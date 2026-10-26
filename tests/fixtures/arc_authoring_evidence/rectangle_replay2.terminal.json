@@ -1,0 +1,26 @@
+{
+  "cleanup_complete": true,
+  "command": [
+    "/workspace/scratch/e704d81da019/mechanical_cad/.venv/bin/python",
+    "-m",
+    "mechanical_cad.sidecar"
+  ],
+  "core_source_hashes": {
+    "backend_contract.py": "d24a47c78d8e78b6ead6961d99bdba48719f48163c812066d9e2b4a19aa503ad",
+    "engine.py": "0628f2cc84c35fa2d7198da747e3265df21d8fb0a2e7820d3115d5e4f2cc33ab",
+    "profile_adapter_v3.py": "ccba7aba5e733ec8c1d86f52e46dc09c9ccabdc1f82fbb3e3222f24b0e1c8606",
+    "result_policy_v3.py": "f0f0e3d03af8379b78780d21279cc77a92d57e8d50e6eb2db98fec1d9722eacb",
+    "sidecar.py": "ae6180f7ff15efe54cb8a50db1e80349a58f940f7a00d3aa51dcd0c1e12d91e3",
+    "sketch_protocol_v3.py": "041a028ab23f888dff5820e5bcccf16c19c30c9c236237bf153efad992d84197",
+    "sketch_service_v3.py": "426b54c1e23154372a4388e9abc4003eb68754300db02f02df1f8342a421a11f"
+  },
+  "digests": {
+    "request.raw": "a574e5ac1227dd738580a9abca3fc20f385d6bfda2dc0e8396037d98a1103e83",
+    "stderr.raw": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "stdout.raw": "ec8dcc15e7f61635e0be8a69c979e84618a874064f0ed68e3a7ed68c65dbae22"
+  },
+  "project_root": "/workspace/scratch/e704d81da019/cad_arc_service/dispatch_aggregate4_20261017T1505/source",
+  "python_executable_target": "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3.12",
+  "returncode": 0,
+  "validation_error": null
+}

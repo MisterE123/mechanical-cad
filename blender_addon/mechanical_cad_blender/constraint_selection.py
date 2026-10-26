@@ -1,0 +1,483 @@
+"""Pure authored selection/inspection requirements for sketch constraint controls.
+
+This leaf consumes bounded sketch records, never an owner, display cache or solve
+report. ``eligible`` describes selection/intent only, not permission to execute:
+the owner must revalidate its current source and fulfill every requirement. No
+command, persisted UI field, geometry mutation or solver authority is created.
+"""
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+
+from .sketch_bridge import _identifier, _keys, _normalized_sketch, _require
+from .sketch_relations import SYMMETRIC_RELATIONS, canonical_refs, valid_pair
+
+MAX_SELECTION = 32
+_COLLECTIONS = {
+    "point": "points",
+    "line": "lines",
+    "circle": "circles",
+    "arc": "arcs",
+    "constraint": "constraints",
+}
+
+
+@dataclass(frozen=True)
+class EntitySelection:
+    kind: str
+    id: str
+
+
+@dataclass(frozen=True)
+class RelationDescriptor:
+    """Exact authored intent, including source expressions and reference order."""
+
+    id: str
+    kind: str
+    refs: tuple[str, ...]
+    source_value: int | float | str | None
+    fixed_target: tuple[int | float, int | float] | None
+
+    @property
+    def signature(self):
+        """Match the command reducer's conservative duplicate-equivalence rule.
+
+        Distance, coincidence, parallel, perpendicular and equal references are symmetric.
+        Equal numeric values
+        compare equally; strings are exact, never evaluated or algebraically
+        equated. This key does not alter the descriptor's source order or type.
+        """
+        refs = canonical_refs(self.kind, self.refs)
+        return self.kind, refs, self.source_value, self.fixed_target
+
+
+@dataclass(frozen=True)
+class ConstraintAction:
+    """Authored prerequisites, deliberately without an ``enabled`` property.
+
+    States are unavailable, eligible, existing or deferred. Existing means show
+    the named relation(s), never manufacture another constraint or fixed target.
+    The listed requirements are obligations, not evidence they have been met.
+    """
+
+    action: str
+    state: str
+    refs: tuple[str, ...] = ()
+    relation_ids: tuple[str, ...] = ()
+    requirements: tuple[str, ...] = ()
+    target: tuple[int | float, int | float] | None = None
+    reason: str = ""
+
+
+@dataclass(frozen=True)
+class CoincidentPreflight:
+    """Symbolic connectivity check only; no coordinate/profile certification."""
+
+    refs: tuple[str, str]
+    existing_relation_ids: tuple[str, ...]
+    already_connected: bool
+    collapsed_line_ids: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class SelectionContract:
+    selection: tuple[EntitySelection, ...]
+    relations: tuple[RelationDescriptor, ...]
+    actions: tuple[ConstraintAction, ...]
+
+    def action(self, name):
+        _require(type(name) is str, "Constraint action name must be text.")
+        for action in self.actions:
+            if action.action == name:
+                return action
+        raise ValueError("Unknown constraint action.")
+
+
+def pick_kinds(mode="geometry"):
+    """Explicit transient filter for ``general_view_geometry.pick_geometry``.
+
+    Passing ``point`` is an intentional UI mode, not a hidden tie-breaking rule.
+    Distinct overlapping points still tie; the picker remains the only hit test.
+    No mode is added to the existing persisted UI envelope.
+    """
+    _require(type(mode) is str and mode in {"geometry", "point"}, "Unknown selection filter.")
+    return ("point",) if mode == "point" else ("point", "line", "circle", "arc")
+
+
+def _source(sketch):
+    # Exact schema dispatch; never let a malformed version enter the old codec.
+    _require(type(sketch) is dict, "Sketch must be an object.")
+    version = sketch.get("schema_version")
+    _require(type(version) is int and version in (1, 2, 3), "Unsupported sketch schema.")
+    if version == 3:
+        from .sketch_contracts_v3 import normalize_sketch_v3
+
+        normalized = normalize_sketch_v3(sketch)
+    else:
+        normalized = _normalized_sketch(sketch)
+    entities = {
+        record["id"]: (kind, record)
+        for kind, collection in _COLLECTIONS.items()
+        for record in normalized.get(collection, [])
+    }
+    # Read the validated originals to retain authored numeric types and strings.
+    # Only immutable scalars/tuples escape; no caller containers are retained.
+    relations = tuple(
+        RelationDescriptor(
+            record["id"],
+            record["kind"],
+            tuple(record["refs"]),
+            record.get("value"),
+            None if record.get("target") is None else tuple(record["target"]),
+        )
+        for record in sorted(sketch["constraints"], key=lambda item: item["id"])
+    )
+    return normalized, entities, relations
+
+
+def _selection(entities, selection):
+    _require(
+        type(selection) in (list, tuple) and len(selection) <= MAX_SELECTION,
+        "Selection exceeds its bounded list limit.",
+    )
+    result, seen = [], set()
+    for item in selection:
+        _keys(item, {"kind", "id"})
+        kind, identifier = item["kind"], item["id"]
+        _require(type(kind) is str and kind in _COLLECTIONS, "Unknown selection kind.")
+        _identifier(identifier)
+        _require(identifier not in seen, "Duplicate selection identity.")
+        _require(identifier in entities, "Selected stable ID is unavailable.")
+        _require(entities[identifier][0] == kind, "Selected stable ID has a different kind.")
+        result.append(EntitySelection(kind, identifier))
+        seen.add(identifier)
+    return tuple(result)
+
+
+def normalize_selection(authored_sketch, selection):
+    """Detach ordered UI ``{kind, id}`` bindings; reject missing/wrong-kind IDs.
+
+    This validates currently available records only. It never revives a tombstone,
+    substitutes a similar-looking entity, or drops part of a multiselection.
+    """
+    _, entities, _ = _source(authored_sketch)
+    return _selection(entities, selection)
+
+
+def relation_descriptors(authored_sketch):
+    """Return all supported authored relations, sorted by exact stable ID."""
+    return _source(authored_sketch)[2]
+
+
+def _coincident_preflight(sketch, relations, refs):
+    _require(type(refs) in (tuple, list) and len(refs) == 2, "Select exactly two points.")
+    points = {point["id"] for point in sketch["points"]}
+    for reference in refs:
+        _identifier(reference)
+        _require(reference in points, "Coincident references must be available points.")
+    _require(refs[0] != refs[1], "Coincident requires two distinct point IDs.")
+    parent = {identifier: identifier for identifier in points}
+
+    def root(identifier):
+        while parent[identifier] != identifier:
+            parent[identifier] = parent[parent[identifier]]
+            identifier = parent[identifier]
+        return identifier
+
+    def join(first, second):
+        parent[root(second)] = root(first)
+
+    for relation in relations:
+        if relation.kind == "coincident":
+            join(*relation.refs)
+    connected = root(refs[0]) == root(refs[1])
+    join(*refs)
+    collapsed = tuple(
+        line["id"] for line in sketch["lines"] if root(line["start"]) == root(line["end"])
+    )
+    signature = ("coincident", tuple(sorted(refs)), None, None)
+    existing = tuple(relation.id for relation in relations if relation.signature == signature)
+    return CoincidentPreflight(tuple(refs), existing, connected, collapsed)
+
+
+def coincident_preflight(authored_sketch, point_ids):
+    """Report all lines collapsed by explicit coincidence closure plus this pair.
+
+    Already-collapsed lines are included. Transitive connectivity is not treated
+    as an exact duplicate. Coordinate equality is never inferred to be identity.
+    A passing symbolic check still needs actual solve/profile/recovery preflight.
+    """
+    sketch, _, relations = _source(authored_sketch)
+    return _coincident_preflight(sketch, relations, point_ids)
+
+
+def _inspected_relations(sketch, selection, relations):
+    if len(selection) != 1:
+        return ()
+    selected = selection[0]
+    if selected.kind == "constraint":
+        return tuple(item for item in relations if item.id == selected.id)
+    # Explicit one-hop structural incidence, not inferred solver influence.
+    relevant = {selected.id}
+    if selected.kind == "line":
+        line = next(item for item in sketch["lines"] if item["id"] == selected.id)
+        relevant.update((line["start"], line["end"]))
+    elif selected.kind in {"circle", "arc"}:
+        curve = next(item for item in sketch[selected.kind + "s"] if item["id"] == selected.id)
+        roles = ("center", "start", "end") if selected.kind == "arc" else ("center",)
+        relevant.update(curve[role] for role in roles)
+    else:
+        relevant.update(
+            item["id"] for item in sketch["lines"] if selected.id in (item["start"], item["end"])
+        )
+        relevant.update(
+            item["id"] for item in sketch.get("circles", []) if item["center"] == selected.id
+        )
+        relevant.update(
+            item["id"]
+            for item in sketch.get("arcs", [])
+            if selected.id in (item["center"], item["start"], item["end"])
+        )
+    return tuple(item for item in relations if relevant.intersection(item.refs))
+
+
+def selection_contract(authored_sketch, selection):
+    """Describe bounded control requirements without consulting current solutions.
+
+    Fix here deliberately has no target until the owner validates current solved
+    coordinates. Fix at origin names (0, 0) and requires a movement disclosure.
+    Ordinary removal remains relation-only and current-solution-gated. There is
+    no coordinate proximity inference: Coincident uses exact point identities.
+    """
+    sketch, entities, relations = _source(authored_sketch)
+    selected = _selection(entities, selection)
+    single = selected[0] if len(selected) == 1 else None
+    actions = []
+    for kind in ("horizontal", "vertical"):
+        if single is None or single.kind != "line":
+            action = ConstraintAction(kind, "unavailable", reason="Select exactly one line.")
+        else:
+            refs = (single.id,)
+            ids = tuple(item.id for item in relations if item.signature == (kind, refs, None, None))
+            action = ConstraintAction(kind, "existing" if ids else "eligible", refs, ids)
+        actions.append(action)
+    for kind in ("parallel", "perpendicular", "equal", "tangent"):
+        refs = tuple(item.id for item in selected)
+        if kind == "tangent" and len(selected) == 2 and selected[1].kind == "arc":
+            refs = refs[::-1]
+        valid = valid_pair(
+            kind,
+            refs,
+            {item["id"]: item for item in sketch["lines"]},
+            {item["id"]: item for item in sketch.get("circles", [])},
+            {item["id"]: item for item in sketch.get("arcs", [])},
+        )
+        signature_refs = tuple(sorted(refs)) if kind in SYMMETRIC_RELATIONS else refs
+        ids = tuple(
+            item.id for item in relations if item.signature == (kind, signature_refs, None, None)
+        )
+        reason = {
+            "parallel": "Select two lines.",
+            "perpendicular": "Select two lines.",
+            "equal": "Select two lines for equal lengths, or two circles for equal radii.",
+            "tangent": "Select an arc and a line sharing exactly one endpoint identity.",
+        }[kind]
+        actions.append(
+            ConstraintAction(
+                kind,
+                ("existing" if ids else "eligible") if valid else "unavailable",
+                refs,
+                ids,
+                reason="" if valid else reason,
+            )
+        )
+    refs = tuple(sorted(item.id for item in selected if item.kind == "point")) + tuple(
+        item.id for item in selected if item.kind == "line"
+    )
+    valid = len(selected) == 3 and valid_pair(
+        "symmetry",
+        refs,
+        {item["id"]: item for item in sketch["lines"]},
+        {},
+        {},
+        {item["id"]: item for item in sketch["points"]},
+    )
+    ids = tuple(item.id for item in relations if item.signature == ("symmetry", refs, None, None))
+    actions.append(
+        ConstraintAction(
+            "symmetry",
+            ("existing" if ids else "eligible") if valid else "unavailable",
+            refs,
+            ids,
+            requirements=("native_solve_after_edit",) if valid and not ids else (),
+            reason=(
+                "Mirror the two points across the infinite axis line; the axis may move unless constrained."
+                if valid
+                else "Select two distinct points and one straight axis line, not its endpoints."
+            ),
+        )
+    )
+    new_relations = {
+        "point_on_line": (
+            "Select one point and one line, not its own endpoint.",
+            "Keep the point on the infinite supporting line, including beyond its endpoints.",
+        ),
+        "midpoint": (
+            "Select one point and one line, not its own endpoint.",
+            "Place the point exactly halfway between the line endpoints.",
+        ),
+        "concentric": (
+            "Select two circles with distinct center-point identities.",
+            "Keep the two circle centers together; radii remain independent.",
+        ),
+        "circle_line_tangent": (
+            "Select one circle and one line.",
+            "Keep the circle tangent to the infinite supporting line; contact may be beyond its endpoints.",
+        ),
+    }
+    for kind, (reason, description) in new_relations.items():
+        refs = tuple(item.id for item in selected)
+        valid = False
+        if len(selected) == 2:
+            kinds = {item.kind for item in selected}
+            if kind in {"point_on_line", "midpoint"} and kinds == {"point", "line"}:
+                point = next(item.id for item in selected if item.kind == "point")
+                line = next(entities[item.id][1] for item in selected if item.kind == "line")
+                refs = (point, line["id"])
+                valid = point not in {line["start"], line["end"]}
+                if not valid:
+                    reason = "That point is already this line's endpoint; choose a different point."
+            elif kind == "concentric" and all(item.kind == "circle" for item in selected):
+                valid = entities[refs[0]][1]["center"] != entities[refs[1]][1]["center"]
+                if not valid:
+                    reason = "These circles already share the same exact center point."
+            elif kind == "circle_line_tangent" and kinds == {"circle", "line"}:
+                refs = (
+                    next(item.id for item in selected if item.kind == "circle"),
+                    next(item.id for item in selected if item.kind == "line"),
+                )
+                valid = True
+        signature_refs = tuple(sorted(refs)) if kind == "concentric" else refs
+        ids = tuple(
+            item.id for item in relations if item.signature == (kind, signature_refs, None, None)
+        )
+        actions.append(
+            ConstraintAction(
+                kind,
+                ("existing" if ids else "eligible") if valid else "unavailable",
+                refs,
+                ids,
+                requirements=("native_solve_after_edit",) if valid and not ids else (),
+                reason=description if valid else reason,
+            )
+        )
+    for name in ("fix_here", "fix_origin"):
+        if single is None or single.kind != "point":
+            action = ConstraintAction(name, "unavailable", reason="Select exactly one point.")
+        else:
+            refs = (single.id,)
+            ids = tuple(item.id for item in relations if item.kind == "fixed" and item.refs == refs)
+            if ids:
+                action = ConstraintAction(
+                    name,
+                    "existing",
+                    refs,
+                    ids,
+                    ("explicit_fixed_relation_selection",),
+                    reason="Inspect an existing fixed relation to edit its target or release it.",
+                )
+            else:
+                action = ConstraintAction(
+                    name,
+                    "eligible",
+                    refs,
+                    requirements=(
+                        "current_successful_solution"
+                        if name == "fix_here"
+                        else "origin_movement_disclosure",
+                    ),
+                    target=(0, 0) if name == "fix_origin" else None,
+                )
+        actions.append(action)
+    actions.append(
+        ConstraintAction(
+            "inspect",
+            "eligible" if single is not None else "unavailable",
+            () if single is None else (single.id,),
+            reason="" if single is not None else "Select exactly one entity or relation.",
+        )
+    )
+    if single is not None and single.kind == "constraint":
+        actions.append(
+            ConstraintAction(
+                "remove_relation",
+                "eligible",
+                (single.id,),
+                (single.id,),
+                ("current_successful_solution", "relation_only_delete_preview"),
+            )
+        )
+    else:
+        actions.append(
+            ConstraintAction(
+                "remove_relation", "unavailable", reason="Select exactly one relation by ID."
+            )
+        )
+    if len(selected) != 2 or any(item.kind != "point" for item in selected):
+        coincident = ConstraintAction(
+            "coincident", "unavailable", reason="Select exactly two distinct points."
+        )
+    else:
+        preflight = _coincident_preflight(sketch, relations, tuple(item.id for item in selected))
+        if preflight.existing_relation_ids:
+            coincident = ConstraintAction(
+                "coincident", "existing", preflight.refs, preflight.existing_relation_ids
+            )
+        elif preflight.already_connected:
+            coincident = ConstraintAction(
+                "coincident",
+                "unavailable",
+                preflight.refs,
+                reason="These points are already joined through existing Coincident relations.",
+            )
+        elif preflight.collapsed_line_ids:
+            coincident = ConstraintAction(
+                "coincident",
+                "unavailable",
+                preflight.refs,
+                reason="Coincidence would leave collapsed lines: "
+                + ", ".join(preflight.collapsed_line_ids),
+            )
+        else:
+            coincident = ConstraintAction(
+                "coincident",
+                "eligible",
+                preflight.refs,
+                requirements=("explicit_two_point_selection", "native_solve_after_edit"),
+                reason="Join the selected points; connected geometry may move.",
+            )
+    actions.append(coincident)
+    return SelectionContract(
+        selected, _inspected_relations(sketch, selected, relations), tuple(actions)
+    )
+
+
+def applicability_hint(authored_sketch, selection, action, *, has_solution, has_retained_evidence):
+    """Non-authoritative palette hint, never a prepared transaction or disclosure.
+
+    Do not serialize/replay the command journal on hover or pointer hit-testing.
+    The registered action still prepares and rechecks its complete exact binding.
+    A hint can be eligible while execution rejects deeper evidence or protection.
+    """
+    mapped = "remove_relation" if action == "recover_remove_relation" else action
+    spec = selection_contract(authored_sketch, selection).action(mapped)
+    if spec.state not in {"eligible", "existing"}:
+        return False
+    if spec.state == "existing":
+        return True
+    if action in {"fix_here", "remove_relation"}:
+        return bool(has_solution)
+    if action == "recover_remove_relation":
+        return not has_solution and not has_retained_evidence
+    return True

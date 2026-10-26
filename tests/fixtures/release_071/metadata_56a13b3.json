@@ -1,0 +1,298 @@
+{
+  "schema": "release-071-metadata-equivalence-v1",
+  "base_commit": "56a13b32f2d29ccb8576f4d64053fe990a61d9bd",
+  "changed": {
+    "src/mechanical_cad/assembly_export.py": {
+      "reviewed_bytes": 5683,
+      "reviewed_sha256": "beb56cb806f790b6a70cd17564d3d6a3c1a0bf52a9bfa397b7c067ef72862852",
+      "original_bytes": 5594,
+      "original_sha256": "f8c1464c383d67eb25592194189471d4c2a1499cae9721bd19d75af9439c59f1",
+      "hunks": [
+        {
+          "new_start": 321,
+          "new_end": 321,
+          "original": "from .actions import _atomic_export, _destination\n",
+          "replacement": ""
+        },
+        {
+          "new_start": 2123,
+          "new_end": 2262,
+          "original": "",
+          "replacement": "    # Legacy Assembly rejection and capability observation never need Part exports.\n    from .actions import _atomic_export, _destination\n\n"
+        }
+      ]
+    },
+    "tests/unit/test_assembly_export_service.py": {
+      "reviewed_bytes": 23885,
+      "reviewed_sha256": "8adef039df2533228d501856196e23dd6984c226b0a03b40d6a8923056de270f",
+      "original_bytes": 22590,
+      "original_sha256": "a7b7a3566d83a10ea69b60650b28d3a0a18ae090803417376da48dba5ac9c749",
+      "hunks": [
+        {
+          "new_start": 85,
+          "new_end": 101,
+          "original": "",
+          "replacement": "import builtins\n"
+        },
+        {
+          "new_start": 10290,
+          "new_end": 11517,
+          "original": "",
+          "replacement": "    \"field,value,code\",\n    [\n        (\"surprise\", None, \"invalid_request\"),\n        (\"protocol_version\", True, \"unsupported_protocol\"),\n        (\"kind\", \"other\", \"unsupported_protocol\"),\n        (\"assembly_protocol_version\", True, \"unsupported_protocol\"),\n        (\"action\", \"assembly_check\", \"invalid_action\"),\n        (\"result_version\", 4, \"unsupported_result_version\"),\n        (\"path\", None, \"invalid_destination\"),\n        (\"path\", \"/tmp/\", \"invalid_destination\"),\n    ],\n)\ndef test_export_rejects_invalid_envelope_before_part_export_import(\n    assembly, replay_double, monkeypatch, field, value, code\n):\n    request = operation(assembly, \"/tmp/output.step\")\n    request[field] = value\n    original_import = builtins.__import__\n\n    def isolated(name, *args, **kwargs):\n        if \"actions\" in name.split(\".\"):\n            raise AssertionError(\"Rejected export imported Part export helpers\")\n        return original_import(name, *args, **kwargs)\n\n    monkeypatch.setattr(builtins, \"__import__\", isolated)\n    with pytest.raises(CADException) as exc:\n        assembly_export.run_assembly_step_export(request, kernel=KernelDouble())\n    assert exc.value.code == code and replay_double[0] == []\n\n\n@pytest.mark.parametrize(\n"
+        },
+        {
+          "new_start": 19791,
+          "new_end": 19960,
+          "original": "    if any(piece in {'OCP', 'slvs', 'bpy', 'kernel_ocp'} for piece in name.split('.')):\n        raise AssertionError('native import: ' + name)\n",
+          "replacement": "    if any(piece in {'OCP', 'slvs', 'bpy', 'kernel_ocp', 'actions'} for piece in name.split('.')):\n        raise AssertionError('forbidden observation import: ' + name)\n"
+        },
+        {
+          "new_start": 20342,
+          "new_end": 20450,
+          "original": "assert not {'OCP', 'slvs', 'bpy', 'mechanical_cad.kernel_ocp'} & set(sys.modules)\n",
+          "replacement": "assert not {'OCP', 'slvs', 'bpy', 'mechanical_cad.kernel_ocp', 'mechanical_cad.actions'} & set(sys.modules)\n"
+        }
+      ]
+    },
+    "blender_addon/mechanical_cad_blender/__init__.py": {
+      "reviewed_bytes": 1649,
+      "reviewed_sha256": "f225727fa5aec5d3c527a53a200116231fcf3b9c485e97df6c80913a570510f1",
+      "original_bytes": 1649,
+      "original_sha256": "cee489002997dbf54467c9fd12e4785c84e7190765f1a4ef2e83e929b0c35966",
+      "hunks": [
+        {
+          "new_start": 433,
+          "new_end": 459,
+          "original": "    \"version\": (0, 7, 0),\n",
+          "replacement": "    \"version\": (0, 7, 1),\n"
+        }
+      ]
+    },
+    "pyproject.toml": {
+      "reviewed_bytes": 1456,
+      "reviewed_sha256": "31b85385bd3979a7acd202c7baf3e4d69ad01b0f6d664f5109a6624bf209761c",
+      "original_bytes": 1361,
+      "original_sha256": "b2b9acff2dbba6c02c5a20aff685334cec79f3cd9d8366532cc5a9cd6ed602f2",
+      "hunks": [
+        {
+          "new_start": 120,
+          "new_end": 138,
+          "original": "version = \"0.7.0\"\n",
+          "replacement": "version = \"0.7.1\"\n"
+        },
+        {
+          "new_start": 587,
+          "new_end": 999,
+          "original": "scope = \"Integrated standalone CAD preview candidate: offline Linux Blender 5.2.2 extension; constrained lines/circles and bounded sectors, editable Parts, rooted-tree box/sector assemblies, pose checks, save/reopen and individual-Part STEP/STL; installer qualification and dependency distribution materials pending\"\n",
+          "replacement": "scope = \"Assembly STEP standalone preview candidate: offline Linux x86_64 Blender 5.2.2 extension; constrained lines/circles and bounded sectors, editable Parts, rooted-tree box/sector assemblies, pose checks, save/reopen, individual-Part STEP/STL and checked Assembly STEP preserving reusable definitions and placements; exact 0.7.1 installer qualification and distribution clearance pending; Windows deferred\"\n"
+        }
+      ]
+    },
+    "scripts/standalone_child_bootstrap.py": {
+      "reviewed_bytes": 22806,
+      "reviewed_sha256": "a16a7b49064091c9ac2b22224944395a8ef36b69f4a6610293aa8b8d99236525",
+      "original_bytes": 22806,
+      "original_sha256": "c6e78a4568c2e12af0a130c039bea3cae4f47ea329d33b1479bf2e3b9c1da26d",
+      "hunks": [
+        {
+          "new_start": 15286,
+          "new_end": 15332,
+          "original": "            or package.__version__ != \"0.7.0\"\n",
+          "replacement": "            or package.__version__ != \"0.7.1\"\n"
+        }
+      ]
+    },
+    "scripts/tests/test_standalone_package_materials.py": {
+      "reviewed_bytes": 43054,
+      "reviewed_sha256": "6c32ce7ccedf55d0480ada13f5b96a2e7ed3a7392e5f8ba15e0e9be15b3cfc84",
+      "original_bytes": 43054,
+      "original_sha256": "d28a8227430b0e5282541f6271b67ce141fd8711fa5b7eec67d766bf6fea0155",
+      "hunks": [
+        {
+          "new_start": 2589,
+          "new_end": 2654,
+          "original": "            \"pyproject.toml\": b'[project]\\nversion = \"0.7.0\"\\n',\n",
+          "replacement": "            \"pyproject.toml\": b'[project]\\nversion = \"0.7.1\"\\n',\n"
+        },
+        {
+          "new_start": 42251,
+          "new_end": 42307,
+          "original": "            current = b'package.__version__ != \"0.7.0\"'\n",
+          "replacement": "            current = b'package.__version__ != \"0.7.1\"'\n"
+        }
+      ]
+    },
+    "scripts/verify_sidecar_install.py": {
+      "reviewed_bytes": 3372,
+      "reviewed_sha256": "d73a15a0a837258c4e0b7fb265ff5d981e12879a5bee031ff62523a7ee1aaceb",
+      "original_bytes": 3372,
+      "original_sha256": "772f23f455cf7192774c9502004210078513dba21ade0d7aa6078de10e238c62",
+      "hunks": [
+        {
+          "new_start": 23,
+          "new_end": 105,
+          "original": "\"\"\"Verify the 0.7.0 source root and interpreter intended for Blender preferences.\n",
+          "replacement": "\"\"\"Verify the 0.7.1 source root and interpreter intended for Blender preferences.\n"
+        },
+        {
+          "new_start": 397,
+          "new_end": 424,
+          "original": "EXPECTED_VERSION = \"0.7.0\"\n",
+          "replacement": "EXPECTED_VERSION = \"0.7.1\"\n"
+        }
+      ]
+    },
+    "src/mechanical_cad/__init__.py": {
+      "reviewed_bytes": 111,
+      "reviewed_sha256": "b98087d6c8052f1f2aee05d117a54dcd4ecec0cd3e1112a4bc618946939e979c",
+      "original_bytes": 111,
+      "original_sha256": "e2227a7c7dbab3abefa11ef43fffcfa573caee943cce27daa07baf44ee1fc277",
+      "hunks": [
+        {
+          "new_start": 89,
+          "new_end": 111,
+          "original": "__version__ = \"0.7.0\"\n",
+          "replacement": "__version__ = \"0.7.1\"\n"
+        }
+      ]
+    },
+    "tests/integration/test_sidecar_install_verifier.py": {
+      "reviewed_bytes": 1833,
+      "reviewed_sha256": "4ef58fa9663e328ec5cfef17a5b160d1aa46dd5243ef0be44c69920944ba8177",
+      "original_bytes": 1833,
+      "original_sha256": "d614524b94a7c754ee384e46974993a07f60cf8021dcff4321a62b7191136c32",
+      "hunks": [
+        {
+          "new_start": 706,
+          "new_end": 768,
+          "original": "    assert result[\"ok\"] and result[\"core_version\"] == \"0.7.0\"\n",
+          "replacement": "    assert result[\"ok\"] and result[\"core_version\"] == \"0.7.1\"\n"
+        },
+        {
+          "new_start": 1744,
+          "new_end": 1833,
+          "original": "    assert not result[\"ok\"] and result[\"error\"] == \"Expected core 0.7.0; imported 0.5.0\"\n",
+          "replacement": "    assert not result[\"ok\"] and result[\"error\"] == \"Expected core 0.7.1; imported 0.5.0\"\n"
+        }
+      ]
+    },
+    "tests/unit/test_arc_profile_incidence.py": {
+      "reviewed_bytes": 50547,
+      "reviewed_sha256": "5924909a8dc9d0a092a463583e65351df57f55f0bdc10fb92d2f7839ed0744d3",
+      "original_bytes": 50407,
+      "original_sha256": "a0d9f5ae6e09fcc53876a8d5758963db4582b9ea043309d88190450cddea5295",
+      "hunks": [
+        {
+          "new_start": 30992,
+          "new_end": 31061,
+          "original": "",
+          "replacement": "            \"RELEASE_071_FIXTURE\",\n            \"RELEASE_071_SHA256\",\n"
+        },
+        {
+          "new_start": 33572,
+          "new_end": 33609,
+          "original": "",
+          "replacement": "            \"RELEASE_071_ORIGINALS\",\n"
+        },
+        {
+          "new_start": 34427,
+          "new_end": 34461,
+          "original": "",
+          "replacement": "            \"_release_071_bytes\",\n"
+        }
+      ]
+    },
+    "tests/unit/test_arc_profile_native_end_cap.py": {
+      "reviewed_bytes": 201470,
+      "reviewed_sha256": "20e06e4c8004c7c894f3f05d22003da744710beec54ccd906e005a3c2cb34912",
+      "original_bytes": 193432,
+      "original_sha256": "d251dcae18eb7a05405149972c9d3ca0d1191ea80e755a8896428d257625bd42",
+      "hunks": [
+        {
+          "new_start": 42853,
+          "new_end": 46365,
+          "original": "",
+          "replacement": "RELEASE_071_FIXTURE = \"tests/fixtures/release_071/metadata_56a13b3.json\"\nRELEASE_071_SHA256 = \"0000000000000000000000000000000000000000000000000000000000000000\"\nRELEASE_071_ORIGINALS = {\n    \"src/mechanical_cad/assembly_export.py\": (\n        5594,\n        \"f8c1464c383d67eb25592194189471d4c2a1499cae9721bd19d75af9439c59f1\",\n    ),\n    \"tests/unit/test_assembly_export_service.py\": (\n        22590,\n        \"a7b7a3566d83a10ea69b60650b28d3a0a18ae090803417376da48dba5ac9c749\",\n    ),\n    \"blender_addon/mechanical_cad_blender/__init__.py\": (\n        1649,\n        \"cee489002997dbf54467c9fd12e4785c84e7190765f1a4ef2e83e929b0c35966\",\n    ),\n    \"pyproject.toml\": (\n        1361,\n        \"b2b9acff2dbba6c02c5a20aff685334cec79f3cd9d8366532cc5a9cd6ed602f2\",\n    ),\n    \"scripts/standalone_child_bootstrap.py\": (\n        22806,\n        \"c6e78a4568c2e12af0a130c039bea3cae4f47ea329d33b1479bf2e3b9c1da26d\",\n    ),\n    \"scripts/tests/test_standalone_package_materials.py\": (\n        43054,\n        \"d28a8227430b0e5282541f6271b67ce141fd8711fa5b7eec67d766bf6fea0155\",\n    ),\n    \"scripts/verify_sidecar_install.py\": (\n        3372,\n        \"772f23f455cf7192774c9502004210078513dba21ade0d7aa6078de10e238c62\",\n    ),\n    \"src/mechanical_cad/__init__.py\": (\n        111,\n        \"e2227a7c7dbab3abefa11ef43fffcfa573caee943cce27daa07baf44ee1fc277\",\n    ),\n    \"tests/integration/test_sidecar_install_verifier.py\": (\n        1833,\n        \"d614524b94a7c754ee384e46974993a07f60cf8021dcff4321a62b7191136c32\",\n    ),\n    \"tests/unit/test_arc_profile_incidence.py\": (\n        50407,\n        \"a0d9f5ae6e09fcc53876a8d5758963db4582b9ea043309d88190450cddea5295\",\n    ),\n    \"tests/unit/test_arc_profile_native_end_cap.py\": (\n        193432,\n        \"d251dcae18eb7a05405149972c9d3ca0d1191ea80e755a8896428d257625bd42\",\n    ),\n    \"tests/unit/test_standalone_child_bootstrap.py\": (\n        40818,\n        \"29239254714781dfcd3c3f7f3d4cda3c11cd31c9f91cdf36983d37d7b4d6b0bc\",\n    ),\n    \"tests/unit/test_standalone_extension_builder.py\": (\n        37158,\n        \"029e6c8097ae680339122b711aa7ef024623521598c6875181e43e7109a17d01\",\n    ),\n    \"tests/unit/test_standalone_runtime_boundary.py\": (\n        114975,\n        \"77fa5cc74708814dc001c525f3d022a2c8cc66e113d55c6185ac63030138373e\",\n    ),\n}\n\n\ndef _release_071_bytes(root, name, data=None):\n    \"\"\"Undo the sealed 0.7.1 metadata and deferred-import repair before older guards.\"\"\"\n    data = (root / name).read_bytes() if data is None else data\n    if name not in RELEASE_071_ORIGINALS:\n        return data\n    expected = RELEASE_071_ORIGINALS[name]\n    if (len(data), hashlib.sha256(data).hexdigest()) == expected:\n        return data\n    assert (root / RELEASE_071_FIXTURE).is_file()\n    raw = (root / RELEASE_071_FIXTURE).read_bytes()\n    assert hashlib.sha256(raw).hexdigest() == RELEASE_071_SHA256\n    revision = json.loads(raw)\n    assert set(revision) == {\"schema\", \"base_commit\", \"changed\"}\n    assert revision[\"schema\"] == \"release-071-metadata-equivalence-v1\"\n    assert revision[\"base_commit\"] == \"56a13b32f2d29ccb8576f4d64053fe990a61d9bd\"\n    assert set(revision[\"changed\"]) == set(RELEASE_071_ORIGINALS)\n    if name == \"tests/unit/test_arc_profile_native_end_cap.py\":\n        label = b\"RELEASE_071_\" + b'SHA256 = \"'\n        slot = label + RELEASE_071_SHA256.encode(\"ascii\") + b'\"'\n        assert data.count(label) == data.count(slot) == 1\n        data = data.replace(slot, label + b\"0\" * 64 + b'\"')\n    return _integration_restore_entry(data, revision[\"changed\"][name], expected)\n\n\n"
+        },
+        {
+          "new_start": 50898,
+          "new_end": 50946,
+          "original": "    data = (root / name).read_bytes() if data is None else data\n",
+          "replacement": "    data = _release_071_bytes(root, name, data)\n"
+        },
+        {
+          "new_start": 51896,
+          "new_end": 51942,
+          "original": "        data = (root / name).read_bytes()\n",
+          "replacement": "        data = _release_071_bytes(root, name)\n"
+        },
+        {
+          "new_start": 137888,
+          "new_end": 137917,
+          "original": "",
+          "replacement": "        RELEASE_071_FIXTURE,\n"
+        },
+        {
+          "new_start": 196452,
+          "new_end": 196537,
+          "original": "    data = read(guard)\n",
+          "replacement": "    data = _release_071_bytes(ROOT, \"tests/unit/test_arc_profile_native_end_cap.py\")\n"
+        },
+        {
+          "new_start": 196615,
+          "new_end": 196930,
+          "original": "",
+          "replacement": "    metadata_read = _release_071_bytes\n    monkeypatch.setitem(\n        globals(),\n        \"_release_071_bytes\",\n        lambda root, name, observed=None: (\n            data\n            if name == \"tests/unit/test_arc_profile_native_end_cap.py\"\n            else metadata_read(root, name, observed)\n        ),\n    )\n"
+        },
+        {
+          "new_start": 197338,
+          "new_end": 201470,
+          "original": "",
+          "replacement": "\n\ndef test_release_071_metadata_restores_exact_parent_before_every_older_guard():\n    for name, expected in RELEASE_071_ORIGINALS.items():\n        data = _release_071_bytes(ROOT, name)\n        assert (len(data), hashlib.sha256(data).hexdigest()) == expected\n    test_assembly_step_inverse_preserves_exact_parent_and_every_older_guard()\n    test_release_070_metadata_restores_exact_eb9b51c_bytes()\n\n\ndef test_release_071_version_files_have_only_exact_metadata_changes():\n    changes = {\n        \"blender_addon/mechanical_cad_blender/__init__.py\": (b\"(0, 7, 1)\", b\"(0, 7, 0)\", 1),\n        \"src/mechanical_cad/__init__.py\": (b\"0.7.1\", b\"0.7.0\", 1),\n        \"scripts/standalone_child_bootstrap.py\": (b\"0.7.1\", b\"0.7.0\", 1),\n        \"scripts/verify_sidecar_install.py\": (b\"0.7.1\", b\"0.7.0\", 2),\n    }\n    for name, (current, previous, count) in changes.items():\n        data = (ROOT / name).read_bytes()\n        assert data.count(current) == count\n        original = _release_071_bytes(ROOT, name)\n        normalized = data.replace(current, previous)\n        assert normalized == original\n        assert ast.dump(ast.parse(normalized)) == ast.dump(ast.parse(original))\n\n\n@pytest.mark.parametrize(\"name\", sorted(RELEASE_071_ORIGINALS))\ndef test_release_071_metadata_never_exempts_other_bytes(monkeypatch, name):\n    read, target = Path.read_bytes, ROOT / name\n    monkeypatch.setattr(\n        Path,\n        \"read_bytes\",\n        lambda path: (\n            read(path) + (b\"\\n# unreviewed metadata mutation\\n\" if path == target else b\"\")\n        ),\n    )\n    with pytest.raises(AssertionError):\n        _release_071_bytes(ROOT, name)\n\n\n@pytest.mark.parametrize(\"mutation\", [\"fixture\", \"slot\", \"helper\", \"coordinated\"])\ndef test_release_071_fixture_and_copied_validator_cannot_replace_trusted_guard(\n    monkeypatch, mutation\n):\n    read = Path.read_bytes\n    fixture = ROOT / RELEASE_071_FIXTURE\n    name = \"tests/unit/test_arc_profile_native_end_cap.py\"\n    guard = ROOT / name\n    raw = read(fixture) + (b\"\\n\" if mutation in {\"fixture\", \"coordinated\"} else b\"\")\n    data = read(guard)\n    if mutation in {\"slot\", \"coordinated\"}:\n        digest = hashlib.sha256(raw).hexdigest() if mutation == \"coordinated\" else \"f\" * 64\n        assert data.count(RELEASE_071_SHA256.encode()) == 1\n        data = data.replace(RELEASE_071_SHA256.encode(), digest.encode())\n    if mutation == \"helper\":\n        marker = b\"def _release_071_bytes(root, name, data=None):\\n\"\n        assert data.count(marker) == 1\n        data = data.replace(marker, marker + b\"    # untrusted copied validator\\n\")\n    monkeypatch.setattr(\n        Path,\n        \"read_bytes\",\n        lambda path: raw if path == fixture else data if path == guard else read(path),\n    )\n    with pytest.raises(AssertionError):\n        _release_071_bytes(ROOT, name)\n\n\n@pytest.mark.parametrize(\"mutation\", [\"equivalent\", \"schema\", \"base\", \"path\", \"original\", \"hunk\"])\ndef test_release_071_inner_controls_keep_pinned_parent_and_finite_paths(monkeypatch, mutation):\n    fixture = ROOT / RELEASE_071_FIXTURE\n    name = \"src/mechanical_cad/__init__.py\"\n    expected = _release_071_bytes(ROOT, name)\n    read = Path.read_bytes\n    revision = json.loads(read(fixture))\n    if mutation == \"schema\":\n        revision[\"schema\"] = \"unreviewed\"\n    elif mutation == \"base\":\n        revision[\"base_commit\"] = \"f\" * 40\n    elif mutation == \"path\":\n        revision[\"changed\"][\"src/mechanical_cad/unreviewed.py\"] = revision[\"changed\"].pop(name)\n    elif mutation == \"original\":\n        revision[\"changed\"][name][\"original_sha256\"] = \"f\" * 64\n    elif mutation == \"hunk\":\n        revision[\"changed\"][name][\"hunks\"][0][\"new_start\"] = True\n    raw = (json.dumps(revision, sort_keys=True) + \"\\n\").encode()\n    assert raw != read(fixture)\n    monkeypatch.setattr(Path, \"read_bytes\", lambda path: raw if path == fixture else read(path))\n    monkeypatch.setitem(globals(), \"RELEASE_071_SHA256\", hashlib.sha256(raw).hexdigest())\n    if mutation == \"equivalent\":\n        assert _release_071_bytes(ROOT, name) == expected\n    else:\n        with pytest.raises(AssertionError):\n            _release_071_bytes(ROOT, name)\n"
+        }
+      ]
+    },
+    "tests/unit/test_standalone_child_bootstrap.py": {
+      "reviewed_bytes": 40818,
+      "reviewed_sha256": "8473174615ba3652ffa8c7f562599f3be531662315855339836be3d30d28605e",
+      "original_bytes": 40818,
+      "original_sha256": "29239254714781dfcd3c3f7f3d4cda3c11cd31c9f91cdf36983d37d7b4d6b0bc",
+      "hunks": [
+        {
+          "new_start": 6758,
+          "new_end": 6787,
+          "original": "        __version__=\"0.7.0\",\n",
+          "replacement": "        __version__=\"0.7.1\",\n"
+        }
+      ]
+    },
+    "tests/unit/test_standalone_extension_builder.py": {
+      "reviewed_bytes": 37158,
+      "reviewed_sha256": "469855aa067c4f8f7f7b77e3fa1207733d2ebb3f8dc8ad609b9850edbbabf57f",
+      "original_bytes": 37158,
+      "original_sha256": "029e6c8097ae680339122b711aa7ef024623521598c6875181e43e7109a17d01",
+      "hunks": [
+        {
+          "new_start": 35429,
+          "new_end": 35459,
+          "original": "    assert version == \"0.7.0\"\n",
+          "replacement": "    assert version == \"0.7.1\"\n"
+        }
+      ]
+    },
+    "tests/unit/test_standalone_runtime_boundary.py": {
+      "reviewed_bytes": 115099,
+      "reviewed_sha256": "ecac4076de53d874eb9e250c090daec9c3db07e328b275bc5e45e0220de22167",
+      "original_bytes": 114975,
+      "original_sha256": "77fa5cc74708814dc001c525f3d022a2c8cc66e113d55c6185ac63030138373e",
+      "hunks": [
+        {
+          "new_start": 3933,
+          "new_end": 4057,
+          "original": "",
+          "replacement": "        \"RELEASE_071_FIXTURE\",\n        \"RELEASE_071_SHA256\",\n        \"RELEASE_071_ORIGINALS\",\n        \"_release_071_bytes\",\n"
+        }
+      ]
+    }
+  }
+}

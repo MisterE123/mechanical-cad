@@ -1,0 +1,1618 @@
+{
+  "schema_version": 1,
+  "pack_version": "0.1.0-next-preview",
+  "created_on": "2026-10-16",
+  "scope": "Offline icon assets for the next Mechanical CAD UI. No add-on integration, product readiness, or action availability is implied.",
+  "style": {
+    "grid": 24,
+    "sizes": [
+      16,
+      24,
+      32,
+      48,
+      64
+    ],
+    "themes": {
+      "dark": "#E8EAED",
+      "light": "#202124"
+    },
+    "theme_meaning": "dark = light ink for dark surfaces; light = dark ink for light surfaces",
+    "google_variant": "Outlined, weight 400, fill 0, grade 0, optical size 24",
+    "original_stroke_width": 1.8
+  },
+  "assets": [
+    {
+      "action_id": "doc.new",
+      "label": "New document",
+      "hover_description": "New document: Start an empty CAD document. Save any work you want to keep first.",
+      "operator_hint": "mcad.new_document",
+      "file_stem": "doc_new",
+      "availability": "asset_only_unwired",
+      "source": {
+        "kind": "google",
+        "name": "Google Material Symbols Outlined",
+        "symbol": "note_add",
+        "license": "Apache-2.0",
+        "license_file": "licenses/Apache-2.0.txt",
+        "url": "https://github.com/google/material-design-icons/blob/49d4db35df873165d6bd6ba09b063c7dafbac2f4/symbols/web/note_add/materialsymbolsoutlined/note_add_24px.svg",
+        "upstream_commit": "49d4db35df873165d6bd6ba09b063c7dafbac2f4",
+        "upstream_git_blob_sha": "8d73e007d6617edc5b2bb58debe1fffeba4a007d",
+        "upstream_file": "vendor/google/note_add.svg",
+        "upstream_sha256": "94b802edf154830b7d0cdbeb8747e9c96e0fb230a13d282b4b1c9ce23a8d2773",
+        "modifications": "Normalized coordinates to a 24-unit viewBox; currentColor; theme recolor; PNG rasterization. Path geometry unchanged."
+      },
+      "svg": "svg/doc_new.svg",
+      "svg_sha256": "971f356a1e26c403c7eedbd5a8e6922964c74984048ce8e19b77497c5d24945b",
+      "png": {
+        "dark": {
+          "16": "png/dark/16/doc_new.png",
+          "24": "png/dark/24/doc_new.png",
+          "32": "png/dark/32/doc_new.png",
+          "48": "png/dark/48/doc_new.png",
+          "64": "png/dark/64/doc_new.png"
+        },
+        "light": {
+          "16": "png/light/16/doc_new.png",
+          "24": "png/light/24/doc_new.png",
+          "32": "png/light/32/doc_new.png",
+          "48": "png/light/48/doc_new.png",
+          "64": "png/light/64/doc_new.png"
+        }
+      }
+    },
+    {
+      "action_id": "doc.load",
+      "label": "Open document",
+      "hover_description": "Open document: Choose a CAD document to validate and load.",
+      "operator_hint": "mcad.load_document",
+      "file_stem": "doc_load",
+      "availability": "asset_only_unwired",
+      "source": {
+        "kind": "google",
+        "name": "Google Material Symbols Outlined",
+        "symbol": "folder_open",
+        "license": "Apache-2.0",
+        "license_file": "licenses/Apache-2.0.txt",
+        "url": "https://github.com/google/material-design-icons/blob/49d4db35df873165d6bd6ba09b063c7dafbac2f4/symbols/web/folder_open/materialsymbolsoutlined/folder_open_24px.svg",
+        "upstream_commit": "49d4db35df873165d6bd6ba09b063c7dafbac2f4",
+        "upstream_git_blob_sha": "65b7a9f81e530ffe4fbed7e25880a48076d46da9",
+        "upstream_file": "vendor/google/folder_open.svg",
+        "upstream_sha256": "0bc856c7bb7bbd1b86b42b6a0c5d242d6759086c910f52e4a549139fb25d4f14",
+        "modifications": "Normalized coordinates to a 24-unit viewBox; currentColor; theme recolor; PNG rasterization. Path geometry unchanged."
+      },
+      "svg": "svg/doc_load.svg",
+      "svg_sha256": "75627aa3d0ffadffab19c10315a04d322744dda27df91f7170d296294b4ec2e7",
+      "png": {
+        "dark": {
+          "16": "png/dark/16/doc_load.png",
+          "24": "png/dark/24/doc_load.png",
+          "32": "png/dark/32/doc_load.png",
+          "48": "png/dark/48/doc_load.png",
+          "64": "png/dark/64/doc_load.png"
+        },
+        "light": {
+          "16": "png/light/16/doc_load.png",
+          "24": "png/light/24/doc_load.png",
+          "32": "png/light/32/doc_load.png",
+          "48": "png/light/48/doc_load.png",
+          "64": "png/light/64/doc_load.png"
+        }
+      }
+    },
+    {
+      "action_id": "doc.save",
+      "label": "Save document",
+      "hover_description": "Save document: Save the CAD parameters and feature history to a file.",
+      "operator_hint": "mcad.save_document",
+      "file_stem": "doc_save",
+      "availability": "asset_only_unwired",
+      "source": {
+        "kind": "google",
+        "name": "Google Material Symbols Outlined",
+        "symbol": "save",
+        "license": "Apache-2.0",
+        "license_file": "licenses/Apache-2.0.txt",
+        "url": "https://github.com/google/material-design-icons/blob/49d4db35df873165d6bd6ba09b063c7dafbac2f4/symbols/web/save/materialsymbolsoutlined/save_24px.svg",
+        "upstream_commit": "49d4db35df873165d6bd6ba09b063c7dafbac2f4",
+        "upstream_git_blob_sha": "9cc945f49f5e780f89a62ddcb1a6efbe6c817c55",
+        "upstream_file": "vendor/google/save.svg",
+        "upstream_sha256": "3d34bab9e571f0fc0f840662d178377237f5906e87e8ff295dd04e07b8ceea35",
+        "modifications": "Normalized coordinates to a 24-unit viewBox; currentColor; theme recolor; PNG rasterization. Path geometry unchanged."
+      },
+      "svg": "svg/doc_save.svg",
+      "svg_sha256": "6e1e6615eba74de901c297a5c428d604d60aa3a24e34aaa3da01a227adb43f86",
+      "png": {
+        "dark": {
+          "16": "png/dark/16/doc_save.png",
+          "24": "png/dark/24/doc_save.png",
+          "32": "png/dark/32/doc_save.png",
+          "48": "png/dark/48/doc_save.png",
+          "64": "png/dark/64/doc_save.png"
+        },
+        "light": {
+          "16": "png/light/16/doc_save.png",
+          "24": "png/light/24/doc_save.png",
+          "32": "png/light/32/doc_save.png",
+          "48": "png/light/48/doc_save.png",
+          "64": "png/light/64/doc_save.png"
+        }
+      }
+    },
+    {
+      "action_id": "session.undo",
+      "label": "Undo",
+      "hover_description": "Undo: Reverse the last editing action in this session.",
+      "file_stem": "session_undo",
+      "availability": "asset_only_unwired",
+      "source": {
+        "kind": "google",
+        "name": "Google Material Symbols Outlined",
+        "symbol": "undo",
+        "license": "Apache-2.0",
+        "license_file": "licenses/Apache-2.0.txt",
+        "url": "https://github.com/google/material-design-icons/blob/49d4db35df873165d6bd6ba09b063c7dafbac2f4/symbols/web/undo/materialsymbolsoutlined/undo_24px.svg",
+        "upstream_commit": "49d4db35df873165d6bd6ba09b063c7dafbac2f4",
+        "upstream_git_blob_sha": "c451e1adc73700bb84d4fd6069fe005880ce1fbf",
+        "upstream_file": "vendor/google/undo.svg",
+        "upstream_sha256": "ed40d5c1ea954d7bd5e292e744b315662252685374dc7a86ed5ad872014244be",
+        "modifications": "Normalized coordinates to a 24-unit viewBox; currentColor; theme recolor; PNG rasterization. Path geometry unchanged."
+      },
+      "svg": "svg/session_undo.svg",
+      "svg_sha256": "8866628917ef58548971fad701ed67f2e851fd4e77b70b36bd681daa2c2b18fa",
+      "png": {
+        "dark": {
+          "16": "png/dark/16/session_undo.png",
+          "24": "png/dark/24/session_undo.png",
+          "32": "png/dark/32/session_undo.png",
+          "48": "png/dark/48/session_undo.png",
+          "64": "png/dark/64/session_undo.png"
+        },
+        "light": {
+          "16": "png/light/16/session_undo.png",
+          "24": "png/light/24/session_undo.png",
+          "32": "png/light/32/session_undo.png",
+          "48": "png/light/48/session_undo.png",
+          "64": "png/light/64/session_undo.png"
+        }
+      }
+    },
+    {
+      "action_id": "session.redo",
+      "label": "Redo",
+      "hover_description": "Redo: Restore the last action undone in this session.",
+      "file_stem": "session_redo",
+      "availability": "asset_only_unwired",
+      "source": {
+        "kind": "google",
+        "name": "Google Material Symbols Outlined",
+        "symbol": "redo",
+        "license": "Apache-2.0",
+        "license_file": "licenses/Apache-2.0.txt",
+        "url": "https://github.com/google/material-design-icons/blob/49d4db35df873165d6bd6ba09b063c7dafbac2f4/symbols/web/redo/materialsymbolsoutlined/redo_24px.svg",
+        "upstream_commit": "49d4db35df873165d6bd6ba09b063c7dafbac2f4",
+        "upstream_git_blob_sha": "94d65b4c8df240a02c938779c89a0fd2f6ac1fef",
+        "upstream_file": "vendor/google/redo.svg",
+        "upstream_sha256": "840dbef868ae7c527bbf13a1bbb31b16b04eed24ce95ee33000c51d5157a4bca",
+        "modifications": "Normalized coordinates to a 24-unit viewBox; currentColor; theme recolor; PNG rasterization. Path geometry unchanged."
+      },
+      "svg": "svg/session_redo.svg",
+      "svg_sha256": "8664e4e14baba8140f155bc2fc929929f77b28eaf39e99fd6f5121c4604685de",
+      "png": {
+        "dark": {
+          "16": "png/dark/16/session_redo.png",
+          "24": "png/dark/24/session_redo.png",
+          "32": "png/dark/32/session_redo.png",
+          "48": "png/dark/48/session_redo.png",
+          "64": "png/dark/64/session_redo.png"
+        },
+        "light": {
+          "16": "png/light/16/session_redo.png",
+          "24": "png/light/24/session_redo.png",
+          "32": "png/light/32/session_redo.png",
+          "48": "png/light/48/session_redo.png",
+          "64": "png/light/64/session_redo.png"
+        }
+      }
+    },
+    {
+      "action_id": "history.regenerate",
+      "label": "Rebuild model",
+      "hover_description": "Rebuild model: Recalculate the CAD result from its saved parameters and feature history.",
+      "operator_hint": "mcad.regenerate",
+      "file_stem": "history_regenerate",
+      "availability": "asset_only_unwired",
+      "source": {
+        "kind": "google",
+        "name": "Google Material Symbols Outlined",
+        "symbol": "refresh",
+        "license": "Apache-2.0",
+        "license_file": "licenses/Apache-2.0.txt",
+        "url": "https://github.com/google/material-design-icons/blob/49d4db35df873165d6bd6ba09b063c7dafbac2f4/symbols/web/refresh/materialsymbolsoutlined/refresh_24px.svg",
+        "upstream_commit": "49d4db35df873165d6bd6ba09b063c7dafbac2f4",
+        "upstream_git_blob_sha": "a7a6bc801bd08b57ee9447990e342c9bc4671139",
+        "upstream_file": "vendor/google/refresh.svg",
+        "upstream_sha256": "e56d7ee330abd6d410cca7778419c524cebacf300c3b6e1b97ca9d0f3c3c1f7c",
+        "modifications": "Normalized coordinates to a 24-unit viewBox; currentColor; theme recolor; PNG rasterization. Path geometry unchanged."
+      },
+      "svg": "svg/history_regenerate.svg",
+      "svg_sha256": "6a1742c54d91257e9c424f6acefce967dc33dd0595554bbe38c88281b268f217",
+      "png": {
+        "dark": {
+          "16": "png/dark/16/history_regenerate.png",
+          "24": "png/dark/24/history_regenerate.png",
+          "32": "png/dark/32/history_regenerate.png",
+          "48": "png/dark/48/history_regenerate.png",
+          "64": "png/dark/64/history_regenerate.png"
+        },
+        "light": {
+          "16": "png/light/16/history_regenerate.png",
+          "24": "png/light/24/history_regenerate.png",
+          "32": "png/light/32/history_regenerate.png",
+          "48": "png/light/48/history_regenerate.png",
+          "64": "png/light/64/history_regenerate.png"
+        }
+      }
+    },
+    {
+      "action_id": "history.inspect",
+      "label": "Feature history",
+      "hover_description": "Feature history: Show the operations that define this CAD model.",
+      "file_stem": "history_inspect",
+      "availability": "asset_only_unwired",
+      "source": {
+        "kind": "google",
+        "name": "Google Material Symbols Outlined",
+        "symbol": "history",
+        "license": "Apache-2.0",
+        "license_file": "licenses/Apache-2.0.txt",
+        "url": "https://github.com/google/material-design-icons/blob/49d4db35df873165d6bd6ba09b063c7dafbac2f4/symbols/web/history/materialsymbolsoutlined/history_24px.svg",
+        "upstream_commit": "49d4db35df873165d6bd6ba09b063c7dafbac2f4",
+        "upstream_git_blob_sha": "2d8124b474acacab437409df3185de12793b5a43",
+        "upstream_file": "vendor/google/history.svg",
+        "upstream_sha256": "9dbbac013fd1a1fa4677670e64164f953647e32878c2870909a3e0910f28b0d9",
+        "modifications": "Normalized coordinates to a 24-unit viewBox; currentColor; theme recolor; PNG rasterization. Path geometry unchanged."
+      },
+      "svg": "svg/history_inspect.svg",
+      "svg_sha256": "1cb2e6047066ae0d5de72a379fba73377f84bdec174f805f451c78da99f81dbf",
+      "png": {
+        "dark": {
+          "16": "png/dark/16/history_inspect.png",
+          "24": "png/dark/24/history_inspect.png",
+          "32": "png/dark/32/history_inspect.png",
+          "48": "png/dark/48/history_inspect.png",
+          "64": "png/dark/64/history_inspect.png"
+        },
+        "light": {
+          "16": "png/light/16/history_inspect.png",
+          "24": "png/light/24/history_inspect.png",
+          "32": "png/light/32/history_inspect.png",
+          "48": "png/light/48/history_inspect.png",
+          "64": "png/light/64/history_inspect.png"
+        }
+      }
+    },
+    {
+      "action_id": "view.focus",
+      "label": "Frame CAD result",
+      "hover_description": "Frame CAD result: Isolate and fit the CAD result in the viewport.",
+      "operator_hint": "mcad.focus_result",
+      "file_stem": "view_focus",
+      "availability": "asset_only_unwired",
+      "source": {
+        "kind": "google",
+        "name": "Google Material Symbols Outlined",
+        "symbol": "center_focus_strong",
+        "license": "Apache-2.0",
+        "license_file": "licenses/Apache-2.0.txt",
+        "url": "https://github.com/google/material-design-icons/blob/49d4db35df873165d6bd6ba09b063c7dafbac2f4/symbols/web/center_focus_strong/materialsymbolsoutlined/center_focus_strong_24px.svg",
+        "upstream_commit": "49d4db35df873165d6bd6ba09b063c7dafbac2f4",
+        "upstream_git_blob_sha": "73b9506062b969f4b10f0ec28fd4688b40fc8c32",
+        "upstream_file": "vendor/google/center_focus_strong.svg",
+        "upstream_sha256": "461ae10b48df0789c3e9a0be5355e923d219b07909a2cef7afc533e5575c9f92",
+        "modifications": "Normalized coordinates to a 24-unit viewBox; currentColor; theme recolor; PNG rasterization. Path geometry unchanged."
+      },
+      "svg": "svg/view_focus.svg",
+      "svg_sha256": "d744b75afd20f5000c95d7fe5bce62d1978340c0b5df61764a58baa3425f3140",
+      "png": {
+        "dark": {
+          "16": "png/dark/16/view_focus.png",
+          "24": "png/dark/24/view_focus.png",
+          "32": "png/dark/32/view_focus.png",
+          "48": "png/dark/48/view_focus.png",
+          "64": "png/dark/64/view_focus.png"
+        },
+        "light": {
+          "16": "png/light/16/view_focus.png",
+          "24": "png/light/24/view_focus.png",
+          "32": "png/light/32/view_focus.png",
+          "48": "png/light/48/view_focus.png",
+          "64": "png/light/64/view_focus.png"
+        }
+      }
+    },
+    {
+      "action_id": "view.whole_scene",
+      "label": "Show whole scene",
+      "hover_description": "Show whole scene: Leave the isolated CAD view and frame all scene objects.",
+      "operator_hint": "mcad.show_scene",
+      "file_stem": "view_whole_scene",
+      "availability": "asset_only_unwired",
+      "source": {
+        "kind": "google",
+        "name": "Google Material Symbols Outlined",
+        "symbol": "select_all",
+        "license": "Apache-2.0",
+        "license_file": "licenses/Apache-2.0.txt",
+        "url": "https://github.com/google/material-design-icons/blob/49d4db35df873165d6bd6ba09b063c7dafbac2f4/symbols/web/select_all/materialsymbolsoutlined/select_all_24px.svg",
+        "upstream_commit": "49d4db35df873165d6bd6ba09b063c7dafbac2f4",
+        "upstream_git_blob_sha": "ac997c907c8642a95bb5d7078c664d4f345120fe",
+        "upstream_file": "vendor/google/select_all.svg",
+        "upstream_sha256": "d3a698a7826bdf43266da6facb81471602d1a80af39bdc7a1fe3a678ff6571f0",
+        "modifications": "Normalized coordinates to a 24-unit viewBox; currentColor; theme recolor; PNG rasterization. Path geometry unchanged."
+      },
+      "svg": "svg/view_whole_scene.svg",
+      "svg_sha256": "cb06ab5909ae19d8f7cdc1562fb4456e317afb95ab149ea52ef9b316491f53de",
+      "png": {
+        "dark": {
+          "16": "png/dark/16/view_whole_scene.png",
+          "24": "png/dark/24/view_whole_scene.png",
+          "32": "png/dark/32/view_whole_scene.png",
+          "48": "png/dark/48/view_whole_scene.png",
+          "64": "png/dark/64/view_whole_scene.png"
+        },
+        "light": {
+          "16": "png/light/16/view_whole_scene.png",
+          "24": "png/light/24/view_whole_scene.png",
+          "32": "png/light/32/view_whole_scene.png",
+          "48": "png/light/48/view_whole_scene.png",
+          "64": "png/light/64/view_whole_scene.png"
+        }
+      }
+    },
+    {
+      "action_id": "verify.model",
+      "label": "Check model",
+      "hover_description": "Check model: Run the available geometry checks and show their results.",
+      "file_stem": "verify_model",
+      "availability": "asset_only_unwired",
+      "source": {
+        "kind": "google",
+        "name": "Google Material Symbols Outlined",
+        "symbol": "fact_check",
+        "license": "Apache-2.0",
+        "license_file": "licenses/Apache-2.0.txt",
+        "url": "https://github.com/google/material-design-icons/blob/49d4db35df873165d6bd6ba09b063c7dafbac2f4/symbols/web/fact_check/materialsymbolsoutlined/fact_check_24px.svg",
+        "upstream_commit": "49d4db35df873165d6bd6ba09b063c7dafbac2f4",
+        "upstream_git_blob_sha": "7b2983cf26d5c865a4d906cef2008ed65f2330de",
+        "upstream_file": "vendor/google/fact_check.svg",
+        "upstream_sha256": "5b869147b842c3cf1f7e5d0bb758fd2a218a6d68097147d744d13230200cb2af",
+        "modifications": "Normalized coordinates to a 24-unit viewBox; currentColor; theme recolor; PNG rasterization. Path geometry unchanged."
+      },
+      "svg": "svg/verify_model.svg",
+      "svg_sha256": "2536bdcc4af5e6dd50e71d71ffe388c23c9045f0fe4204285e5f43bc04d5ec81",
+      "png": {
+        "dark": {
+          "16": "png/dark/16/verify_model.png",
+          "24": "png/dark/24/verify_model.png",
+          "32": "png/dark/32/verify_model.png",
+          "48": "png/dark/48/verify_model.png",
+          "64": "png/dark/64/verify_model.png"
+        },
+        "light": {
+          "16": "png/light/16/verify_model.png",
+          "24": "png/light/24/verify_model.png",
+          "32": "png/light/32/verify_model.png",
+          "48": "png/light/48/verify_model.png",
+          "64": "png/light/64/verify_model.png"
+        }
+      }
+    },
+    {
+      "action_id": "file.export",
+      "label": "Export CAD result",
+      "hover_description": "Export CAD result: Choose a file format and export the current checked result.",
+      "file_stem": "file_export",
+      "availability": "asset_only_unwired",
+      "source": {
+        "kind": "google",
+        "name": "Google Material Symbols Outlined",
+        "symbol": "output",
+        "license": "Apache-2.0",
+        "license_file": "licenses/Apache-2.0.txt",
+        "url": "https://github.com/google/material-design-icons/blob/49d4db35df873165d6bd6ba09b063c7dafbac2f4/symbols/web/output/materialsymbolsoutlined/output_24px.svg",
+        "upstream_commit": "49d4db35df873165d6bd6ba09b063c7dafbac2f4",
+        "upstream_git_blob_sha": "efed99e347a4f81f7760654c2bae0ab7e9ca78e6",
+        "upstream_file": "vendor/google/output.svg",
+        "upstream_sha256": "1494087dbce5a8cb13da3ba1e1c07c6978809019ed93ee2351516194b25d9b8c",
+        "modifications": "Normalized coordinates to a 24-unit viewBox; currentColor; theme recolor; PNG rasterization. Path geometry unchanged."
+      },
+      "svg": "svg/file_export.svg",
+      "svg_sha256": "700caeb0749165b796b9c2779f6140b1812be91a1c018a5a9cfa735463e1af25",
+      "png": {
+        "dark": {
+          "16": "png/dark/16/file_export.png",
+          "24": "png/dark/24/file_export.png",
+          "32": "png/dark/32/file_export.png",
+          "48": "png/dark/48/file_export.png",
+          "64": "png/dark/64/file_export.png"
+        },
+        "light": {
+          "16": "png/light/16/file_export.png",
+          "24": "png/light/24/file_export.png",
+          "32": "png/light/32/file_export.png",
+          "48": "png/light/48/file_export.png",
+          "64": "png/light/64/file_export.png"
+        }
+      }
+    },
+    {
+      "action_id": "edit.apply",
+      "label": "Apply",
+      "hover_description": "Apply: Commit the values in this operation and update the model.",
+      "file_stem": "edit_apply",
+      "availability": "asset_only_unwired",
+      "source": {
+        "kind": "google",
+        "name": "Google Material Symbols Outlined",
+        "symbol": "check",
+        "license": "Apache-2.0",
+        "license_file": "licenses/Apache-2.0.txt",
+        "url": "https://github.com/google/material-design-icons/blob/49d4db35df873165d6bd6ba09b063c7dafbac2f4/symbols/web/check/materialsymbolsoutlined/check_24px.svg",
+        "upstream_commit": "49d4db35df873165d6bd6ba09b063c7dafbac2f4",
+        "upstream_git_blob_sha": "1655d12bf37e32e5c2121665cd720b483ad0661c",
+        "upstream_file": "vendor/google/check.svg",
+        "upstream_sha256": "01edd53418816632be08e9565b8ca40d9028c230a8a67baaf4b8a1de20db00e6",
+        "modifications": "Normalized coordinates to a 24-unit viewBox; currentColor; theme recolor; PNG rasterization. Path geometry unchanged."
+      },
+      "svg": "svg/edit_apply.svg",
+      "svg_sha256": "27c3a65637826a34f6e659476f9659f71be7090bbd146b2d5c061c87d61b6bf9",
+      "png": {
+        "dark": {
+          "16": "png/dark/16/edit_apply.png",
+          "24": "png/dark/24/edit_apply.png",
+          "32": "png/dark/32/edit_apply.png",
+          "48": "png/dark/48/edit_apply.png",
+          "64": "png/dark/64/edit_apply.png"
+        },
+        "light": {
+          "16": "png/light/16/edit_apply.png",
+          "24": "png/light/24/edit_apply.png",
+          "32": "png/light/32/edit_apply.png",
+          "48": "png/light/48/edit_apply.png",
+          "64": "png/light/64/edit_apply.png"
+        }
+      }
+    },
+    {
+      "action_id": "edit.cancel",
+      "label": "Cancel",
+      "hover_description": "Cancel: Close this operation without applying its changes.",
+      "file_stem": "edit_cancel",
+      "availability": "asset_only_unwired",
+      "source": {
+        "kind": "google",
+        "name": "Google Material Symbols Outlined",
+        "symbol": "close",
+        "license": "Apache-2.0",
+        "license_file": "licenses/Apache-2.0.txt",
+        "url": "https://github.com/google/material-design-icons/blob/49d4db35df873165d6bd6ba09b063c7dafbac2f4/symbols/web/close/materialsymbolsoutlined/close_24px.svg",
+        "upstream_commit": "49d4db35df873165d6bd6ba09b063c7dafbac2f4",
+        "upstream_git_blob_sha": "5a60c58e77bd20036a345d0befd31fc5741317e4",
+        "upstream_file": "vendor/google/close.svg",
+        "upstream_sha256": "a82592b0faa0b104a4d4b0530bb05c6a4bfed5728f5aad03ae8e7a19f32b5511",
+        "modifications": "Normalized coordinates to a 24-unit viewBox; currentColor; theme recolor; PNG rasterization. Path geometry unchanged."
+      },
+      "svg": "svg/edit_cancel.svg",
+      "svg_sha256": "b072bb7a3bb4f6f309b98c68e0e25c60fea8b4fbeae4e593a4d61b0564d1a0d0",
+      "png": {
+        "dark": {
+          "16": "png/dark/16/edit_cancel.png",
+          "24": "png/dark/24/edit_cancel.png",
+          "32": "png/dark/32/edit_cancel.png",
+          "48": "png/dark/48/edit_cancel.png",
+          "64": "png/dark/64/edit_cancel.png"
+        },
+        "light": {
+          "16": "png/light/16/edit_cancel.png",
+          "24": "png/light/24/edit_cancel.png",
+          "32": "png/light/32/edit_cancel.png",
+          "48": "png/light/48/edit_cancel.png",
+          "64": "png/light/64/edit_cancel.png"
+        }
+      }
+    },
+    {
+      "action_id": "help.open",
+      "label": "Help",
+      "hover_description": "Help: Show instructions, required inputs, and current limitations for this tool.",
+      "operator_hint": "mcad.help",
+      "file_stem": "help_open",
+      "availability": "asset_only_unwired",
+      "source": {
+        "kind": "google",
+        "name": "Google Material Symbols Outlined",
+        "symbol": "help",
+        "license": "Apache-2.0",
+        "license_file": "licenses/Apache-2.0.txt",
+        "url": "https://github.com/google/material-design-icons/blob/49d4db35df873165d6bd6ba09b063c7dafbac2f4/symbols/web/help/materialsymbolsoutlined/help_24px.svg",
+        "upstream_commit": "49d4db35df873165d6bd6ba09b063c7dafbac2f4",
+        "upstream_git_blob_sha": "0f10691c55297418a97122686e2f5a8bf889ee29",
+        "upstream_file": "vendor/google/help.svg",
+        "upstream_sha256": "9f2bdd969cefc5843f95ccbd560c4281b1eec87c78b68bd4daf694d19fc9c5f9",
+        "modifications": "Normalized coordinates to a 24-unit viewBox; currentColor; theme recolor; PNG rasterization. Path geometry unchanged."
+      },
+      "svg": "svg/help_open.svg",
+      "svg_sha256": "fb2bef5f6cb6b713b10de87ad513faefc522b96d3ce0720d16d2f42016aa9374",
+      "png": {
+        "dark": {
+          "16": "png/dark/16/help_open.png",
+          "24": "png/dark/24/help_open.png",
+          "32": "png/dark/32/help_open.png",
+          "48": "png/dark/48/help_open.png",
+          "64": "png/dark/64/help_open.png"
+        },
+        "light": {
+          "16": "png/light/16/help_open.png",
+          "24": "png/light/24/help_open.png",
+          "32": "png/light/32/help_open.png",
+          "48": "png/light/48/help_open.png",
+          "64": "png/light/64/help_open.png"
+        }
+      }
+    },
+    {
+      "action_id": "setup.settings",
+      "label": "CAD settings",
+      "hover_description": "CAD settings: Review the setup used by the Mechanical CAD add-on.",
+      "file_stem": "setup_settings",
+      "availability": "asset_only_unwired",
+      "source": {
+        "kind": "google",
+        "name": "Google Material Symbols Outlined",
+        "symbol": "settings",
+        "license": "Apache-2.0",
+        "license_file": "licenses/Apache-2.0.txt",
+        "url": "https://github.com/google/material-design-icons/blob/49d4db35df873165d6bd6ba09b063c7dafbac2f4/symbols/web/settings/materialsymbolsoutlined/settings_24px.svg",
+        "upstream_commit": "49d4db35df873165d6bd6ba09b063c7dafbac2f4",
+        "upstream_git_blob_sha": "817c782f0591e478421a5d83f17c3ba07b3532f7",
+        "upstream_file": "vendor/google/settings.svg",
+        "upstream_sha256": "6aebb4a88b40a5bf1ce378ca532e4a885aedc402a0574562c6ed4ded03360fd2",
+        "modifications": "Normalized coordinates to a 24-unit viewBox; currentColor; theme recolor; PNG rasterization. Path geometry unchanged."
+      },
+      "svg": "svg/setup_settings.svg",
+      "svg_sha256": "109a3db012fe4d001c626e7f617df37a326e97680417a7aa884998201d5e4974",
+      "png": {
+        "dark": {
+          "16": "png/dark/16/setup_settings.png",
+          "24": "png/dark/24/setup_settings.png",
+          "32": "png/dark/32/setup_settings.png",
+          "48": "png/dark/48/setup_settings.png",
+          "64": "png/dark/64/setup_settings.png"
+        },
+        "light": {
+          "16": "png/light/16/setup_settings.png",
+          "24": "png/light/24/setup_settings.png",
+          "32": "png/light/32/setup_settings.png",
+          "48": "png/light/48/setup_settings.png",
+          "64": "png/light/64/setup_settings.png"
+        }
+      }
+    },
+    {
+      "action_id": "status.warning",
+      "label": "Warning",
+      "hover_description": "Warning: Read the accompanying explanation before continuing.",
+      "usage": "Status only; always accompany with specific visible text.",
+      "file_stem": "status_warning",
+      "availability": "asset_only_unwired",
+      "source": {
+        "kind": "google",
+        "name": "Google Material Symbols Outlined",
+        "symbol": "warning",
+        "license": "Apache-2.0",
+        "license_file": "licenses/Apache-2.0.txt",
+        "url": "https://github.com/google/material-design-icons/blob/49d4db35df873165d6bd6ba09b063c7dafbac2f4/symbols/web/warning/materialsymbolsoutlined/warning_24px.svg",
+        "upstream_commit": "49d4db35df873165d6bd6ba09b063c7dafbac2f4",
+        "upstream_git_blob_sha": "238299e6064bc5d631fa4b98f4401a9e2c41e416",
+        "upstream_file": "vendor/google/warning.svg",
+        "upstream_sha256": "0212c59cfa1e2da887b0b36c7d89886de94b019feaaba5c063ec8dc7d32be436",
+        "modifications": "Normalized coordinates to a 24-unit viewBox; currentColor; theme recolor; PNG rasterization. Path geometry unchanged."
+      },
+      "svg": "svg/status_warning.svg",
+      "svg_sha256": "d2637e94590d37ea3b9e697f8a92de3d321b690eeb515781eacf46027d1ba22a",
+      "png": {
+        "dark": {
+          "16": "png/dark/16/status_warning.png",
+          "24": "png/dark/24/status_warning.png",
+          "32": "png/dark/32/status_warning.png",
+          "48": "png/dark/48/status_warning.png",
+          "64": "png/dark/64/status_warning.png"
+        },
+        "light": {
+          "16": "png/light/16/status_warning.png",
+          "24": "png/light/24/status_warning.png",
+          "32": "png/light/32/status_warning.png",
+          "48": "png/light/48/status_warning.png",
+          "64": "png/light/64/status_warning.png"
+        }
+      }
+    },
+    {
+      "action_id": "status.failure",
+      "label": "Failed",
+      "hover_description": "Failed: The operation did not complete. Read the error and check its inputs.",
+      "usage": "Status only; always accompany with specific visible text.",
+      "file_stem": "status_failure",
+      "availability": "asset_only_unwired",
+      "source": {
+        "kind": "google",
+        "name": "Google Material Symbols Outlined",
+        "symbol": "error",
+        "license": "Apache-2.0",
+        "license_file": "licenses/Apache-2.0.txt",
+        "url": "https://github.com/google/material-design-icons/blob/49d4db35df873165d6bd6ba09b063c7dafbac2f4/symbols/web/error/materialsymbolsoutlined/error_24px.svg",
+        "upstream_commit": "49d4db35df873165d6bd6ba09b063c7dafbac2f4",
+        "upstream_git_blob_sha": "86c4555326886c711aa657b921eaf86b338e69c6",
+        "upstream_file": "vendor/google/error.svg",
+        "upstream_sha256": "f02b30c23e0c004e47a128526ab417832b2fd475c4cfbcdfff58e9df8f6c30ab",
+        "modifications": "Normalized coordinates to a 24-unit viewBox; currentColor; theme recolor; PNG rasterization. Path geometry unchanged."
+      },
+      "svg": "svg/status_failure.svg",
+      "svg_sha256": "7f7ef494652f01f0b6b35281d049881e63064c8c31497bf7ff555bd1d535a121",
+      "png": {
+        "dark": {
+          "16": "png/dark/16/status_failure.png",
+          "24": "png/dark/24/status_failure.png",
+          "32": "png/dark/32/status_failure.png",
+          "48": "png/dark/48/status_failure.png",
+          "64": "png/dark/64/status_failure.png"
+        },
+        "light": {
+          "16": "png/light/16/status_failure.png",
+          "24": "png/light/24/status_failure.png",
+          "32": "png/light/32/status_failure.png",
+          "48": "png/light/48/status_failure.png",
+          "64": "png/light/64/status_failure.png"
+        }
+      }
+    },
+    {
+      "action_id": "status.success",
+      "label": "Passed",
+      "hover_description": "Passed: The displayed check completed successfully. Read the check details for its scope.",
+      "usage": "Status only; must identify which check actually passed.",
+      "file_stem": "status_success",
+      "availability": "asset_only_unwired",
+      "source": {
+        "kind": "google",
+        "name": "Google Material Symbols Outlined",
+        "symbol": "check_circle",
+        "license": "Apache-2.0",
+        "license_file": "licenses/Apache-2.0.txt",
+        "url": "https://github.com/google/material-design-icons/blob/49d4db35df873165d6bd6ba09b063c7dafbac2f4/symbols/web/check_circle/materialsymbolsoutlined/check_circle_24px.svg",
+        "upstream_commit": "49d4db35df873165d6bd6ba09b063c7dafbac2f4",
+        "upstream_git_blob_sha": "802ed5650ced040d78d04b123d277923228f91ac",
+        "upstream_file": "vendor/google/check_circle.svg",
+        "upstream_sha256": "42bf0950bc12ecf7952a8c3be86e0131f225095a7dc6c824a659a13df442e373",
+        "modifications": "Normalized coordinates to a 24-unit viewBox; currentColor; theme recolor; PNG rasterization. Path geometry unchanged."
+      },
+      "svg": "svg/status_success.svg",
+      "svg_sha256": "aaaa5384460e2c7eb1ac25d03c95e13117d01e980bf0734e44c01d9a6faa7277",
+      "png": {
+        "dark": {
+          "16": "png/dark/16/status_success.png",
+          "24": "png/dark/24/status_success.png",
+          "32": "png/dark/32/status_success.png",
+          "48": "png/dark/48/status_success.png",
+          "64": "png/dark/64/status_success.png"
+        },
+        "light": {
+          "16": "png/light/16/status_success.png",
+          "24": "png/light/24/status_success.png",
+          "32": "png/light/32/status_success.png",
+          "48": "png/light/48/status_success.png",
+          "64": "png/light/64/status_success.png"
+        }
+      }
+    },
+    {
+      "action_id": "sketch.rectangle",
+      "label": "Rectangle sketch",
+      "hover_description": "Rectangle sketch: Create a closed XY profile from its width, height, and lower-left corner, in millimetres.",
+      "operator_hint": "mcad.add_rectangle",
+      "file_stem": "sketch_rectangle",
+      "availability": "asset_only_unwired",
+      "source": {
+        "kind": "original",
+        "name": "Mechanical CAD original vector geometry",
+        "license": "GPL-3.0-or-later",
+        "license_file": "licenses/GPL-3.0-or-later.txt",
+        "source_file": "original_geometry.json",
+        "created_on": "2026-10-16",
+        "modifications": "Original repository-native vector geometry created for this project; no third-party CAD artwork used."
+      },
+      "svg": "svg/sketch_rectangle.svg",
+      "svg_sha256": "95d3d206cd13effb10c49f103f27b58501509f4c6b91d458e50751ccc906aa7b",
+      "png": {
+        "dark": {
+          "16": "png/dark/16/sketch_rectangle.png",
+          "24": "png/dark/24/sketch_rectangle.png",
+          "32": "png/dark/32/sketch_rectangle.png",
+          "48": "png/dark/48/sketch_rectangle.png",
+          "64": "png/dark/64/sketch_rectangle.png"
+        },
+        "light": {
+          "16": "png/light/16/sketch_rectangle.png",
+          "24": "png/light/24/sketch_rectangle.png",
+          "32": "png/light/32/sketch_rectangle.png",
+          "48": "png/light/48/sketch_rectangle.png",
+          "64": "png/light/64/sketch_rectangle.png"
+        }
+      }
+    },
+    {
+      "action_id": "sketch.circle",
+      "label": "Circle sketch",
+      "hover_description": "Circle sketch: Create a closed XY profile from its center and a positive radius, in millimetres.",
+      "operator_hint": "mcad.add_circle",
+      "file_stem": "sketch_circle",
+      "availability": "asset_only_unwired",
+      "source": {
+        "kind": "original",
+        "name": "Mechanical CAD original vector geometry",
+        "license": "GPL-3.0-or-later",
+        "license_file": "licenses/GPL-3.0-or-later.txt",
+        "source_file": "original_geometry.json",
+        "created_on": "2026-10-16",
+        "modifications": "Original repository-native vector geometry created for this project; no third-party CAD artwork used."
+      },
+      "svg": "svg/sketch_circle.svg",
+      "svg_sha256": "f0b3dc8f414b28b51ffdde0ff556ee397db3269c7d45cab86f486256827a3df3",
+      "png": {
+        "dark": {
+          "16": "png/dark/16/sketch_circle.png",
+          "24": "png/dark/24/sketch_circle.png",
+          "32": "png/dark/32/sketch_circle.png",
+          "48": "png/dark/48/sketch_circle.png",
+          "64": "png/dark/64/sketch_circle.png"
+        },
+        "light": {
+          "16": "png/light/16/sketch_circle.png",
+          "24": "png/light/24/sketch_circle.png",
+          "32": "png/light/32/sketch_circle.png",
+          "48": "png/light/48/sketch_circle.png",
+          "64": "png/light/64/sketch_circle.png"
+        }
+      }
+    },
+    {
+      "action_id": "sketch.line",
+      "label": "Sketch line",
+      "hover_description": "Sketch line: Draw a line between two endpoints on the active sketch plane.",
+      "file_stem": "sketch_line",
+      "availability": "asset_only_unwired",
+      "source": {
+        "kind": "original",
+        "name": "Mechanical CAD original vector geometry",
+        "license": "GPL-3.0-or-later",
+        "license_file": "licenses/GPL-3.0-or-later.txt",
+        "source_file": "original_geometry.json",
+        "created_on": "2026-10-16",
+        "modifications": "Original repository-native vector geometry created for this project; no third-party CAD artwork used."
+      },
+      "svg": "svg/sketch_line.svg",
+      "svg_sha256": "4ec4c5be91ed1a21416f114f8ec6e58d27c6153ebb5515822c1eadb78ba77f76",
+      "png": {
+        "dark": {
+          "16": "png/dark/16/sketch_line.png",
+          "24": "png/dark/24/sketch_line.png",
+          "32": "png/dark/32/sketch_line.png",
+          "48": "png/dark/48/sketch_line.png",
+          "64": "png/dark/64/sketch_line.png"
+        },
+        "light": {
+          "16": "png/light/16/sketch_line.png",
+          "24": "png/light/24/sketch_line.png",
+          "32": "png/light/32/sketch_line.png",
+          "48": "png/light/48/sketch_line.png",
+          "64": "png/light/64/sketch_line.png"
+        }
+      }
+    },
+    {
+      "action_id": "sketch.dimension",
+      "label": "Sketch dimension",
+      "hover_description": "Sketch dimension: Set a distance between the selected sketch points or edges.",
+      "file_stem": "sketch_dimension",
+      "availability": "asset_only_unwired",
+      "source": {
+        "kind": "original",
+        "name": "Mechanical CAD original vector geometry",
+        "license": "GPL-3.0-or-later",
+        "license_file": "licenses/GPL-3.0-or-later.txt",
+        "source_file": "original_geometry.json",
+        "created_on": "2026-10-16",
+        "modifications": "Original repository-native vector geometry created for this project; no third-party CAD artwork used."
+      },
+      "svg": "svg/sketch_dimension.svg",
+      "svg_sha256": "a8ce6b84dbe8f9d13e4ddb1d8d42479fdb1955fd3067c89e1e4c3362d3a49a9a",
+      "png": {
+        "dark": {
+          "16": "png/dark/16/sketch_dimension.png",
+          "24": "png/dark/24/sketch_dimension.png",
+          "32": "png/dark/32/sketch_dimension.png",
+          "48": "png/dark/48/sketch_dimension.png",
+          "64": "png/dark/64/sketch_dimension.png"
+        },
+        "light": {
+          "16": "png/light/16/sketch_dimension.png",
+          "24": "png/light/24/sketch_dimension.png",
+          "32": "png/light/32/sketch_dimension.png",
+          "48": "png/light/48/sketch_dimension.png",
+          "64": "png/light/64/sketch_dimension.png"
+        }
+      }
+    },
+    {
+      "action_id": "constraint.coincident",
+      "label": "Coincident constraint",
+      "hover_description": "Coincident constraint: Make two selected sketch points occupy the same position.",
+      "file_stem": "constraint_coincident",
+      "availability": "asset_only_unwired",
+      "source": {
+        "kind": "original",
+        "name": "Mechanical CAD original vector geometry",
+        "license": "GPL-3.0-or-later",
+        "license_file": "licenses/GPL-3.0-or-later.txt",
+        "source_file": "original_geometry.json",
+        "created_on": "2026-10-16",
+        "modifications": "Original repository-native vector geometry created for this project; no third-party CAD artwork used."
+      },
+      "svg": "svg/constraint_coincident.svg",
+      "svg_sha256": "b1f409a358fdfd1b99d97fb07149ad73ca01a01589d4b3226b9f3182683e5f77",
+      "png": {
+        "dark": {
+          "16": "png/dark/16/constraint_coincident.png",
+          "24": "png/dark/24/constraint_coincident.png",
+          "32": "png/dark/32/constraint_coincident.png",
+          "48": "png/dark/48/constraint_coincident.png",
+          "64": "png/dark/64/constraint_coincident.png"
+        },
+        "light": {
+          "16": "png/light/16/constraint_coincident.png",
+          "24": "png/light/24/constraint_coincident.png",
+          "32": "png/light/32/constraint_coincident.png",
+          "48": "png/light/48/constraint_coincident.png",
+          "64": "png/light/64/constraint_coincident.png"
+        }
+      }
+    },
+    {
+      "action_id": "constraint.horizontal",
+      "label": "Horizontal constraint",
+      "hover_description": "Horizontal constraint: Keep the selected sketch line horizontal in its sketch plane.",
+      "file_stem": "constraint_horizontal",
+      "availability": "asset_only_unwired",
+      "source": {
+        "kind": "original",
+        "name": "Mechanical CAD original vector geometry",
+        "license": "GPL-3.0-or-later",
+        "license_file": "licenses/GPL-3.0-or-later.txt",
+        "source_file": "original_geometry.json",
+        "created_on": "2026-10-16",
+        "modifications": "Original repository-native vector geometry created for this project; no third-party CAD artwork used."
+      },
+      "svg": "svg/constraint_horizontal.svg",
+      "svg_sha256": "e71f86848ff444193fee5a252d300c56ef031546dd92c91ce155237bf740b18d",
+      "png": {
+        "dark": {
+          "16": "png/dark/16/constraint_horizontal.png",
+          "24": "png/dark/24/constraint_horizontal.png",
+          "32": "png/dark/32/constraint_horizontal.png",
+          "48": "png/dark/48/constraint_horizontal.png",
+          "64": "png/dark/64/constraint_horizontal.png"
+        },
+        "light": {
+          "16": "png/light/16/constraint_horizontal.png",
+          "24": "png/light/24/constraint_horizontal.png",
+          "32": "png/light/32/constraint_horizontal.png",
+          "48": "png/light/48/constraint_horizontal.png",
+          "64": "png/light/64/constraint_horizontal.png"
+        }
+      }
+    },
+    {
+      "action_id": "constraint.vertical",
+      "label": "Vertical constraint",
+      "hover_description": "Vertical constraint: Keep the selected sketch line vertical in its sketch plane.",
+      "file_stem": "constraint_vertical",
+      "availability": "asset_only_unwired",
+      "source": {
+        "kind": "original",
+        "name": "Mechanical CAD original vector geometry",
+        "license": "GPL-3.0-or-later",
+        "license_file": "licenses/GPL-3.0-or-later.txt",
+        "source_file": "original_geometry.json",
+        "created_on": "2026-10-16",
+        "modifications": "Original repository-native vector geometry created for this project; no third-party CAD artwork used."
+      },
+      "svg": "svg/constraint_vertical.svg",
+      "svg_sha256": "5d4602329402539ad63ff4007d017c632d575695cada8ac19c9eed76d4192923",
+      "png": {
+        "dark": {
+          "16": "png/dark/16/constraint_vertical.png",
+          "24": "png/dark/24/constraint_vertical.png",
+          "32": "png/dark/32/constraint_vertical.png",
+          "48": "png/dark/48/constraint_vertical.png",
+          "64": "png/dark/64/constraint_vertical.png"
+        },
+        "light": {
+          "16": "png/light/16/constraint_vertical.png",
+          "24": "png/light/24/constraint_vertical.png",
+          "32": "png/light/32/constraint_vertical.png",
+          "48": "png/light/48/constraint_vertical.png",
+          "64": "png/light/64/constraint_vertical.png"
+        }
+      }
+    },
+    {
+      "action_id": "constraint.parallel",
+      "label": "Parallel constraint",
+      "hover_description": "Parallel constraint: Keep two selected sketch lines parallel.",
+      "file_stem": "constraint_parallel",
+      "availability": "asset_only_unwired",
+      "source": {
+        "kind": "original",
+        "name": "Mechanical CAD original vector geometry",
+        "license": "GPL-3.0-or-later",
+        "license_file": "licenses/GPL-3.0-or-later.txt",
+        "source_file": "original_geometry.json",
+        "created_on": "2026-10-16",
+        "modifications": "Original repository-native vector geometry created for this project; no third-party CAD artwork used."
+      },
+      "svg": "svg/constraint_parallel.svg",
+      "svg_sha256": "1b58fc5ae3b0815f1101c7aae657fa704a72fcd2c578abf68c15dfd14c79f52d",
+      "png": {
+        "dark": {
+          "16": "png/dark/16/constraint_parallel.png",
+          "24": "png/dark/24/constraint_parallel.png",
+          "32": "png/dark/32/constraint_parallel.png",
+          "48": "png/dark/48/constraint_parallel.png",
+          "64": "png/dark/64/constraint_parallel.png"
+        },
+        "light": {
+          "16": "png/light/16/constraint_parallel.png",
+          "24": "png/light/24/constraint_parallel.png",
+          "32": "png/light/32/constraint_parallel.png",
+          "48": "png/light/48/constraint_parallel.png",
+          "64": "png/light/64/constraint_parallel.png"
+        }
+      }
+    },
+    {
+      "action_id": "constraint.perpendicular",
+      "label": "Perpendicular constraint",
+      "hover_description": "Perpendicular constraint: Keep two selected sketch lines at a right angle.",
+      "file_stem": "constraint_perpendicular",
+      "availability": "asset_only_unwired",
+      "source": {
+        "kind": "original",
+        "name": "Mechanical CAD original vector geometry",
+        "license": "GPL-3.0-or-later",
+        "license_file": "licenses/GPL-3.0-or-later.txt",
+        "source_file": "original_geometry.json",
+        "created_on": "2026-10-16",
+        "modifications": "Original repository-native vector geometry created for this project; no third-party CAD artwork used."
+      },
+      "svg": "svg/constraint_perpendicular.svg",
+      "svg_sha256": "d960b59905b984d2d0b9d48cfcf2988926128075c0a3c705155f1a418f28dbec",
+      "png": {
+        "dark": {
+          "16": "png/dark/16/constraint_perpendicular.png",
+          "24": "png/dark/24/constraint_perpendicular.png",
+          "32": "png/dark/32/constraint_perpendicular.png",
+          "48": "png/dark/48/constraint_perpendicular.png",
+          "64": "png/dark/64/constraint_perpendicular.png"
+        },
+        "light": {
+          "16": "png/light/16/constraint_perpendicular.png",
+          "24": "png/light/24/constraint_perpendicular.png",
+          "32": "png/light/32/constraint_perpendicular.png",
+          "48": "png/light/48/constraint_perpendicular.png",
+          "64": "png/light/64/constraint_perpendicular.png"
+        }
+      }
+    },
+    {
+      "action_id": "constraint.equal",
+      "label": "Equal constraint",
+      "hover_description": "Equal constraint: Give the selected compatible sketch entities equal lengths or radii.",
+      "file_stem": "constraint_equal",
+      "availability": "asset_only_unwired",
+      "source": {
+        "kind": "original",
+        "name": "Mechanical CAD original vector geometry",
+        "license": "GPL-3.0-or-later",
+        "license_file": "licenses/GPL-3.0-or-later.txt",
+        "source_file": "original_geometry.json",
+        "created_on": "2026-10-16",
+        "modifications": "Original repository-native vector geometry created for this project; no third-party CAD artwork used."
+      },
+      "svg": "svg/constraint_equal.svg",
+      "svg_sha256": "3250cc95c6edf57b3db96880ae1ff0c903ab6bdc3b83576aaf936b95cb459570",
+      "png": {
+        "dark": {
+          "16": "png/dark/16/constraint_equal.png",
+          "24": "png/dark/24/constraint_equal.png",
+          "32": "png/dark/32/constraint_equal.png",
+          "48": "png/dark/48/constraint_equal.png",
+          "64": "png/dark/64/constraint_equal.png"
+        },
+        "light": {
+          "16": "png/light/16/constraint_equal.png",
+          "24": "png/light/24/constraint_equal.png",
+          "32": "png/light/32/constraint_equal.png",
+          "48": "png/light/48/constraint_equal.png",
+          "64": "png/light/64/constraint_equal.png"
+        }
+      }
+    },
+    {
+      "action_id": "constraint.tangent",
+      "label": "Tangent constraint",
+      "hover_description": "Tangent constraint: Make the selected supported sketch entities touch with a common direction.",
+      "file_stem": "constraint_tangent",
+      "availability": "asset_only_unwired",
+      "source": {
+        "kind": "original",
+        "name": "Mechanical CAD original vector geometry",
+        "license": "GPL-3.0-or-later",
+        "license_file": "licenses/GPL-3.0-or-later.txt",
+        "source_file": "original_geometry.json",
+        "created_on": "2026-10-16",
+        "modifications": "Original repository-native vector geometry created for this project; no third-party CAD artwork used."
+      },
+      "svg": "svg/constraint_tangent.svg",
+      "svg_sha256": "0b22e27a795a33576b08943c489b4f6c13f8f1643ee9313133f60f88383db9a5",
+      "png": {
+        "dark": {
+          "16": "png/dark/16/constraint_tangent.png",
+          "24": "png/dark/24/constraint_tangent.png",
+          "32": "png/dark/32/constraint_tangent.png",
+          "48": "png/dark/48/constraint_tangent.png",
+          "64": "png/dark/64/constraint_tangent.png"
+        },
+        "light": {
+          "16": "png/light/16/constraint_tangent.png",
+          "24": "png/light/24/constraint_tangent.png",
+          "32": "png/light/32/constraint_tangent.png",
+          "48": "png/light/48/constraint_tangent.png",
+          "64": "png/light/64/constraint_tangent.png"
+        }
+      }
+    },
+    {
+      "action_id": "constraint.fixed",
+      "label": "Fix sketch point",
+      "hover_description": "Fix sketch point: Hold the selected point at its current sketch coordinates.",
+      "file_stem": "constraint_fixed",
+      "availability": "asset_only_unwired",
+      "source": {
+        "kind": "original",
+        "name": "Mechanical CAD original vector geometry",
+        "license": "GPL-3.0-or-later",
+        "license_file": "licenses/GPL-3.0-or-later.txt",
+        "source_file": "original_geometry.json",
+        "created_on": "2026-10-16",
+        "modifications": "Original repository-native vector geometry created for this project; no third-party CAD artwork used."
+      },
+      "svg": "svg/constraint_fixed.svg",
+      "svg_sha256": "3bcf33326e4aa274a715b47659d1134b3f592d48705f380bdddf703de4d98473",
+      "png": {
+        "dark": {
+          "16": "png/dark/16/constraint_fixed.png",
+          "24": "png/dark/24/constraint_fixed.png",
+          "32": "png/dark/32/constraint_fixed.png",
+          "48": "png/dark/48/constraint_fixed.png",
+          "64": "png/dark/64/constraint_fixed.png"
+        },
+        "light": {
+          "16": "png/light/16/constraint_fixed.png",
+          "24": "png/light/24/constraint_fixed.png",
+          "32": "png/light/32/constraint_fixed.png",
+          "48": "png/light/48/constraint_fixed.png",
+          "64": "png/light/64/constraint_fixed.png"
+        }
+      }
+    },
+    {
+      "action_id": "feature.extrude",
+      "label": "Extrude profile",
+      "hover_description": "Extrude profile: Select a saved closed sketch and create a solid along +Z using a positive length, in millimetres.",
+      "operator_hint": "mcad.add_extrude",
+      "file_stem": "feature_extrude",
+      "availability": "asset_only_unwired",
+      "source": {
+        "kind": "original",
+        "name": "Mechanical CAD original vector geometry",
+        "license": "GPL-3.0-or-later",
+        "license_file": "licenses/GPL-3.0-or-later.txt",
+        "source_file": "original_geometry.json",
+        "created_on": "2026-10-16",
+        "modifications": "Original repository-native vector geometry created for this project; no third-party CAD artwork used."
+      },
+      "svg": "svg/feature_extrude.svg",
+      "svg_sha256": "b4aad21f9b00d84d58136271568178684bf451db7e84b79e04936999867b5ae6",
+      "png": {
+        "dark": {
+          "16": "png/dark/16/feature_extrude.png",
+          "24": "png/dark/24/feature_extrude.png",
+          "32": "png/dark/32/feature_extrude.png",
+          "48": "png/dark/48/feature_extrude.png",
+          "64": "png/dark/64/feature_extrude.png"
+        },
+        "light": {
+          "16": "png/light/16/feature_extrude.png",
+          "24": "png/light/24/feature_extrude.png",
+          "32": "png/light/32/feature_extrude.png",
+          "48": "png/light/48/feature_extrude.png",
+          "64": "png/light/64/feature_extrude.png"
+        }
+      }
+    },
+    {
+      "action_id": "feature.cut",
+      "label": "Cut solid",
+      "hover_description": "Cut solid: Choose target and tool solids. Subtract the tool from the target; operand order matters.",
+      "operator_hint": "mcad.add_cut",
+      "file_stem": "feature_cut",
+      "availability": "asset_only_unwired",
+      "source": {
+        "kind": "original",
+        "name": "Mechanical CAD original vector geometry",
+        "license": "GPL-3.0-or-later",
+        "license_file": "licenses/GPL-3.0-or-later.txt",
+        "source_file": "original_geometry.json",
+        "created_on": "2026-10-16",
+        "modifications": "Original repository-native vector geometry created for this project; no third-party CAD artwork used."
+      },
+      "svg": "svg/feature_cut.svg",
+      "svg_sha256": "7f793513c0ed6069396d0c2c94595be00fd184b6c796de8b40b3fd81a065d687",
+      "png": {
+        "dark": {
+          "16": "png/dark/16/feature_cut.png",
+          "24": "png/dark/24/feature_cut.png",
+          "32": "png/dark/32/feature_cut.png",
+          "48": "png/dark/48/feature_cut.png",
+          "64": "png/dark/64/feature_cut.png"
+        },
+        "light": {
+          "16": "png/light/16/feature_cut.png",
+          "24": "png/light/24/feature_cut.png",
+          "32": "png/light/32/feature_cut.png",
+          "48": "png/light/48/feature_cut.png",
+          "64": "png/light/64/feature_cut.png"
+        }
+      }
+    },
+    {
+      "action_id": "assembly.component",
+      "label": "New component",
+      "hover_description": "New component: Define a reusable part for the assembly.",
+      "file_stem": "assembly_component",
+      "availability": "asset_only_unwired",
+      "source": {
+        "kind": "original",
+        "name": "Mechanical CAD original vector geometry",
+        "license": "GPL-3.0-or-later",
+        "license_file": "licenses/GPL-3.0-or-later.txt",
+        "source_file": "original_geometry.json",
+        "created_on": "2026-10-16",
+        "modifications": "Original repository-native vector geometry created for this project; no third-party CAD artwork used."
+      },
+      "svg": "svg/assembly_component.svg",
+      "svg_sha256": "7054fdb9ade5079cb6837501d4ff5458b34543524bbbcbdc434eaa3a8109b5e8",
+      "png": {
+        "dark": {
+          "16": "png/dark/16/assembly_component.png",
+          "24": "png/dark/24/assembly_component.png",
+          "32": "png/dark/32/assembly_component.png",
+          "48": "png/dark/48/assembly_component.png",
+          "64": "png/dark/64/assembly_component.png"
+        },
+        "light": {
+          "16": "png/light/16/assembly_component.png",
+          "24": "png/light/24/assembly_component.png",
+          "32": "png/light/32/assembly_component.png",
+          "48": "png/light/48/assembly_component.png",
+          "64": "png/light/64/assembly_component.png"
+        }
+      }
+    },
+    {
+      "action_id": "assembly.instance",
+      "label": "Place component",
+      "hover_description": "Place component: Add another placement of a reusable part to the assembly.",
+      "file_stem": "assembly_instance",
+      "availability": "asset_only_unwired",
+      "source": {
+        "kind": "original",
+        "name": "Mechanical CAD original vector geometry",
+        "license": "GPL-3.0-or-later",
+        "license_file": "licenses/GPL-3.0-or-later.txt",
+        "source_file": "original_geometry.json",
+        "created_on": "2026-10-16",
+        "modifications": "Original repository-native vector geometry created for this project; no third-party CAD artwork used."
+      },
+      "svg": "svg/assembly_instance.svg",
+      "svg_sha256": "ac1b7ec26a68cef0c1b73902d971172ec4f61b41c767cace7fc57d06a880d500",
+      "png": {
+        "dark": {
+          "16": "png/dark/16/assembly_instance.png",
+          "24": "png/dark/24/assembly_instance.png",
+          "32": "png/dark/32/assembly_instance.png",
+          "48": "png/dark/48/assembly_instance.png",
+          "64": "png/dark/64/assembly_instance.png"
+        },
+        "light": {
+          "16": "png/light/16/assembly_instance.png",
+          "24": "png/light/24/assembly_instance.png",
+          "32": "png/light/32/assembly_instance.png",
+          "48": "png/light/48/assembly_instance.png",
+          "64": "png/light/64/assembly_instance.png"
+        }
+      }
+    },
+    {
+      "action_id": "mate.fixed",
+      "label": "Fixed mate",
+      "hover_description": "Fixed mate: Lock the relative position and orientation of the selected components.",
+      "file_stem": "mate_fixed",
+      "availability": "asset_only_unwired",
+      "source": {
+        "kind": "original",
+        "name": "Mechanical CAD original vector geometry",
+        "license": "GPL-3.0-or-later",
+        "license_file": "licenses/GPL-3.0-or-later.txt",
+        "source_file": "original_geometry.json",
+        "created_on": "2026-10-16",
+        "modifications": "Original repository-native vector geometry created for this project; no third-party CAD artwork used."
+      },
+      "svg": "svg/mate_fixed.svg",
+      "svg_sha256": "df75c58f33d9507539746aca21a4c5eec06cca0cefd629dcdc29a5894d26a8c2",
+      "png": {
+        "dark": {
+          "16": "png/dark/16/mate_fixed.png",
+          "24": "png/dark/24/mate_fixed.png",
+          "32": "png/dark/32/mate_fixed.png",
+          "48": "png/dark/48/mate_fixed.png",
+          "64": "png/dark/64/mate_fixed.png"
+        },
+        "light": {
+          "16": "png/light/16/mate_fixed.png",
+          "24": "png/light/24/mate_fixed.png",
+          "32": "png/light/32/mate_fixed.png",
+          "48": "png/light/48/mate_fixed.png",
+          "64": "png/light/64/mate_fixed.png"
+        }
+      }
+    },
+    {
+      "action_id": "mate.revolute",
+      "label": "Revolute mate",
+      "hover_description": "Revolute mate: Align two selected axes and allow rotation around their shared axis.",
+      "file_stem": "mate_revolute",
+      "availability": "asset_only_unwired",
+      "source": {
+        "kind": "original",
+        "name": "Mechanical CAD original vector geometry",
+        "license": "GPL-3.0-or-later",
+        "license_file": "licenses/GPL-3.0-or-later.txt",
+        "source_file": "original_geometry.json",
+        "created_on": "2026-10-16",
+        "modifications": "Original repository-native vector geometry created for this project; no third-party CAD artwork used."
+      },
+      "svg": "svg/mate_revolute.svg",
+      "svg_sha256": "b23e1324dd0edb33ecdd500834a48790a40afec002b018e630c2635e83d5d7ed",
+      "png": {
+        "dark": {
+          "16": "png/dark/16/mate_revolute.png",
+          "24": "png/dark/24/mate_revolute.png",
+          "32": "png/dark/32/mate_revolute.png",
+          "48": "png/dark/48/mate_revolute.png",
+          "64": "png/dark/64/mate_revolute.png"
+        },
+        "light": {
+          "16": "png/light/16/mate_revolute.png",
+          "24": "png/light/24/mate_revolute.png",
+          "32": "png/light/32/mate_revolute.png",
+          "48": "png/light/48/mate_revolute.png",
+          "64": "png/light/64/mate_revolute.png"
+        }
+      }
+    },
+    {
+      "action_id": "mate.slider",
+      "label": "Slider mate",
+      "hover_description": "Slider mate: Align selected components and allow translation along one shared axis.",
+      "file_stem": "mate_slider",
+      "availability": "asset_only_unwired",
+      "source": {
+        "kind": "original",
+        "name": "Mechanical CAD original vector geometry",
+        "license": "GPL-3.0-or-later",
+        "license_file": "licenses/GPL-3.0-or-later.txt",
+        "source_file": "original_geometry.json",
+        "created_on": "2026-10-16",
+        "modifications": "Original repository-native vector geometry created for this project; no third-party CAD artwork used."
+      },
+      "svg": "svg/mate_slider.svg",
+      "svg_sha256": "e47ca40e934dd0cf65bb127ee2184e7ffaf8f6b0b48c3f3ec3787db070bebf02",
+      "png": {
+        "dark": {
+          "16": "png/dark/16/mate_slider.png",
+          "24": "png/dark/24/mate_slider.png",
+          "32": "png/dark/32/mate_slider.png",
+          "48": "png/dark/48/mate_slider.png",
+          "64": "png/dark/64/mate_slider.png"
+        },
+        "light": {
+          "16": "png/light/16/mate_slider.png",
+          "24": "png/light/24/mate_slider.png",
+          "32": "png/light/32/mate_slider.png",
+          "48": "png/light/48/mate_slider.png",
+          "64": "png/light/64/mate_slider.png"
+        }
+      }
+    },
+    {
+      "action_id": "verify.interference",
+      "label": "Check interference",
+      "hover_description": "Check interference: Find overlapping solid volumes in the selected components.",
+      "file_stem": "verify_interference",
+      "availability": "asset_only_unwired",
+      "source": {
+        "kind": "original",
+        "name": "Mechanical CAD original vector geometry",
+        "license": "GPL-3.0-or-later",
+        "license_file": "licenses/GPL-3.0-or-later.txt",
+        "source_file": "original_geometry.json",
+        "created_on": "2026-10-16",
+        "modifications": "Original repository-native vector geometry created for this project; no third-party CAD artwork used."
+      },
+      "svg": "svg/verify_interference.svg",
+      "svg_sha256": "465d3dd2fb111bf76e5204748aaa002d33169504be15e81b60c86716fc508e26",
+      "png": {
+        "dark": {
+          "16": "png/dark/16/verify_interference.png",
+          "24": "png/dark/24/verify_interference.png",
+          "32": "png/dark/32/verify_interference.png",
+          "48": "png/dark/48/verify_interference.png",
+          "64": "png/dark/64/verify_interference.png"
+        },
+        "light": {
+          "16": "png/light/16/verify_interference.png",
+          "24": "png/light/24/verify_interference.png",
+          "32": "png/light/32/verify_interference.png",
+          "48": "png/light/48/verify_interference.png",
+          "64": "png/light/64/verify_interference.png"
+        }
+      }
+    },
+    {
+      "action_id": "verify.clearance",
+      "label": "Measure clearance",
+      "hover_description": "Measure clearance: Measure the shortest gap between the selected supported faces or components.",
+      "file_stem": "verify_clearance",
+      "availability": "asset_only_unwired",
+      "source": {
+        "kind": "original",
+        "name": "Mechanical CAD original vector geometry",
+        "license": "GPL-3.0-or-later",
+        "license_file": "licenses/GPL-3.0-or-later.txt",
+        "source_file": "original_geometry.json",
+        "created_on": "2026-10-16",
+        "modifications": "Original repository-native vector geometry created for this project; no third-party CAD artwork used."
+      },
+      "svg": "svg/verify_clearance.svg",
+      "svg_sha256": "85dc5665f67bcb072a3a683fb5b00d5bb0127d7696f8a8b811df38476cee0aef",
+      "png": {
+        "dark": {
+          "16": "png/dark/16/verify_clearance.png",
+          "24": "png/dark/24/verify_clearance.png",
+          "32": "png/dark/32/verify_clearance.png",
+          "48": "png/dark/48/verify_clearance.png",
+          "64": "png/dark/64/verify_clearance.png"
+        },
+        "light": {
+          "16": "png/light/16/verify_clearance.png",
+          "24": "png/light/24/verify_clearance.png",
+          "32": "png/light/32/verify_clearance.png",
+          "48": "png/light/48/verify_clearance.png",
+          "64": "png/light/64/verify_clearance.png"
+        }
+      }
+    },
+    {
+      "action_id": "doc.demo",
+      "label": "New drilled-plate demo",
+      "hover_description": "New drilled-plate demo: Replace the current CAD document with the editable example. Save work you want to keep first.",
+      "operator_hint": "mcad.new_demo",
+      "file_stem": "doc_demo",
+      "availability": "asset_only_unwired",
+      "source": {
+        "kind": "original",
+        "name": "Mechanical CAD original vector geometry",
+        "license": "GPL-3.0-or-later",
+        "license_file": "licenses/GPL-3.0-or-later.txt",
+        "source_file": "original_geometry.json",
+        "created_on": "2026-10-16",
+        "modifications": "Original repository-native vector geometry created for this project; no third-party CAD artwork used."
+      },
+      "svg": "svg/doc_demo.svg",
+      "svg_sha256": "6c1eb85b9f99767a3dddfdc7f23962f2a059ecb04609644c3d21b1a6c3a33777",
+      "png": {
+        "dark": {
+          "16": "png/dark/16/doc_demo.png",
+          "24": "png/dark/24/doc_demo.png",
+          "32": "png/dark/32/doc_demo.png",
+          "48": "png/dark/48/doc_demo.png",
+          "64": "png/dark/64/doc_demo.png"
+        },
+        "light": {
+          "16": "png/light/16/doc_demo.png",
+          "24": "png/light/24/doc_demo.png",
+          "32": "png/light/32/doc_demo.png",
+          "48": "png/light/48/doc_demo.png",
+          "64": "png/light/64/doc_demo.png"
+        }
+      }
+    },
+    {
+      "action_id": "history.previous",
+      "label": "Previous feature",
+      "hover_description": "Previous feature: Move to the preceding operation in the CAD feature history.",
+      "file_stem": "history_previous",
+      "availability": "asset_only_unwired",
+      "source": {
+        "kind": "google",
+        "name": "Google Material Symbols Outlined",
+        "symbol": "chevron_left",
+        "license": "Apache-2.0",
+        "license_file": "licenses/Apache-2.0.txt",
+        "url": "https://github.com/google/material-design-icons/blob/49d4db35df873165d6bd6ba09b063c7dafbac2f4/symbols/web/chevron_left/materialsymbolsoutlined/chevron_left_24px.svg",
+        "upstream_commit": "49d4db35df873165d6bd6ba09b063c7dafbac2f4",
+        "upstream_git_blob_sha": "53783746ae6c81971597d6379af6a0c48dc1b9ca",
+        "upstream_file": "vendor/google/chevron_left.svg",
+        "upstream_sha256": "b1df6b8d30d0320c97db2368f7e41123e1a7817932aa01cd865013ed6f7c7048",
+        "modifications": "Normalized coordinates to a 24-unit viewBox; currentColor; theme recolor; PNG rasterization. Path geometry unchanged."
+      },
+      "svg": "svg/history_previous.svg",
+      "svg_sha256": "2102bdeb03a7aaab3e01dcf3aa8ec3d7b89dbef62ea817e800abe63e627653bf",
+      "png": {
+        "dark": {
+          "16": "png/dark/16/history_previous.png",
+          "24": "png/dark/24/history_previous.png",
+          "32": "png/dark/32/history_previous.png",
+          "48": "png/dark/48/history_previous.png",
+          "64": "png/dark/64/history_previous.png"
+        },
+        "light": {
+          "16": "png/light/16/history_previous.png",
+          "24": "png/light/24/history_previous.png",
+          "32": "png/light/32/history_previous.png",
+          "48": "png/light/48/history_previous.png",
+          "64": "png/light/64/history_previous.png"
+        }
+      }
+    },
+    {
+      "action_id": "history.next",
+      "label": "Next feature",
+      "hover_description": "Next feature: Move to the next operation in the CAD feature history.",
+      "file_stem": "history_next",
+      "availability": "asset_only_unwired",
+      "source": {
+        "kind": "google",
+        "name": "Google Material Symbols Outlined",
+        "symbol": "chevron_right",
+        "license": "Apache-2.0",
+        "license_file": "licenses/Apache-2.0.txt",
+        "url": "https://github.com/google/material-design-icons/blob/49d4db35df873165d6bd6ba09b063c7dafbac2f4/symbols/web/chevron_right/materialsymbolsoutlined/chevron_right_24px.svg",
+        "upstream_commit": "49d4db35df873165d6bd6ba09b063c7dafbac2f4",
+        "upstream_git_blob_sha": "41004673651a63615c28ad0d31b652b0b6f291f3",
+        "upstream_file": "vendor/google/chevron_right.svg",
+        "upstream_sha256": "f6b777ee0ce9059b5f8eea987d813ab12c4f309ba431063153841c742e668ac0",
+        "modifications": "Normalized coordinates to a 24-unit viewBox; currentColor; theme recolor; PNG rasterization. Path geometry unchanged."
+      },
+      "svg": "svg/history_next.svg",
+      "svg_sha256": "d7bfe02467b0e8a61bac24a966f9cd9bcb7ed3a88269fa256e7ec08a30f4de3a",
+      "png": {
+        "dark": {
+          "16": "png/dark/16/history_next.png",
+          "24": "png/dark/24/history_next.png",
+          "32": "png/dark/32/history_next.png",
+          "48": "png/dark/48/history_next.png",
+          "64": "png/dark/64/history_next.png"
+        },
+        "light": {
+          "16": "png/light/16/history_next.png",
+          "24": "png/light/24/history_next.png",
+          "32": "png/light/32/history_next.png",
+          "48": "png/light/48/history_next.png",
+          "64": "png/light/64/history_next.png"
+        }
+      }
+    },
+    {
+      "action_id": "file.export_step",
+      "label": "Export STEP",
+      "hover_description": "Export STEP: Write the checked CAD result as exact solid geometry in a STEP file.",
+      "usage": "Use a visible STEP caption; a shape alone cannot reliably communicate a file format.",
+      "file_stem": "file_export_step",
+      "availability": "asset_only_unwired",
+      "source": {
+        "kind": "original",
+        "name": "Mechanical CAD original vector geometry",
+        "license": "GPL-3.0-or-later",
+        "license_file": "licenses/GPL-3.0-or-later.txt",
+        "source_file": "original_geometry.json",
+        "created_on": "2026-10-16",
+        "modifications": "Original repository-native vector geometry created for this project; no third-party CAD artwork used."
+      },
+      "svg": "svg/file_export_step.svg",
+      "svg_sha256": "0bebc216750e486b22f688e5091d637f641545d02d9d5921ecd5e9ba1b34eaa5",
+      "png": {
+        "dark": {
+          "16": "png/dark/16/file_export_step.png",
+          "24": "png/dark/24/file_export_step.png",
+          "32": "png/dark/32/file_export_step.png",
+          "48": "png/dark/48/file_export_step.png",
+          "64": "png/dark/64/file_export_step.png"
+        },
+        "light": {
+          "16": "png/light/16/file_export_step.png",
+          "24": "png/light/24/file_export_step.png",
+          "32": "png/light/32/file_export_step.png",
+          "48": "png/light/48/file_export_step.png",
+          "64": "png/light/64/file_export_step.png"
+        }
+      }
+    },
+    {
+      "action_id": "file.export_stl",
+      "label": "Export STL",
+      "hover_description": "Export STL: Write a triangulated copy of the checked CAD result in an STL file.",
+      "usage": "Use a visible STL caption; a shape alone cannot reliably communicate a file format.",
+      "file_stem": "file_export_stl",
+      "availability": "asset_only_unwired",
+      "source": {
+        "kind": "original",
+        "name": "Mechanical CAD original vector geometry",
+        "license": "GPL-3.0-or-later",
+        "license_file": "licenses/GPL-3.0-or-later.txt",
+        "source_file": "original_geometry.json",
+        "created_on": "2026-10-16",
+        "modifications": "Original repository-native vector geometry created for this project; no third-party CAD artwork used."
+      },
+      "svg": "svg/file_export_stl.svg",
+      "svg_sha256": "968c0ea19e19d9df16b4f01f824b12dd7ad46b66d76ab2ff5fe46479b868d018",
+      "png": {
+        "dark": {
+          "16": "png/dark/16/file_export_stl.png",
+          "24": "png/dark/24/file_export_stl.png",
+          "32": "png/dark/32/file_export_stl.png",
+          "48": "png/dark/48/file_export_stl.png",
+          "64": "png/dark/64/file_export_stl.png"
+        },
+        "light": {
+          "16": "png/light/16/file_export_stl.png",
+          "24": "png/light/24/file_export_stl.png",
+          "32": "png/light/32/file_export_stl.png",
+          "48": "png/light/48/file_export_stl.png",
+          "64": "png/light/64/file_export_stl.png"
+        }
+      }
+    }
+  ]
+}

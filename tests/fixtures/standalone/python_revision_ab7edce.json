@@ -1,0 +1,932 @@
+{
+  "added": {
+    "blender_addon/mechanical_cad_blender/runtime_bundle_launch.py": {
+      "bytes": 14215,
+      "sha256": "534667990b67a57e1afac814c2db9d305d9f195540b5b8959c1ca7d2e2cbab00"
+    },
+    "blender_addon/mechanical_cad_blender/runtime_bundle_prepare.py": {
+      "bytes": 12926,
+      "sha256": "3eb36b9271c269b59e03a00b092bfada69947a3d7b3eae0c6f6859cfbbe20a6d"
+    },
+    "tests/unit/test_bundled_backend_runtime.py": {
+      "bytes": 10120,
+      "sha256": "3dd1383b202189fe23160160635aa516d8eb623cd8d36d2d37cbebf2ecf12459"
+    },
+    "tests/unit/test_bundled_registration.py": {
+      "bytes": 12634,
+      "sha256": "257377b861ac25b55d86c684aacd342358545baa29016709e71450b0f8665818"
+    },
+    "tests/unit/test_bundled_status_ui.py": {
+      "bytes": 13187,
+      "sha256": "3a4062b2ffae18ba9bea06a6a7a5b73261814c7c4f208539ce8628ce10827a7b"
+    },
+    "tests/unit/test_runtime_bundle_launch.py": {
+      "bytes": 28730,
+      "sha256": "1ce5f259c45d4f01f1852bd0bf3d5b0bd2e83dbaa375d777d453310a78bcc050"
+    },
+    "tests/unit/test_runtime_bundle_prepare.py": {
+      "bytes": 27099,
+      "sha256": "d3e95518e8ba7e36debc65734f3030c6acce2960d6f813c2440e5162d25e58fe"
+    },
+    "tests/unit/test_runtime_cleanup_quarantine.py": {
+      "bytes": 26194,
+      "sha256": "699cafa7f5f79c9d890adad89d0ce391e57467f923f5bc3e907e74098e863b1a"
+    }
+  },
+  "base_commit": "ab7edce1561df34fd9eb12f62772b132f02297b9",
+  "changed": {
+    "blender_addon/mechanical_cad_blender/assembly_job_ui.py": {
+      "hunks": [
+        {
+          "new_end": 422,
+          "new_start": 301,
+          "original": "from . import assembly_pending, assembly_state, bridge, sketch_pending\n",
+          "replacement": "from . import assembly_pending, assembly_state, bridge, execution_lease, sketch_pending\nfrom .help_ui import _panel_wrap\n"
+        },
+        {
+          "new_end": 958,
+          "new_start": 439,
+          "original": "",
+          "replacement": "\n\ndef draw_backend_failure(layout, context):\n    \"\"\"Bounded display of retained cleanup failure; never poll or start work.\"\"\"\n    message = (\n        execution_lease.cleanup_message()\n        or sketch_pending.cleanup_message()\n        or assembly_pending.cleanup_message()\n    )\n    if not message:\n        return False\n    box = layout.box()\n    box.alert = True\n    box.label(text=\"Native operations blocked\", icon=\"ERROR\")\n    for line in _panel_wrap(context, message):\n        box.label(text=line)\n    return True\n"
+        },
+        {
+          "new_end": 2562,
+          "new_start": 2248,
+          "original": "    box.operator(\"mcad.assembly_cancel_check\", text=\"Cancel Check\", icon=\"CANCEL\")\n",
+          "replacement": "    if details[\"message\"]:\n        for line in _panel_wrap(context, details[\"message\"]):\n            box.label(text=line, icon=\"ERROR\")\n    row = box.row()\n    row.enabled = details[\"message\"] != execution_lease.QUARANTINE_MESSAGE\n    row.operator(\"mcad.assembly_cancel_check\", text=\"Cancel Check\", icon=\"CANCEL\")\n"
+        }
+      ],
+      "original_bytes": 9842,
+      "original_sha256": "7c74b054ee2a752c7aa1e7130b54b9f541c6120cfc9bb8c674f736cdb209a806",
+      "reviewed_bytes": 10642,
+      "reviewed_sha256": "f232ca84e8dd8449f365fb8b88f3f07369b024dbad8432c447ae83a60bef6f07"
+    },
+    "blender_addon/mechanical_cad_blender/assembly_operator_helpers.py": {
+      "hunks": [
+        {
+          "new_end": 2296,
+          "new_start": 1983,
+          "original": "        evidence = guarded_operations.canonical_snapshot_guarded(\n            document,\n            selection=selection,\n            owner_token=owner_token,\n            current_selection=lambda: backend_runtime.capture(context),\n        )\n",
+          "replacement": "        with execution_lease.synchronous(token):\n            evidence = guarded_operations.canonical_snapshot_guarded(\n                document,\n                selection=selection,\n                owner_token=owner_token,\n                current_selection=lambda: backend_runtime.capture(context),\n            )\n"
+        }
+      ],
+      "original_bytes": 10380,
+      "original_sha256": "2c4b8dd98cae182016e9396e25b28e050f5ca87fcd4717ada15cfba89db20c0c",
+      "reviewed_bytes": 10453,
+      "reviewed_sha256": "bb09a3f553a4c4a40d00718361b1204445f91b4e89b1b8b361934e426237e6db"
+    },
+    "blender_addon/mechanical_cad_blender/assembly_pending.py": {
+      "hunks": [
+        {
+          "new_end": 9067,
+          "new_start": 8196,
+          "original": "",
+          "replacement": "def cleanup_message():\n    \"\"\"Read detached retained-job diagnostics without polling or changing state.\"\"\"\n    _main_thread()\n    for pending in _ACTIVE.values():\n        diagnostic = getattr(pending._job, \"cleanup_diagnostic\", \"\")\n        if type(diagnostic) is str and diagnostic:\n            return execution_lease.QUARANTINE_MESSAGE\n    return \"\"\n\n\ndef _cleanup_diagnostic(pending):\n    \"\"\"Keep original ownership and replace stale/cancel reasons with actionable status.\"\"\"\n    diagnostic = getattr(pending._job, \"cleanup_diagnostic\", \"\")\n    if type(diagnostic) is not str or not diagnostic:\n        return False\n    message = execution_lease.QUARANTINE_MESSAGE\n    if pending._error != message:\n        pending._notified = False\n    pending._error = message\n    pending._abort_error = bridge.BridgeError(message)\n    pending._phase = \"cancelling\"\n    return True\n\n\n"
+        },
+        {
+          "new_end": 9394,
+          "new_start": 9332,
+          "original": "    if not pending._job.done:\n",
+          "replacement": "    if _cleanup_diagnostic(pending) or not pending._job.done:\n"
+        },
+        {
+          "new_end": 9706,
+          "new_start": 9654,
+          "original": "",
+          "replacement": "    if _cleanup_diagnostic(pending):\n        return\n"
+        },
+        {
+          "new_end": 10328,
+          "new_start": 10295,
+          "original": "",
+          "replacement": "    _cleanup_diagnostic(pending)\n"
+        },
+        {
+          "new_end": 10494,
+          "new_start": 10442,
+          "original": "",
+          "replacement": "    if _cleanup_diagnostic(pending):\n        return\n"
+        },
+        {
+          "new_end": 12501,
+          "new_start": 12334,
+          "original": "",
+          "replacement": "    if _cleanup_diagnostic(pending):\n        if not pending._notified:\n            pending._notified = True\n            raise pending._abort_error\n        return None\n"
+        },
+        {
+          "new_end": 13450,
+          "new_start": 13283,
+          "original": "",
+          "replacement": "    if _cleanup_diagnostic(pending):\n        if not pending._notified:\n            pending._notified = True\n            raise pending._abort_error\n        return None\n"
+        },
+        {
+          "new_end": 15801,
+          "new_start": 15739,
+          "original": "",
+          "replacement": "        if _cleanup_diagnostic(pending):\n            continue\n"
+        },
+        {
+          "new_end": 16680,
+          "new_start": 16618,
+          "original": "",
+          "replacement": "        if _cleanup_diagnostic(pending):\n            continue\n"
+        },
+        {
+          "new_end": 19286,
+          "new_start": 19224,
+          "original": "",
+          "replacement": "        if _cleanup_diagnostic(pending):\n            continue\n"
+        }
+      ],
+      "original_bytes": 18010,
+      "original_sha256": "3e1dc3db95925e5f7b7d81ae3906bbeb4a10447fa56d002318d47f454e2b53c6",
+      "reviewed_bytes": 19570,
+      "reviewed_sha256": "7e2fadd6ee72533dc114db27dc870b57ab3c094a418bd211cd784478e75f2b69"
+    },
+    "blender_addon/mechanical_cad_blender/assembly_state.py": {
+      "hunks": [
+        {
+          "new_end": 6601,
+          "new_start": 6281,
+          "original": "        return guarded_transport.execute(\n            snapshot[\"prepared\"],\n            snapshot[\"selection\"],\n            owner_token=snapshot[\"owner_token\"],\n            current_selection=lambda: _current_selection(context, snapshot),\n        )\n",
+          "replacement": "        with execution_lease.synchronous(token):\n            return guarded_transport.execute(\n                snapshot[\"prepared\"],\n                snapshot[\"selection\"],\n                owner_token=snapshot[\"owner_token\"],\n                current_selection=lambda: _current_selection(context, snapshot),\n            )\n"
+        }
+      ],
+      "original_bytes": 32649,
+      "original_sha256": "a29b302e4b62ca609420f812c02bd3be919a55f7d77716352079571e7327973b",
+      "reviewed_bytes": 32722,
+      "reviewed_sha256": "d3223cdaed9b2178167142ca3b4022f2d17da0e4fbcbfa2db4600f5a2e7637fb"
+    },
+    "blender_addon/mechanical_cad_blender/backend_runtime.py": {
+      "hunks": [
+        {
+          "new_end": 451,
+          "new_start": 440,
+          "original": "",
+          "replacement": "import sys\n"
+        },
+        {
+          "new_end": 787,
+          "new_start": 598,
+          "original": "",
+          "replacement": "from .runtime_bundle_launch import LAUNCH_CONSTANT_FIELDS, capture_bundled_policy\nfrom .runtime_bundle_manifest import BundleLimits\nfrom .runtime_bundle_prepare import BundlePreparationJob\n"
+        },
+        {
+          "new_end": 8761,
+          "new_start": 869,
+          "original": "",
+          "replacement": "_BUNDLE_REQUIRED = False\n_BUNDLE_ENABLED = False\n_BUNDLE_JOB = None\n_BUNDLE_JOB_REQUEST = None\n_BUNDLE_REQUEST = None\n_BUNDLE_POLICY = None\n_BUNDLE_STATE = \"external\"\n_BUNDLE_MESSAGE = \"External development backend; configure its paths explicitly.\"\n\n\ndef bundled_mode():\n    \"\"\"A manifest extension never falls back to external preferences or MCAD_* .\"\"\"\n    _main_thread()\n    return _BUNDLE_REQUIRED\n\n\ndef bundle_status():\n    \"\"\"Bounded presentation only: no polling, hashing, path inspection or launch.\"\"\"\n    _main_thread()\n    return _BUNDLE_STATE, _BUNDLE_MESSAGE\n\n\ndef _bundle_capture(package_root, cache_root, constants):\n    # Generated installed Python literals, not model data. Detach the dictionary\n    # before any worker starts. Full constant/descriptor checks follow cleanup.\n    if type(constants) is not dict or set(constants) != set(LAUNCH_CONSTANT_FIELDS):\n        raise ValueError(\"Installed extension launch constants are incomplete.\")\n    captured = {}\n    for name in LAUNCH_CONSTANT_FIELDS:\n        value = constants[name]\n        if type(value) in (str, bytes):\n            if len(value) > 16384:\n                raise ValueError(\"Installed extension launch constant is oversized.\")\n        elif type(value) is tuple:\n            if len(value) > 8 or any(type(v) not in (str, int) for v in value):\n                raise ValueError(\"Installed extension launch tuple is malformed.\")\n            if any(type(v) is str and len(v) > 128 for v in value):\n                raise ValueError(\"Installed extension launch tuple is oversized.\")\n        elif type(value) is not int:\n            raise ValueError(\"Installed extension launch constants must be literals.\")\n        captured[name] = value\n    release = captured[\"RELEASE_IDENTITY_BYTES\"]\n    if type(release) is not bytes or not 0 < len(release) <= 16384:\n        raise ValueError(\"Installed extension release identity is malformed.\")\n    if sys.platform != \"linux\" or captured[\"PLATFORM\"] != \"linux-x64\":\n        raise ValueError(\n            \"This bundled backend is not qualified for this platform. \"\n            \"Windows support requires a separately verified Windows extension.\"\n        )\n    return package_root, cache_root, release, captured\n\n\ndef _bundle_failure(message):\n    global _BUNDLE_STATE, _BUNDLE_MESSAGE, _BUNDLE_POLICY, _BUNDLE_REQUEST\n    _BUNDLE_POLICY, _BUNDLE_REQUEST = None, None\n    _BUNDLE_STATE = \"failed\"\n    _BUNDLE_MESSAGE = message[:1500]\n\n\ndef fail_bundled_setup(message):\n    \"\"\"Missing generated metadata/path failures remain a closed extension mode.\"\"\"\n    global _BUNDLE_REQUIRED, _BUNDLE_ENABLED\n    _main_thread()\n    _BUNDLE_REQUIRED, _BUNDLE_ENABLED = True, False\n    if _BUNDLE_JOB is not None:\n        _BUNDLE_JOB.cancel()\n    _bundle_failure(message if type(message) is str else \"Bundled backend setup failed.\")\n    revoke(\"Bundled backend is unavailable; current evidence was revoked.\")\n\n\ndef begin_bundled_setup(package_root, cache_root, constants):\n    \"\"\"Enable automatic offline setup without waiting or touching runtime files.\n\n    An old cancelling/uncertain owner is retained across disable/re-enable. A new\n    worker may start only after that original owner reports confirmed cleanup.\n    \"\"\"\n    global _BUNDLE_REQUIRED, _BUNDLE_ENABLED, _BUNDLE_REQUEST, _BUNDLE_POLICY\n    global _BUNDLE_STATE, _BUNDLE_MESSAGE\n    _main_thread()\n    _BUNDLE_REQUIRED, _BUNDLE_ENABLED, _BUNDLE_POLICY = True, True, None\n    _BUNDLE_REQUEST = None\n    if _BUNDLE_JOB is not None:\n        _BUNDLE_JOB.cancel()\n    _BUNDLE_STATE, _BUNDLE_MESSAGE = \"preparing\", \"Preparing the bundled backend offline\u2026\"\n    # State is closed before callbacks: a reentrant currentness read cannot use\n    # the old policy even if owner invalidation raises.\n    revoke(\"Bundled backend setup changed; current evidence was revoked.\")\n    try:\n        _BUNDLE_REQUEST = _bundle_capture(package_root, cache_root, constants)\n    except (TypeError, ValueError) as exc:\n        _bundle_failure(str(exc))\n    return poll_bundled_setup()\n\n\ndef stop_bundled_setup():\n    \"\"\"Revoke setup policy and cancel, without dropping or joining its owner.\"\"\"\n    global _BUNDLE_ENABLED, _BUNDLE_POLICY, _BUNDLE_REQUEST\n    global _BUNDLE_STATE, _BUNDLE_MESSAGE\n    _main_thread()\n    if not _BUNDLE_REQUIRED:\n        return\n    _BUNDLE_ENABLED, _BUNDLE_POLICY, _BUNDLE_REQUEST = False, None, None\n    _BUNDLE_STATE, _BUNDLE_MESSAGE = \"disabled\", \"Bundled backend is disabled.\"\n    if _BUNDLE_JOB is not None:\n        _BUNDLE_JOB.cancel()\n    revoke(\"Bundled backend disabled; current evidence was revoked.\")\n\n\ndef poll_bundled_setup():\n    \"\"\"Main-thread timer seam. Return whether another bounded poll is needed.\"\"\"\n    global _BUNDLE_JOB, _BUNDLE_JOB_REQUEST, _BUNDLE_REQUEST, _BUNDLE_POLICY\n    global _BUNDLE_STATE, _BUNDLE_MESSAGE\n    _main_thread()\n    if not _BUNDLE_ENABLED:\n        return False\n    if _BUNDLE_JOB is not None:\n        state = _BUNDLE_JOB.poll()\n        if state == \"cleanup_blocked\":\n            _BUNDLE_POLICY, _BUNDLE_REQUEST = None, None\n            _BUNDLE_STATE = \"cleanup_blocked\"\n            _BUNDLE_MESSAGE = (\n                \"Bundled backend cleanup could not be confirmed. \"\n                \"Save your work and restart Blender; no backend operation is allowed.\"\n            )\n            return False\n        if not _BUNDLE_JOB.done:\n            return True\n        job = _BUNDLE_JOB\n        request = _BUNDLE_JOB_REQUEST\n        _BUNDLE_JOB = None  # Only after the original owner confirms cleanup.\n        _BUNDLE_JOB_REQUEST = None\n        if _BUNDLE_REQUEST is request and request is not None:\n            try:\n                descriptor = job.result()\n                package, cache, release, constants = _BUNDLE_REQUEST\n                policy = capture_bundled_policy(\n                    descriptor,\n                    package_root=package,\n                    cache_root=cache,\n                    release_data=release,\n                    constants=constants,\n                )\n            except (ValueError, RuntimeError, OSError, TypeError) as exc:\n                _bundle_failure(\"Bundled backend setup failed: \" + str(exc))\n                return False\n            else:\n                _BUNDLE_REQUEST = None\n                try:\n                    revoke(\"Bundled backend became ready; request fresh CAD evidence.\")\n                except Exception:\n                    _bundle_failure(\n                        \"Bundled backend owner invalidation failed. \"\n                        \"Save your work and restart Blender before retrying.\"\n                    )\n                    return False\n                _BUNDLE_POLICY = policy\n                _BUNDLE_STATE, _BUNDLE_MESSAGE = \"ready\", \"Bundled backend ready.\"\n                return False\n        else:\n            # An explicit newer enable request superseded this job. Consume\n            # only to discard its cleanup-confirmed result; never bind an old\n            # descriptor to new package/cache/constants or automatically retry.\n            try:\n                job.result()\n            except (ValueError, RuntimeError, OSError, TypeError):\n                pass\n    if _BUNDLE_REQUEST is None:\n        return False\n    package, cache, release, constants = _BUNDLE_REQUEST\n    try:\n        # Constructor captures bounded primitives only. Hashing and extraction\n        # run on its single worker; no CAD lease or native process is created.\n        _BUNDLE_JOB = BundlePreparationJob(\n            package,\n            cache,\n            release,\n            expected_platform=constants[\"PLATFORM\"],\n            limits=BundleLimits(),\n        )\n        _BUNDLE_JOB_REQUEST = _BUNDLE_REQUEST\n        _BUNDLE_JOB.start()\n    except (ValueError, RuntimeError, OSError, TypeError) as exc:\n        _bundle_failure(\"Bundled backend preparation could not start: \" + str(exc))\n        return False\n    return True\n"
+        },
+        {
+          "new_end": 10755,
+          "new_start": 10721,
+          "original": "",
+          "replacement": "        selection.bundled_policy,\n"
+        },
+        {
+          "new_end": 12191,
+          "new_start": 11427,
+          "original": "        selection = BackendSelection.capture(\n            preferences.project_root if preferences else \"\",\n            preferences.python_executable if preferences else \"\",\n            preferences.timeout_seconds if preferences else 60.0,\n            generation=_GENERATION,\n            lifetime_id=_LIFETIME,\n        )\n",
+          "replacement": "        if _BUNDLE_REQUIRED:\n            if not _BUNDLE_ENABLED or _BUNDLE_POLICY is None:\n                raise bridge.BridgeError(_BUNDLE_MESSAGE)\n            selection = BackendSelection.capture_bundled(\n                _BUNDLE_POLICY,\n                preferences.timeout_seconds if preferences else 60.0,\n                generation=_GENERATION,\n                lifetime_id=_LIFETIME,\n            )\n        else:\n            selection = BackendSelection.capture(\n                preferences.project_root if preferences else \"\",\n                preferences.python_executable if preferences else \"\",\n                preferences.timeout_seconds if preferences else 60.0,\n                generation=_GENERATION,\n                lifetime_id=_LIFETIME,\n            )\n"
+        }
+      ],
+      "original_bytes": 5363,
+      "original_sha256": "f6f94ecef3300d142425c74d52a129fdbbd6991422e3da4c964e4d20c3441dfb",
+      "reviewed_bytes": 13933,
+      "reviewed_sha256": "0929abb0ce2b214075658b1e01751d5744266f61c1f7da04700aa36e044d4a08"
+    },
+    "blender_addon/mechanical_cad_blender/backend_selection.py": {
+      "hunks": [
+        {
+          "new_end": 547,
+          "new_start": 491,
+          "original": "",
+          "replacement": "\nfrom .runtime_bundle_launch import BundledLaunchPolicy\n"
+        },
+        {
+          "new_end": 2568,
+          "new_start": 2487,
+          "original": "",
+          "replacement": "    bundled_policy: BundledLaunchPolicy | None = field(default=None, repr=False)\n"
+        },
+        {
+          "new_end": 4777,
+          "new_start": 4196,
+          "original": "",
+          "replacement": "        if self.bundled_policy is not None:\n            policy = self.bundled_policy\n            if (\n                type(policy) is not BundledLaunchPolicy\n                or self.project_root != policy.descriptor.root\n                or self.python_executable != policy.descriptor.python_path\n                or self.python_executable_target != policy.descriptor.python_path\n                or dict(self._environment) != policy.launch_environment()\n            ):\n                raise SelectionError(\"Captured bundled selection violates its launch policy.\")\n            return\n"
+        },
+        {
+          "new_end": 9097,
+          "new_start": 7770,
+          "original": "",
+          "replacement": "    @classmethod\n    def capture_bundled(\n        cls,\n        policy: BundledLaunchPolicy,\n        timeout: float = 60.0,\n        *,\n        generation: int,\n        lifetime_id: str,\n    ) -> BackendSelection:\n        \"\"\"Use prepared immutable setup only; no manual settings or ambient environment.\n\n        No filesystem lookup or native work occurs here. Every operation worker\n        must reacquire a shared pin and fully verify this exact runtime policy.\n        \"\"\"\n        if type(policy) is not BundledLaunchPolicy:\n            raise SelectionError(\"Bundled capture requires an exact immutable launch policy.\")\n        try:\n            if type(timeout) is bool:\n                raise ValueError(\"boolean timeout\")\n            seconds = float(timeout)\n            if not math.isfinite(seconds):\n                raise ValueError(\"non-finite timeout\")\n        except (TypeError, ValueError, OverflowError) as exc:\n            raise SelectionError(\"Backend timeout must be finite.\") from exc\n        return cls(\n            policy.descriptor.root,\n            policy.descriptor.python_path,\n            policy.descriptor.python_path,\n            max(1.0, min(seconds, 300.0)),\n            generation,\n            lifetime_id,\n            tuple(sorted(policy.launch_environment().items())),\n            policy,\n        )\n\n"
+        }
+      ],
+      "original_bytes": 7691,
+      "original_sha256": "8f7701af577b9913206d43ba04ceb4babe89f394a7824383066eb4e58a0ed222",
+      "reviewed_bytes": 9736,
+      "reviewed_sha256": "82e6659b1c0afa7ffb07f5fc30ab47c91867718a6c7899cc03514f5dcb3a5840"
+    },
+    "blender_addon/mechanical_cad_blender/document_state.py": {
+      "hunks": [
+        {
+          "new_end": 23180,
+          "new_start": 23113,
+          "original": "        yield\n",
+          "replacement": "        with execution_lease.synchronous(token):\n            yield\n"
+        }
+      ],
+      "original_bytes": 36153,
+      "original_sha256": "a45c49bb503e6b92743de471af393c3dc60d3681d7f2dec05843742e41ac2c10",
+      "reviewed_bytes": 36206,
+      "reviewed_sha256": "8dd345b6fe817b0552845e451a4d94dfe522310112248b8e3bfc9335851a8790"
+    },
+    "blender_addon/mechanical_cad_blender/execution_lease.py": {
+      "hunks": [
+        {
+          "new_end": 485,
+          "new_start": 80,
+          "original": "Tokens are opaque immutable objects with no model, Blender or callback references.\nAcquisition never queues work. Release compares identity only, so a stale cleanup\ncannot clear a newer operation. Lifecycle code must not reset this module while\nan owned sidecar is still being cleaned up.\n",
+          "replacement": "Tokens are opaque immutable objects. Acquisition never queues work. Synchronous\nowner scopes lend their exact token to one atomic transport binding; unscoped busy\ncallers and reentrant transports are rejected. An uncertain transport is retained\nin one absorbing quarantine slot. There is no reset or cleanup retry operation.\nLifecycle restart must not release or replace this module's original ownership.\n"
+        },
+        {
+          "new_end": 545,
+          "new_start": 507,
+          "original": "",
+          "replacement": "from contextlib import contextmanager\n"
+        },
+        {
+          "new_end": 915,
+          "new_start": 738,
+          "original": "",
+          "replacement": "QUARANTINE_MESSAGE = (\n    \"Bundled backend cleanup could not be confirmed. Native operations remain \"\n    \"disabled. Save your work and restart Blender before trying again.\"\n)\n"
+        },
+        {
+          "new_end": 1143,
+          "new_start": 955,
+          "original": "",
+          "replacement": "_BOUND_TOKEN = None\n_QUARANTINE = None\n_SCOPE = threading.local()\n\n\nclass LeaseError(RuntimeError):\n    \"\"\"Execution ownership could not be established without replacing another owner.\"\"\"\n"
+        },
+        {
+          "new_end": 1335,
+          "new_start": 1277,
+          "original": "        if _TOKEN is not None:\n",
+          "replacement": "        if _TOKEN is not None or _QUARANTINE is not None:\n"
+        },
+        {
+          "new_end": 1519,
+          "new_start": 1429,
+          "original": "    \"\"\"Release only this exact current token; unknown/stale tokens do nothing.\"\"\"\n",
+          "replacement": "    \"\"\"Release only this unbound exact token; quarantined/stale owners never clear it.\"\"\"\n"
+        },
+        {
+          "new_end": 1717,
+          "new_start": 1553,
+          "original": "        if token is None or token is not _TOKEN:\n",
+          "replacement": "        if (\n            token is None\n            or token is not _TOKEN\n            or _BOUND_TOKEN is not None\n            or _QUARANTINE is not None\n        ):\n"
+        },
+        {
+          "new_end": 5115,
+          "new_start": 1899,
+          "original": "        return _TOKEN is not None\n",
+          "replacement": "        return _TOKEN is not None or _QUARANTINE is not None\n\n\ndef cleanup_message():\n    \"\"\"Read only the absorbing failure flag; never touch or release its owner.\"\"\"\n    with _LOCK:\n        return QUARANTINE_MESSAGE if _QUARANTINE is not None else \"\"\n\n\n@contextmanager\ndef synchronous(token):\n    \"\"\"Expose one existing main-thread owner token only within its lexical scope.\"\"\"\n    if threading.current_thread() is not threading.main_thread():\n        raise LeaseError(\"Synchronous CAD ownership requires the main thread.\")\n    with _LOCK:\n        if _QUARANTINE is not None:\n            raise LeaseError(QUARANTINE_MESSAGE)\n        if (\n            token is None\n            or token is not _TOKEN\n            or _BOUND_TOKEN is not None\n            or getattr(_SCOPE, \"token\", None) is not None\n        ):\n            raise LeaseError(BUSY_MESSAGE)\n        _SCOPE.token = token\n    try:\n        yield\n    finally:\n        # Scope exit grants no cleanup or release authority, even after mismatch.\n        if getattr(_SCOPE, \"token\", None) is token:\n            _SCOPE.token = None\n\n\ndef bind_transport():\n    \"\"\"Atomically borrow the current scoped token or acquire an otherwise empty slot.\n\n    Return (exact token, transport_owned). Binding precedes job construction and\n    prevents reentrancy or release until finish_transport or absorbing quarantine.\n    \"\"\"\n    global _TOKEN, _BOUND_TOKEN\n    with _LOCK:\n        if _QUARANTINE is not None:\n            raise LeaseError(QUARANTINE_MESSAGE)\n        if _BOUND_TOKEN is not None:\n            raise LeaseError(BUSY_MESSAGE)\n        scoped = getattr(_SCOPE, \"token\", None)\n        if scoped is not None:\n            if scoped is not _TOKEN:\n                raise LeaseError(BUSY_MESSAGE)\n            owned = False\n        elif _TOKEN is None:\n            _TOKEN = object()\n            owned = True\n        else:\n            raise LeaseError(BUSY_MESSAGE)\n        _BOUND_TOKEN = _TOKEN\n        return _TOKEN, owned\n\n\ndef finish_transport(token, *, transport_owned):\n    \"\"\"Clear only this exact binding, releasing owned tokens only after clean use.\"\"\"\n    global _TOKEN, _BOUND_TOKEN\n    with _LOCK:\n        if token is None or token is not _BOUND_TOKEN or _QUARANTINE is not None:\n            return False\n        _BOUND_TOKEN = None\n        if transport_owned and token is _TOKEN:\n            _TOKEN = None\n        return token is _TOKEN or transport_owned and _TOKEN is None\n\n\ndef quarantine(token, owner):\n    \"\"\"Retain the original detached uncertain owner forever; never release/retry.\n\n    A mismatch is an internal invariant failure, not authority over a successor.\n    Keep that successor's token unchanged while retaining this original owner and\n    blocking all new work. Supported binding/scoping makes mismatch unreachable.\n    \"\"\"\n    global _QUARANTINE\n    if token is None or owner is None:\n        raise LeaseError(\"Uncertain execution requires its original token and owner.\")\n    with _LOCK:\n        if _QUARANTINE is None:\n            _QUARANTINE = (token, owner)\n        elif _QUARANTINE[0] is not token or _QUARANTINE[1] is not owner:\n            raise LeaseError(QUARANTINE_MESSAGE)\n        return token is _TOKEN and token is _BOUND_TOKEN\n"
+        }
+      ],
+      "original_bytes": 1264,
+      "original_sha256": "b0e47b43ac6054f23c4f9e8489c8f2fd27e532a2c12ae188b652a5faee9cdc1d",
+      "reviewed_bytes": 5115,
+      "reviewed_sha256": "f225805d681bbfdd4b99606ca910dcf9e70462b48af35eacd454b6f7dac95a99"
+    },
+    "blender_addon/mechanical_cad_blender/guarded_transport.py": {
+      "hunks": [
+        {
+          "new_end": 239,
+          "new_start": 74,
+          "original": "This adapter does not acquire an execution lease or access Blender. Existing\nmain-thread owners keep their lease through cleanup and supply a fresh selection\n",
+          "replacement": "This adapter accesses no Blender data. Synchronous execution binds the existing\nlease or owns an empty slot; async owners retain their own lease and fresh selection\n"
+        },
+        {
+          "new_end": 474,
+          "new_start": 417,
+          "original": "from . import backend_contracts, bridge\n",
+          "replacement": "from . import backend_contracts, bridge, execution_lease\n"
+        },
+        {
+          "new_end": 4324,
+          "new_start": 4151,
+          "original": "",
+          "replacement": "    @property\n    def cleanup_diagnostic(self):\n        \"\"\"Bounded process-only error; reading it never consumes completion.\"\"\"\n        return self._job.cleanup_diagnostic\n\n"
+        },
+        {
+          "new_end": 7133,
+          "new_start": 7047,
+          "original": "    \"\"\"Wait over the same bounded job used asynchronously; never recapture launch.\n",
+          "replacement": "    \"\"\"Run under one atomic execution binding, retaining uncertainty without hanging.\n"
+        },
+        {
+          "new_end": 7374,
+          "new_start": 7134,
+          "original": "    ``current_selection`` is a main-thread callable used only for comparison.\n    Existing synchronous callers must own their normal execution lease. All\n    exceptional exits finish process/file cleanup before returning to that owner.\n",
+          "replacement": "    Live synchronous owners expose their existing token through synchronous().\n    An otherwise empty slot is owned here. Busy unscoped/reentrant calls fail\n    before constructing a job. No exceptional path may release an uncertain owner.\n"
+        },
+        {
+          "new_end": 7382,
+          "new_start": 7382,
+          "original": "    job = GuardedJob(prepared, selection, owner_token=owner_token)\n",
+          "replacement": ""
+        },
+        {
+          "new_end": 7654,
+          "new_start": 7391,
+          "original": "        job.start(current_selection())\n        job.wait()\n",
+          "replacement": "        token, transport_owned = execution_lease.bind_transport()\n    except execution_lease.LeaseError as exc:\n        raise GuardedOperationError(str(exc)) from None\n    job = None\n    try:\n        job = GuardedJob(prepared, selection, owner_token=owner_token)\n"
+        },
+        {
+          "new_end": 8711,
+          "new_start": 7667,
+          "original": "            current = current_selection()\n        except (ValueError, RuntimeError, OSError) as exc:\n            raise job._error(f\"Backend selection could not be rechecked: {exc}\") from exc\n        return job.result(current, owner_token=owner_token)\n    except BaseException:\n        job.cancel()\n        job.wait()\n        raise\n",
+          "replacement": "            job.start(current_selection())\n            if not job.wait():\n                raise job._error(job.cleanup_diagnostic or execution_lease.QUARANTINE_MESSAGE)\n            try:\n                current = current_selection()\n            except (ValueError, RuntimeError, OSError) as exc:\n                raise job._error(f\"Backend selection could not be rechecked: {exc}\") from exc\n            return job.result(current, owner_token=owner_token)\n        except BaseException:\n            try:\n                job.cancel()\n            finally:\n                try:\n                    cleaned = job.wait()\n                except BaseException:\n                    cleaned = False\n                if not cleaned:\n                    execution_lease.quarantine(token, job)\n                    raise job._error(\n                        job.cleanup_diagnostic or execution_lease.QUARANTINE_MESSAGE\n                    ) from None\n            raise\n    finally:\n        execution_lease.finish_transport(token, transport_owned=transport_owned)\n"
+        }
+      ],
+      "original_bytes": 7656,
+      "original_sha256": "7f2ae5e57e1f96829e79bc2716975d6645a78b0b265ab9e07e301cc7dbeaadfb",
+      "reviewed_bytes": 8711,
+      "reviewed_sha256": "85aaf8fb4dd3e0e5a0987ba61bae9c851aa6c0623f39781452fae1958c05cded"
+    },
+    "blender_addon/mechanical_cad_blender/help_topics.py": {
+      "hunks": [
+        {
+          "new_end": 9198,
+          "new_start": 8213,
+          "original": "",
+          "replacement": "    \"setup.bundled\": (\n        \"Automatic offline CAD backend\",\n        [\n            \"The standalone extension includes its isolated CAD backend. Enable the extension and wait for automatic offline preparation; no Project Root or Python path is required.\",\n            \"Preferences show preparation, ready or failure status. Preparation uses only the installed package and does not download or install dependencies from the network.\",\n            \"Once ready, create a New Document, draw a sketch and extrude it. The native CAD libraries run in a separate process, never inside Blender.\",\n            \"If cleanup cannot be confirmed, native operations stay blocked. Save your work and restart Blender. Disabling and re-enabling the extension cannot discard the retained owner or bypass the failure.\",\n            \"A prepared backend is not geometry evidence. Check or rebuild the current document explicitly; saved reports remain historical until validated again.\",\n        ],\n    ),\n"
+        }
+      ],
+      "original_bytes": 20146,
+      "original_sha256": "0cd455d0c4ff7bfb0bea50c23fc49174f18b71a65da56a17a663c000879d0c41",
+      "reviewed_bytes": 21131,
+      "reviewed_sha256": "7a8add001d718862ca26f1f5ccd93bcb5253bdb6b0bacfc461549d8832154a4c"
+    },
+    "blender_addon/mechanical_cad_blender/panels.py": {
+      "hunks": [
+        {
+          "new_end": 253,
+          "new_start": 168,
+          "original": "from . import document_state, operators, workspace\n",
+          "replacement": "from . import assembly_job_ui, backend_runtime, document_state, operators, workspace\n"
+        },
+        {
+          "new_end": 1625,
+          "new_start": 1553,
+          "original": "",
+          "replacement": "        blocked = assembly_job_ui.draw_backend_failure(layout, context)\n"
+        },
+        {
+          "new_end": 3592,
+          "new_start": 2959,
+          "original": "            layout.label(text=\"Set the external Python path in preferences.\", icon=\"INFO\")\n            _help_button(layout, \"setup.backend\", \"Backend setup\")\n",
+          "replacement": "            if backend_runtime.bundled_mode():\n                setup_state, message = backend_runtime.bundle_status()\n                if blocked and setup_state == \"ready\":\n                    message = \"Bundled files prepared; native operations are blocked.\"\n                for line in _panel_wrap(context, message):\n                    layout.label(text=line, icon=\"INFO\")\n                _help_button(layout, \"setup.bundled\", \"Bundled backend\")\n            else:\n                layout.label(text=\"Set the external Python path in preferences.\", icon=\"INFO\")\n                _help_button(layout, \"setup.backend\", \"Backend setup\")\n"
+        }
+      ],
+      "original_bytes": 7911,
+      "original_sha256": "b84a5edcc64773294c6667ebaaedb70a9f960264736d94a3210b757f92ce9ade",
+      "reviewed_bytes": 8492,
+      "reviewed_sha256": "4d0acfc973fda6ece1ab0416b9aebc854ed6d5b60ab416b5a8449d83e12cca9c"
+    },
+    "blender_addon/mechanical_cad_blender/properties.py": {
+      "hunks": [
+        {
+          "new_end": 174,
+          "new_start": 147,
+          "original": "",
+          "replacement": "\nfrom textwrap import wrap\n"
+        },
+        {
+          "new_end": 458,
+          "new_start": 411,
+          "original": "from . import backend_runtime\n",
+          "replacement": "from . import assembly_job_ui, backend_runtime\n"
+        },
+        {
+          "new_end": 4324,
+          "new_start": 4193,
+          "original": "        description=\"External Python with cadquery-ocp installed; defaults to MCAD_PYTHON or Project Root/.venv/bin/python\",\n",
+          "replacement": "        description=\"Legacy Linux development backend only; standalone extensions choose their bundled interpreter automatically\",\n"
+        },
+        {
+          "new_end": 5605,
+          "new_start": 4838,
+          "original": "        layout.prop(self, \"project_root\")\n        layout.prop(self, \"python_executable\")\n",
+          "replacement": "        blocked = assembly_job_ui.draw_backend_failure(layout, context)\n        if backend_runtime.bundled_mode():\n            state, message = backend_runtime.bundle_status()\n            layout.label(text=\"Automatic offline backend\", icon=\"PACKAGE\")\n            if blocked and state == \"ready\":\n                message = \"Bundled files prepared; native operations are blocked.\"\n            for line in wrap(message, width=72):\n                layout.label(\n                    text=line, icon=\"CHECKMARK\" if state == \"ready\" and not blocked else \"INFO\"\n                )\n        else:\n            layout.prop(self, \"project_root\")\n            layout.prop(self, \"python_executable\")\n            layout.label(text=\"Legacy development setup (Linux only)\", icon=\"INFO\")\n"
+        }
+      ],
+      "original_bytes": 5070,
+      "original_sha256": "221dd6240572fc3d255ea7752b24f9d70e6448753ffbf345c6d7e5dc46b156e5",
+      "reviewed_bytes": 5798,
+      "reviewed_sha256": "07f56a4d15a85a53331b63b2bb317e6aca7c15f35cfd731b33b1654d064a5f19"
+    },
+    "blender_addon/mechanical_cad_blender/registration.py": {
+      "hunks": [
+        {
+          "new_end": 285,
+          "new_start": 242,
+          "original": "",
+          "replacement": "\nimport importlib\nfrom pathlib import Path\n"
+        },
+        {
+          "new_end": 3721,
+          "new_start": 1357,
+          "original": "",
+          "replacement": "from .runtime_bundle_launch import LAUNCH_CONSTANT_FIELDS\n\n\ndef _poll_bundle_setup():\n    return 0.1 if backend_runtime.poll_bundled_setup() else None\n\n\ndef _stop_bundle_setup():\n    # Cancel before unregistering RNA; keep the original worker in backend_runtime\n    # until it confirms cleanup, including across a quick disable/re-enable.\n    try:\n        backend_runtime.stop_bundled_setup()\n    except Exception as exc:\n        # Never skip native-job retirement because independent setup cleanup\n        # failed. Setup revokes its policy before attempting cancellation.\n        print(\"Mechanical CAD bundled setup cleanup:\", exc)\n    finally:\n        if bpy.app.timers.is_registered(_poll_bundle_setup):\n            bpy.app.timers.unregister(_poll_bundle_setup)\n\n\ndef _start_bundle_setup():\n    if not __package__.startswith(\"bl_ext.\"):\n        return\n    try:\n        generated = importlib.import_module(__package__ + \".standalone_launch_constants\")\n        constants = {key: getattr(generated, key) for key in LAUNCH_CONSTANT_FIELDS}\n        package = str(Path(__file__).resolve().parent)\n        cache = bpy.utils.extension_path_user(__package__, path=\"backend_runtime\", create=True)\n        pending = backend_runtime.begin_bundled_setup(package, cache, constants)\n    except Exception as exc:\n        backend_runtime.fail_bundled_setup(\"Bundled backend setup failed: \" + str(exc))\n        return\n    if pending and not bpy.app.timers.is_registered(_poll_bundle_setup):\n        # File load may happen while first-use extraction is running. It must\n        # not orphan the bounded main-thread completion transfer.\n        bpy.app.timers.register(_poll_bundle_setup, first_interval=0.1, persistent=True)\n\n\ndef _owns_scene_pointer(name, cls):\n    if not getattr(cls, \"is_registered\", False):\n        return False\n    try:\n        prop = bpy.types.Scene.bl_rna.properties[name]\n        return prop.fixed_type == cls.bl_rna\n    except (KeyError, AttributeError, ReferenceError):\n        return False\n\n\n_SCENE_POINTERS = (\n    (\"mechanical_cad\", MCAD_State),\n    (\"mechanical_cad_assembly\", assembly_properties.MCAD_AssemblyState),\n)\n\n\ndef _owns_scene_registration():\n    return all(_owns_scene_pointer(name, cls) for name, cls in _SCENE_POINTERS)\n\n\ndef _has_scene_registration():\n    return any(hasattr(bpy.types.Scene, name) for name, _cls in _SCENE_POINTERS)\n"
+        },
+        {
+          "new_end": 8775,
+          "new_start": 8746,
+          "original": "",
+          "replacement": "        _stop_bundle_setup()\n"
+        },
+        {
+          "new_end": 12433,
+          "new_start": 12372,
+          "original": "            \"Mechanical CAD 0.3 requires Blender 5.2 or newer. \"\n",
+          "replacement": "            \"Mechanical CAD requires Blender 5.2 or newer. \"\n"
+        },
+        {
+          "new_end": 12891,
+          "new_start": 12602,
+          "original": "    if hasattr(bpy.types.Scene, \"mechanical_cad\"):\n        return\n",
+          "replacement": "    if _has_scene_registration():\n        if _owns_scene_registration():\n            return\n        raise RuntimeError(\n            \"Another Mechanical CAD version is enabled. Disable it before enabling \"\n            \"this extension. Saved documents and drafts are not changed.\"\n        )\n"
+        },
+        {
+          "new_end": 13071,
+          "new_start": 13045,
+          "original": "",
+          "replacement": "    created_pointers = []\n"
+        },
+        {
+          "new_end": 13323,
+          "new_start": 13259,
+          "original": "",
+          "replacement": "        created_pointers.append((\"mechanical_cad\", MCAD_State))\n"
+        },
+        {
+          "new_end": 13557,
+          "new_start": 13456,
+          "original": "",
+          "replacement": "        created_pointers.append((\"mechanical_cad_assembly\", assembly_properties.MCAD_AssemblyState))\n"
+        },
+        {
+          "new_end": 13664,
+          "new_start": 13634,
+          "original": "",
+          "replacement": "        _start_bundle_setup()\n"
+        },
+        {
+          "new_end": 14491,
+          "new_start": 14462,
+          "original": "",
+          "replacement": "        _stop_bundle_setup()\n"
+        },
+        {
+          "new_end": 15240,
+          "new_start": 15240,
+          "original": "        if hasattr(bpy.types.Scene, \"mechanical_cad_assembly\"):\n            del bpy.types.Scene.mechanical_cad_assembly\n",
+          "replacement": ""
+        },
+        {
+          "new_end": 15426,
+          "new_start": 15279,
+          "original": "        if hasattr(bpy.types.Scene, \"mechanical_cad\"):\n            del bpy.types.Scene.mechanical_cad\n",
+          "replacement": "        for name, cls in reversed(created_pointers):\n            if _owns_scene_pointer(name, cls):\n                delattr(bpy.types.Scene, name)\n"
+        },
+        {
+          "new_end": 15803,
+          "new_start": 15545,
+          "original": "",
+          "replacement": "    # A failed attempt to enable beside a legacy/foreign owner must not remove\n    # that owner's RNA, callbacks, preferences or persisted CAD data.\n    if _has_scene_registration() and not _owns_scene_registration():\n        return\n    _stop_bundle_setup()\n"
+        },
+        {
+          "new_end": 16871,
+          "new_start": 16737,
+          "original": "    if hasattr(bpy.types.Scene, \"mechanical_cad_assembly\"):\n        del bpy.types.Scene.mechanical_cad_assembly\n    if hasattr(bpy.types.Scene, \"mechanical_cad\"):\n        del bpy.types.Scene.mechanical_cad\n",
+          "replacement": "    for name, cls in reversed(_SCENE_POINTERS):\n        if _owns_scene_pointer(name, cls):\n            delattr(bpy.types.Scene, name)\n"
+        }
+      ],
+      "original_bytes": 13982,
+      "original_sha256": "89ef132e68e48237dd66b5afa73585acf0541c9bbad94a44932e6de300310a99",
+      "reviewed_bytes": 16998,
+      "reviewed_sha256": "26109bdec35fc858d65430a5d2d58d754d0d90661a051000fd3067ce1722f024"
+    },
+    "blender_addon/mechanical_cad_blender/service_v3.py": {
+      "hunks": [
+        {
+          "new_end": 1429,
+          "new_start": 1243,
+          "original": "",
+          "replacement": "        if selection.bundled_policy is not None:\n            raise bridge.BridgeError(\n                \"Bundled backends are unavailable to the dormant data-only service.\"\n            )\n"
+        }
+      ],
+      "original_bytes": 5442,
+      "original_sha256": "43978fe53f9121777618ab094869d99f08562d304a610362fb31891d28391956",
+      "reviewed_bytes": 5628,
+      "reviewed_sha256": "5110d999eccb3025841d141645186419c4c1797da0ac387003feff2e7bf89773"
+    },
+    "blender_addon/mechanical_cad_blender/sidecar_job.py": {
+      "hunks": [
+        {
+          "new_end": 5726,
+          "new_start": 5673,
+          "original": "",
+          "replacement": "            bundled_policy=selection.bundled_policy,\n"
+        },
+        {
+          "new_end": 5888,
+          "new_start": 5759,
+          "original": "    def _initialize(self, snapshot, payload, root, executable, timeout, *, environment=None):\n",
+          "replacement": "    def _initialize(\n        self, snapshot, payload, root, executable, timeout, *, environment=None, bundled_policy=None\n    ):\n"
+        },
+        {
+          "new_end": 7081,
+          "new_start": 7032,
+          "original": "",
+          "replacement": "        self._worker_stopped = threading.Event()\n"
+        },
+        {
+          "new_end": 7415,
+          "new_start": 7229,
+          "original": "",
+          "replacement": "        self._bundled_policy = bundled_policy\n        self._bundle_owner = None\n        self._owned_process = None\n        self._owned_files = []\n        self._cleanup_uncertain = False\n"
+        },
+        {
+          "new_end": 8267,
+          "new_start": 7801,
+          "original": "",
+          "replacement": "\n    @property\n    def cleanup_diagnostic(self) -> str:\n        \"\"\"Bounded non-consuming status; uncertain owners must remain supervised.\"\"\"\n        with self._lock:\n            if self._state == \"cleanup_uncertain\":\n                return (\n                    \"Bundled backend cleanup could not be confirmed. Native operations remain \"\n                    \"disabled. Save your work and restart Blender before trying again.\"\n                )\n            return \"\"\n"
+        },
+        {
+          "new_end": 9331,
+          "new_start": 9288,
+          "original": "",
+          "replacement": "                self._worker_stopped.set()\n"
+        },
+        {
+          "new_end": 9756,
+          "new_start": 9664,
+          "original": "            if self._state in {\"cancelling\", \"cancelled\", \"consumed\"}:\n",
+          "replacement": "            if self._state in {\"cancelling\", \"cancelled\", \"consumed\", \"cleanup_uncertain\"}:\n"
+        },
+        {
+          "new_end": 10172,
+          "new_start": 10129,
+          "original": "",
+          "replacement": "                self._worker_stopped.set()\n"
+        },
+        {
+          "new_end": 11478,
+          "new_start": 11148,
+          "original": "        \"\"\"Wait for cleanup, not result consumption; avoid this in UI callbacks.\"\"\"\n        return self._finished.wait(timeout)\n",
+          "replacement": "        \"\"\"Wait for worker stop; True still means confirmed cleanup, never uncertainty.\n\n        An uncertain worker wakes synchronous owners without claiming completion.\n        They must retain its original resources and execution lease in quarantine.\n        \"\"\"\n        return self._worker_stopped.wait(timeout) and self.done\n"
+        },
+        {
+          "new_end": 14182,
+          "new_start": 14150,
+          "original": "    def _exchange(self):\n",
+          "replacement": "    def _exchange_legacy(self):\n"
+        },
+        {
+          "new_end": 19775,
+          "new_start": 16292,
+          "original": "",
+          "replacement": "    def _exchange(self):\n        if self._bundled_policy is None:\n            return self._exchange_legacy()\n        from .runtime_bundle_launch import BundleCleanupUncertain, BundledOperationOwner\n\n        # Publish resource ownership before any acquisition can fail. The existing\n        # supervisor retains this job and its execution lease until done is true.\n        owner = self._bundle_owner = BundledOperationOwner(self._bundled_policy)\n        process = None\n        try:\n            owner.acquire(timeout=self._timeout, cancelled=self._cancel_requested.is_set)\n            for _ in range(3):\n                self._owned_files.append(tempfile.TemporaryFile(mode=\"w+b\"))\n            stdin, stdout, stderr = self._owned_files\n            stdin.write(self._payload)\n            stdin.seek(0)\n            if self._cancel_requested.is_set():\n                raise _Cancelled\n            owner.pin.assert_held()\n            deadline = time.monotonic() + self._timeout\n            try:\n                process = self._owned_process = subprocess.Popen(\n                    owner.command(),\n                    stdin=stdin,\n                    stdout=stdout,\n                    stderr=stderr,\n                    cwd=str(self._root),\n                    env=self._environment,\n                    close_fds=True,\n                    pass_fds=owner.pass_fds,\n                )\n            except OSError as exc:\n                raise bridge.BridgeError(\"Could not start the verified bundled Python.\") from exc\n            self._launched = True\n            while True:\n                if self._cancel_requested.is_set():\n                    raise _Cancelled\n                self._check_limits(stdout, stderr)\n                if time.monotonic() >= deadline:\n                    raise self._transport_error(\n                        \"CAD operation timed out; the sidecar was stopped. Reduce model \"\n                        \"complexity or increase the timeout in preferences.\"\n                    )\n                if process.poll() is not None:\n                    break\n                self._cancel_requested.wait(POLL_INTERVAL)\n            return self._read_response(process, stdout, stderr)\n        finally:\n            uncertain = owner.cleanup_uncertain\n            if process is not None:\n                try:\n                    try:\n                        if process.poll() is None:\n                            try:\n                                process.kill()\n                            except ProcessLookupError:\n                                pass\n                    finally:\n                        process.wait()\n                except BaseException:\n                    uncertain = True\n            # Every original stream gets exactly one close attempt, including\n            # partial construction. Never release the pin before all are closed.\n            for stream in reversed(self._owned_files):\n                try:\n                    stream.close()\n                except BaseException:\n                    uncertain = True\n            if not uncertain:\n                try:\n                    owner.cleanup()\n                except BaseException:\n                    uncertain = True\n            if uncertain:\n                owner.cleanup_uncertain = self._cleanup_uncertain = True\n                raise BundleCleanupUncertain(\n                    \"Bundled cleanup is uncertain. Save your work and restart Blender before trying again.\"\n                )\n\n"
+        },
+        {
+          "new_end": 20813,
+          "new_start": 19795,
+          "original": "",
+          "replacement": "        \"\"\"Always wake waiters; abrupt worker exits retain fail-closed ownership.\"\"\"\n        try:\n            self._run_exchange()\n        except BaseException:\n            # Unexpected SystemExit/KeyboardInterrupt must neither hang a sync\n            # owner nor leave an async owner displaying an endless running state.\n            # Do not retry cleanup or discard the original process/file/pin owner.\n            with self._lock:\n                self._cleanup_uncertain = True\n                self._response = None\n                self._error = self._transport_error(\n                    \"Bundled cleanup is uncertain. Save your work and restart Blender before trying again.\"\n                )\n                self._state = \"cleanup_uncertain\"\n                self._finished.clear()\n        finally:\n            # This is only a worker-stop notification. done/_finished remain the\n            # independent proof of successful resource cleanup.\n            self._worker_stopped.set()\n\n    def _run_exchange(self):\n"
+        },
+        {
+          "new_end": 21418,
+          "new_start": 21046,
+          "original": "            error = self._transport_error(f\"Sidecar communication failed: {exc}\")\n",
+          "replacement": "            if self._bundled_policy is not None:\n                error = self._transport_error(\n                    \"Bundled backend verification or communication failed. \"\n                    \"Check the installed extension and its private runtime.\"\n                )\n            else:\n                error = self._transport_error(f\"Sidecar communication failed: {exc}\")\n"
+        },
+        {
+          "new_end": 21773,
+          "new_start": 21443,
+          "original": "",
+          "replacement": "            if self._cleanup_uncertain:\n                self._response = None\n                self._error = self._transport_error(\n                    \"Bundled cleanup is uncertain. Save your work and restart Blender before trying again.\"\n                )\n                self._state = \"cleanup_uncertain\"\n                return\n"
+        }
+      ],
+      "original_bytes": 15974,
+      "original_sha256": "71cb56c349f2e9f257939391a57799632a8eab7494cc3ce407e199b6c6e39ae6",
+      "reviewed_bytes": 22200,
+      "reviewed_sha256": "b776757f5c60c01736a4052c58a0ed16081c1070ffecc829770171dfa4d1987f"
+    },
+    "blender_addon/mechanical_cad_blender/sketch_pending.py": {
+      "hunks": [
+        {
+          "new_end": 7386,
+          "new_start": 6529,
+          "original": "",
+          "replacement": "def cleanup_message():\n    \"\"\"Read detached retained-job diagnostics without polling or changing state.\"\"\"\n    _main_thread()\n    for pending in _ACTIVE.values():\n        diagnostic = getattr(pending._job, \"cleanup_diagnostic\", \"\")\n        if type(diagnostic) is str and diagnostic:\n            return execution_lease.QUARANTINE_MESSAGE\n    return \"\"\n\n\ndef _cleanup_diagnostic(pending):\n    \"\"\"Promote an absorbing cleanup error even after cancellation/staleness.\"\"\"\n    diagnostic = getattr(pending._job, \"cleanup_diagnostic\", \"\")\n    if type(diagnostic) is not str or not diagnostic:\n        return False\n    message = execution_lease.QUARANTINE_MESSAGE\n    if pending._error != message:\n        pending._notified = False\n    pending._error = message\n    pending._retired = pending._retired or \"failed\"\n    pending._phase = \"cancelling\"\n    return True\n\n\n"
+        },
+        {
+          "new_end": 7467,
+          "new_start": 7409,
+          "original": "",
+          "replacement": "    if _cleanup_diagnostic(pending):\n        return False\n"
+        },
+        {
+          "new_end": 8235,
+          "new_start": 8183,
+          "original": "",
+          "replacement": "    if _cleanup_diagnostic(pending):\n        return\n"
+        },
+        {
+          "new_end": 12494,
+          "new_start": 12404,
+          "original": "",
+          "replacement": "    if _cleanup_diagnostic(pending):\n        _notify_failure(pending)\n        return None\n"
+        },
+        {
+          "new_end": 16529,
+          "new_start": 16467,
+          "original": "",
+          "replacement": "        if _cleanup_diagnostic(pending):\n            continue\n"
+        }
+      ],
+      "original_bytes": 16953,
+      "original_sha256": "7d4caef3542de997ecf579bb29a9971ea9d4b8b070f51038b1d2b752f756b030",
+      "reviewed_bytes": 18072,
+      "reviewed_sha256": "9b85fa55c3a5b580d4c3b9d17222d0184a3e8e84712f7313452d71b6df164835"
+    },
+    "blender_addon/mechanical_cad_blender/workspace_ui.py": {
+      "hunks": [
+        {
+          "new_end": 624,
+          "new_start": 479,
+          "original": "from . import assembly_ui, constraint_ui, document_state, operators, palette_shapes, workspace\n",
+          "replacement": "from . import (\n    assembly_job_ui,\n    assembly_ui,\n    constraint_ui,\n    document_state,\n    operators,\n    palette_shapes,\n    workspace,\n)\n"
+        },
+        {
+          "new_end": 32752,
+          "new_start": 32690,
+          "original": "",
+          "replacement": "        assembly_job_ui.draw_backend_failure(layout, context)\n"
+        }
+      ],
+      "original_bytes": 41574,
+      "original_sha256": "ab66559a26f213c5e84db7d7e6433f12d112c5d3581ae11fb3e2edbe43d001a9",
+      "reviewed_bytes": 41686,
+      "reviewed_sha256": "5aed3a04330dbc87cb6c0b206df9def26a62da587341d9f65551e078cb1e1ba9"
+    },
+    "scripts/package_standalone_extension.py": {
+      "hunks": [
+        {
+          "new_end": 319,
+          "new_start": 159,
+          "original": "runtime inventory. This tool neither fetches nor executes their contents. It\n",
+          "replacement": "runtime inventory. This tool never fetches or executes a candidate runtime. It\nexecutes only the checked local child bootstrap's trusted build-time factory. It\n"
+        },
+        {
+          "new_end": 1881,
+          "new_start": 1595,
+          "original": "",
+          "replacement": "BOOTSTRAP_SOURCE_PATH = \"scripts/standalone_child_bootstrap.py\"\nGENERATED_LAUNCH_MODULE = \"standalone_launch_constants.py\"\nMAX_BOOTSTRAP_BYTES = 64 * 1024\nMAX_ENTRY_LOADER_BYTES = 4096\nPYTHON_PATHS = {\n    \"linux-x64\": \"python/bin/python3.12\",\n    \"windows-x64\": \"python/python.exe\",\n}\n"
+        },
+        {
+          "new_end": 10460,
+          "new_start": 7819,
+          "original": "",
+          "replacement": "def _trusted_bootstrap(source_root, source_by_path, limits):\n    \"\"\"Match inventoried source to local trusted bytes before any factory runs.\"\"\"\n    item = source_by_path[BOOTSTRAP_SOURCE_PATH]\n    if not 0 < item.size <= MAX_BOOTSTRAP_BYTES:\n        raise BuildError(\"Trusted bootstrap exceeds its fixed byte limit.\")\n    trusted = _read(ROOT, item, limits)\n    if trusted != _read(source_root, item, limits):\n        raise BuildError(\"Source bootstrap differs from the trusted local bootstrap.\")\n    return trusted\n\n\ndef _entry_loader(bootstrap_data):\n    \"\"\"Run the trusted child factory at build time, never in the Blender package.\"\"\"\n    namespace = {\n        \"__name__\": \"_mcad_trusted_bootstrap_build_factory\",\n        \"__file__\": str(ROOT / BOOTSTRAP_SOURCE_PATH),\n    }\n    try:\n        exec(compile(bootstrap_data, namespace[\"__file__\"], \"exec\"), namespace)\n        loader = namespace[\"entry_loader\"](_digest(bootstrap_data))\n    except Exception as exc:\n        raise BuildError(\"Trusted bootstrap launch factory failed.\") from exc\n    if (\n        type(loader) is not str\n        or not loader\n        or not loader.isascii()\n        or \"\\0\" in loader\n        or len(loader) > MAX_ENTRY_LOADER_BYTES\n    ):\n        raise BuildError(\"Trusted bootstrap loader exceeds its fixed launch contract.\")\n    return loader\n\n\ndef _launch_constants(bootstrap_data, loader, release, release_data, python_path):\n    \"\"\"Literal assignments only; final release hash stays outside the payload.\"\"\"\n    values = {\n        \"SCHEMA_VERSION\": 1,\n        \"BUILD_STATUS\": STATUS,\n        \"SOURCE_COMMIT\": release[\"source_commit\"],\n        \"RUNTIME_LOCK_SHA256\": release[\"runtime_lock_sha256\"],\n        \"BUNDLE_ID\": release[\"bundle_id\"],\n        \"PLATFORM\": release[\"platform\"],\n        \"PYTHON_IMPLEMENTATION\": \"cpython\",\n        \"PYTHON_VERSION\": (3, 12, 15, \"final\", 0),\n        \"PYTHON_CACHE_TAG\": \"cpython-312\",\n        \"PYTHON_BITS\": 64,\n        \"PYTHON_PATH\": python_path,\n        \"PYTHON_FLAGS\": (\"-I\", \"-S\", \"-B\", \"-X\", \"utf8\", \"-c\"),\n        \"BOOTSTRAP_PATH\": \"bootstrap.py\",\n        \"BOOTSTRAP_SHA256\": _digest(bootstrap_data),\n        \"RELEASE_IDENTITY_PATH\": \"release_identity.json\",\n        \"RELEASE_IDENTITY_BYTES\": release_data,\n        \"RELEASE_IDENTITY_SHA256\": _digest(release_data),\n        \"BUNDLE_MANIFEST_SHA256\": release[\"manifest_sha256\"],\n        \"PAYLOAD_SHA256\": release[\"payload_sha256\"],\n        \"ENTRY_LOADER\": loader,\n    }\n    return (\n        \"# Generated trusted build constants; setup identity is not CAD evidence.\\n\"\n        + \"\".join(f\"{name} = {value!r}\\n\" for name, value in values.items())\n    ).encode(\"ascii\")\n\n\n"
+        },
+        {
+          "new_end": 11222,
+          "new_start": 10993,
+          "original": "    Runtime input must include bootstrap.py and all dependency/license/source\n    material; it cannot shadow src/. Source and runtime trees are never modified.\n",
+          "replacement": "    Runtime input supplies all dependency/license/source material; it cannot\n    shadow src/ or bootstrap.py. The exact inventoried trusted child source is\n    copied as bootstrap.py. Source and runtime trees are never modified.\n"
+        },
+        {
+          "new_end": 12591,
+          "new_start": 12560,
+          "original": "",
+          "replacement": "        BOOTSTRAP_SOURCE_PATH,\n"
+        },
+        {
+          "new_end": 13499,
+          "new_start": 13032,
+          "original": "",
+          "replacement": "            parts = relative.casefold().split(\"/\")\n            stem = GENERATED_LAUNCH_MODULE.removesuffix(\".py\")\n            if (\n                parts[0] == stem\n                or parts[0].startswith(stem + \".\")\n                or (\n                    parts[0] == \"__pycache__\" and len(parts) > 1 and parts[1].startswith(stem + \".\")\n                )\n            ):\n                raise BuildError(\"Blender source cannot supply the generated launch namespace.\")\n"
+        },
+        {
+          "new_end": 14455,
+          "new_start": 14129,
+          "original": "",
+          "replacement": "    if any(item.path.split(\"/\", 1)[0].casefold() == \"bootstrap.py\" for item in runtime):\n        raise BuildError(\"Generated bootstrap.py namespace collision in runtime inputs.\")\n    if python_path != PYTHON_PATHS[platform]:\n        raise BuildError(\"Runtime profile requires its direct bundled CPython 3.12.15 interpreter.\")\n"
+        },
+        {
+          "new_end": 14787,
+          "new_start": 14667,
+          "original": "",
+          "replacement": "    bootstrap_data = _trusted_bootstrap(source_root, source_by_path, limits)\n    loader = _entry_loader(bootstrap_data)\n"
+        },
+        {
+          "new_end": 15232,
+          "new_start": 15050,
+          "original": "",
+          "replacement": "    (bootstrap_item,) = CONTRACTS.validate_file_inventory(\n        [_entry(\"bootstrap.py\", bootstrap_data)], limits=limits\n    )\n    payload.append((bootstrap_item, bootstrap_data))\n"
+        },
+        {
+          "new_end": 17208,
+          "new_start": 17112,
+          "original": "",
+          "replacement": "    launch_data = _launch_constants(bootstrap_data, loader, release, release_data, python_path)\n"
+        },
+        {
+          "new_end": 18012,
+          "new_start": 17772,
+          "original": "",
+          "replacement": "            \"bootstrap_source_path\": BOOTSTRAP_SOURCE_PATH,\n            \"bootstrap_sha256\": _digest(bootstrap_data),\n            \"release_identity_sha256\": _digest(release_data),\n            \"generated_launch_sha256\": _digest(launch_data),\n"
+        },
+        {
+          "new_end": 18809,
+          "new_start": 18761,
+          "original": "",
+          "replacement": "        (GENERATED_LAUNCH_MODULE, launch_data),\n"
+        }
+      ],
+      "original_bytes": 16173,
+      "original_sha256": "1467e70c089b1a685b079b74eb3d3528dafe6143de0645218ea3fcf74430d802",
+      "reviewed_bytes": 20762,
+      "reviewed_sha256": "1fd634b545480816a277b0707f27488e3253b8aae1a47090fe99c806b1d92750"
+    },
+    "tests/unit/test_standalone_extension_builder.py": {
+      "hunks": [
+        {
+          "new_end": 87,
+          "new_start": 76,
+          "original": "",
+          "replacement": "import ast\n"
+        },
+        {
+          "new_end": 1897,
+          "new_start": 1801,
+          "original": "",
+          "replacement": "            builder.BOOTSTRAP_SOURCE_PATH: (ROOT / builder.BOOTSTRAP_SOURCE_PATH).read_bytes(),\n"
+        },
+        {
+          "new_end": 2049,
+          "new_start": 2049,
+          "original": "            \"bootstrap.py\": b\"# inert bootstrap\\n\",\n",
+          "replacement": ""
+        },
+        {
+          "new_end": 6367,
+          "new_start": 6316,
+          "original": "        (\"runtime\", \"bootstrap.py\"),\n",
+          "replacement": "        (\"source\", builder.BOOTSTRAP_SOURCE_PATH),\n"
+        },
+        {
+          "new_end": 7338,
+          "new_start": 7287,
+          "original": "        (\"runtime\", \"bootstrap.py\"),\n",
+          "replacement": "        (\"source\", builder.BOOTSTRAP_SOURCE_PATH),\n"
+        },
+        {
+          "new_end": 12990,
+          "new_start": 12893,
+          "original": "        (inputs[\"runtime_root\"] / \"bootstrap.py\").write_bytes(b\"mutated after inventory\")\n",
+          "replacement": "        (inputs[\"runtime_root\"] / inputs[\"python_path\"]).write_bytes(b\"mutated after inventory\")\n"
+        },
+        {
+          "new_end": 16904,
+          "new_start": 16557,
+          "original": "",
+          "replacement": "    with zipfile.ZipFile(inputs[\"destination\"]) as archive:\n        constants = literal_launch_constants(archive)\n        assert constants[\"PLATFORM\"] == \"windows-x64\"\n        assert constants[\"PYTHON_PATH\"] == \"python/python.exe\"\n        assert constants[\"PYTHON_VERSION\"] == (3, 12, 15, \"final\", 0)\n        assert constants[\"PYTHON_BITS\"] == 64\n"
+        },
+        {
+          "new_end": 30959,
+          "new_start": 20241,
+          "original": "",
+          "replacement": "\n\ndef literal_launch_constants(archive):\n    \"\"\"Inspect generated Blender bytes without importing or executing the loader.\"\"\"\n    tree = ast.parse(archive.read(builder.GENERATED_LAUNCH_MODULE))\n    result = {}\n    for node in tree.body:\n        assert type(node) is ast.Assign\n        assert len(node.targets) == 1 and type(node.targets[0]) is ast.Name\n        name = node.targets[0].id\n        assert name.isupper() and name not in result\n        result[name] = ast.literal_eval(node.value)\n    return result\n\n\ndef test_trusted_child_and_literal_launch_identity_are_bound_without_circular_hash(inputs):\n    result = builder.build_contract_extension(**inputs)\n    trusted = (ROOT / builder.BOOTSTRAP_SOURCE_PATH).read_bytes()\n    with zipfile.ZipFile(inputs[\"destination\"]) as archive:\n        values = literal_launch_constants(archive)\n        release_data = archive.read(\"release_identity.json\")\n        release = json.loads(release_data)\n        manifest_data = archive.read(release[\"manifest_path\"])\n        manifest = json.loads(manifest_data)\n        payload_data = archive.read(release[\"payload_path\"])\n        record_data = json.loads(archive.read(\"BUILD_CONTRACT.json\"))\n        assert values == {\n            \"SCHEMA_VERSION\": 1,\n            \"BUILD_STATUS\": builder.STATUS,\n            \"SOURCE_COMMIT\": inputs[\"source_commit\"],\n            \"RUNTIME_LOCK_SHA256\": digest(inputs[\"runtime_lock\"]),\n            \"BUNDLE_ID\": release[\"bundle_id\"],\n            \"PLATFORM\": \"linux-x64\",\n            \"PYTHON_IMPLEMENTATION\": \"cpython\",\n            \"PYTHON_VERSION\": (3, 12, 15, \"final\", 0),\n            \"PYTHON_CACHE_TAG\": \"cpython-312\",\n            \"PYTHON_BITS\": 64,\n            \"PYTHON_PATH\": \"python/bin/python3.12\",\n            \"PYTHON_FLAGS\": (\"-I\", \"-S\", \"-B\", \"-X\", \"utf8\", \"-c\"),\n            \"BOOTSTRAP_PATH\": \"bootstrap.py\",\n            \"BOOTSTRAP_SHA256\": digest(trusted),\n            \"RELEASE_IDENTITY_PATH\": \"release_identity.json\",\n            \"RELEASE_IDENTITY_BYTES\": release_data,\n            \"RELEASE_IDENTITY_SHA256\": digest(release_data),\n            \"BUNDLE_MANIFEST_SHA256\": digest(manifest_data),\n            \"PAYLOAD_SHA256\": digest(payload_data),\n            \"ENTRY_LOADER\": builder._entry_loader(trusted),\n        }\n        loader = values[\"ENTRY_LOADER\"]\n        assert len(loader.encode(\"ascii\")) <= 4096\n        assert values[\"BOOTSTRAP_SHA256\"] in loader\n        assert inputs[\"source_commit\"] not in loader\n        assert record_data[\"bootstrap_source_path\"] == builder.BOOTSTRAP_SOURCE_PATH\n        assert record_data[\"bootstrap_sha256\"] == digest(trusted)\n        assert record_data[\"release_identity_sha256\"] == digest(release_data)\n        assert record_data[\"generated_launch_sha256\"] == digest(\n            archive.read(builder.GENERATED_LAUNCH_MODULE)\n        )\n        assert not any(\"standalone_child_bootstrap\" in name for name in archive.namelist())\n        assert result[\"sha256\"] not in release_data.decode()\n        assert result[\"sha256\"] not in archive.read(builder.GENERATED_LAUNCH_MODULE).decode()\n    with zipfile.ZipFile(io.BytesIO(payload_data)) as payload:\n        assert payload.read(\"bootstrap.py\") == trusted\n        assert \"release_identity.json\" not in payload.namelist()\n        assert builder.GENERATED_LAUNCH_MODULE not in payload.namelist()\n        assert next(item for item in manifest[\"files\"] if item[\"path\"] == \"bootstrap.py\") == (\n            record(\"bootstrap.py\", trusted)\n        )\n    assert \"entry_loader\" not in release and \"entry_loader\" not in manifest\n\n\n@pytest.mark.parametrize(\"replacement\", [None, \"scripts/other_bootstrap.py\"])\ndef test_exact_bootstrap_source_path_is_required(inputs, replacement):\n    inputs[\"source_files\"] = [\n        item for item in inputs[\"source_files\"] if item[\"path\"] != builder.BOOTSTRAP_SOURCE_PATH\n    ]\n    if replacement is not None:\n        inputs[\"source_files\"] += stage(\n            inputs[\"source_root\"],\n            {replacement: (ROOT / builder.BOOTSTRAP_SOURCE_PATH).read_bytes()},\n        )\n    with pytest.raises(builder.BuildError, match=\"lacks required\"):\n        builder.build_contract_extension(**inputs)\n    assert not inputs[\"destination\"].exists()\n\n\ndef test_self_consistent_foreign_child_source_is_rejected_before_execution(inputs, tmp_path):\n    marker = tmp_path / \"foreign-code-executed\"\n    foreign = f\"from pathlib import Path\\nPath({str(marker)!r}).touch()\\n\".encode()\n    (inputs[\"source_root\"] / builder.BOOTSTRAP_SOURCE_PATH).write_bytes(foreign)\n    inputs[\"source_files\"] = [\n        record(item[\"path\"], foreign) if item[\"path\"] == builder.BOOTSTRAP_SOURCE_PATH else item\n        for item in inputs[\"source_files\"]\n    ]\n    with pytest.raises(builder.BuildError, match=\"bytes differ\"):\n        builder.build_contract_extension(**inputs)\n    assert not marker.exists() and not inputs[\"destination\"].exists()\n\n\n@pytest.mark.parametrize(\"size\", [0, 65537])\ndef test_bootstrap_fixed_size_bound_precedes_factory_execution(inputs, monkeypatch, size):\n    data = b\"#\" * size\n    (inputs[\"source_root\"] / builder.BOOTSTRAP_SOURCE_PATH).write_bytes(data)\n    inputs[\"source_files\"] = [\n        record(item[\"path\"], data) if item[\"path\"] == builder.BOOTSTRAP_SOURCE_PATH else item\n        for item in inputs[\"source_files\"]\n    ]\n    monkeypatch.setattr(builder, \"_entry_loader\", lambda *a: pytest.fail(\"factory ran\"))\n    with pytest.raises(builder.BuildError, match=\"fixed byte limit\"):\n        builder.build_contract_extension(**inputs)\n    assert not inputs[\"destination\"].exists()\n\n\n@pytest.mark.parametrize(\n    \"path\",\n    [\n        \"standalone_launch_constants.py\",\n        \"STANDALONE_LAUNCH_CONSTANTS.PY\",\n        \"standalone_launch_constants/__init__.py\",\n        \"standalone_launch_constants.py/data\",\n        \"standalone_launch_constants.pyc\",\n        \"standalone_launch_constants.cpython-312-x86_64-linux-gnu.so\",\n        \"__pycache__/standalone_launch_constants.cpython-312.pyc\",\n        \"__PYCACHE__/STANDALONE_LAUNCH_CONSTANTS.cpython-312.pyc\",\n    ],\n)\ndef test_source_cannot_shadow_generated_launch_module_or_bytecode(inputs, path):\n    inputs[\"source_files\"] += stage(inputs[\"source_root\"], {builder.ADDON_PREFIX + path: b\"x\"})\n    with pytest.raises(builder.BuildError, match=\"generated launch namespace\"):\n        builder.build_contract_extension(**inputs)\n    assert not inputs[\"destination\"].exists()\n\n\n@pytest.mark.parametrize(\"path\", [\"bootstrap.py\", \"Bootstrap.PY\", \"bootstrap.py/foreign.py\"])\ndef test_runtime_cannot_supply_generated_child_bootstrap(inputs, path):\n    inputs[\"runtime_files\"] += stage(inputs[\"runtime_root\"], {path: b\"# foreign bootstrap\\n\"})\n    with pytest.raises(builder.BuildError, match=\"bootstrap.py namespace collision\"):\n        builder.build_contract_extension(**inputs)\n    assert not inputs[\"destination\"].exists()\n\n\n@pytest.mark.parametrize(\"loader\", [None, b\"loader\", \"\", \"\\0\", \"\u00e9\", \"#\" * 4097])\ndef test_child_factory_must_return_bounded_ascii_launch_text(inputs, monkeypatch, loader):\n    def fake_factory(_code, namespace):\n        namespace[\"entry_loader\"] = lambda _digest: loader\n\n    monkeypatch.setattr(builder, \"exec\", fake_factory, raising=False)\n    with pytest.raises(builder.BuildError, match=\"fixed launch contract\"):\n        builder.build_contract_extension(**inputs)\n    assert not inputs[\"destination\"].exists()\n\n\ndef test_factory_failure_is_explicit_and_does_not_publish(inputs, monkeypatch):\n    def failed_factory(*args):\n        raise RuntimeError(\"synthetic build factory failure\")\n\n    monkeypatch.setattr(builder, \"exec\", failed_factory, raising=False)\n    with pytest.raises(builder.BuildError, match=\"launch factory failed\"):\n        builder.build_contract_extension(**inputs)\n    assert not inputs[\"destination\"].exists()\n\n\ndef test_child_factory_accepts_exact_loader_byte_bound(monkeypatch):\n    def fake_factory(_code, namespace):\n        namespace[\"entry_loader\"] = lambda _digest: \"#\" * 4096\n\n    monkeypatch.setattr(builder, \"exec\", fake_factory, raising=False)\n    assert builder._entry_loader(b\"# synthetic factory contract only\") == \"#\" * 4096\n\n\ndef test_metadata_cannot_supply_loader_text(inputs, tmp_path):\n    marker = tmp_path / \"descriptor-code-executed\"\n    evil = f\"from pathlib import Path; Path({str(marker)!r}).touch()\"\n    inputs[\"runtime_lock\"] = json.dumps({\"entry_loader\": evil, \"bootstrap\": evil}).encode()\n    builder.build_contract_extension(**inputs)\n    with zipfile.ZipFile(inputs[\"destination\"]) as archive:\n        values = literal_launch_constants(archive)\n        assert evil not in values[\"ENTRY_LOADER\"]\n        assert values[\"ENTRY_LOADER\"] == builder._entry_loader(\n            (ROOT / builder.BOOTSTRAP_SOURCE_PATH).read_bytes()\n        )\n    assert not marker.exists()\n\n\ndef test_linux_rejects_inventoried_alternative_interpreter_location(inputs):\n    inputs[\"runtime_files\"] += stage(\n        inputs[\"runtime_root\"], {\"python/bin/python\": b\"INERT ALTERNATIVE, DO NOT RUN\"}\n    )\n    inputs[\"python_path\"] = \"python/bin/python\"\n    with pytest.raises(builder.BuildError, match=\"direct bundled CPython 3.12.15\"):\n        builder.build_contract_extension(**inputs)\n    assert not inputs[\"destination\"].exists()\n\n\ndef test_reordered_exact_inventories_produce_identical_archive(inputs, tmp_path):\n    first = builder.build_contract_extension(**inputs)\n    second = builder.build_contract_extension(\n        **(\n            inputs\n            | {\n                \"destination\": tmp_path / \"reordered.zip\",\n                \"source_files\": list(reversed(inputs[\"source_files\"])),\n                \"runtime_files\": list(reversed(inputs[\"runtime_files\"])),\n            }\n        )\n    )\n    assert first[\"sha256\"] == second[\"sha256\"]\n\n\ndef test_changed_source_release_identity_changes_constants_without_changing_child(inputs, tmp_path):\n    builder.build_contract_extension(**inputs)\n    second = tmp_path / \"different-source-identity.zip\"\n    builder.build_contract_extension(\n        **(\n            inputs\n            | {\n                \"destination\": second,\n                \"source_commit\": \"7\" * 40,\n            }\n        )\n    )\n    with zipfile.ZipFile(inputs[\"destination\"]) as one, zipfile.ZipFile(second) as two:\n        first, next_values = literal_launch_constants(one), literal_launch_constants(two)\n        assert first[\"BOOTSTRAP_SHA256\"] == next_values[\"BOOTSTRAP_SHA256\"]\n        assert first[\"ENTRY_LOADER\"] == next_values[\"ENTRY_LOADER\"]\n        assert first[\"BUNDLE_ID\"] != next_values[\"BUNDLE_ID\"]\n        assert first[\"RELEASE_IDENTITY_SHA256\"] != next_values[\"RELEASE_IDENTITY_SHA256\"]\n        assert first[\"BUNDLE_MANIFEST_SHA256\"] != next_values[\"BUNDLE_MANIFEST_SHA256\"]\n        assert first[\"PAYLOAD_SHA256\"] == next_values[\"PAYLOAD_SHA256\"]\n"
+        }
+      ],
+      "original_bytes": 19804,
+      "original_sha256": "9b6dc84231af77d00620260a612b1eb6794fa88fe6ddf88fa15494b54fd1f2a5",
+      "reviewed_bytes": 30959,
+      "reviewed_sha256": "3e4a1282408ad384bfeb8cb43aee8771b5f60b9adc6b810a745b966d77b246eb"
+    },
+    "tests/unit/test_standalone_runtime_boundary.py": {
+      "hunks": [
+        {
+          "new_end": 85,
+          "new_start": 0,
+          "original": "\"\"\"Exact isolated footprint and unchanged live selection/publication boundaries.\"\"\"\n",
+          "replacement": "\"\"\"Finite live-launch footprint, exact historical inverses and import boundaries.\"\"\"\n"
+        },
+        {
+          "new_end": 373,
+          "new_start": 262,
+          "original": "",
+          "replacement": "EXPECTED_LIVE_GUARD_SOURCE_SHA256 = (\n    \"398fda102da7ebddf29213ae824dd72a4011882e6c23a27d8fa33955bc80e075\"\n)\n"
+        },
+        {
+          "new_end": 2557,
+          "new_start": 522,
+          "original": "",
+          "replacement": "    \"runtime_bundle_prepare\",\n    \"runtime_bundle_launch\",\n}\n# Exact import statements, including imported symbols, aliases and multiplicity.\n# No core, native adapter, publisher or validator is an admitted importer.\nIMPORT_EDGES = {\n    \"backend_platform.py\": (\n        \"from .runtime_bundle_manifest import BundleDescriptor\",\n        \"from .runtime_bundle_manifest import BundleDescriptor\",\n    ),\n    \"backend_runtime.py\": (\n        \"from .runtime_bundle_launch import LAUNCH_CONSTANT_FIELDS, capture_bundled_policy\",\n        \"from .runtime_bundle_manifest import BundleLimits\",\n        \"from .runtime_bundle_prepare import BundlePreparationJob\",\n    ),\n    \"backend_selection.py\": (\"from .runtime_bundle_launch import BundledLaunchPolicy\",),\n    \"registration.py\": (\"from .runtime_bundle_launch import LAUNCH_CONSTANT_FIELDS\",),\n    \"runtime_bundle_launch.py\": (\n        \"from . import runtime_bundle_materialize as materialize\",\n        \"from . import runtime_bundle_pin as pins\",\n        \"from .runtime_bundle_manifest import \"\n        \"BundleDescriptor, BundleError, BundleLimits, parse_release_manifest\",\n    ),\n    \"runtime_bundle_materialize.py\": (\n        \"from .runtime_bundle_manifest import \"\n        \"BundleDescriptor, BundleError, parse_bundle_manifest, parse_release_manifest\",\n    ),\n    \"runtime_bundle_prepare.py\": (\n        \"from .runtime_bundle_manifest import \"\n        \"PLATFORMS, BundleDescriptor, BundleLimits, parse_release_manifest\",\n        \"from .runtime_bundle_materialize import BundleCancelled, materialize_bundle\",\n        \"from .runtime_bundle_pin import \"\n        \"MAX_TIMEOUT_SECONDS, BundlePinCancelled, BundlePinError, BundlePinTimeout, \"\n        \"acquire_bundle_pin\",\n    ),\n    \"sidecar_job.py\": (\n        \"from .runtime_bundle_launch import BundleCleanupUncertain, BundledOperationOwner\",\n    ),\n    \"windows_process.py\": (\n        \"from .backend_platform import MAX_STDERR_BYTES, MAX_STDOUT_BYTES, LaunchObservation, \"\n        \"LaunchSpec, LaunchValidation, ProcessError, RuntimePin\",\n    ),\n"
+        },
+        {
+          "new_end": 3176,
+          "new_start": 3002,
+          "original": "",
+          "replacement": "        \"STANDALONE_LIVE_FIXTURE\",\n        \"STANDALONE_LIVE_SHA256\",\n        \"STANDALONE_LIVE_CHANGED\",\n        \"STANDALONE_LIVE_ADDED\",\n        \"standalone_live_originals\",\n"
+        },
+        {
+          "new_end": 3854,
+          "new_start": 3819,
+          "original": "",
+          "replacement": "    assert names <= set(namespace)\n"
+        },
+        {
+          "new_end": 5722,
+          "new_start": 3875,
+          "original": "",
+          "replacement": "\n\ndef assert_guard_source_bytes(raw, fixture_sha256):\n    seal = ('STANDALONE_LIVE_SHA256 = \"' + fixture_sha256 + '\"').encode()\n    assert raw.count(seal) == 1\n    normalized = raw.replace(seal, ('STANDALONE_LIVE_SHA256 = \"' + \"0\" * 64 + '\"').encode())\n    assert hashlib.sha256(normalized).hexdigest() == EXPECTED_LIVE_GUARD_SOURCE_SHA256\n\n\ndef test_guard_module_remains_exact_except_the_fixture_hash_slot():\n    namespace = guard_namespace()\n    raw = (ROOT / \"tests/unit/test_arc_profile_native_end_cap.py\").read_bytes()\n    assert_guard_source_bytes(raw, namespace[\"STANDALONE_LIVE_SHA256\"])\n\n\n@pytest.mark.parametrize(\n    \"before, after\",\n    [\n        (\n            b\"def standalone_live_originals(root):\",\n            b\"def standalone_live_originals(root): # changed\",\n        ),\n        (\n            b\"def authoring_revision_originals(root):\",\n            b\"def authoring_revision_originals(root): # changed\",\n        ),\n        (\n            b\"def service_revision_originals(root):\",\n            b\"def service_revision_originals(root): # changed\",\n        ),\n        (\n            b\"def standalone_revision_added(root):\",\n            b\"def standalone_revision_added(root): # changed\",\n        ),\n        (b\"def protected_python_digest(root):\", b\"def protected_python_digest(root): # changed\"),\n        (\n            b\"class NoNativeImports(importlib.abc.MetaPathFinder):\",\n            b\"class NoNativeImports(importlib.abc.MetaPathFinder): # changed\",\n        ),\n    ],\n)\ndef test_guard_source_mutations_have_no_historical_exemption(before, after):\n    namespace = guard_namespace()\n    raw = (ROOT / \"tests/unit/test_arc_profile_native_end_cap.py\").read_bytes()\n    assert raw.count(before) == 1\n    with pytest.raises(AssertionError):\n        assert_guard_source_bytes(raw.replace(before, after), namespace[\"STANDALONE_LIVE_SHA256\"])\n"
+        },
+        {
+          "new_end": 6022,
+          "new_start": 5835,
+          "original": "",
+          "replacement": "    added, restored = namespace[\"standalone_live_originals\"](ROOT)\n    assert added == namespace[\"STANDALONE_LIVE_ADDED\"]\n    assert set(restored) == namespace[\"STANDALONE_LIVE_CHANGED\"]\n"
+        },
+        {
+          "new_end": 6237,
+          "new_start": 6205,
+          "original": "",
+          "replacement": "    assert len(baseline) == 129\n"
+        },
+        {
+          "new_end": 7010,
+          "new_start": 6504,
+          "original": "        assert hashlib.sha256((ROOT / path).read_bytes()).hexdigest() == expected, path\n",
+          "replacement": "        data = restored.get(path, (ROOT / path).read_bytes())\n        assert hashlib.sha256(data).hexdigest() == expected, path\n        if path not in namespace[\"STANDALONE_LIVE_CHANGED\"]:\n            # In particular all core, solver, kernel and wire validators retain\n            # actual source bytes, not reconstructed equivalents or exemptions.\n            assert hashlib.sha256((ROOT / path).read_bytes()).hexdigest() == expected, path\n    assert not any(path.startswith(\"src/\") for path in restored)\n"
+        },
+        {
+          "new_end": 7347,
+          "new_start": 7196,
+          "original": "",
+          "replacement": "    assert namespace[\"SNAPSHOT3_PYTHON_PROTECTED\"] == (\n        259,\n        \"f1c9a006975a48a8ef3fb051709eb4ac75a0dadc207090c27783902034e939b7\",\n    )\n"
+        },
+        {
+          "new_end": 8060,
+          "new_start": 7349,
+          "original": "def test_no_existing_runtime_imports_or_dynamically_names_new_leaves():\n    # Baseline byte check above also rejects indirect caller/fallback changes.\n",
+          "replacement": "def test_original_standalone_fixture_and_all_fourteen_before_files_stay_exact():\n    namespace = guard_namespace()\n    raw = (ROOT / namespace[\"STANDALONE_REVISION_FIXTURE\"]).read_bytes()\n    assert hashlib.sha256(raw).hexdigest() == (\n        \"0e6152a913e23079c770f23bbe6daf111d28f82981496e1c85af19ae1bc5c6c9\"\n    )\n    _added, restored = namespace[\"standalone_live_originals\"](ROOT)\n    old = json.loads(raw)[\"added\"]\n    assert len(old) == 14\n    for path, expected in old.items():\n        data = restored.get(path, (ROOT / path).read_bytes())\n        assert len(data) == expected[\"bytes\"], path\n        assert hashlib.sha256(data).hexdigest() == expected[\"sha256\"], path\n\n\ndef assert_import_boundary(root):\n"
+        },
+        {
+          "new_end": 8192,
+          "new_start": 8116,
+          "original": "    for directory in (ROOT / \"src\", ROOT / \"blender_addon\"):\n",
+          "replacement": "    found = {}\n    for directory in (root / \"src\", root / \"blender_addon\"):\n"
+        },
+        {
+          "new_end": 8237,
+          "new_start": 8237,
+          "original": "            if path.parent == ADDON and path.stem in LEAVES:\n                continue\n",
+          "replacement": ""
+        },
+        {
+          "new_end": 8807,
+          "new_start": 8325,
+          "original": "                if isinstance(node, ast.Import):\n                    assert all(\n                        not forbidden.intersection(alias.name.split(\".\")) for alias in node.names\n                    ), path\n                elif isinstance(node, ast.ImportFrom):\n                    names = (node.module or \"\").split(\".\") + [alias.name for alias in node.names]\n                    assert not forbidden.intersection(names), path\n",
+          "replacement": "                if isinstance(node, (ast.Import, ast.ImportFrom)):\n                    names = [alias.name for alias in node.names]\n                    if isinstance(node, ast.ImportFrom):\n                        names.append(node.module or \"\")\n                    if any(forbidden.intersection(name.split(\".\")) for name in names):\n                        relative = path.relative_to(root).as_posix()\n                        found.setdefault(relative, []).append(ast.unparse(node))\n"
+        },
+        {
+          "new_end": 11283,
+          "new_start": 8975,
+          "original": "",
+          "replacement": "    expected = {\n        \"blender_addon/mechanical_cad_blender/\" + name: sorted(edges)\n        for name, edges in IMPORT_EDGES.items()\n    }\n    assert {path: sorted(edges) for path, edges in found.items()} == expected\n\n\ndef test_only_exact_named_runtime_edges_import_new_leaves_and_no_dynamic_bootstrap():\n    # No leaf-module exemption: internal imports are pinned as narrowly as live callers.\n    assert_import_boundary(ROOT)\n\n\n@pytest.mark.parametrize(\n    \"path, statement\",\n    [\n        (\"src/mechanical_cad/kernel_ocp.py\", \"from x import runtime_bundle_launch\"),\n        (\"src/mechanical_cad/sidecar.py\", \"import runtime_bundle_prepare\"),\n        (\n            \"blender_addon/mechanical_cad_blender/part_publication.py\",\n            \"from .runtime_bundle_launch import BundledOperationOwner\",\n        ),\n        (\n            \"blender_addon/mechanical_cad_blender/guarded_evidence.py\",\n            \"from . import runtime_bundle_materialize\",\n        ),\n        (\n            \"blender_addon/mechanical_cad_blender/backend_runtime.py\",\n            \"from .runtime_bundle_launch import BundledOperationOwner\",\n        ),\n        (\n            \"blender_addon/mechanical_cad_blender/runtime_bundle_launch.py\",\n            \"import standalone_child_bootstrap\",\n        ),\n        (\n            \"blender_addon/mechanical_cad_blender/runtime_bundle_prepare.py\",\n            \"__import__('standalone_child_bootstrap')\",\n        ),\n        (\n            \"blender_addon/mechanical_cad_blender/backend_selection.py\",\n            \"importlib.import_module('runtime_bundle_pin')\",\n        ),\n        (\"src/mechanical_cad/model.py\", \"module_name = 'pkg.runtime_bundle_manifest'\"),\n        (\n            \"blender_addon/mechanical_cad_blender/backend_runtime.py\",\n            \"from .runtime_bundle_prepare import BundlePreparationJob\",\n        ),\n    ],\n)\ndef test_new_importers_symbols_duplicates_and_dynamic_names_reject(tmp_path, path, statement):\n    namespace = guard_namespace()\n    namespace[\"copy_python_guard_tree\"](tmp_path)\n    target = tmp_path / path\n    target.write_bytes(target.read_bytes() + b\"\\n\" + statement.encode() + b\"\\n\")\n    with pytest.raises(AssertionError):\n        assert_import_boundary(tmp_path)\n    with pytest.raises(AssertionError):\n        namespace[\"protected_python_digest\"](tmp_path)\n"
+        },
+        {
+          "new_end": 13065,
+          "new_start": 12541,
+          "original": "",
+          "replacement": "@pytest.mark.parametrize(\n    \"path\",\n    sorted(\n        guard_namespace()[\"STANDALONE_LIVE_CHANGED\"] | guard_namespace()[\"STANDALONE_LIVE_ADDED\"]\n    ),\n)\ndef test_every_live_changed_or_added_path_is_exactly_pinned(tmp_path, path):\n    namespace = guard_namespace()\n    namespace[\"copy_python_guard_tree\"](tmp_path)\n    target = tmp_path / path\n    target.write_bytes(target.read_bytes() + b\"\\n# unreviewed live mutation\\n\")\n    with pytest.raises(AssertionError):\n        namespace[\"protected_python_digest\"](tmp_path)\n\n\n"
+        },
+        {
+          "new_end": 19422,
+          "new_start": 13701,
+          "original": "",
+          "replacement": "\n\ndef test_live_fixture_bytes_are_pinned_before_loading_any_delta(tmp_path):\n    namespace = guard_namespace()\n    namespace[\"copy_python_guard_tree\"](tmp_path)\n    fixture = tmp_path / namespace[\"STANDALONE_LIVE_FIXTURE\"]\n    fixture.write_bytes(fixture.read_bytes() + b\"\\n\")\n    with pytest.raises(AssertionError):\n        namespace[\"protected_python_digest\"](tmp_path)\n\n\n@pytest.mark.parametrize(\n    \"path\",\n    [\n        \"src/mechanical_cad/unreviewed_live.py\",\n        \"blender_addon/mechanical_cad_blender/unreviewed_live.py\",\n        \"tests/unit/test_unreviewed_live.py\",\n    ],\n)\ndef test_unlisted_live_python_paths_remain_in_historical_digest(tmp_path, path):\n    namespace = guard_namespace()\n    namespace[\"copy_python_guard_tree\"](tmp_path)\n    (tmp_path / path).write_bytes(b\"pass\\n\")\n    assert namespace[\"protected_python_digest\"](tmp_path) != namespace[\"SNAPSHOT3_PYTHON_PROTECTED\"]\n\n\ndef repin_test_fixture(namespace, root, revision):\n    \"\"\"Bypass only the outer seal in a test to exercise inner semantic assertions.\"\"\"\n    raw = (json.dumps(revision, sort_keys=True, indent=2) + \"\\n\").encode()\n    (root / namespace[\"STANDALONE_LIVE_FIXTURE\"]).write_bytes(raw)\n    namespace[\"STANDALONE_LIVE_SHA256\"] = hashlib.sha256(raw).hexdigest()\n\n\n@pytest.mark.parametrize(\n    \"mutation\",\n    [\n        \"schema\",\n        \"base\",\n        \"extra_key\",\n        \"missing_added\",\n        \"missing_changed\",\n        \"added_path\",\n        \"changed_path\",\n        \"core_path\",\n        \"original_hash\",\n        \"reviewed_hash\",\n        \"original_length\",\n        \"reviewed_length\",\n        \"entry_key\",\n        \"hunk_key\",\n        \"empty_hunks\",\n        \"start_negative\",\n        \"start_bool\",\n        \"end_before_start\",\n        \"end_overflow\",\n        \"replacement\",\n        \"original\",\n        \"duplicate_hunk\",\n        \"reversed_hunks\",\n    ],\n)\ndef test_live_inverse_rejects_invalid_hunks_metadata_and_nonfinite_paths(tmp_path, mutation):\n    namespace = guard_namespace()\n    namespace[\"copy_python_guard_tree\"](tmp_path)\n    revision = json.loads((tmp_path / namespace[\"STANDALONE_LIVE_FIXTURE\"]).read_bytes())\n    name = \"blender_addon/mechanical_cad_blender/backend_runtime.py\"\n    entry = revision[\"changed\"][name]\n    hunk = entry[\"hunks\"][0]\n    if mutation == \"schema\":\n        revision[\"schema\"] = \"other\"\n    elif mutation == \"base\":\n        revision[\"base_commit\"] = \"0\" * 40\n    elif mutation == \"extra_key\":\n        revision[\"allow_other_paths\"] = True\n    elif mutation == \"missing_added\":\n        revision[\"added\"].pop(next(iter(revision[\"added\"])))\n    elif mutation == \"missing_changed\":\n        revision[\"changed\"].pop(name)\n    elif mutation == \"added_path\":\n        revision[\"added\"][\"../unreviewed.py\"] = revision[\"added\"].pop(next(iter(revision[\"added\"])))\n    elif mutation == \"changed_path\":\n        revision[\"changed\"][\"blender_addon/../unreviewed.py\"] = revision[\"changed\"].pop(name)\n    elif mutation == \"core_path\":\n        revision[\"changed\"][\"src/mechanical_cad/kernel_ocp.py\"] = revision[\"changed\"].pop(name)\n    elif mutation in {\"original_hash\", \"reviewed_hash\"}:\n        entry[mutation.replace(\"_hash\", \"_sha256\")] = \"0\" * 64\n    elif mutation in {\"original_length\", \"reviewed_length\"}:\n        entry[mutation.replace(\"_length\", \"_bytes\")] = True\n    elif mutation == \"entry_key\":\n        entry[\"exempt\"] = True\n    elif mutation == \"hunk_key\":\n        hunk[\"skip_validation\"] = True\n    elif mutation == \"empty_hunks\":\n        entry[\"hunks\"] = []\n    elif mutation == \"start_negative\":\n        hunk[\"new_start\"] = -1\n    elif mutation == \"start_bool\":\n        hunk[\"new_start\"] = False\n    elif mutation == \"end_before_start\":\n        hunk[\"new_end\"] = hunk[\"new_start\"] - 1\n    elif mutation == \"end_overflow\":\n        hunk[\"new_end\"] = entry[\"reviewed_bytes\"] + 1\n    elif mutation == \"replacement\":\n        hunk[\"replacement\"] += \"# altered reviewed bytes\\n\"\n    elif mutation == \"original\":\n        hunk[\"original\"] += \"# altered before bytes\\n\"\n    elif mutation == \"duplicate_hunk\":\n        entry[\"hunks\"].insert(1, dict(hunk))\n    else:\n        assert mutation == \"reversed_hunks\" and len(entry[\"hunks\"]) > 1\n        entry[\"hunks\"].reverse()\n    repin_test_fixture(namespace, tmp_path, revision)\n    with pytest.raises(AssertionError):\n        namespace[\"protected_python_digest\"](tmp_path)\n\n\n@pytest.mark.parametrize(\n    \"name\",\n    [\n        \"blender_addon/mechanical_cad_blender/backend_runtime.py\",\n        \"scripts/package_standalone_extension.py\",\n        \"tests/unit/test_standalone_extension_builder.py\",\n        \"tests/unit/test_standalone_runtime_boundary.py\",\n    ],\n)\ndef test_forged_before_hash_cannot_replace_baseline_or_older_added_bytes(tmp_path, name):\n    namespace = guard_namespace()\n    namespace[\"copy_python_guard_tree\"](tmp_path)\n    _added, original = namespace[\"standalone_live_originals\"](tmp_path)\n    revision = json.loads((tmp_path / namespace[\"STANDALONE_LIVE_FIXTURE\"]).read_bytes())\n    entry = revision[\"changed\"][name]\n    # Even internally self-consistent forged originals must reach the unchanged\n    # historical baseline/standalone checks instead of becoming exempt paths.\n    before = original[name] + b\"\\n# forged baseline\\n\"\n    reviewed = (tmp_path / name).read_bytes()\n    entry[\"original_bytes\"] = len(before)\n    entry[\"original_sha256\"] = hashlib.sha256(before).hexdigest()\n    entry[\"hunks\"] = [\n        {\n            \"new_start\": 0,\n            \"new_end\": len(reviewed),\n            \"original\": before.decode(),\n            \"replacement\": reviewed.decode(),\n        }\n    ]\n    repin_test_fixture(namespace, tmp_path, revision)\n    with pytest.raises(AssertionError):\n        namespace[\"protected_python_digest\"](tmp_path)\n"
+        }
+      ],
+      "original_bytes": 5334,
+      "original_sha256": "668fe39292051cb9ec5a7ad72f0c185bf9a5876e797878903af85849e75adbf0",
+      "reviewed_bytes": 19422,
+      "reviewed_sha256": "b538d5ae80fddf25085a05cb2983ed92c8da3de07d9de4012217e699d0de2c13"
+    }
+  },
+  "schema": "standalone-live-python-boundary-v1"
+}

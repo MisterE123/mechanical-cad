@@ -1,0 +1,160 @@
+{
+  "0.5": {
+    "model_parse_calls": [],
+    "native_modules_loaded": false,
+    "root": "/workspace/scratch/e704d81da019/cad_release_05/restored-source-1a27e74",
+    "rows": [
+      {
+        "action": "replay",
+        "error": {
+          "code": "invalid_request",
+          "message": "Unknown request fields."
+        },
+        "ok": false
+      },
+      {
+        "action": "canonical_snapshot",
+        "error": {
+          "code": "invalid_request",
+          "message": "Unknown request fields."
+        },
+        "ok": false
+      },
+      {
+        "action": "check_geometry",
+        "error": {
+          "code": "invalid_request",
+          "message": "Unknown request fields."
+        },
+        "ok": false
+      },
+      {
+        "action": "export_step",
+        "error": {
+          "code": "invalid_request",
+          "message": "Unknown request fields."
+        },
+        "ok": false
+      },
+      {
+        "action": "export_stl",
+        "error": {
+          "code": "invalid_request",
+          "message": "Unknown request fields."
+        },
+        "ok": false
+      },
+      {
+        "action": "solve_sketch",
+        "error": {
+          "code": "invalid_request",
+          "message": "Solve Sketch accepts only its explicit fields."
+        },
+        "ok": false
+      },
+      {
+        "action": "assembly_replay",
+        "error": {
+          "code": "invalid_request",
+          "message": "Unknown assembly request fields."
+        },
+        "ok": false
+      },
+      {
+        "action": "assembly_check",
+        "error": {
+          "code": "invalid_request",
+          "message": "Unknown assembly request fields."
+        },
+        "ok": false
+      },
+      {
+        "action": "assembly_sample",
+        "error": {
+          "code": "invalid_request",
+          "message": "Unknown assembly request fields."
+        },
+        "ok": false
+      }
+    ]
+  },
+  "0.5.1": {
+    "model_parse_calls": [],
+    "native_modules_loaded": false,
+    "root": "/workspace/scratch/e704d81da019/cad_dof_hotfix",
+    "rows": [
+      {
+        "action": "replay",
+        "error": {
+          "code": "invalid_request",
+          "message": "Unknown request fields."
+        },
+        "ok": false
+      },
+      {
+        "action": "canonical_snapshot",
+        "error": {
+          "code": "invalid_request",
+          "message": "Unknown request fields."
+        },
+        "ok": false
+      },
+      {
+        "action": "check_geometry",
+        "error": {
+          "code": "invalid_request",
+          "message": "Unknown request fields."
+        },
+        "ok": false
+      },
+      {
+        "action": "export_step",
+        "error": {
+          "code": "invalid_request",
+          "message": "Unknown request fields."
+        },
+        "ok": false
+      },
+      {
+        "action": "export_stl",
+        "error": {
+          "code": "invalid_request",
+          "message": "Unknown request fields."
+        },
+        "ok": false
+      },
+      {
+        "action": "solve_sketch",
+        "error": {
+          "code": "invalid_request",
+          "message": "Solve Sketch accepts only its explicit fields."
+        },
+        "ok": false
+      },
+      {
+        "action": "assembly_replay",
+        "error": {
+          "code": "invalid_request",
+          "message": "Unknown assembly request fields."
+        },
+        "ok": false
+      },
+      {
+        "action": "assembly_check",
+        "error": {
+          "code": "invalid_request",
+          "message": "Unknown assembly request fields."
+        },
+        "ok": false
+      },
+      {
+        "action": "assembly_sample",
+        "error": {
+          "code": "invalid_request",
+          "message": "Unknown assembly request fields."
+        },
+        "ok": false
+      }
+    ]
+  }
+}

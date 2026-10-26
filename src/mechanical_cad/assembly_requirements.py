@@ -1,0 +1,243 @@
+"""Native-free persisted engineering requirements and numerical query policies.
+
+A design's required clearance is independent of numerical query tolerances.
+Nothing here establishes a pass verdict or selects an implicit verification policy.
+"""
+
+from __future__ import annotations
+
+import math
+import re
+from dataclasses import dataclass, field
+from typing import Any
+
+from .errors import CADException
+
+MAX_VERIFICATION_PRESETS = 8
+MAX_REQUIREMENTS_PER_PRESET = 120  # Every distinct pair among 16 instances.
+MAX_TOTAL_CLEARANCE_REQUIREMENTS = 960
+MAX_MINIMUM_CLEARANCE_MM = 1e6
+_IDENTIFIER = re.compile(r"^[A-Za-z0-9_][A-Za-z0-9_.-]{0,127}$")
+
+
+class RequirementError(CADException):
+    """Expected failure in a persisted requirement or numerical policy."""
+
+
+def _error(code: str, message: str) -> None:
+    raise RequirementError(code, message)
+
+
+def _id(value: Any, label: str) -> None:
+    if type(value) is not str or not _IDENTIFIER.fullmatch(value):
+        _error("invalid_id", f"{label} requires a stable 1–128 character ASCII ID.")
+
+
+def _name(value: Any) -> None:
+    if type(value) is not str or not value or len(value) > 256:
+        _error("invalid_requirements", "A named requirement/preset needs 1–256 text characters.")
+    try:
+        value.encode("utf-8")
+    except UnicodeEncodeError as exc:
+        raise RequirementError("invalid_requirements", "Name contains invalid Unicode.") from exc
+
+
+def _keys(data: Any, fields: set[str], label: str) -> None:
+    if type(data) is not dict or set(data) != fields:
+        _error("invalid_requirements", f"{label} requires exactly {sorted(fields)}.")
+
+
+def _number(value: Any, lower: float, upper: float, label: str, code: str) -> float:
+    if type(value) not in (int, float):
+        _error(code, f"{label} must be a finite number, not a boolean or expression.")
+    try:
+        converted = float(value)
+    except (OverflowError, ValueError) as exc:
+        raise RequirementError(code, f"{label} exceeds double range.") from exc
+    if not math.isfinite(converted) or not lower <= converted <= upper:
+        _error(code, f"{label} must be between {lower:g} and {upper:g}, inclusive.")
+    return converted
+
+
+@dataclass(frozen=True)
+class ClearanceRequirement:
+    """A named engineering minimum for one unordered pair of instance IDs."""
+
+    id: str
+    name: str
+    instances: tuple[str, str]
+    minimum_mm: float
+    contact_policy: str | None = None
+
+    def __post_init__(self) -> None:
+        _id(self.id, "Requirement")
+        _name(self.name)
+        if type(self.instances) not in (tuple, list) or len(self.instances) != 2:
+            _error(
+                "invalid_clearance_pair", "A clearance requirement needs exactly two instance IDs."
+            )
+        for instance_id in self.instances:
+            _id(instance_id, "Instance reference")
+        if self.instances[0] == self.instances[1]:
+            _error("invalid_clearance_pair", "A clearance pair requires two distinct instances.")
+        object.__setattr__(self, "instances", tuple(sorted(self.instances)))
+        object.__setattr__(
+            self,
+            "minimum_mm",
+            _number(
+                self.minimum_mm,
+                0,
+                MAX_MINIMUM_CLEARANCE_MM,
+                "Minimum clearance (mm)",
+                "invalid_clearance",
+            ),
+        )
+
+        if self.contact_policy is not None and (
+            type(self.contact_policy) is not str
+            or self.contact_policy != "accept_tolerance_band"
+            or self.minimum_mm != 0
+        ):
+            _error(
+                "invalid_contact_policy",
+                "Contact acceptance requires zero minimum and accept_tolerance_band.",
+            )
+
+    def to_dict(self) -> dict:
+        return {
+            **({"contact_policy": self.contact_policy} if self.contact_policy is not None else {}),
+            "id": self.id,
+            "name": self.name,
+            "instances": list(self.instances),
+            "minimum_mm": self.minimum_mm,
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict) -> ClearanceRequirement:
+        if type(data) is dict and "contact_policy" in data:
+            if data["contact_policy"] != "accept_tolerance_band":
+                _error(
+                    "invalid_contact_policy",
+                    "Unknown contact policy; omit it for strict clearance.",
+                )
+            fields = {"id", "name", "instances", "minimum_mm", "contact_policy"}
+        else:
+            fields = {"id", "name", "instances", "minimum_mm"}
+        _keys(data, fields, "Clearance requirement")
+        if type(data["instances"]) is not list:
+            _error("invalid_clearance_pair", "Serialized instance pairs must be JSON arrays.")
+        return cls(
+            data["id"],
+            data["name"],
+            data["instances"],
+            data["minimum_mm"],
+            data.get("contact_policy"),
+        )
+
+
+@dataclass(frozen=True)
+class NumericalPolicy:
+    """Numerical resolution only; these are not engineering fit allowances."""
+
+    linear_tolerance_mm: float = 1e-6
+    volume_tolerance_mm3: float = 1e-9
+    linear_deflection_mm: float = 0.1
+
+    def __post_init__(self) -> None:
+        # Keep these bounds aligned with the service's CheckPolicy contract.
+        for name, lower, upper in (
+            ("linear_tolerance_mm", 1e-9, 1),
+            ("volume_tolerance_mm3", 1e-15, 1),
+            ("linear_deflection_mm", 0.001, 10),
+        ):
+            object.__setattr__(
+                self, name, _number(getattr(self, name), lower, upper, name, "invalid_tolerance")
+            )
+
+    def to_dict(self) -> dict:
+        return {
+            "linear_tolerance_mm": self.linear_tolerance_mm,
+            "volume_tolerance_mm3": self.volume_tolerance_mm3,
+            "linear_deflection_mm": self.linear_deflection_mm,
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict) -> NumericalPolicy:
+        _keys(
+            data,
+            {"linear_tolerance_mm", "volume_tolerance_mm3", "linear_deflection_mm"},
+            "Numerical policy",
+        )
+        return cls(**data)
+
+
+@dataclass(frozen=True)
+class VerificationPreset:
+    """Explicit named checking intent; no automatic selection or inferred success."""
+
+    id: str
+    name: str
+    requirements: tuple[ClearanceRequirement, ...]
+    policy: NumericalPolicy = field(default_factory=NumericalPolicy)
+    kind: str = "clearance"
+
+    def __post_init__(self) -> None:
+        _id(self.id, "Verification preset")
+        _name(self.name)
+        if type(self.kind) is not str or self.kind not in ("clearance", "interference_only"):
+            _error("invalid_preset", "Preset kind must be clearance or interference_only.")
+        if (
+            type(self.requirements) not in (tuple, list)
+            or len(self.requirements) > MAX_REQUIREMENTS_PER_PRESET
+        ):
+            _error("resource_limit", "A preset accepts at most 120 named clearance requirements.")
+        if any(type(requirement) is not ClearanceRequirement for requirement in self.requirements):
+            _error(
+                "invalid_requirements",
+                "Preset requirements must be typed ClearanceRequirement records.",
+            )
+        requirements = tuple(self.requirements)
+        if self.kind == "clearance" and not requirements:
+            _error(
+                "invalid_preset",
+                "A clearance preset needs at least one named instance-pair requirement.",
+            )
+        if self.kind == "interference_only" and requirements:
+            _error(
+                "invalid_preset",
+                "An interference-only preset cannot contain clearance requirements.",
+            )
+        ids = [r.id for r in requirements]
+        if len(set(ids)) != len(ids):
+            _error("duplicate_id", "Requirement IDs must be unique within a preset.")
+        pairs = [r.instances for r in requirements]
+        if len(set(pairs)) != len(pairs):
+            _error("invalid_clearance_pair", "Duplicate normalized instance pair in a preset.")
+        if type(self.policy) is not NumericalPolicy:
+            _error("invalid_policy", "A preset requires a typed NumericalPolicy.")
+        object.__setattr__(self, "requirements", requirements)
+
+    def to_dict(self) -> dict:
+        return {
+            "id": self.id,
+            "name": self.name,
+            "kind": self.kind,
+            "requirements": [r.to_dict() for r in self.requirements],
+            "policy": self.policy.to_dict(),
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict) -> VerificationPreset:
+        _keys(data, {"id", "name", "kind", "requirements", "policy"}, "Verification preset")
+        requirements = data["requirements"]
+        if type(requirements) is not list or len(requirements) > MAX_REQUIREMENTS_PER_PRESET:
+            _error(
+                "resource_limit", "Serialized requirements need an array of at most 120 entries."
+            )
+        return cls(
+            data["id"],
+            data["name"],
+            tuple(ClearanceRequirement.from_dict(r) for r in requirements),
+            NumericalPolicy.from_dict(data["policy"]),
+            data["kind"],
+        )

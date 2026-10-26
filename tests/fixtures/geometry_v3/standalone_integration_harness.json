@@ -1,0 +1,304 @@
+{
+  "base_commit": "07f25501d2fcd10bf93d5bf31b82cc62bf483863",
+  "changed": {
+    "tests/unit/test_arc_profile_incidence.py": {
+      "hunks": [
+        {
+          "new_end": 1197,
+          "new_start": 1171,
+          "original": "",
+          "replacement": "TRUSTED_GUARD_ROOT = ROOT\n"
+        },
+        {
+          "new_end": 30970,
+          "new_start": 30886,
+          "original": "        path = root / \"tests/unit/test_arc_profile_native_end_cap.py\"\n",
+          "replacement": "        path = TRUSTED_GUARD_ROOT / \"tests/unit/test_arc_profile_native_end_cap.py\"\n"
+        },
+        {
+          "new_end": 31252,
+          "new_start": 30992,
+          "original": "",
+          "replacement": "            \"INTEGRATION_SOURCE_FIXTURE\",\n            \"INTEGRATION_SOURCE_SHA256\",\n            \"INTEGRATION_HARNESS_FIXTURE\",\n            \"STANDALONE_INTEGRATION_HARNESS_SHA256\",\n            \"GEOMETRY_REVISION_FIXTURE\",\n            \"GEOMETRY_REVISION_SHA256\",\n"
+        },
+        {
+          "new_end": 32242,
+          "new_start": 32202,
+          "original": "",
+          "replacement": "            \"INTEGRATION_SOURCE_ADDED\",\n"
+        },
+        {
+          "new_end": 32732,
+          "new_start": 32643,
+          "original": "",
+          "replacement": "            \"INTEGRATION_SOURCE_ORIGINALS\",\n            \"INTEGRATION_HARNESS_ORIGINALS\",\n"
+        },
+        {
+          "new_end": 33310,
+          "new_start": 33065,
+          "original": "",
+          "replacement": "            \"_integration_restore_entry\",\n            \"standalone_integration_source_originals\",\n            \"standalone_integration_harness_originals\",\n            \"_geometry_recovered_harness_bytes\",\n            \"geometry_revision_originals\",\n"
+        }
+      ],
+      "original_bytes": 47957,
+      "original_sha256": "ae600a2936b45336ccf18eb7680b20cf828d671b9e2d046f393a8b1be4c667ac",
+      "reviewed_bytes": 48631,
+      "reviewed_sha256": "01ac1a861767fda75808f7c75e8ba78ed6cd45ea4d3f02cd99c697fe061d6005"
+    },
+    "tests/unit/test_arc_profile_native_end_cap.py": {
+      "hunks": [
+        {
+          "new_end": 52930,
+          "new_start": 42773,
+          "original": "",
+          "replacement": "INTEGRATION_SOURCE_FIXTURE = \"tests/fixtures/geometry_v3/standalone_integration_source.json\"\n\nINTEGRATION_SOURCE_SHA256 = \"9b5729489bad6a31eeed1916893ceed80a1e5a67ab04310a8588a941097ae1e0\"\n\nINTEGRATION_SOURCE_ADDED = frozenset(\n    {\n        \"src/mechanical_cad/geometry_policy_v3.py\",\n        \"tests/unit/test_geometry3_core_contracts.py\",\n        \"src/mechanical_cad/geometry_protocol_v3.py\",\n        \"tests/unit/test_geometry3_dispatch.py\",\n        \"tests/unit/test_geometry3_legacy_bytes.py\",\n        \"blender_addon/mechanical_cad_blender/geometry_result_v3.py\",\n        \"tests/unit/test_geometry_result_v3.py\",\n    }\n)\n\nINTEGRATION_SOURCE_ORIGINALS = {\n    \"blender_addon/mechanical_cad_blender/result_v3.py\": (\n        10912,\n        \"cf07a1c445e6b414ca8db5cb170dce62f5ebaf8e27c751289299920c5ccec59a\",\n    ),\n    \"src/mechanical_cad/actions.py\": (\n        8172,\n        \"e85b03a54aefb171100252a8a6aa57f00cf0705b84d7e2005918a2dcef2c1649\",\n    ),\n    \"src/mechanical_cad/backend_contract.py\": (\n        19017,\n        \"d24a47c78d8e78b6ead6961d99bdba48719f48163c812066d9e2b4a19aa503ad\",\n    ),\n    \"src/mechanical_cad/sidecar.py\": (\n        10301,\n        \"ae6180f7ff15efe54cb8a50db1e80349a58f940f7a00d3aa51dcd0c1e12d91e3\",\n    ),\n    \"tests/unit/test_sector_dispatch_v3.py\": (\n        25278,\n        \"8d1b88c5e268167032856b61c481534aaf909a05c2f3d584a89b49a14fb8caf3\",\n    ),\n}\n\nINTEGRATION_HARNESS_FIXTURE = \"tests/fixtures/geometry_v3/standalone_integration_harness.json\"\n\nSTANDALONE_INTEGRATION_HARNESS_SHA256 = (\n    \"0000000000000000000000000000000000000000000000000000000000000000\"\n)\n\nINTEGRATION_HARNESS_ORIGINALS = {\n    \"tests/unit/test_arc_profile_incidence.py\": (\n        47957,\n        \"ae600a2936b45336ccf18eb7680b20cf828d671b9e2d046f393a8b1be4c667ac\",\n    ),\n    \"tests/unit/test_arc_profile_native_end_cap.py\": (\n        97004,\n        \"094bec87e229ac938f182e6edf43acd889934506326baa234c3387747e3235bd\",\n    ),\n    \"tests/unit/test_arc_sector_native_boundary_mutations.py\": (\n        36536,\n        \"74b123c6d9a33732a98dd5c357c357587ffd26dcc6f288769446cee6e123bdf9\",\n    ),\n    \"tests/unit/test_result_v3_dependency_boundary.py\": (\n        15816,\n        \"18f8ad021447e9e738027356c61364ac0278fb35ea687ec6995c108ef3ba47ec\",\n    ),\n    \"tests/unit/test_standalone_runtime_boundary.py\": (\n        109294,\n        \"0c6635d08871cfa3f3b198efacabc644de44de2ee6fce11656ed9720168c0406\",\n    ),\n}\n\nGEOMETRY_REVISION_FIXTURE = \"tests/fixtures/geometry_v3/python_revision_69d0f81.json\"\n\nGEOMETRY_REVISION_SHA256 = \"0e5bfde75fef63e6933abb5458a95d94893abaaa158dd4b011231f00075bf30d\"\n\n\ndef _integration_restore_entry(data, entry, expected):\n    \"\"\"Validate one exact finite inverse against independently pinned before bytes.\"\"\"\n    assert set(entry) == {\n        \"reviewed_bytes\",\n        \"reviewed_sha256\",\n        \"original_bytes\",\n        \"original_sha256\",\n        \"hunks\",\n    }\n    assert type(entry[\"reviewed_bytes\"]) is type(entry[\"original_bytes\"]) is int\n    assert entry[\"reviewed_bytes\"] > 0 and entry[\"original_bytes\"] > 0\n    assert (entry[\"original_bytes\"], entry[\"original_sha256\"]) == expected\n    assert entry[\"reviewed_sha256\"] != entry[\"original_sha256\"]\n    assert len(data) == entry[\"reviewed_bytes\"]\n    assert hashlib.sha256(data).hexdigest() == entry[\"reviewed_sha256\"]\n    assert type(entry[\"hunks\"]) is list and entry[\"hunks\"]\n    previous = 0\n    for hunk in entry[\"hunks\"]:\n        assert set(hunk) == {\"new_start\", \"new_end\", \"original\", \"replacement\"}\n        start, end = hunk[\"new_start\"], hunk[\"new_end\"]\n        assert type(start) is type(end) is int\n        assert previous <= start <= end <= len(data)\n        assert type(hunk[\"original\"]) is type(hunk[\"replacement\"]) is str\n        assert hunk[\"original\"] != hunk[\"replacement\"]\n        assert data[start:end] == hunk[\"replacement\"].encode(\"utf-8\")\n        previous = end\n    for hunk in reversed(entry[\"hunks\"]):\n        data = (\n            data[: hunk[\"new_start\"]] + hunk[\"original\"].encode(\"utf-8\") + data[hunk[\"new_end\"] :]\n        )\n    assert len(data) == expected[0]\n    assert hashlib.sha256(data).hexdigest() == expected[1]\n    return data\n\n\ndef standalone_integration_source_originals(root):\n    \"\"\"Seal only seven recovered additions and five deltas to standalone 07f2550.\"\"\"\n    raw = (root / INTEGRATION_SOURCE_FIXTURE).read_bytes()\n    assert hashlib.sha256(raw).hexdigest() == INTEGRATION_SOURCE_SHA256\n    revision = json.loads(raw)\n    assert set(revision) == {\"schema\", \"base_commit\", \"added\", \"changed\"}\n    assert revision[\"schema\"] == \"sector-standalone-integration-source-v1\"\n    assert revision[\"base_commit\"] == \"07f25501d2fcd10bf93d5bf31b82cc62bf483863\"\n    assert set(revision[\"added\"]) == INTEGRATION_SOURCE_ADDED\n    assert set(revision[\"changed\"]) == set(INTEGRATION_SOURCE_ORIGINALS)\n    assert not INTEGRATION_SOURCE_ADDED & INTEGRATION_SOURCE_ORIGINALS.keys()\n    for name, entry in revision[\"added\"].items():\n        assert set(entry) == {\"bytes\", \"sha256\"}\n        assert type(entry[\"bytes\"]) is int and entry[\"bytes\"] > 0\n        data = (root / name).read_bytes()\n        assert len(data) == entry[\"bytes\"]\n        assert hashlib.sha256(data).hexdigest() == entry[\"sha256\"]\n    restored = {}\n    for name, entry in revision[\"changed\"].items():\n        restored[name] = _integration_restore_entry(\n            (root / name).read_bytes(), entry, INTEGRATION_SOURCE_ORIGINALS[name]\n        )\n    return INTEGRATION_SOURCE_ADDED, restored\n\n\ndef standalone_integration_harness_originals(root):\n    \"\"\"Restore five exact 07f2550 guards; trust no copied fixture or validator.\n\n    Only this outer fixture's one digest slot is normalized. Every historical\n    digest and every old assertion remains part of the sealed before bytes.\n    \"\"\"\n    raw = (root / INTEGRATION_HARNESS_FIXTURE).read_bytes()\n    assert hashlib.sha256(raw).hexdigest() == STANDALONE_INTEGRATION_HARNESS_SHA256\n    revision = json.loads(raw)\n    assert set(revision) == {\"schema\", \"base_commit\", \"changed\"}\n    assert revision[\"schema\"] == \"sector-standalone-integration-harness-v1\"\n    assert revision[\"base_commit\"] == \"07f25501d2fcd10bf93d5bf31b82cc62bf483863\"\n    assert set(revision[\"changed\"]) == set(INTEGRATION_HARNESS_ORIGINALS)\n    restored = {}\n    for name, entry in revision[\"changed\"].items():\n        data = (root / name).read_bytes()\n        if name == \"tests/unit/test_arc_profile_native_end_cap.py\":\n            label = b\"STANDALONE_INTEGRATION_HARNESS_\" + b'SHA256 = (\\n    \"'\n            assert data.count(label) == 1\n            slot = label + STANDALONE_INTEGRATION_HARNESS_SHA256.encode(\"ascii\") + b'\"\\n)'\n            assert data.count(slot) == 1, \"copied guard digest differs from trusted namespace\"\n            data = data.replace(slot, label + b\"0\" * 64 + b'\"\\n)')\n        restored[name] = _integration_restore_entry(\n            data, entry, INTEGRATION_HARNESS_ORIGINALS[name]\n        )\n    return restored\n\n\ndef _geometry_recovered_harness_bytes(original, entry):\n    \"\"\"Forward only sealed historical hunks to reconstruct the recovered guard view.\"\"\"\n    assert (len(original), hashlib.sha256(original).hexdigest()) == (\n        entry[\"original_bytes\"],\n        entry[\"original_sha256\"],\n    )\n    data, shift, previous = original, 0, 0\n    for hunk in entry[\"hunks\"]:\n        assert set(hunk) == {\"new_start\", \"new_end\", \"original\", \"replacement\"}\n        start, end = hunk[\"new_start\"], hunk[\"new_end\"]\n        assert type(start) is type(end) is int and previous <= start <= end\n        before, after = hunk[\"original\"].encode(\"utf-8\"), hunk[\"replacement\"].encode(\"utf-8\")\n        assert len(after) == end - start and before != after\n        old_start = start - shift\n        assert 0 <= old_start <= old_start + len(before) <= len(original)\n        assert original[old_start : old_start + len(before)] == before\n        assert data[start : start + len(before)] == before\n        data = data[:start] + after + data[start + len(before) :]\n        shift += len(after) - len(before)\n        previous = end\n    assert len(data) == entry[\"reviewed_bytes\"]\n    assert hashlib.sha256(data).hexdigest() == entry[\"reviewed_sha256\"]\n    return data\n\n\ndef geometry_revision_originals(root):\n    \"\"\"Prove the recovered geometry inverse separately from standalone restoration.\n\n    The three old guard files are reconstructed from independently sealed 69d0\n    originals, never used as live validators. Five clean deltas use actual source.\n    \"\"\"\n    added, source_originals = standalone_integration_source_originals(root)\n    historical = standalone_harness_originals(root)\n    raw = (root / GEOMETRY_REVISION_FIXTURE).read_bytes()\n    assert hashlib.sha256(raw).hexdigest() == GEOMETRY_REVISION_SHA256\n    revision = json.loads(raw)\n    assert set(revision) == {\"schema\", \"base_commit\", \"added\", \"changed\", \"provenance\"}\n    assert revision[\"schema\"] == \"geometry-v3-python-boundary-v1\"\n    assert revision[\"base_commit\"] == \"69d0f8164e73bfbbcdf0c48d6546f97803d12f58\"\n    assert set(revision[\"added\"]) == added\n    historical_paths = {\n        \"tests/unit/test_arc_profile_incidence.py\",\n        \"tests/unit/test_arc_sector_native_boundary_mutations.py\",\n        \"tests/unit/test_result_v3_dependency_boundary.py\",\n    }\n    assert set(revision[\"changed\"]) == source_originals.keys() | historical_paths\n    for name, entry in revision[\"added\"].items():\n        assert set(entry) == {\"bytes\", \"sha256\"}\n        data = (root / name).read_bytes()\n        assert type(entry[\"bytes\"]) is int and len(data) == entry[\"bytes\"]\n        assert hashlib.sha256(data).hexdigest() == entry[\"sha256\"]\n    restored = {}\n    for name, entry in revision[\"changed\"].items():\n        original = historical[name] if name in historical_paths else source_originals[name]\n        data = (\n            _geometry_recovered_harness_bytes(original, entry)\n            if name in historical_paths\n            else (root / name).read_bytes()\n        )\n        expected = (len(original), hashlib.sha256(original).hexdigest())\n        restored[name] = _integration_restore_entry(data, entry, expected)\n        assert restored[name] == original\n    return added, restored\n\n\n"
+        },
+        {
+          "new_end": 54288,
+          "new_start": 54215,
+          "original": "",
+          "replacement": "    integration_harness = standalone_integration_harness_originals(root)\n"
+        },
+        {
+          "new_end": 55479,
+          "new_start": 55406,
+          "original": "        data = (root / name).read_bytes()\n",
+          "replacement": "        data = integration_harness.get(name, (root / name).read_bytes())\n"
+        },
+        {
+          "new_end": 63854,
+          "new_start": 63691,
+          "original": "    runtime_harness = windows_runtime_cache_harness_originals(root)\n",
+          "replacement": "    integration_harness = standalone_integration_harness_originals(root)\n    runtime_harness = integration_harness | windows_runtime_cache_harness_originals(root)\n"
+        },
+        {
+          "new_end": 90048,
+          "new_start": 89971,
+          "original": "",
+          "replacement": "    _, integration_originals = standalone_integration_source_originals(root)\n"
+        },
+        {
+          "new_end": 90219,
+          "new_start": 90124,
+          "original": "        data = restored.get(name, (root / name).read_bytes())\n",
+          "replacement": "        data = restored.get(name, integration_originals.get(name, (root / name).read_bytes()))\n"
+        },
+        {
+          "new_end": 91081,
+          "new_start": 91006,
+          "original": "",
+          "replacement": "    geometry_added, geometry_originals = geometry_revision_originals(root)\n"
+        },
+        {
+          "new_end": 91942,
+          "new_start": 91871,
+          "original": "    restored = harness_originals | live_originals\n",
+          "replacement": "    restored = geometry_originals | harness_originals | live_originals\n"
+        },
+        {
+          "new_end": 93381,
+          "new_start": 93313,
+          "original": "    return frozenset(added) | live_added, restored\n",
+          "replacement": "    return frozenset(added) | live_added | geometry_added, restored\n"
+        },
+        {
+          "new_end": 100736,
+          "new_start": 100628,
+          "original": "",
+          "replacement": "        GEOMETRY_REVISION_FIXTURE,\n        INTEGRATION_SOURCE_FIXTURE,\n        INTEGRATION_HARNESS_FIXTURE,\n"
+        },
+        {
+          "new_end": 117786,
+          "new_start": 107691,
+          "original": "",
+          "replacement": "\n\ndef test_integration_restores_exact_standalone_and_recovered_geometry_boundaries():\n    added, source = standalone_integration_source_originals(ROOT)\n    assert len(added) == 7 and len(source) == 5\n    assert set(source) == set(INTEGRATION_SOURCE_ORIGINALS)\n    harness = standalone_integration_harness_originals(ROOT)\n    assert len(harness) == 5 and set(harness) == set(INTEGRATION_HARNESS_ORIGINALS)\n    for name, data in (source | harness).items():\n        expected = (INTEGRATION_SOURCE_ORIGINALS | INTEGRATION_HARNESS_ORIGINALS)[name]\n        assert (len(data), hashlib.sha256(data).hexdigest()) == expected\n    geometry_added, geometry = geometry_revision_originals(ROOT)\n    assert geometry_added == added and len(geometry) == 8\n    assert all(geometry[name] == data for name, data in source.items())\n    assert protected_python_digest(ROOT) == SNAPSHOT3_PYTHON_PROTECTED\n\n\n@pytest.mark.parametrize(\n    \"name\",\n    sorted(\n        INTEGRATION_SOURCE_ADDED\n        | INTEGRATION_SOURCE_ORIGINALS.keys()\n        | INTEGRATION_HARNESS_ORIGINALS.keys()\n    ),\n)\ndef test_geometry_extension_rejects_each_unreviewed_python_mutation(tmp_path, name):\n    copy_python_guard_tree(tmp_path)\n    path = tmp_path / name\n    path.write_bytes(path.read_bytes() + b\"\\n# Unreviewed geometry integration mutation.\\n\")\n    with pytest.raises(AssertionError):\n        protected_python_digest(tmp_path)\n\n\n@pytest.mark.parametrize(\n    \"fixture\", [GEOMETRY_REVISION_FIXTURE, INTEGRATION_SOURCE_FIXTURE, INTEGRATION_HARNESS_FIXTURE]\n)\ndef test_geometry_extension_rejects_tampered_fixture(tmp_path, fixture):\n    copy_python_guard_tree(tmp_path)\n    path = tmp_path / fixture\n    path.write_bytes(path.read_bytes() + b\"\\n\")\n    with pytest.raises(AssertionError):\n        protected_python_digest(tmp_path)\n\n\n@pytest.mark.parametrize(\"mutation\", [\"fixture\", \"slot\", \"helper\", \"coordinated\"])\ndef test_integration_harness_pair_cannot_replace_trusted_validator(tmp_path, mutation):\n    copy_python_guard_tree(tmp_path)\n    fixture = tmp_path / INTEGRATION_HARNESS_FIXTURE\n    guard = tmp_path / \"tests/unit/test_arc_profile_native_end_cap.py\"\n    if mutation in {\"fixture\", \"coordinated\"}:\n        fixture.write_bytes(fixture.read_bytes() + b\"\\n\")\n    if mutation in {\"slot\", \"coordinated\"}:\n        digest = (\n            hashlib.sha256(fixture.read_bytes()).hexdigest()\n            if mutation == \"coordinated\"\n            else \"f\" * 64\n        )\n        before = (\n            'STANDALONE_INTEGRATION_HARNESS_SHA256 = (\\n    \"'\n            + STANDALONE_INTEGRATION_HARNESS_SHA256\n            + '\"\\n)'\n        ).encode()\n        after = ('STANDALONE_INTEGRATION_HARNESS_SHA256 = (\\n    \"' + digest + '\"\\n)').encode()\n        data = guard.read_bytes()\n        assert data.count(before) == 1\n        guard.write_bytes(data.replace(before, after))\n    if mutation == \"helper\":\n        before = b\"\\ndef standalone_integration_harness_originals(root):\\n\"\n        data = guard.read_bytes()\n        assert data.count(before) == 1\n        guard.write_bytes(data.replace(before, before + b\" # unreviewed\"))\n    with pytest.raises(AssertionError):\n        standalone_integration_harness_originals(tmp_path)\n\n\n@pytest.mark.parametrize(\n    \"constant\",\n    [\n        \"INTEGRATION_SOURCE_SHA256\",\n        \"GEOMETRY_REVISION_SHA256\",\n        \"STANDALONE_LIVE_SHA256\",\n        \"STANDALONE_HARNESS_SHA256\",\n        \"WINDOWS_RUNTIME_CACHE_HARNESS_SHA256\",\n        \"WINDOWS_RUNTIME_CACHE_REVISION_SHA256\",\n        \"WINDOWS_CACHE_HARNESS_SHA256\",\n        \"WINDOWS_CACHE_REVISION_SHA256\",\n        \"WINDOWS_TRANSPORT_HARNESS_SHA256\",\n        \"WINDOWS_TRANSPORT_REVISION_SHA256\",\n        \"AUTHORING_REVISION_SHA256\",\n        \"SERVICE_REVISION_SHA256\",\n    ],\n)\ndef test_integration_harness_normalizes_no_other_digest_slot(tmp_path, constant):\n    copy_python_guard_tree(tmp_path)\n    guard = tmp_path / \"tests/unit/test_arc_profile_native_end_cap.py\"\n    data, digest = guard.read_bytes(), globals()[constant].encode(\"ascii\")\n    assert data.count(digest) == 1\n    guard.write_bytes(data.replace(digest, b\"f\" * 64))\n    with pytest.raises(AssertionError):\n        standalone_integration_harness_originals(tmp_path)\n\n\n@pytest.mark.parametrize(\"kind\", [\"source\", \"harness\"])\n@pytest.mark.parametrize(\n    \"mutation\",\n    [\n        \"schema\",\n        \"base\",\n        \"extra_key\",\n        \"missing_path\",\n        \"extra_path\",\n        \"production_path\",\n        \"original_hash\",\n        \"reviewed_hash\",\n        \"original_length\",\n        \"reviewed_length\",\n        \"entry_key\",\n        \"hunk_key\",\n        \"empty_hunks\",\n        \"start_negative\",\n        \"start_bool\",\n        \"end_bool\",\n        \"end_before_start\",\n        \"end_overflow\",\n        \"replacement\",\n        \"original\",\n        \"duplicate_hunk\",\n        \"reversed_hunks\",\n        \"forged_original\",\n    ],\n)\ndef test_integration_inverse_inner_schema_hunks_and_pinned_originals(\n    tmp_path, monkeypatch, kind, mutation\n):\n    copy_python_guard_tree(tmp_path)\n    fixture = INTEGRATION_SOURCE_FIXTURE if kind == \"source\" else INTEGRATION_HARNESS_FIXTURE\n    function = (\n        standalone_integration_source_originals\n        if kind == \"source\"\n        else standalone_integration_harness_originals\n    )\n    # Establish the clean positive path before bypassing this layer's outer digest.\n    clean = function(tmp_path)\n    original = clean[1] if kind == \"source\" else clean\n    revision = json.loads((tmp_path / fixture).read_bytes())\n    name = (\n        \"src/mechanical_cad/actions.py\"\n        if kind == \"source\"\n        else \"tests/unit/test_arc_profile_incidence.py\"\n    )\n    entry = revision[\"changed\"][name]\n    hunk = entry[\"hunks\"][0]\n    if mutation == \"schema\":\n        revision[\"schema\"] = \"other\"\n    elif mutation == \"base\":\n        revision[\"base_commit\"] = \"0\" * 40\n    elif mutation == \"extra_key\":\n        revision[\"allow_other_paths\"] = True\n    elif mutation == \"missing_path\":\n        revision[\"changed\"].pop(name)\n    elif mutation == \"extra_path\":\n        revision[\"changed\"][\"tests/unit/test_unreviewed.py\"] = dict(entry)\n    elif mutation == \"production_path\":\n        revision[\"changed\"][\"src/mechanical_cad/kernel_ocp.py\"] = revision[\"changed\"].pop(name)\n    elif mutation in {\"original_hash\", \"reviewed_hash\"}:\n        entry[mutation.replace(\"_hash\", \"_sha256\")] = \"0\" * 64\n    elif mutation in {\"original_length\", \"reviewed_length\"}:\n        entry[mutation.replace(\"_length\", \"_bytes\")] = True\n    elif mutation == \"entry_key\":\n        entry[\"exempt\"] = True\n    elif mutation == \"hunk_key\":\n        hunk[\"skip\"] = True\n    elif mutation == \"empty_hunks\":\n        entry[\"hunks\"] = []\n    elif mutation == \"start_negative\":\n        hunk[\"new_start\"] = -1\n    elif mutation == \"start_bool\":\n        hunk[\"new_start\"] = False\n    elif mutation == \"end_bool\":\n        hunk[\"new_end\"] = True\n    elif mutation == \"end_before_start\":\n        hunk[\"new_end\"] = hunk[\"new_start\"] - 1\n    elif mutation == \"end_overflow\":\n        hunk[\"new_end\"] = entry[\"reviewed_bytes\"] + 1\n    elif mutation == \"replacement\":\n        hunk[\"replacement\"] += \"# altered reviewed bytes\\n\"\n    elif mutation == \"original\":\n        hunk[\"original\"] += \"# altered before bytes\\n\"\n    elif mutation == \"duplicate_hunk\":\n        entry[\"hunks\"].insert(1, dict(hunk))\n    elif mutation == \"reversed_hunks\":\n        assert len(entry[\"hunks\"]) > 1\n        entry[\"hunks\"].reverse()\n    else:\n        assert mutation == \"forged_original\"\n        before = original[name] + b\"\\n# forged original\\n\"\n        current = (tmp_path / name).read_bytes()\n        entry[\"original_bytes\"] = len(before)\n        entry[\"original_sha256\"] = hashlib.sha256(before).hexdigest()\n        entry[\"hunks\"] = [\n            {\n                \"new_start\": 0,\n                \"new_end\": len(current),\n                \"original\": before.decode(),\n                \"replacement\": current.decode(),\n            }\n        ]\n    raw = (json.dumps(revision, sort_keys=True, indent=2) + \"\\n\").encode()\n    (tmp_path / fixture).write_bytes(raw)\n    digest = hashlib.sha256(raw).hexdigest()\n    constant = (\n        \"INTEGRATION_SOURCE_SHA256\" if kind == \"source\" else \"STANDALONE_INTEGRATION_HARNESS_SHA256\"\n    )\n    if kind == \"harness\":\n        guard = tmp_path / \"tests/unit/test_arc_profile_native_end_cap.py\"\n        before = (\n            'STANDALONE_INTEGRATION_HARNESS_SHA256 = (\\n    \"'\n            + STANDALONE_INTEGRATION_HARNESS_SHA256\n            + '\"\\n)'\n        ).encode()\n        after = ('STANDALONE_INTEGRATION_HARNESS_SHA256 = (\\n    \"' + digest + '\"\\n)').encode()\n        data = guard.read_bytes()\n        assert data.count(before) == 1\n        guard.write_bytes(data.replace(before, after))\n    monkeypatch.setitem(globals(), constant, digest)\n    with pytest.raises(AssertionError):\n        function(tmp_path)\n\n\n@pytest.mark.parametrize(\n    \"mutation\", [\"missing\", \"extra\", \"wrong_directory\", \"entry_key\", \"length_bool\", \"hash\"]\n)\ndef test_integration_source_added_paths_remain_exact(tmp_path, monkeypatch, mutation):\n    copy_python_guard_tree(tmp_path)\n    standalone_integration_source_originals(tmp_path)\n    path = tmp_path / INTEGRATION_SOURCE_FIXTURE\n    revision = json.loads(path.read_bytes())\n    name = sorted(revision[\"added\"])[0]\n    if mutation == \"missing\":\n        revision[\"added\"].pop(name)\n    elif mutation == \"extra\":\n        revision[\"added\"][\"src/mechanical_cad/unreviewed.py\"] = revision[\"added\"][name]\n    elif mutation == \"wrong_directory\":\n        revision[\"added\"][\"src/impostor/geometry_result_v3.py\"] = revision[\"added\"].pop(name)\n    elif mutation == \"entry_key\":\n        revision[\"added\"][name][\"skip\"] = True\n    elif mutation == \"length_bool\":\n        revision[\"added\"][name][\"bytes\"] = True\n    else:\n        revision[\"added\"][name][\"sha256\"] = \"0\" * 64\n    raw = (json.dumps(revision, sort_keys=True, indent=2) + \"\\n\").encode()\n    path.write_bytes(raw)\n    monkeypatch.setitem(globals(), \"INTEGRATION_SOURCE_SHA256\", hashlib.sha256(raw).hexdigest())\n    with pytest.raises(AssertionError):\n        standalone_integration_source_originals(tmp_path)\n"
+        }
+      ],
+      "original_bytes": 97004,
+      "original_sha256": "094bec87e229ac938f182e6edf43acd889934506326baa234c3387747e3235bd",
+      "reviewed_bytes": 117786,
+      "reviewed_sha256": "0c6c2c7a26d51e3abdfd1cb8824f0bdd0e498f00d99e151e4897d774093af9e0"
+    },
+    "tests/unit/test_arc_sector_native_boundary_mutations.py": {
+      "hunks": [
+        {
+          "new_end": 4056,
+          "new_start": 3998,
+          "original": "",
+          "replacement": "    namespace = {**namespace, \"TRUSTED_GUARD_ROOT\": ROOT}\n"
+        },
+        {
+          "new_end": 6230,
+          "new_start": 6139,
+          "original": "    namespace = {\"ast\": ast, \"hashlib\": hashlib, \"json\": json}\n",
+          "replacement": "    namespace = {\"ast\": ast, \"hashlib\": hashlib, \"json\": json, \"TRUSTED_GUARD_ROOT\": ROOT}\n"
+        },
+        {
+          "new_end": 26220,
+          "new_start": 25786,
+          "original": "",
+          "replacement": "    for relative in (\n        \"tests/fixtures/geometry_v3/python_revision_69d0f81.json\",\n        \"tests/fixtures/geometry_v3/standalone_integration_source.json\",\n        \"tests/fixtures/geometry_v3/standalone_integration_harness.json\",\n    ):\n        support.add(relative)\n        fixture = json.loads((ROOT / relative).read_bytes())\n        support.update(fixture.get(\"added\", {}))\n        support.update(fixture.get(\"changed\", {}))\n"
+        },
+        {
+          "new_end": 28596,
+          "new_start": 28512,
+          "original": "            assert hashlib.sha256(data).hexdigest() == entry[\"reviewed_sha256\"]\n",
+          "replacement": "            assert hashlib.sha256(original).hexdigest() == entry[\"reviewed_sha256\"]\n"
+        },
+        {
+          "new_end": 39088,
+          "new_start": 37060,
+          "original": "",
+          "replacement": "\n\n@pytest.mark.parametrize(\"mutation\", [\"helper\", \"constant\"])\n@pytest.mark.parametrize(\"entry\", [\"nested_helper\", \"whole_guard\"])\ndef test_copied_guard_code_and_constants_are_only_hash_checked(\n    historical_runtime_root, mutation, entry\n):\n    root = historical_runtime_root\n    path = root / \"tests/unit/test_arc_profile_native_end_cap.py\"\n    original = path.read_bytes()\n\n    def run():\n        if entry == \"nested_helper\":\n            return _authoring_originals(root)\n        return _extract_function(\n            \"test_arc_profile_incidence.py\",\n            INCIDENCE_GUARD,\n            {\"ROOT\": root, \"ast\": ast, \"hashlib\": hashlib, \"json\": json},\n        )()\n\n    run()  # The copied data tree is otherwise admissible before poisoning it.\n    if mutation == \"helper\":\n        tree = ast.parse(original)\n        node = next(\n            item\n            for item in tree.body\n            if isinstance(item, ast.FunctionDef)\n            and item.name == \"standalone_integration_harness_originals\"\n        )\n        lines = original.splitlines(keepends=True)\n        poisoned = (\n            b\"\".join(lines[: node.lineno])\n            + b'    raise RuntimeError(\"copied validator executed\")\\n'\n            + b\"\".join(lines[node.end_lineno :])\n        )\n    else:\n        before = b'INTEGRATION_HARNESS_FIXTURE = \"tests/fixtures/geometry_v3/standalone_integration_harness.json\"'\n        assert original.count(before) == 1\n        poisoned = original.replace(\n            before,\n            b'INTEGRATION_HARNESS_FIXTURE = \"tests/fixtures/geometry_v3/SHOULD_NOT_BE_READ.json\"',\n        )\n    assert poisoned != original\n    try:\n        path.write_bytes(poisoned)\n        # Loading the copied helper would raise RuntimeError; loading its copied\n        # path constant would raise FileNotFoundError. Only the trusted validator\n        # must run, rejecting these copied bytes against the unchanged outer seal.\n        with pytest.raises(AssertionError):\n            run()\n    finally:\n        path.write_bytes(original)\n"
+        }
+      ],
+      "original_bytes": 36536,
+      "original_sha256": "74b123c6d9a33732a98dd5c357c357587ffd26dcc6f288769446cee6e123bdf9",
+      "reviewed_bytes": 39088,
+      "reviewed_sha256": "fab922866fe908146fc87b488729adc8e6d2a27519b66a139e26b4ba569fbb9b"
+    },
+    "tests/unit/test_result_v3_dependency_boundary.py": {
+      "hunks": [
+        {
+          "new_end": 373,
+          "new_start": 340,
+          "original": "",
+          "replacement": "    geometry_revision_originals,\n"
+        },
+        {
+          "new_end": 1226,
+          "new_start": 1001,
+          "original": "",
+          "replacement": "GEOMETRY_RUNTIME_NEW = frozenset(\n    {\n        \"src/mechanical_cad/geometry_policy_v3.py\",\n        \"src/mechanical_cad/geometry_protocol_v3.py\",\n        \"blender_addon/mechanical_cad_blender/geometry_result_v3.py\",\n    }\n)\n\n"
+        },
+        {
+          "new_end": 6635,
+          "new_start": 6430,
+          "original": "",
+          "replacement": "    geometry_added, geometry_originals = geometry_revision_originals(root)\n    assert {\n        name for name in geometry_added if name.startswith((\"src/\", \"blender_addon/\"))\n    } == GEOMETRY_RUNTIME_NEW\n"
+        },
+        {
+          "new_end": 6750,
+          "new_start": 6693,
+          "original": "",
+          "replacement": "    live_originals = geometry_originals | live_originals\n"
+        },
+        {
+          "new_end": 7024,
+          "new_start": 6937,
+          "original": "    return added - live_added, originals, live_originals, arc_changed\n",
+          "replacement": "    return added - live_added - geometry_added, originals, live_originals, arc_changed\n"
+        },
+        {
+          "new_end": 7122,
+          "new_start": 7026,
+          "original": "def _assert_new_paths(root, original, *, standalone_new=frozenset()):\n",
+          "replacement": "def _assert_new_paths(root, original, *, standalone_new=frozenset(), geometry_new=frozenset()):\n"
+        },
+        {
+          "new_end": 8027,
+          "new_start": 7821,
+          "original": "    historical_observed = observed - standalone_new\n",
+          "replacement": "    assert geometry_new in (frozenset(), GEOMETRY_RUNTIME_NEW)\n    assert geometry_new <= observed, \"missing sealed geometry runtime path\"\n    historical_observed = observed - standalone_new - geometry_new\n"
+        },
+        {
+          "new_end": 8941,
+          "new_start": 8842,
+          "original": "        _restore_dispatch_original((ROOT / relative).read_bytes(), entry)\n",
+          "replacement": "        _restore_dispatch_original(originals.get(relative, (ROOT / relative).read_bytes()), entry)\n"
+        },
+        {
+          "new_end": 9285,
+          "new_start": 9123,
+          "original": "    raw = (ROOT / relative).read_bytes()\n",
+          "replacement": "    _, originals = geometry_revision_originals(ROOT)\n    raw = originals.get(relative, (ROOT / relative).read_bytes())\n    _restore_dispatch_original(raw, entry)\n"
+        },
+        {
+          "new_end": 9806,
+          "new_start": 9643,
+          "original": "    _assert_new_paths(ROOT, _baseline()[\"files\"], standalone_new=STANDALONE_RUNTIME_NEW)\n",
+          "replacement": "    _assert_new_paths(\n        ROOT,\n        _baseline()[\"files\"],\n        standalone_new=STANDALONE_RUNTIME_NEW,\n        geometry_new=GEOMETRY_RUNTIME_NEW,\n    )\n"
+        },
+        {
+          "new_end": 17931,
+          "new_start": 16753,
+          "original": "",
+          "replacement": "\n\n@pytest.mark.parametrize(\"mutation\", [\"missing\", \"extra\", \"wrong_directory\", \"partial_set\"])\ndef test_geometry_paths_cannot_expand_or_shrink_historical_boundary(tmp_path, mutation):\n    for relative in GEOMETRY_RUNTIME_NEW:\n        path = tmp_path / relative\n        path.parent.mkdir(parents=True, exist_ok=True)\n        path.write_bytes(b\"# path-only control; source hashes are separately sealed\\n\")\n    _assert_new_paths(tmp_path, {}, geometry_new=GEOMETRY_RUNTIME_NEW)\n    relative = sorted(GEOMETRY_RUNTIME_NEW)[0]\n    if mutation == \"missing\":\n        (tmp_path / relative).unlink()\n    elif mutation == \"extra\":\n        (tmp_path / \"src/mechanical_cad/unreviewed.py\").write_bytes(b\"pass\\n\")\n    elif mutation == \"wrong_directory\":\n        target = tmp_path / \"blender_addon/impostor\" / Path(relative).name\n        target.parent.mkdir(parents=True)\n        (tmp_path / relative).rename(target)\n    else:\n        with pytest.raises(AssertionError):\n            _assert_new_paths(tmp_path, {}, geometry_new=GEOMETRY_RUNTIME_NEW - {relative})\n        return\n    with pytest.raises(AssertionError):\n        _assert_new_paths(tmp_path, {}, geometry_new=GEOMETRY_RUNTIME_NEW)\n"
+        }
+      ],
+      "original_bytes": 15816,
+      "original_sha256": "18f8ad021447e9e738027356c61364ac0278fb35ea687ec6995c108ef3ba47ec",
+      "reviewed_bytes": 17931,
+      "reviewed_sha256": "d47b65a70ca1b5b94c7c97a312ad52e098f88aa75a719faa3714460e298201a7"
+    },
+    "tests/unit/test_standalone_runtime_boundary.py": {
+      "hunks": [
+        {
+          "new_end": 4511,
+          "new_start": 3933,
+          "original": "",
+          "replacement": "        \"INTEGRATION_SOURCE_FIXTURE\",\n        \"INTEGRATION_SOURCE_SHA256\",\n        \"INTEGRATION_HARNESS_FIXTURE\",\n        \"STANDALONE_INTEGRATION_HARNESS_SHA256\",\n        \"GEOMETRY_REVISION_FIXTURE\",\n        \"GEOMETRY_REVISION_SHA256\",\n        \"INTEGRATION_SOURCE_ADDED\",\n        \"INTEGRATION_SOURCE_ORIGINALS\",\n        \"INTEGRATION_HARNESS_ORIGINALS\",\n        \"_integration_restore_entry\",\n        \"standalone_integration_source_originals\",\n        \"standalone_integration_harness_originals\",\n        \"_geometry_recovered_harness_bytes\",\n        \"geometry_revision_originals\",\n"
+        },
+        {
+          "new_end": 17730,
+          "new_start": 17640,
+          "original": "",
+          "replacement": "    _, integration_originals = namespace[\"standalone_integration_source_originals\"](ROOT)\n"
+        },
+        {
+          "new_end": 17869,
+          "new_start": 17774,
+          "original": "        data = restored.get(path, (ROOT / path).read_bytes())\n",
+          "replacement": "        data = restored.get(path, integration_originals.get(path, (ROOT / path).read_bytes()))\n"
+        },
+        {
+          "new_end": 18155,
+          "new_start": 17996,
+          "original": "            # In particular all core, solver, kernel and wire validators retain\n            # actual source bytes, not reconstructed equivalents or exemptions.\n",
+          "replacement": "            # Every old core/add-on hash remains exact after the separately\n            # sealed finite geometry inverse; untouched bytes are still read live.\n"
+        },
+        {
+          "new_end": 18365,
+          "new_start": 18208,
+          "original": "                    transport_originals.get(path, (ROOT / path).read_bytes())\n",
+          "replacement": "                    transport_originals.get(\n                        path, integration_originals.get(path, (ROOT / path).read_bytes())\n                    )\n"
+        },
+        {
+          "new_end": 56984,
+          "new_start": 56898,
+          "original": "",
+          "replacement": "    integration_harness = namespace[\"standalone_integration_harness_originals\"](root)\n"
+        },
+        {
+          "new_end": 58253,
+          "new_start": 58002,
+          "original": "",
+          "replacement": "    historical = integration_harness[path]\n    assert historical.count(old_slot) == 1\n    integration_harness[path] = historical.replace(old_slot, new_slot)\n    namespace[\"standalone_integration_harness_originals\"] = lambda _root: integration_harness\n"
+        },
+        {
+          "new_end": 85357,
+          "new_start": 85271,
+          "original": "",
+          "replacement": "    integration_harness = namespace[\"standalone_integration_harness_originals\"](root)\n"
+        },
+        {
+          "new_end": 86383,
+          "new_start": 86072,
+          "original": "",
+          "replacement": "\n    path = \"tests/unit/test_arc_profile_native_end_cap.py\"\n    historical = integration_harness[path]\n    assert historical.count(old_slot) == 1\n    integration_harness[path] = historical.replace(old_slot, new_slot)\n    namespace[\"standalone_integration_harness_originals\"] = lambda _root: integration_harness\n"
+        },
+        {
+          "new_end": 112931,
+          "new_start": 110807,
+          "original": "",
+          "replacement": "\n\n@pytest.mark.parametrize(\"layer\", [\"runtime_cache\", \"cache\", \"transport\", \"standalone\"])\ndef test_old_harness_inner_controls_reach_positive_equivalent_repin(tmp_path, layer):\n    \"\"\"A changed outer digest must still reach a valid historical inner inverse.\"\"\"\n    namespace = guard_namespace()\n    namespace[\"copy_python_guard_tree\"](tmp_path)\n    if layer == \"runtime_cache\":\n        prefix = \"WINDOWS_RUNTIME_CACHE\"\n        function = namespace[\"windows_runtime_cache_harness_originals\"]\n        current = namespace[\"standalone_integration_harness_originals\"](tmp_path)\n        repin = repin_windows_runtime_cache_harness_fixture_for_inner_control\n    elif layer == \"cache\":\n        prefix = \"WINDOWS_CACHE\"\n        function = namespace[\"windows_cache_harness_originals\"]\n        current = namespace[\"standalone_integration_harness_originals\"](tmp_path) | namespace[\n            \"windows_runtime_cache_harness_originals\"\n        ](tmp_path)\n        repin = repin_windows_cache_harness_fixture_for_inner_control\n    elif layer == \"transport\":\n        prefix = \"WINDOWS_TRANSPORT\"\n        function = namespace[\"windows_transport_harness_originals\"]\n        current = namespace[\"windows_cache_harness_originals\"](tmp_path)\n        repin = repin_windows_harness_fixture_for_inner_control\n    else:\n        prefix = \"STANDALONE\"\n        function = namespace[\"standalone_harness_originals\"]\n        current = namespace[\"windows_transport_harness_originals\"](tmp_path)\n        repin = repin_harness_fixture_for_inner_control\n    expected = function(tmp_path)\n    fixture = tmp_path / namespace[prefix + \"_HARNESS_FIXTURE\"]\n    original_raw = fixture.read_bytes()\n    revision = json.loads(original_raw)\n    name = \"tests/unit/test_arc_profile_incidence.py\"\n    revision[\"changed\"][name][\"hunks\"] = [\n        {\n            \"new_start\": 0,\n            \"new_end\": len(current[name]),\n            \"original\": expected[name].decode(),\n            \"replacement\": current[name].decode(),\n        }\n    ]\n    repin(namespace, tmp_path, revision)\n    assert fixture.read_bytes() != original_raw\n    assert function(tmp_path) == expected\n"
+        }
+      ],
+      "original_bytes": 109294,
+      "original_sha256": "0c6635d08871cfa3f3b198efacabc644de44de2ee6fce11656ed9720168c0406",
+      "reviewed_bytes": 112931,
+      "reviewed_sha256": "e56cc4373ac05c65161ad0f16af9a353a42579e04406e62decc5b809bc25aa11"
+    }
+  },
+  "schema": "sector-standalone-integration-harness-v1"
+}

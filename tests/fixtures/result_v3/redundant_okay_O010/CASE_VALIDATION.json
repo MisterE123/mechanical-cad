@@ -1,0 +1,10 @@
+{
+  "case_id": "O010",
+  "evidence_kind": "actual_native",
+  "expected_outcome_verified": false,
+  "slot_releasable": true,
+  "validation_failure": {
+    "message": "successful solve reports failed constraints",
+    "type": "ValueError"
+  }
+}

@@ -1,0 +1,372 @@
+{
+  "cuts": {
+    "full_height_notch": {
+      "arc_images": [
+        {
+          "feature_id": "ext",
+          "id": "snapshot:notch:face:0",
+          "kind": "face",
+          "provenance": {
+            "evolution": "modified",
+            "id_scope": "evaluation_snapshot_only",
+            "image_count": 2,
+            "kernel": "OCCT",
+            "modifying_feature_id": "notch",
+            "operation": "cut",
+            "operation_id": "notch",
+            "relation": "modified",
+            "semantic_status": "split",
+            "source_count": 1,
+            "source_id": "ext/face/side.arc.round"
+          },
+          "role": "side.arc.round",
+          "signature": {
+            "area": 102.94402339433358,
+            "axis": [
+              -0.0,
+              -0.0,
+              -1.0
+            ],
+            "centroid": [
+              6.765727460512014,
+              6.119830750997027,
+              3.5
+            ],
+            "radius": 10.0,
+            "surface": "cylinder"
+          }
+        },
+        {
+          "feature_id": "ext",
+          "id": "snapshot:notch:face:5",
+          "kind": "face",
+          "provenance": {
+            "evolution": "modified",
+            "id_scope": "evaluation_snapshot_only",
+            "image_count": 2,
+            "kernel": "OCCT",
+            "modifying_feature_id": "notch",
+            "operation": "cut",
+            "operation_id": "notch",
+            "relation": "modified",
+            "semantic_status": "split",
+            "source_count": 1,
+            "source_id": "ext/face/side.arc.round"
+          },
+          "role": "side.arc.round",
+          "signature": {
+            "area": 102.94402339433357,
+            "axis": [
+              -0.0,
+              -0.0,
+              -1.0
+            ],
+            "centroid": [
+              -6.765727460512014,
+              6.1198307509970284,
+              3.5
+            ],
+            "radius": 10.0,
+            "surface": "cylinder"
+          }
+        }
+      ],
+      "resolution": {
+        "candidate": null,
+        "candidates": [
+          {
+            "body_id": null,
+            "feature_id": "ext",
+            "id": "snapshot:notch:face:0",
+            "kind": "face",
+            "provenance": {
+              "evolution": "modified",
+              "id_scope": "evaluation_snapshot_only",
+              "image_count": 2,
+              "kernel": "OCCT",
+              "modifying_feature_id": "notch",
+              "operation": "cut",
+              "operation_id": "notch",
+              "relation": "modified",
+              "semantic_status": "split",
+              "source_count": 1,
+              "source_id": "ext/face/side.arc.round"
+            },
+            "role": "side.arc.round",
+            "signature": {
+              "area": 102.94402339433358,
+              "axis": [
+                -0.0,
+                -0.0,
+                -1.0
+              ],
+              "centroid": [
+                6.765727460512014,
+                6.119830750997027,
+                3.5
+              ],
+              "radius": 10.0,
+              "surface": "cylinder"
+            }
+          },
+          {
+            "body_id": null,
+            "feature_id": "ext",
+            "id": "snapshot:notch:face:5",
+            "kind": "face",
+            "provenance": {
+              "evolution": "modified",
+              "id_scope": "evaluation_snapshot_only",
+              "image_count": 2,
+              "kernel": "OCCT",
+              "modifying_feature_id": "notch",
+              "operation": "cut",
+              "operation_id": "notch",
+              "relation": "modified",
+              "semantic_status": "split",
+              "source_count": 1,
+              "source_id": "ext/face/side.arc.round"
+            },
+            "role": "side.arc.round",
+            "signature": {
+              "area": 102.94402339433357,
+              "axis": [
+                -0.0,
+                -0.0,
+                -1.0
+              ],
+              "centroid": [
+                -6.765727460512014,
+                6.1198307509970284,
+                3.5
+              ],
+              "radius": 10.0,
+              "surface": "cylinder"
+            }
+          }
+        ],
+        "inferred": false,
+        "reason": "multiple_semantic_matches",
+        "status": "ambiguous",
+        "suggestions": []
+      },
+      "stats": {
+        "area": 693.412320368129,
+        "faces": 8,
+        "solids": 1,
+        "valid": true,
+        "volume": 1071.7911133458722
+      }
+    },
+    "partial_height_window": {
+      "arc_images": [
+        {
+          "feature_id": "ext",
+          "id": "ext/face/side.arc.round",
+          "kind": "face",
+          "provenance": {
+            "evolution": "modified",
+            "image_count": 1,
+            "kernel": "OCCT",
+            "modifying_feature_id": "notch",
+            "operation": "cut",
+            "operation_id": "notch",
+            "relation": "modified",
+            "semantic_status": "stable",
+            "source_count": 1,
+            "source_id": "ext/face/side.arc.round"
+          },
+          "role": "side.arc.round",
+          "signature": {
+            "area": 209.89474363512952,
+            "axis": [
+              -0.0,
+              -0.0,
+              -1.0
+            ],
+            "centroid": [
+              0.0,
+              6.193580541777905,
+              3.5
+            ],
+            "radius": 10.0,
+            "surface": "cylinder"
+          }
+        }
+      ],
+      "resolution": {
+        "candidate": {
+          "body_id": null,
+          "feature_id": "ext",
+          "id": "ext/face/side.arc.round",
+          "kind": "face",
+          "provenance": {
+            "evolution": "modified",
+            "image_count": 1,
+            "kernel": "OCCT",
+            "modifying_feature_id": "notch",
+            "operation": "cut",
+            "operation_id": "notch",
+            "relation": "modified",
+            "semantic_status": "stable",
+            "source_count": 1,
+            "source_id": "ext/face/side.arc.round"
+          },
+          "role": "side.arc.round",
+          "signature": {
+            "area": 209.89474363512952,
+            "axis": [
+              -0.0,
+              -0.0,
+              -1.0
+            ],
+            "centroid": [
+              0.0,
+              6.193580541777905,
+              3.5
+            ],
+            "radius": 10.0,
+            "surface": "cylinder"
+          }
+        },
+        "candidates": [
+          {
+            "body_id": null,
+            "feature_id": "ext",
+            "id": "ext/face/side.arc.round",
+            "kind": "face",
+            "provenance": {
+              "evolution": "modified",
+              "image_count": 1,
+              "kernel": "OCCT",
+              "modifying_feature_id": "notch",
+              "operation": "cut",
+              "operation_id": "notch",
+              "relation": "modified",
+              "semantic_status": "stable",
+              "source_count": 1,
+              "source_id": "ext/face/side.arc.round"
+            },
+            "role": "side.arc.round",
+            "signature": {
+              "area": 209.89474363512952,
+              "axis": [
+                -0.0,
+                -0.0,
+                -1.0
+              ],
+              "centroid": [
+                0.0,
+                6.193580541777905,
+                3.5
+              ],
+              "radius": 10.0,
+              "surface": "cylinder"
+            }
+          }
+        ],
+        "inferred": false,
+        "reason": "unique_stable_semantic_match",
+        "status": "resolved",
+        "suggestions": []
+      },
+      "stats": {
+        "area": 701.4859856792151,
+        "faces": 9,
+        "solids": 1,
+        "valid": true,
+        "volume": 1079.7243463203165
+      }
+    }
+  },
+  "graph_and_order": {
+    "all_semantic_role_status_surface_maps_equal": true,
+    "cases": {
+      "branch": {
+        "error": "ValueError",
+        "message": "branched graph"
+      },
+      "equal_coords_distinct_ids": {
+        "error": "ValueError",
+        "message": "disconnected graph"
+      },
+      "explicit_coincidence": [
+        "open",
+        [
+          [
+            "round",
+            "arc",
+            "a",
+            "b",
+            "c",
+            "ccw"
+          ],
+          [
+            "tail",
+            "line",
+            "b2",
+            "d"
+          ]
+        ]
+      ],
+      "mixed_open": [
+        "open",
+        [
+          [
+            "round",
+            "arc",
+            "a",
+            "b",
+            "c",
+            "ccw"
+          ],
+          [
+            "tail",
+            "line",
+            "b",
+            "d"
+          ]
+        ]
+      ],
+      "one_arc": [
+        "open",
+        [
+          [
+            "round",
+            "arc",
+            "a",
+            "b",
+            "c",
+            "ccw"
+          ]
+        ]
+      ],
+      "two_arc_disk": [
+        "closed",
+        [
+          [
+            "lower",
+            "arc",
+            "a",
+            "b",
+            "c",
+            "cw"
+          ],
+          [
+            "upper",
+            "arc",
+            "b",
+            "a",
+            "c",
+            "cw"
+          ]
+        ]
+      ]
+    },
+    "distinct_canonical_traversals": 1,
+    "max_volume": 2499.5574287564277,
+    "min_volume": 2499.5574287564277,
+    "native_rebuilds": 64,
+    "permutation_orientation_combinations": 384
+  }
+}

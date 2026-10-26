@@ -1,0 +1,3593 @@
+"""Synthetic-only exact translated-cap controls; never native success evidence.
+
+The pure helper consumes detached observations. Collector and adapter statements
+are extracted from the real source into explicit binding doubles; the native
+kernel is never imported, constructed, or run by this module. Historical snapshot3 inverse helpers remain for dependent audit tooling.
+Whole-repository freeze assertions are archived under docs/regressions/
+historical_source_guards; they describe the 0.7 milestone, not current behavior.
+"""
+
+from __future__ import annotations
+
+import ast
+import copy
+import hashlib
+import importlib.abc
+import itertools
+import json
+import math
+import sys
+from dataclasses import fields, replace
+from fractions import Fraction as F
+from pathlib import Path
+from types import SimpleNamespace
+
+import pytest
+
+import mechanical_cad.arc_profile_native_evidence as evidence
+from mechanical_cad.arc_profile_native_plan import (
+    NativeActualSupport,
+    NativePlan,
+    NativePlane,
+    NativePlanError,
+    NativeRadialDirection,
+    _continue_actual_support,
+    entry_context,
+    prepare_native_geometry,
+    transform,
+)
+from mechanical_cad.arc_profile_primitives import PrimitiveContext, PrimitiveError
+from mechanical_cad.arc_profile_sector_source import (
+    SectorArc,
+    SectorGeometrySource,
+    SectorLine,
+    SectorPoint,
+)
+
+ROOT = Path(__file__).resolve().parents[2]
+KERNEL = ROOT / "src/mechanical_cad/kernel_ocp.py"
+IDENTITY = ((1.0, 0.0, 0.0, 0.0), (0.0, 1.0, 0.0, 0.0), (0.0, 0.0, 1.0, 0.0))
+RAW_KEYS = {
+    "shape_type",
+    "is_null",
+    "orientation",
+    "profile_orientation",
+    "first_is_equal",
+    "shape_location",
+    "surface_location",
+    "surface_type",
+    "surface_fields",
+    "surface_is_retained",
+    "is_partner",
+    "is_same",
+    "is_equal",
+    "actual_vector",
+    "height",
+}
+HEIGHTS = (1.0, 1000.0, 7.25, math.nextafter(1.0, math.inf), math.nextafter(1000.0, 0.0), 7.0)
+COORDINATES = ((F(0), F(0)), (F(1), F(0)), (F(0), F(1)), (F(3, 2), F(-7, 4)))
+
+
+class NoNativeImports(importlib.abc.MetaPathFinder):
+    def find_spec(self, fullname, path=None, target=None):
+        if fullname.split(".")[0] in {"OCP", "OCC", "cadquery", "slvs", "bpy"}:
+            raise AssertionError(f"native import forbidden: {fullname}")
+        if fullname == "mechanical_cad.kernel_ocp":
+            raise AssertionError("parse the real native kernel; never import it")
+        return None
+
+
+@pytest.fixture(autouse=True)
+def no_native_imports():
+    blocker = NoNativeImports()
+    sys.meta_path.insert(0, blocker)
+    try:
+        yield
+    finally:
+        sys.meta_path.remove(blocker)
+
+
+def quaternions():
+    """24 rotations, selecting one sign of every equivalent quaternion pair."""
+    answer = []
+    for index in range(4):
+        answer.append(tuple(float(axis == index) for axis in range(4)))
+    for a, b in itertools.combinations(range(4), 2):
+        for sign in (-1.0, 1.0):
+            values = [0.0] * 4
+            values[a], values[b] = math.sqrt(0.5), sign * math.sqrt(0.5)
+            answer.append(tuple(values))
+    answer.extend((0.5, *values) for values in itertools.product((-0.5, 0.5), repeat=3))
+    assert len(answer) == 24
+    return tuple(answer)
+
+
+def fresh_plan(quaternion=(1.0, 0.0, 0.0, 0.0)):
+    source = SectorGeometrySource(
+        (SectorPoint("c", 0.0, 0.0), SectorPoint("a", 5.0, 0.0), SectorPoint("b", 0.0, 5.0)),
+        (SectorLine("ra", "c", "a"), SectorLine("rb", "c", "b")),
+        (SectorArc("arc", "c", "a", "b", "ccw"),),
+    )
+    context = entry_context()
+    plan = prepare_native_geometry(source, NativePlane(quaternion=quaternion), context=context)
+    observed = tuple(
+        NativeRadialDirection(line.entity_id, transform(plan.frame, line.direction))
+        for line in plan.lines
+    )
+    return _continue_actual_support(plan, observed, context), context
+
+
+@pytest.fixture(scope="module")
+def plan():
+    return fresh_plan()[0]
+
+
+@pytest.fixture(scope="module", params=quaternions(), ids=lambda q: "q=" + str(q))
+def frame_plan(request):
+    return fresh_plan(request.param)
+
+
+def matrix(vector):
+    return tuple((*IDENTITY[index][:3], value) for index, value in enumerate(vector))
+
+
+def observation(plan, height=7.0):
+    vector = tuple(height * component for component in plan.frame.normal)
+    return {
+        "shape_type": 4,
+        "is_null": False,
+        "orientation": 0,
+        "profile_orientation": 0,
+        "first_is_equal": True,
+        "shape_location": {"identity": False, "matrix": matrix(vector)},
+        "surface_location": {"identity": False, "matrix": matrix(vector)},
+        "surface_type": "Geom_Plane",
+        "surface_fields": {
+            "kind": "Geom_Plane",
+            "origin": (0.0, 0.0, 0.0),
+            "u": plan.frame.u,
+            "v": plan.frame.v,
+            "normal": plan.frame.normal,
+            "radius": None,
+        },
+        "surface_is_retained": True,
+        "is_partner": True,
+        "is_same": False,
+        "is_equal": False,
+        "actual_vector": vector,
+        "height": height,
+    }
+
+
+def validate(plan, record, height=7.0, context=None):
+    return evidence.validate_end_cap_observation(
+        plan, record, height=height, context=PrimitiveContext() if context is None else context
+    )
+
+
+def cross(a, b):
+    return (a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0])
+
+
+@pytest.mark.parametrize("height", HEIGHTS)
+def test_all_24_frames_and_six_heights_transfer_once_exactly(frame_plan, height):
+    plan, context = frame_plan
+    before, original = context.operations, copy.deepcopy(plan)
+    record = observation(plan, height)
+    derived = validate(plan, record, height, context)
+    assert set(record) == RAW_KEYS
+    assert derived == {
+        "origin": record["actual_vector"],
+        "u": plan.frame.u,
+        "v": plan.frame.v,
+        "normal": plan.frame.normal,
+        "placement_rule": "checked_surface_translation_applied_once",
+    }
+    assert before < context.operations <= 200_000
+    assert context.max_operations == 200_000
+    assert plan == original
+    assert derived["origin"] != tuple(2.0 * x for x in record["actual_vector"])
+    u, v, n = (tuple(map(F, derived[key])) for key in ("u", "v", "normal"))
+    assert cross(u, v) == n and sum(x * x for x in n) == 1
+    points = []
+    for a, b in COORDINATES:
+        local = tuple(a * x + b * y for x, y in zip(u, v, strict=True))
+        world = tuple(x + F(t) for x, t in zip(local, derived["origin"], strict=True))
+        reference = tuple(a * x + b * y + F(height) * z for x, y, z in zip(u, v, n, strict=True))
+        assert world == reference
+        points.append((local, world))
+    for (local_a, world_a), (local_b, world_b) in itertools.combinations(points, 2):
+        assert sum((a - b) ** 2 for a, b in zip(local_a, local_b, strict=True)) == sum(
+            (a - b) ** 2 for a, b in zip(world_a, world_b, strict=True)
+        )
+    assert plan.source_comparison_area == original.source_comparison_area
+    assert plan.area_allowance == original.area_allowance
+
+
+def test_controls_cover_every_signed_normal_and_all_right_handed_frames():
+    from mechanical_cad.arc_profile_native_plan import _frame
+
+    frames = [_frame(PrimitiveContext(), NativePlane(quaternion=q)) for q in quaternions()]
+    assert len({(frame.u, frame.v, frame.normal) for frame in frames}) == 24
+    assert {frame.normal for frame in frames} == {
+        (1.0, 0.0, 0.0),
+        (-1.0, 0.0, 0.0),
+        (0.0, 1.0, 0.0),
+        (0.0, -1.0, 0.0),
+        (0.0, 0.0, 1.0),
+        (0.0, 0.0, -1.0),
+    }
+    assert all(cross(frame.u, frame.v) == frame.normal for frame in frames)
+
+
+@pytest.mark.parametrize(
+    "change",
+    [
+        "one_ulp",
+        "tangential",
+        "zero",
+        "negative",
+        "wrong_height",
+        "identity_shape",
+        "identity_surface",
+        "shape_only_wrong",
+        "surface_only_wrong",
+        "halves",
+        "complementary",
+        "double",
+        "vector_only_wrong",
+        "all_vector_fields_wrong",
+    ],
+)
+def test_translation_is_independent_exact_and_never_composed(plan, change):
+    record = observation(plan)
+    vector = record["actual_vector"]
+    if change in {"one_ulp", "tangential", "zero", "negative", "wrong_height", "double"}:
+        wrong = {
+            "one_ulp": (0.0, 0.0, math.nextafter(7.0, math.inf)),
+            "tangential": (math.ulp(0.0), 0.0, 7.0),
+            "zero": (0.0, 0.0, 0.0),
+            "negative": (0.0, 0.0, -7.0),
+            "wrong_height": (0.0, 0.0, 8.0),
+            "double": (0.0, 0.0, 14.0),
+        }[change]
+        record["shape_location"]["matrix"] = record["surface_location"]["matrix"] = matrix(wrong)
+    elif change.startswith("identity_"):
+        record[change.removeprefix("identity_") + "_location"] = {
+            "identity": True,
+            "matrix": IDENTITY,
+        }
+    elif change.endswith("only_wrong") and change != "vector_only_wrong":
+        record[change.removesuffix("_only_wrong") + "_location"]["matrix"] = IDENTITY
+    elif change == "halves":
+        for key in ("shape_location", "surface_location"):
+            record[key]["matrix"] = matrix(tuple(t / 2.0 for t in vector))
+    elif change == "complementary":
+        record["shape_location"]["matrix"] = matrix((0.0, 0.0, 2.0))
+        record["surface_location"]["matrix"] = matrix((0.0, 0.0, 5.0))
+    else:
+        record["actual_vector"] = (0.0, 0.0, 8.0)
+        if change == "all_vector_fields_wrong":
+            for key in ("shape_location", "surface_location"):
+                record[key]["matrix"] = matrix(record["actual_vector"])
+    with pytest.raises(NativePlanError):
+        validate(plan, record)
+
+
+@pytest.mark.parametrize("location", ["shape_location", "surface_location", "both"])
+@pytest.mark.parametrize(
+    "linear",
+    [
+        ((1.0, math.ulp(0.0), 0.0), (0.0, 1.0, 0.0), (0.0, 0.0, 1.0)),
+        ((0.0, -1.0, 0.0), (1.0, 0.0, 0.0), (0.0, 0.0, 1.0)),
+        ((2.0, 0.0, 0.0), (0.0, 2.0, 0.0), (0.0, 0.0, 2.0)),
+        ((1.0, 0.25, 0.0), (0.0, 1.0, 0.0), (0.0, 0.0, 1.0)),
+        ((-1.0, 0.0, 0.0), (0.0, 1.0, 0.0), (0.0, 0.0, 1.0)),
+        ((math.nextafter(1.0, 0.0), 0.0, 0.0), (0.0, 1.0, 0.0), (0.0, 0.0, 1.0)),
+    ],
+    ids=["ulp_off_diagonal", "rotation", "scale", "shear", "reflection", "ulp_diagonal"],
+)
+def test_no_general_affine_matrix_is_admitted(plan, location, linear):
+    record = observation(plan)
+    for key in ("shape_location", "surface_location") if location == "both" else (location,):
+        record[key]["matrix"] = tuple(
+            (*row, t) for row, t in zip(linear, record["actual_vector"], strict=True)
+        )
+    with pytest.raises(NativePlanError):
+        validate(plan, record)
+
+
+@pytest.mark.parametrize(
+    "field,value",
+    [
+        ("shape_type", 6),
+        ("is_null", True),
+        ("orientation", 1),
+        ("profile_orientation", 1),
+        ("first_is_equal", False),
+        ("surface_is_retained", False),
+        ("is_partner", False),
+        ("is_same", True),
+        ("is_equal", True),
+        ("surface_type", "Geom_CylindricalSurface"),
+        ("surface_type", "Geom_BSplineSurface"),
+        ("surface_fields", None),
+        ("height", 0.0),
+        ("height", -7.0),
+        ("height", 8.0),
+        ("height", 1001.0),
+    ],
+)
+def test_shape_identity_orientation_kind_and_observed_height_are_mandatory(plan, field, value):
+    record = observation(plan)
+    record[field] = value
+    with pytest.raises(NativePlanError):
+        validate(plan, record)
+
+
+@pytest.mark.parametrize(
+    "field,value",
+    [
+        ("origin", (math.ulp(0.0), 0.0, 0.0)),
+        ("origin", (0.0, 0.0, 7.0)),
+        ("u", (0.0, 1.0, 0.0)),
+        ("v", (1.0, 0.0, 0.0)),
+        ("normal", (0.0, 0.0, -1.0)),
+        ("u", (math.nextafter(1.0, 0.0), 0.0, 0.0)),
+        ("radius", 0.0),
+        ("radius", 5.0),
+        ("kind", "Geom_CylindricalSurface"),
+    ],
+)
+def test_raw_local_plane_is_not_a_baked_or_fitted_world_plane(plan, field, value):
+    record = observation(plan)
+    record["surface_fields"][field] = value
+    with pytest.raises(NativePlanError):
+        validate(plan, record)
+
+
+@pytest.mark.parametrize(
+    "height",
+    [True, False, 0.0, -7.0, 1001.0, math.nan, math.inf, -math.inf, "7", 1 << 100_000],
+    ids=["true", "false", "zero", "negative", "large", "nan", "inf", "neginf", "string", "huge"],
+)
+def test_independently_supplied_height_cannot_be_forged(plan, height):
+    with pytest.raises(NativePlanError):
+        validate(plan, observation(plan), height=height)
+
+
+def test_coherent_wrong_observed_height_vector_and_locations_do_not_override_input(plan):
+    record = observation(plan, height=8.0)
+    with pytest.raises(NativePlanError):
+        validate(plan, record, height=7.0)
+
+
+@pytest.mark.parametrize(
+    "field",
+    [
+        "expected_vector",
+        "effective_origin",
+        "effective_world_plane",
+        "expected_matrix",
+        "placement_rule",
+        "same_tshape",
+        "expected_height",
+    ],
+)
+def test_forged_derived_or_caller_expected_fields_are_not_premises(plan, field):
+    record = observation(plan)
+    record[field] = {"origin": (0.0, 0.0, 14.0)}
+    with pytest.raises(NativePlanError):
+        validate(plan, record)
+
+
+@pytest.mark.parametrize("where", ["root", "shape_location", "surface_location", "surface_fields"])
+@pytest.mark.parametrize("change", ["missing", "extra", "nonstring"])
+def test_record_schema_exact_at_every_level(plan, where, change):
+    record = observation(plan)
+    target = record if where == "root" else record[where]
+    if change == "missing":
+        target.pop(next(iter(target)))
+    elif change == "extra":
+        target["unapproved"] = 0
+    else:
+        target[1] = target.pop(next(iter(target)))
+    with pytest.raises(NativePlanError):
+        validate(plan, record)
+
+
+class Dict(dict):
+    pass
+
+
+class Tuple(tuple):
+    pass
+
+
+class Float(float):
+    pass
+
+
+class Int(int):
+    pass
+
+
+class String(str):
+    pass
+
+
+class Hostile:
+    def __eq__(self, other):
+        raise AssertionError("untrusted equality must not run")
+
+    def __float__(self):
+        raise AssertionError("untrusted conversion must not run")
+
+    def __hash__(self):
+        return 1
+
+
+@pytest.mark.parametrize("field", ["shape_type", "orientation", "profile_orientation"])
+@pytest.mark.parametrize("bad", [True, False, 0.0, 4.0, Int(0), Int(4), "0", None, Hostile()])
+def test_integer_observation_fields_require_builtin_int(plan, field, bad):
+    record = observation(plan)
+    record[field] = bad
+    with pytest.raises(NativePlanError):
+        validate(plan, record)
+
+
+@pytest.mark.parametrize(
+    "field",
+    ["is_null", "first_is_equal", "surface_is_retained", "is_partner", "is_same", "is_equal"],
+)
+@pytest.mark.parametrize("bad", [0, 1, None, "true", Hostile()])
+def test_observation_flags_require_builtin_bool(plan, field, bad):
+    record = observation(plan)
+    record[field] = bad
+    with pytest.raises(NativePlanError):
+        validate(plan, record)
+
+
+@pytest.mark.parametrize(
+    "where", ["actual_vector", "origin", "u", "v", "normal", "matrix_scalar", "height"]
+)
+@pytest.mark.parametrize(
+    "bad",
+    [True, 0, Float(0.0), math.nan, math.inf, -math.inf, 1 << 100_000, Hostile()],
+    ids=["bool", "int", "subclass", "nan", "inf", "neginf", "huge", "hostile"],
+)
+def test_every_numeric_leaf_rejects_nonfinite_nonfloat_and_hooks(plan, where, bad):
+    record = observation(plan)
+    if where == "height":
+        record["height"] = bad
+    elif where == "matrix_scalar":
+        record["surface_location"]["matrix"] = (
+            (bad, 0.0, 0.0, 0.0),
+            *record["surface_location"]["matrix"][1:],
+        )
+    else:
+        target = record if where == "actual_vector" else record["surface_fields"]
+        target[where] = (bad, *target[where][1:])
+    with pytest.raises(NativePlanError):
+        validate(plan, record)
+
+
+@pytest.mark.parametrize("where", ["root", "shape_location", "surface_location", "surface_fields"])
+@pytest.mark.parametrize("kind", ["subclass", "list", "none"])
+def test_dict_records_require_builtin_dict(plan, where, kind):
+    record = observation(plan)
+    target = record if where == "root" else record[where]
+    bad = Dict(target) if kind == "subclass" else (list(target.items()) if kind == "list" else None)
+    if where == "root":
+        record = bad
+    else:
+        record[where] = bad
+    with pytest.raises(NativePlanError):
+        validate(plan, record)
+
+
+@pytest.mark.parametrize("where", ["actual_vector", "origin", "u", "v", "normal", "matrix", "row"])
+@pytest.mark.parametrize("kind", ["subclass", "list", "short", "long", "none"])
+def test_tuple_shape_and_builtin_container_grammar(plan, where, kind):
+    record = observation(plan)
+    if where in {"matrix", "row"}:
+        target, key = record["shape_location"], "matrix"
+        value = target[key] if where == "matrix" else target[key][0]
+    else:
+        target = record if where == "actual_vector" else record["surface_fields"]
+        key, value = where, target[where]
+    bad = {
+        "subclass": lambda: Tuple(value),
+        "list": lambda: list(value),
+        "short": lambda: value[:-1],
+        "long": lambda: (*value, 0.0),
+        "none": lambda: None,
+    }[kind]()
+    target[key] = (bad, *target[key][1:]) if where == "row" else bad
+    with pytest.raises(NativePlanError):
+        validate(plan, record)
+
+
+@pytest.mark.parametrize("where", ["surface_type", "kind"])
+@pytest.mark.parametrize("bad", [String("Geom_Plane"), Hostile(), None, 0])
+def test_surface_type_tokens_are_plain_strings(plan, where, bad):
+    record = observation(plan)
+    (record if where == "surface_type" else record["surface_fields"])[where] = bad
+    with pytest.raises(NativePlanError):
+        validate(plan, record)
+
+
+@pytest.mark.parametrize("location", ["shape_location", "surface_location"])
+@pytest.mark.parametrize("value", [True, 0, 1, None, Hostile()])
+def test_location_identity_is_exact_false_boolean(plan, location, value):
+    record = observation(plan)
+    record[location]["identity"] = value
+    with pytest.raises(NativePlanError):
+        validate(plan, record)
+
+
+def test_hostile_dictionary_key_is_not_compared(plan):
+    record = observation(plan)
+    record[Hostile()] = record.pop("height")
+    with pytest.raises(NativePlanError):
+        validate(plan, record)
+
+
+def test_intended_only_plan_and_unproved_support_never_authorize_transfer(plan):
+    with pytest.raises(NativePlanError, match="unproved_native_support"):
+        validate(replace(plan, accepted_support=None), observation(plan))
+    for wrong in (None, {}, object(), replace(plan, accepted_support=object())):
+        with pytest.raises(NativePlanError):
+            validate(wrong, observation(plan))
+
+
+@pytest.mark.parametrize("missing", [field.name for field in fields(NativeActualSupport)])
+def test_incomplete_actual_support_record_rejects(plan, missing):
+    support = object.__new__(NativeActualSupport)
+    for field in fields(NativeActualSupport):
+        if field.name != missing:
+            object.__setattr__(support, field.name, getattr(plan.accepted_support, field.name))
+    with pytest.raises(NativePlanError, match="invalid_native_support_record"):
+        validate(replace(plan, accepted_support=support), observation(plan))
+
+
+def test_original_arithmetic_context_is_continued_without_reset(plan):
+    context = PrimitiveContext(max_operations=200_000)
+    context._make(17, 0)
+    before = context.operations
+    validate(plan, observation(plan), context=context)
+    after = context.operations
+    validate(plan, observation(plan), context=context)
+    assert before < after < context.operations
+    assert context.operations - after == after - before
+    assert context.max_operations == 200_000
+
+
+def test_exhausted_original_context_rejects_instead_of_starting_auxiliary_budget(plan):
+    context = PrimitiveContext(max_operations=1)
+    context._tick()
+    with pytest.raises(PrimitiveError, match="operation_limit"):
+        validate(plan, observation(plan), context=context)
+    assert context.operations == context.max_operations == 1
+
+
+@pytest.mark.parametrize("missing", [field.name for field in fields(NativePlan)])
+def test_incomplete_native_plan_is_controlled_rejection(plan, missing):
+    broken = object.__new__(type(plan))
+    for field in fields(type(plan)):
+        if field.name != missing:
+            object.__setattr__(broken, field.name, getattr(plan, field.name))
+    with pytest.raises(NativePlanError, match="invalid_native_plan"):
+        validate(broken, observation(plan))
+
+
+class Coord:
+    def __init__(self, values):
+        self.values = values
+
+    def Coord(self):
+        return self.values
+
+
+class Location:
+    def __init__(self, values=IDENTITY, identity=None):
+        self.values = values
+        self.identity = values == IDENTITY if identity is None else identity
+
+    def IsIdentity(self):
+        return self.identity
+
+    def Transformation(self):
+        return self
+
+    def Value(self, row, column):
+        return self.values[row - 1][column - 1]
+
+
+class Surface:
+    """Separate handles intentionally compare equal by their geometry."""
+
+    def __init__(self, plan, kind="Geom_Plane"):
+        self.kind = kind
+        self.origin = (0.0, 0.0, 0.0)
+        self.u, self.v, self.normal = plan.frame.u, plan.frame.v, plan.frame.normal
+        self.plane_calls = 0
+
+    def __eq__(self, other):
+        return isinstance(other, Surface) and self.kind == other.kind
+
+    def DynamicType(self):
+        return SimpleNamespace(Name=lambda: self.kind)
+
+    def Pln(self):
+        self.plane_calls += 1
+        assert self.kind == "Geom_Plane", "never request plane fields from a nonplane"
+        return self
+
+    def Position(self):
+        return SimpleNamespace(
+            XDirection=lambda: Coord(self.u),
+            YDirection=lambda: Coord(self.v),
+            Direction=lambda: Coord(self.normal),
+        )
+
+    def Location(self):
+        return Coord(self.origin)
+
+
+class Shape:
+    """Only genuine identity/occurrence predicates supply the collected flags."""
+
+    def __init__(self, tshape, location, surface, surface_location):
+        self.tshape, self.location = tshape, location
+        self.surface, self.surface_location = surface, surface_location
+        self.orientation, self.shape_type, self.is_null = 0, 4, False
+        self.comparisons = []
+
+    def IsNull(self):
+        return self.is_null
+
+    def ShapeType(self):
+        assert not self.is_null
+        return self.shape_type
+
+    def Orientation(self):
+        assert not self.is_null
+        return self.orientation
+
+    def Location(self):
+        assert not self.is_null
+        return self.location
+
+    def IsPartner(self, other):
+        self.comparisons.append(("IsPartner", other))
+        return self.tshape is other.tshape
+
+    def IsSame(self, other):
+        self.comparisons.append(("IsSame", other))
+        return self.tshape is other.tshape and self.location.values == other.location.values
+
+    def IsEqual(self, other):
+        self.comparisons.append(("IsEqual", other))
+        return (
+            self.tshape is other.tshape
+            and self.location.values == other.location.values
+            and self.orientation == other.orientation
+        )
+
+
+def fake_shapes(plan, height=7.0):
+    surface, tshape = Surface(plan), object()
+    profile = Shape(tshape, Location(), surface, Location())
+    first = Shape(tshape, Location(), surface, Location())
+    placement = matrix(tuple(height * n for n in plan.frame.normal))
+    last = Shape(tshape, Location(placement), surface, Location(placement))
+    return profile, first, last, surface
+
+
+def kernel_method(name):
+    tree = ast.parse(KERNEL.read_bytes())
+    kernel = next(
+        node for node in tree.body if isinstance(node, ast.ClassDef) and node.name == "OCPKernel"
+    )
+    return next(
+        node for node in kernel.body if isinstance(node, ast.FunctionDef) and node.name == name
+    )
+
+
+@pytest.fixture(scope="module")
+def collectors():
+    names = {
+        "_curve_profile_location_record",
+        "_curve_profile_surface_record",
+        "_curve_profile_end_cap_record",
+    }
+    tree = ast.parse(KERNEL.read_bytes())
+    selected = [
+        node for node in tree.body if isinstance(node, ast.FunctionDef) and node.name in names
+    ]
+    assert {node.name for node in selected} == names
+    calls = []
+
+    def face(shape):
+        calls.append(("Face", shape))
+        assert not shape.is_null and shape.shape_type == 4
+        return shape
+
+    def surface(shape, location):
+        calls.append(("Surface_s", shape, location))
+        location.values, location.identity = (
+            shape.surface_location.values,
+            shape.surface_location.identity,
+        )
+        return shape.surface
+
+    namespace = {
+        "__name__": "mechanical_cad._synthetic_end_cap_collectors",
+        "__package__": "mechanical_cad",
+        "TopAbs_FACE": 4,
+        "TopLoc_Location": Location,
+        "TopoDS": SimpleNamespace(Face=face),
+        "BRep_Tool": SimpleNamespace(Surface_s=surface),
+    }
+    exec(compile(ast.Module(body=selected, type_ignores=[]), str(KERNEL), "exec"), namespace)
+    return SimpleNamespace(record=namespace["_curve_profile_end_cap_record"], calls=calls)
+
+
+@pytest.fixture(scope="module")
+def inspection_block():
+    method = kernel_method("extrude_sector")
+    body = next(node.body for node in method.body if isinstance(node, ast.Try))
+    start = next(
+        index
+        for index, node in enumerate(body)
+        if isinstance(node, ast.Assign)
+        and any(
+            isinstance(target, ast.Name) and target.id == "end_record" for target in node.targets
+        )
+    )
+    stop = next(
+        index
+        for index, node in enumerate(body)
+        if isinstance(node, ast.Assign)
+        and any(isinstance(target, ast.Name) and target.id == "roles" for target in node.targets)
+    )
+    selected = body[start:stop]
+    assert len(selected) == 4
+    assert ast.unparse(selected[1]) == "event('raw_last_cap_representation', end_record)"
+    assert (
+        ast.unparse(selected[2])
+        == "end_fields = validate_end_cap_observation(plan, end_record, height=height, context=c)"
+    )
+    assert ast.unparse(selected[3]) == "event('actual_last_cap_plane', end_fields)"
+    return compile(ast.Module(body=selected, type_ignores=[]), str(KERNEL), "exec")
+
+
+def collect(collectors, plan, shapes=None, height=7.0, vector=None):
+    shapes = fake_shapes(plan, height) if shapes is None else shapes
+    vector = tuple(height * n for n in plan.frame.normal) if vector is None else vector
+    return collectors.record(*shapes, vector, height)
+
+
+def test_collector_observes_genuine_identity_and_exact_raw_schema(collectors, plan):
+    shapes = fake_shapes(plan)
+    record = collect(collectors, plan, shapes)
+    profile, first, last, retained = shapes
+    assert record == observation(plan)
+    assert set(record) == RAW_KEYS
+    assert first.comparisons == [("IsEqual", profile)]
+    assert last.comparisons == [("IsPartner", profile), ("IsSame", profile), ("IsEqual", profile)]
+    assert retained.plane_calls == 1
+    assert collectors.calls[-1][0] == "Surface_s" and collectors.calls[-1][1] is last
+    validate(plan, record)
+
+
+def test_equal_geometry_on_different_handle_is_raw_foreign_evidence(collectors, plan):
+    shapes = fake_shapes(plan)
+    shapes[2].surface = Surface(plan)
+    assert shapes[2].surface == shapes[3] and shapes[2].surface is not shapes[3]
+    record = collect(collectors, plan, shapes)
+    assert record["surface_fields"] == observation(plan)["surface_fields"]
+    assert record["surface_is_retained"] is False
+    with pytest.raises(NativePlanError):
+        validate(plan, record)
+
+
+BAD_COLLECTOR_CASES = (
+    "nonplane",
+    "wrong_handle",
+    "wrong_partner",
+    "last_reversed",
+    "profile_reversed",
+    "first_mismatch",
+    "null",
+    "nonface",
+    "shape_location",
+    "surface_location",
+    "half_locations",
+    "double_locations",
+    "complementary_locations",
+    "raw_origin",
+    "raw_u",
+    "raw_v",
+    "raw_normal",
+    "wrong_vector",
+    "tangential",
+    "identity_flags",
+    "same_equal",
+    "combined",
+)
+
+
+def mutate_shapes(shapes, change, plan):
+    profile, first, last, retained = shapes
+    if change == "nonplane":
+        last.surface.kind = "Geom_BSplineSurface"
+    elif change == "wrong_handle":
+        last.surface = Surface(plan)
+    elif change == "wrong_partner":
+        last.tshape = object()
+    elif change == "last_reversed":
+        last.orientation = 1
+    elif change == "profile_reversed":
+        profile.orientation = 1
+    elif change == "first_mismatch":
+        first.orientation = 1
+    elif change == "null":
+        last.is_null = True
+    elif change == "nonface":
+        last.shape_type = 6
+    elif change in {"shape_location", "surface_location"}:
+        target = last.location if change == "shape_location" else last.surface_location
+        target.values = IDENTITY
+    elif change in {"half_locations", "double_locations", "complementary_locations", "tangential"}:
+        a, b = {
+            "half_locations": (3.5, 3.5),
+            "double_locations": (14.0, 14.0),
+            "complementary_locations": (2.0, 5.0),
+            "tangential": (7.0, 7.0),
+        }[change]
+        tangent = math.ulp(0.0) if change == "tangential" else 0.0
+        last.location.values = matrix((tangent, 0.0, a))
+        last.surface_location.values = matrix((tangent, 0.0, b))
+    elif change.startswith("raw_"):
+        setattr(retained, change.removeprefix("raw_"), (1.0, 1.0, 1.0))
+    elif change == "identity_flags":
+        last.location.identity = last.surface_location.identity = True
+    elif change == "same_equal":
+        last.location.values = profile.location.values
+    elif change == "combined":
+        last.tshape, last.orientation, last.surface = object(), 1, Surface(plan)
+        last.location.values = matrix((0.0, 0.0, 3.5))
+        last.surface_location.values = matrix((0.0, 0.0, 3.5))
+    return (0.0, 0.0, 8.0) if change == "wrong_vector" else (0.0, 0.0, 7.0)
+
+
+@pytest.mark.parametrize("change", BAD_COLLECTOR_CASES)
+def test_actual_additive_block_emits_raw_before_each_new_predicate_rejection(
+    collectors, inspection_block, plan, change
+):
+    shapes, events = fake_shapes(plan), []
+    vector = mutate_shapes(shapes, change, plan)
+    profile, first, last, retained = shapes
+    before_calls = len(collectors.calls)
+    namespace = {
+        "profile": profile,
+        "first": first,
+        "last": last,
+        "state": SimpleNamespace(surface=retained),
+        "plan": plan,
+        "c": PrimitiveContext(),
+        "actual_vector": vector,
+        "height": 7.0,
+        "_curve_profile_end_cap_record": collectors.record,
+        "validate_end_cap_observation": evidence.validate_end_cap_observation,
+        "event": lambda stage, value: events.append((stage, copy.deepcopy(value))),
+    }
+    with pytest.raises(NativePlanError):
+        exec(inspection_block, namespace)
+    assert len(events) == 1 and events[0][0] == "raw_last_cap_representation"
+    raw = events[0][1]
+    assert set(raw) == RAW_KEYS and raw["actual_vector"] == vector
+    assert "placement_rule" not in raw
+    if change in {"null", "nonface"}:
+        assert len(collectors.calls) == before_calls
+        assert raw["surface_fields"] is raw["surface_location"] is raw["surface_type"] is None
+    if change == "nonplane":
+        assert raw["surface_type"] == "Geom_BSplineSurface" and raw["surface_fields"] is None
+        assert retained.plane_calls == 0
+
+
+def test_actual_additive_block_keeps_raw_and_derived_separate(collectors, inspection_block, plan):
+    profile, first, last, retained = fake_shapes(plan)
+    events, context = [], PrimitiveContext()
+    namespace = {
+        "profile": profile,
+        "first": first,
+        "last": last,
+        "state": SimpleNamespace(surface=retained),
+        "plan": plan,
+        "c": context,
+        "actual_vector": (0.0, 0.0, 7.0),
+        "height": 7.0,
+        "_curve_profile_end_cap_record": collectors.record,
+        "validate_end_cap_observation": evidence.validate_end_cap_observation,
+        "event": lambda stage, value: events.append(
+            (stage, copy.deepcopy(value), context.operations)
+        ),
+    }
+    exec(inspection_block, namespace)
+    assert [item[0] for item in events] == ["raw_last_cap_representation", "actual_last_cap_plane"]
+    assert events[0][1] == observation(plan)
+    assert events[1][1]["origin"] == (0.0, 0.0, 7.0)
+    assert events[0][2] < events[1][2]
+    assert events[0][1]["surface_fields"]["origin"] == (0.0, 0.0, 0.0)
+
+
+def test_no_transformed_copy_healing_accessor_or_constructor_is_added():
+    tree = ast.parse(KERNEL.read_bytes())
+    collector = next(
+        node
+        for node in tree.body
+        if isinstance(node, ast.FunctionDef) and node.name == "_curve_profile_end_cap_record"
+    )
+    calls = [node for node in ast.walk(collector) if isinstance(node, ast.Call)]
+    names = {node.func.id for node in calls if isinstance(node.func, ast.Name)}
+    attributes = {node.func.attr for node in calls if isinstance(node.func, ast.Attribute)}
+    assert names == {
+        "TopLoc_Location",
+        "int",
+        "_curve_profile_location_record",
+        "_curve_profile_surface_record",
+    }
+    assert attributes == {
+        "IsNull",
+        "ShapeType",
+        "Surface_s",
+        "Face",
+        "DynamicType",
+        "Name",
+        "Orientation",
+        "IsEqual",
+        "Location",
+        "IsPartner",
+        "IsSame",
+    }
+    assert not any(
+        isinstance(node, (ast.Import, ast.ImportFrom, ast.Raise)) for node in ast.walk(collector)
+    )
+    assert [arg.arg for arg in collector.args.args] == [
+        "profile",
+        "first",
+        "last",
+        "retained_surface",
+        "actual_vector",
+        "height",
+    ]
+
+
+def test_bounded_raw_event_overflow_precedes_helper_and_registration(
+    collectors, inspection_block, plan
+):
+    profile, first, last, retained = fake_shapes(plan)
+    context = PrimitiveContext()
+    record = {
+        "operation": "curve_profile",
+        "operations_start": 0,
+        "events": [{"stage": "synthetic_only_padding", "value": "", "operations": 0}],
+    }
+    overhead = len(evidence.bounded_evidence_bytes(record))
+    record["events"][0]["value"] = "x" * (1_048_576 - overhead)
+    assert len(evidence.bounded_evidence_bytes(record)) == 1_048_576
+    before = copy.deepcopy(record)
+    helper_called = []
+    method = kernel_method("extrude_sector")
+    event = next(
+        node for node in method.body if isinstance(node, ast.FunctionDef) and node.name == "event"
+    )
+    namespace = {
+        "profile": profile,
+        "first": first,
+        "last": last,
+        "state": SimpleNamespace(surface=retained),
+        "plan": plan,
+        "c": context,
+        "actual_vector": (0.0, 0.0, 7.0),
+        "height": 7.0,
+        "_curve_profile_end_cap_record": collectors.record,
+        "validate_end_cap_observation": lambda *args, **kwargs: helper_called.append(True),
+        "evidence": record,
+        "bounded_evidence_bytes": evidence.bounded_evidence_bytes,
+        "evidence_sink": None,
+    }
+    exec(compile(ast.Module(body=[event], type_ignores=[]), str(KERNEL), "exec"), namespace)
+    with pytest.raises(NativePlanError, match="native_evidence_limit"):
+        exec(inspection_block, namespace)
+    assert record == before and not helper_called and context.operations == 0
+    bounds = [
+        node.lineno
+        for node in ast.walk(method)
+        if isinstance(node, ast.Call)
+        and isinstance(node.func, ast.Name)
+        and node.func.id == "bounded_evidence_bytes"
+    ]
+    registration = [
+        node.lineno
+        for node in ast.walk(method)
+        if isinstance(node, ast.Call)
+        and isinstance(node.func, ast.Attribute)
+        and node.func.attr == "_remember"
+    ]
+    assert len(registration) == 1 and max(bounds) < registration[0]
+
+
+def undo_regularity_metadata_revision(data, relative):
+    """Apply only exact reviewed hunks; leave every other old byte observable."""
+    path = ROOT / "tests/fixtures/arc_sector/regularity_metadata_inverse.json"
+    raw = path.read_bytes()
+    assert hashlib.sha256(raw).hexdigest() == (
+        "86b0357993ac11c4c885d1b4eaf6d78cc1adbcacd89281a1e361ffe03b3b0c9f"
+    )
+    fixture = json.loads(raw)
+    assert fixture["schema"] == 1
+    lines = data.splitlines(keepends=True)
+    for hunk in reversed(fixture["files"][relative]["hunks"]):
+        start = hunk["line"]
+        current = hunk["current"].encode().splitlines(keepends=True)
+        assert current and lines[start : start + len(current)] == current
+        lines[start : start + len(current)] = hunk["historical"].encode().splitlines(keepends=True)
+    return b"".join(lines)
+
+
+def undo_canonical_vertex_revision(data, relative):
+    """Apply only exact reviewed hunks; leave every other old byte observable."""
+    path = ROOT / "tests/fixtures/arc_sector/canonical_vertex_inverse.json"
+    raw = path.read_bytes()
+    assert hashlib.sha256(raw).hexdigest() == (
+        "0c6f93e8e6defd7398a011249ff2c7b4302798a25374a1d0194eba72a41bafae"
+    )
+    fixture = json.loads(raw)
+    assert fixture["schema"] == 1
+    lines = data.splitlines(keepends=True)
+    for hunk in reversed(fixture["files"][relative]["hunks"]):
+        start = hunk["line"]
+        current = hunk["current"].encode().splitlines(keepends=True)
+        assert current and lines[start : start + len(current)] == current
+        lines[start : start + len(current)] = hunk["historical"].encode().splitlines(keepends=True)
+    return b"".join(lines)
+
+
+def test_vertex_inverse_rejects_an_altered_fixture(monkeypatch):
+    fixture = ROOT / "tests/fixtures/arc_sector/canonical_vertex_inverse.json"
+    original = Path.read_bytes
+    monkeypatch.setattr(
+        Path, "read_bytes", lambda path: original(path) + (b" " if path == fixture else b"")
+    )
+    with pytest.raises(AssertionError):
+        undo_canonical_vertex_revision(KERNEL.read_bytes(), "src/mechanical_cad/kernel_ocp.py")
+
+
+def test_regularity_inverse_rejects_an_altered_fixture(monkeypatch):
+    fixture = ROOT / "tests/fixtures/arc_sector/regularity_metadata_inverse.json"
+    original = Path.read_bytes
+    monkeypatch.setattr(
+        Path, "read_bytes", lambda path: original(path) + (b" " if path == fixture else b"")
+    )
+    with pytest.raises(AssertionError):
+        undo_regularity_metadata_revision(KERNEL.read_bytes(), "src/mechanical_cad/kernel_ocp.py")
+
+
+def protected_kernel_bytes(data):
+    """Old spans, excising only the sealed inspection and exact raw observations."""
+    data = _assembly_step_bytes(ROOT, "src/mechanical_cad/kernel_ocp.py", data)
+    data = undo_regularity_metadata_revision(data, "src/mechanical_cad/kernel_ocp.py")
+    data = undo_canonical_vertex_revision(data, "src/mechanical_cad/kernel_ocp.py")
+    for added in (
+        b'            event("raw_face_empirical_area", {"area": area})\n',
+        b"            event(\n"
+        b'                "raw_prism_empirical_masses",\n'
+        b'                {"area": state.area, "height": height, "volume": volume},\n'
+        b"            )\n",
+    ):
+        assert data.count(added) == 1
+        data = data.replace(added, b"")
+    # Undo only the two sealed radial finite-range substitutions.
+    replacements = (
+        (b"(curve, (0.0, line.trim_parameter), True, 3)", b"(curve, (0.0, line.length), True, 3)"),
+        (
+            b"                maker = BRepBuilderAPI_MakeEdge(\n                    curve,\n                    vertices[arc.center_id],\n                    vertices[line.point_id],\n                    0.0,\n                    line.trim_parameter,\n                )",
+            b"                maker = BRepBuilderAPI_MakeEdge(\n                    curve, vertices[arc.center_id], vertices[line.point_id], 0.0, line.length\n                )",
+        ),
+    )
+    for current, historical in replacements:
+        assert data.count(current) == 1
+        data = data.replace(current, historical)
+    lines = data.splitlines(keepends=True)
+    tree = ast.parse(data)
+
+    def span(node):
+        first = min([node.lineno, *[item.lineno for item in getattr(node, "decorator_list", ())]])
+        return b"".join(lines[first - 1 : node.end_lineno])
+
+    def is_assignment(node, name):
+        return isinstance(node, ast.Assign) and any(
+            isinstance(target, ast.Name) and target.id == name for target in node.targets
+        )
+
+    segments = []
+    for node in tree.body:
+        if isinstance(node, ast.FunctionDef) and node.name == "_curve_profile_end_cap_record":
+            continue
+        if not isinstance(node, ast.ClassDef) or node.name != "OCPKernel":
+            segments.append(span(node))
+            continue
+        segments.append(b"".join(lines[node.lineno - 1 : node.body[0].lineno - 1]))
+        for method in node.body:
+            if not isinstance(method, ast.FunctionDef) or method.name != "extrude_sector":
+                segments.append(span(method))
+                continue
+            body = next(item.body for item in method.body if isinstance(item, ast.Try))
+            start = next(
+                item
+                for item in body
+                if is_assignment(item, "end_record") or is_assignment(item, "end_location")
+            )
+            stop = next(
+                item
+                for item in body
+                if isinstance(item, ast.Expr)
+                and isinstance(item.value, ast.Call)
+                and isinstance(item.value.func, ast.Name)
+                and item.value.func.id == "event"
+                and item.value.args
+                and isinstance(item.value.args[0], ast.Constant)
+                and item.value.args[0].value == "actual_last_cap_plane"
+            )
+            old = b"".join(
+                lines[method.lineno - 1 : start.lineno - 1]
+                + lines[stop.end_lineno : method.end_lineno]
+            )
+            old = old.replace(b"            validate_end_cap_observation,\n", b"")
+            segments.append(old)
+    return b"\0".join(segments)
+
+
+def protected_evidence_bytes(data):
+    data = undo_regularity_metadata_revision(
+        data, "src/mechanical_cad/arc_profile_native_evidence.py"
+    )
+    data = undo_canonical_vertex_revision(data, "src/mechanical_cad/arc_profile_native_evidence.py")
+    assert data.count(b'"range": (0.0, line.trim_parameter),') == 1
+    data = data.replace(b'"range": (0.0, line.trim_parameter),', b'"range": (0.0, line.length),')
+    lines = data.splitlines(keepends=True)
+    return b"\0".join(
+        b"".join(lines[node.lineno - 1 : node.end_lineno])
+        for node in ast.parse(data).body
+        if not isinstance(node, ast.FunctionDef) or node.name != "validate_end_cap_observation"
+    )
+
+
+VISUAL_JOINT_FIXTURE = "tests/fixtures/visual_assembly_joints/source_edc574e.json"
+VISUAL_JOINT_SHA256 = "3f1a2150b5cbf6a192897bd5903619322ac404b4c350024d08398781a1b77f1a"
+VISUAL_JOINT_ADDED = frozenset(
+    {
+        "blender_addon/mechanical_cad_blender/assembly_joint_draft.py",
+        "blender_addon/mechanical_cad_blender/assembly_joint_overlay.py",
+        "blender_addon/mechanical_cad_blender/assembly_joint_viewport.py",
+        "tests/blender_visual_joint_smoke.py",
+        "tests/unit/test_assembly_joint_draft.py",
+        "tests/unit/test_assembly_joint_overlay.py",
+        "tests/unit/test_visual_joint_owner.py",
+    }
+)
+VISUAL_JOINT_ORIGINALS = {
+    "tests/unit/test_backend_contract_server.py": (
+        26402,
+        "9489bf21f8d894ef89f5f811e373aa4208b1e5638b6a6d1bd623366565a20589",
+    ),
+    "tests/unit/test_arc_ui_availability.py": (
+        41391,
+        "9ec7d95d169f0fc9383a29fdec6115d206e9ba47da88cc6ab81a27839b6e9503",
+    ),
+    "blender_addon/mechanical_cad_blender/__init__.py": (
+        1649,
+        "f225727fa5aec5d3c527a53a200116231fcf3b9c485e97df6c80913a570510f1",
+    ),
+    "pyproject.toml": (
+        1456,
+        "31b85385bd3979a7acd202c7baf3e4d69ad01b0f6d664f5109a6624bf209761c",
+    ),
+    "scripts/standalone_child_bootstrap.py": (
+        22806,
+        "a16a7b49064091c9ac2b22224944395a8ef36b69f4a6610293aa8b8d99236525",
+    ),
+    "scripts/tests/test_standalone_package_materials.py": (
+        43054,
+        "6c32ce7ccedf55d0480ada13f5b96a2e7ed3a7392e5f8ba15e0e9be15b3cfc84",
+    ),
+    "scripts/verify_sidecar_install.py": (
+        3372,
+        "d73a15a0a837258c4e0b7fb265ff5d981e12879a5bee031ff62523a7ee1aaceb",
+    ),
+    "src/mechanical_cad/__init__.py": (
+        111,
+        "b98087d6c8052f1f2aee05d117a54dcd4ecec0cd3e1112a4bc618946939e979c",
+    ),
+    "tests/integration/test_sidecar_install_verifier.py": (
+        1833,
+        "4ef58fa9663e328ec5cfef17a5b160d1aa46dd5243ef0be44c69920944ba8177",
+    ),
+    "tests/unit/test_assembly_workflow_ui.py": (
+        3431,
+        "081808ad7153bf96c773618aa91d8fae0111e62d1498162cc65a173f987df4c6",
+    ),
+    "tests/unit/test_standalone_child_bootstrap.py": (
+        40818,
+        "8473174615ba3652ffa8c7f562599f3be531662315855339836be3d30d28605e",
+    ),
+    "tests/unit/test_standalone_extension_builder.py": (
+        37158,
+        "469855aa067c4f8f7f7b77e3fa1207733d2ebb3f8dc8ad609b9850edbbabf57f",
+    ),
+    "blender_addon/mechanical_cad_blender/assembly_state.py": (
+        32954,
+        "b30faa603a42a43ad85e96c31561c0b2b4484969af741481e311a02a185e5c4d",
+    ),
+    "blender_addon/mechanical_cad_blender/assembly_ui.py": (
+        14030,
+        "a523c608a3714a08a8366a751edd766e27db62bdd2a0c58748037c621cbf3df9",
+    ),
+    "blender_addon/mechanical_cad_blender/registration.py": (
+        17204,
+        "90cfa1462da7d68c6958c2c050988b625278addcdd98b66478150aaffdb7d816",
+    ),
+    "tests/unit/test_arc_profile_incidence.py": (
+        50547,
+        "5924909a8dc9d0a092a463583e65351df57f55f0bdc10fb92d2f7839ed0744d3",
+    ),
+    "tests/unit/test_arc_profile_native_end_cap.py": (
+        201470,
+        "47a079bd77a1b76e00b69f9c7ce81d22b565313f8646276fd9d24ee84ef78e53",
+    ),
+    "tests/unit/test_arc_sector_native_boundary_mutations.py": (
+        39694,
+        "361a64fc4225b241b418b54706afa98d285fe2b398870e170313200b2115d74c",
+    ),
+    "tests/unit/test_result_v3_dependency_boundary.py": (
+        19728,
+        "391d992c1cb7d117d8269a186e1f0520962af4a78bbfa5509457b7438f90b570",
+    ),
+    "tests/unit/test_standalone_runtime_boundary.py": (
+        115099,
+        "ecac4076de53d874eb9e250c090daec9c3db07e328b275bc5e45e0220de22167",
+    ),
+}
+
+
+def _visual_joint_revision(root):
+    assert (root / VISUAL_JOINT_FIXTURE).is_file()
+    raw = (root / VISUAL_JOINT_FIXTURE).read_bytes()
+    assert hashlib.sha256(raw).hexdigest() == VISUAL_JOINT_SHA256
+    revision = json.loads(raw)
+    assert set(revision) == {"schema", "base_commit", "added", "changed"}
+    assert revision["schema"] == "visual-assembly-joint-boundary-v1"
+    assert revision["base_commit"] == "edc574e23bdb361e6566915842befb91526abaf2"
+    assert set(revision["changed"]) == set(VISUAL_JOINT_ORIGINALS)
+    assert set(revision["added"]) == VISUAL_JOINT_ADDED
+    assert not VISUAL_JOINT_ADDED & VISUAL_JOINT_ORIGINALS.keys()
+    return revision
+
+
+def _visual_joint_bytes(root, name, data=None):
+    """Undo only the finite visual joint UI delta before every historical guard."""
+    data = (root / name).read_bytes() if data is None else data
+    if name not in VISUAL_JOINT_ORIGINALS:
+        return data
+    expected = VISUAL_JOINT_ORIGINALS[name]
+    if (len(data), hashlib.sha256(data).hexdigest()) == expected:
+        return data
+    revision = _visual_joint_revision(root)
+    if name == "tests/unit/test_arc_profile_native_end_cap.py":
+        label = b"VISUAL_JOINT_" + b'SHA256 = "'
+        slot = label + VISUAL_JOINT_SHA256.encode("ascii") + b'"'
+        assert data.count(label) == data.count(slot) == 1
+        data = data.replace(slot, label + b"0" * 64 + b'"')
+    return _integration_restore_entry(data, revision["changed"][name], expected)
+
+
+def visual_joint_originals(root):
+    """Seal each explicit addition and restore the exact edc574e source and guards."""
+    revision = _visual_joint_revision(root)
+    for name, entry in revision["added"].items():
+        assert set(entry) == {"bytes", "sha256"}
+        assert type(entry["bytes"]) is int and entry["bytes"] > 0
+        data = (root / name).read_bytes()
+        assert (len(data), hashlib.sha256(data).hexdigest()) == (entry["bytes"], entry["sha256"])
+    return VISUAL_JOINT_ADDED, {
+        name: _visual_joint_bytes(root, name) for name in VISUAL_JOINT_ORIGINALS
+    }
+
+
+RELEASE_071_FIXTURE = "tests/fixtures/release_071/metadata_56a13b3.json"
+RELEASE_071_SHA256 = "1fcfa3954df7e7d3b92e1a77786c02476ae47ef1356ace09e1c774edadfb9d89"
+RELEASE_071_ORIGINALS = {
+    "src/mechanical_cad/assembly_export.py": (
+        5594,
+        "f8c1464c383d67eb25592194189471d4c2a1499cae9721bd19d75af9439c59f1",
+    ),
+    "tests/unit/test_assembly_export_service.py": (
+        22590,
+        "a7b7a3566d83a10ea69b60650b28d3a0a18ae090803417376da48dba5ac9c749",
+    ),
+    "blender_addon/mechanical_cad_blender/__init__.py": (
+        1649,
+        "cee489002997dbf54467c9fd12e4785c84e7190765f1a4ef2e83e929b0c35966",
+    ),
+    "pyproject.toml": (
+        1361,
+        "b2b9acff2dbba6c02c5a20aff685334cec79f3cd9d8366532cc5a9cd6ed602f2",
+    ),
+    "scripts/standalone_child_bootstrap.py": (
+        22806,
+        "c6e78a4568c2e12af0a130c039bea3cae4f47ea329d33b1479bf2e3b9c1da26d",
+    ),
+    "scripts/tests/test_standalone_package_materials.py": (
+        43054,
+        "d28a8227430b0e5282541f6271b67ce141fd8711fa5b7eec67d766bf6fea0155",
+    ),
+    "scripts/verify_sidecar_install.py": (
+        3372,
+        "772f23f455cf7192774c9502004210078513dba21ade0d7aa6078de10e238c62",
+    ),
+    "src/mechanical_cad/__init__.py": (
+        111,
+        "e2227a7c7dbab3abefa11ef43fffcfa573caee943cce27daa07baf44ee1fc277",
+    ),
+    "tests/integration/test_sidecar_install_verifier.py": (
+        1833,
+        "d614524b94a7c754ee384e46974993a07f60cf8021dcff4321a62b7191136c32",
+    ),
+    "tests/unit/test_arc_profile_incidence.py": (
+        50407,
+        "a0d9f5ae6e09fcc53876a8d5758963db4582b9ea043309d88190450cddea5295",
+    ),
+    "tests/unit/test_arc_profile_native_end_cap.py": (
+        193432,
+        "d251dcae18eb7a05405149972c9d3ca0d1191ea80e755a8896428d257625bd42",
+    ),
+    "tests/unit/test_standalone_child_bootstrap.py": (
+        40818,
+        "29239254714781dfcd3c3f7f3d4cda3c11cd31c9f91cdf36983d37d7b4d6b0bc",
+    ),
+    "tests/unit/test_standalone_extension_builder.py": (
+        37158,
+        "029e6c8097ae680339122b711aa7ef024623521598c6875181e43e7109a17d01",
+    ),
+    "tests/unit/test_standalone_runtime_boundary.py": (
+        114975,
+        "77fa5cc74708814dc001c525f3d022a2c8cc66e113d55c6185ac63030138373e",
+    ),
+}
+
+
+def _release_071_bytes(root, name, data=None):
+    """Undo the sealed 0.7.1 metadata and deferred-import repair before older guards."""
+    data = _visual_joint_bytes(root, name, data)
+    if name not in RELEASE_071_ORIGINALS:
+        return data
+    expected = RELEASE_071_ORIGINALS[name]
+    if (len(data), hashlib.sha256(data).hexdigest()) == expected:
+        return data
+    assert (root / RELEASE_071_FIXTURE).is_file()
+    raw = (root / RELEASE_071_FIXTURE).read_bytes()
+    assert hashlib.sha256(raw).hexdigest() == RELEASE_071_SHA256
+    revision = json.loads(raw)
+    assert set(revision) == {"schema", "base_commit", "changed"}
+    assert revision["schema"] == "release-071-metadata-equivalence-v1"
+    assert revision["base_commit"] == "56a13b32f2d29ccb8576f4d64053fe990a61d9bd"
+    assert set(revision["changed"]) == set(RELEASE_071_ORIGINALS)
+    if name == "tests/unit/test_arc_profile_native_end_cap.py":
+        label = b"RELEASE_071_" + b'SHA256 = "'
+        slot = label + RELEASE_071_SHA256.encode("ascii") + b'"'
+        assert data.count(label) == data.count(slot) == 1
+        data = data.replace(slot, label + b"0" * 64 + b'"')
+    return _integration_restore_entry(data, revision["changed"][name], expected)
+
+
+ASSEMBLY_STEP_FIXTURE = "tests/fixtures/assembly_step_export/source_c405435.json"
+ASSEMBLY_STEP_SHA256 = "5b0ce9ed602c5bfabd9476614c8ec515cb487978f69a6dd97c85e78d67d3ade5"
+ASSEMBLY_STEP_ADDED = frozenset(
+    {
+        "blender_addon/mechanical_cad_blender/assembly_export_bridge.py",
+        "blender_addon/mechanical_cad_blender/assembly_export_owner.py",
+        "src/mechanical_cad/assembly_export.py",
+        "tests/blender_assembly_step_export_smoke.py",
+        "tests/integration/test_assembly_step_kernel.py",
+        "tests/integration/test_assembly_step_workflow.py",
+        "tests/unit/test_assembly_export_contracts.py",
+        "tests/unit/test_assembly_export_owner.py",
+        "tests/unit/test_assembly_export_service.py",
+    }
+)
+ASSEMBLY_STEP_ORIGINALS = {
+    "blender_addon/mechanical_cad_blender/assembly_operators.py": (
+        21132,
+        "00a76b5a110924329b600f01f58e2456e3cd44c87678d6cd6c59688dbddadb3b",
+    ),
+    "blender_addon/mechanical_cad_blender/assembly_properties.py": (
+        1362,
+        "5c3c7cd84eae0860d58e12dd075b61da94d8b9611d1209fb5a1db32234f612f2",
+    ),
+    "blender_addon/mechanical_cad_blender/assembly_ui.py": (
+        13401,
+        "88f9f75f52f6efe842e6e671f82f31181e40a664d057a8be74f0257bf1d2784a",
+    ),
+    "blender_addon/mechanical_cad_blender/backend_contracts.py": (
+        18328,
+        "aabc3245636bb4ae1e0f02419cf61c3fbad33a4658e6649b21e251d9e2ffc4f0",
+    ),
+    "blender_addon/mechanical_cad_blender/bridge.py": (
+        22829,
+        "58512fa61fdc5fc0ddd45c18e2dc8d40070a78c2965335ffa3f35d832bfa824d",
+    ),
+    "blender_addon/mechanical_cad_blender/guarded_transport.py": (
+        8711,
+        "85aaf8fb4dd3e0e5a0987ba61bae9c851aa6c0623f39781452fae1958c05cded",
+    ),
+    "blender_addon/mechanical_cad_blender/operation_contracts.py": (
+        7004,
+        "a76434063e0162f4cae81160e5fb141d49a5b5723161c29ac95f5385481397e0",
+    ),
+    "src/mechanical_cad/assembly_protocol.py": (
+        2056,
+        "c516e22a44d2b7002fdcbd4d485fb8a101cfedf0cb883cb69bb50ac64d2a30a3",
+    ),
+    "src/mechanical_cad/assembly_service.py": (
+        17229,
+        "bd6108ec2198f6af2fa232a4401400cf91f10066f6a4f051637e6507c55a54e9",
+    ),
+    "src/mechanical_cad/backend_contract.py": (
+        25291,
+        "0ccf19fd9565651787bb06d643731fcc43c335d4a41356bce350457be909f0d6",
+    ),
+    "src/mechanical_cad/kernel_ocp.py": (
+        115844,
+        "77f3f3033f95cbe72a97dbdab70769f1f0c3d34604f2d2ac036d6e10f78224ac",
+    ),
+    "tests/unit/test_arc_guarded_evidence.py": (
+        29590,
+        "b133fcd30ed721b9e903685bb73174e5d500b840aef0d3d5ef9f2881db77c143",
+    ),
+    "tests/unit/test_arc_live_owner_boundary.py": (
+        19190,
+        "b60eee440fc414946eb3d358983dcd3b66d5eb3f7902ae0d0ba25560f4ba0d5b",
+    ),
+    "tests/unit/test_arc_profile_incidence.py": (
+        50094,
+        "f6ca211a3e2be29682f2ffaf2251d30b3e2f143b1f66c6897a6c149001bbf375",
+    ),
+    "tests/unit/test_arc_profile_native_end_cap.py": (
+        183038,
+        "b35ceb9c57e31be17cf4a8217cf256ec6e6e657e0c85160aae1dbfb1c9afa1e9",
+    ),
+    "tests/unit/test_arc_sector_native_boundary_mutations.py": (
+        39627,
+        "0aa50e1e4fe9f5b4fdb541f4ab2a6cdf18af4c4ce0f5bcb43edc971e18c47568",
+    ),
+    "tests/unit/test_backend_contract_client.py": (
+        16282,
+        "030e45f7fc888ee641f5662d08fdc30dd1450a4d767a9352c90ef05a5594fa60",
+    ),
+    "tests/unit/test_result_v3_dependency_boundary.py": (
+        19133,
+        "42d8be8c72092c2b4ae471a3416597ff4872935e7241ee645ea085f818a99d56",
+    ),
+    "tests/unit/test_standalone_runtime_boundary.py": (
+        114742,
+        "1fc13f40ccc5524e1eff39cd09f80b0f4f1519ed7851354ae0da0c0913368feb",
+    ),
+}
+
+
+def _assembly_step_revision(root):
+    assert (root / ASSEMBLY_STEP_FIXTURE).is_file()
+    raw = (root / ASSEMBLY_STEP_FIXTURE).read_bytes()
+    assert hashlib.sha256(raw).hexdigest() == ASSEMBLY_STEP_SHA256
+    revision = json.loads(raw)
+    assert set(revision) == {"schema", "base_commit", "added", "changed"}
+    assert revision["schema"] == "assembly-step-export-boundary-v1"
+    assert revision["base_commit"] == "c40543535d5858455fa2b59941992efe3cb82afd"
+    assert set(revision["changed"]) == set(ASSEMBLY_STEP_ORIGINALS)
+    assert set(revision["added"]) == ASSEMBLY_STEP_ADDED
+    assert not ASSEMBLY_STEP_ADDED & ASSEMBLY_STEP_ORIGINALS.keys()
+    return revision
+
+
+def _assembly_step_bytes(root, name, data=None):
+    """Undo only the finite reviewed export delta before every older byte seal."""
+    data = _release_071_bytes(root, name, data)
+    if name not in ASSEMBLY_STEP_ORIGINALS:
+        return data
+    expected = ASSEMBLY_STEP_ORIGINALS[name]
+    if (len(data), hashlib.sha256(data).hexdigest()) == expected:
+        return data
+    revision = _assembly_step_revision(root)
+    if name == "tests/unit/test_arc_profile_native_end_cap.py":
+        label = b"ASSEMBLY_STEP_" + b'SHA256 = "'
+        slot = label + ASSEMBLY_STEP_SHA256.encode("ascii") + b'"'
+        assert data.count(label) == data.count(slot) == 1
+        data = data.replace(slot, label + b"0" * 64 + b'"')
+    return _integration_restore_entry(data, revision["changed"][name], expected)
+
+
+def assembly_step_originals(root):
+    """Seal the explicit additions and recover the exact c405435 source/guards."""
+    revision = _assembly_step_revision(root)
+    for name, entry in revision["added"].items():
+        assert set(entry) == {"bytes", "sha256"}
+        assert type(entry["bytes"]) is int and entry["bytes"] > 0
+        data = _release_071_bytes(root, name)
+        assert (len(data), hashlib.sha256(data).hexdigest()) == (entry["bytes"], entry["sha256"])
+    return ASSEMBLY_STEP_ADDED, {
+        name: _assembly_step_bytes(root, name) for name in ASSEMBLY_STEP_ORIGINALS
+    }
+
+
+RELEASE_070_FIXTURE = "tests/fixtures/release_070/metadata_eb9b51c.json"
+RELEASE_070_SHA256 = "f72350834395c6a577044c9c83c4f839885257af84aad8f9b918ae02a658b730"
+RELEASE_070_ORIGINALS = {
+    "blender_addon/mechanical_cad_blender/__init__.py": (
+        1649,
+        "7dff1a887faecedbebd8d123eb5b65a6903f8149e0f6a510dc54158c2e2ac0e0",
+    ),
+    "blender_addon/mechanical_cad_blender/properties.py": (
+        5798,
+        "07f56a4d15a85a53331b63b2bb317e6aca7c15f35cfd731b33b1654d064a5f19",
+    ),
+    "scripts/standalone_child_bootstrap.py": (
+        22806,
+        "df85aeb34905ca1e18f34610ecbf74b8c00fa26738f520e65f9bc278b058188c",
+    ),
+    "scripts/tests/test_standalone_package_materials.py": (
+        42798,
+        "9123e993462b4e346bb1962f2325b7d8c18f258d2607078c7d2e425fcf525649",
+    ),
+    "scripts/verify_sidecar_install.py": (
+        3372,
+        "971cbe0a910737bec4194fdd6ed6118368fe366b21eb9b6e3814974cae93ffc2",
+    ),
+    "src/mechanical_cad/__init__.py": (
+        111,
+        "98040c3b58fb78f42db9a75fae4d962e5dea5313f34d8baf339b3fa3f55bea02",
+    ),
+    "tests/integration/test_sidecar_install_verifier.py": (
+        1833,
+        "b5bcd87f15a71a6e22a3ffebac9901aec6e9431731c6731927c3d82acaa7612d",
+    ),
+    "tests/unit/test_arc_guarded_evidence.py": (
+        23753,
+        "51961b68752ec16a2c61078d9665db7369d44f94b5003bb160c1c561e23d52c5",
+    ),
+    "tests/unit/test_arc_profile_incidence.py": (
+        49954,
+        "c3eea8bae4dcc5b08ebb69e200d3789d7cc4aeba7066299872f06baeb7025c44",
+    ),
+    "tests/unit/test_arc_profile_native_end_cap.py": (
+        175067,
+        "63c8e455687a5524eabef0e84b4b900396d5bdfeac4bafa5573984622bd885a1",
+    ),
+    "tests/unit/test_arc_sector_native_boundary_mutations.py": (
+        39567,
+        "df849ca558ce40780862524f08bb37068ce178a573bf3f745d4548a4744ceed0",
+    ),
+    "tests/unit/test_arc_ui_availability.py": (
+        38188,
+        "4f8f59047b14497df6d950867017c77e67ed8ac1b780b6a0137e105cb6abe998",
+    ),
+    "tests/unit/test_assembly_pending_admission_order.py": (
+        6287,
+        "e726e15f6e24b1c6579e7c5796e198ce39eef5c26f5208b3d6d15301fdcfb079",
+    ),
+    "tests/unit/test_backend_contract_server.py": (
+        26402,
+        "828b185dcbe3fad52c02dce547ce23fe70791c5087317dc030420a60bb25064c",
+    ),
+    "tests/unit/test_bundled_registration.py": (
+        13957,
+        "1b3f5398665b4f7fe7d53ffe89e9565e554dbd6dc7dd38b6933a7b2322c1ecd9",
+    ),
+    "tests/unit/test_bundled_status_ui.py": (
+        13187,
+        "3a4062b2ffae18ba9bea06a6a7a5b73261814c7c4f208539ce8628ce10827a7b",
+    ),
+    "tests/unit/test_geometry3_dispatch.py": (
+        16949,
+        "7003ef4a609ea412df3e20e21d5088454b7ca761075919bd04a9089cdcdd4504",
+    ),
+    "tests/unit/test_pure_bridge_contracts.py": (
+        4207,
+        "10d8a6052d4abc4f56dbe78422cffc680667dcb6f37d7535e03b79a45cea41c2",
+    ),
+    "tests/unit/test_sector_dispatch_v3.py": (
+        25403,
+        "4d3f5dea45d048644269bd4493a2dcaa4d3a26e90c792552f8169a041352ecb7",
+    ),
+    "tests/unit/test_standalone_child_bootstrap.py": (
+        40818,
+        "419329545f682755f2441163692b492f0bd995573a8e5d93c2a685ff55831e11",
+    ),
+    "tests/unit/test_standalone_extension_builder.py": (
+        35259,
+        "85f64586b0327e2a2f9b55073c77655b2c209b1e8daaf379f4bda4347c3118c6",
+    ),
+    "tests/unit/test_standalone_runtime_boundary.py": (
+        114466,
+        "0592651e2713e2c639e551e77ff8e64007afc7491372cfc716acb2c2d2d8637e",
+    ),
+}
+
+
+def _release_070_bytes(root, name):
+    """Undo only sealed 0.7 metadata/test edits; keep all historical guards exact.
+
+    The trusted validator accepts the exact eb9b51c bytes or this finite reviewed
+    successor. Copied helpers are data only; no arbitrary version substitution.
+    """
+    data = _assembly_step_bytes(root, name)
+    if name not in RELEASE_070_ORIGINALS:
+        return data
+    raw = (root / RELEASE_070_FIXTURE).read_bytes()
+    assert hashlib.sha256(raw).hexdigest() == RELEASE_070_SHA256
+    revision = json.loads(raw)
+    assert set(revision) == {"schema", "base_commit", "changed"}
+    assert revision["schema"] == "release-070-metadata-equivalence-v1"
+    assert revision["base_commit"] == "eb9b51caab77c94e92c32a2d75042f756ab83012"
+    assert set(revision["changed"]) == set(RELEASE_070_ORIGINALS)
+    expected = RELEASE_070_ORIGINALS[name]
+    if (len(data), hashlib.sha256(data).hexdigest()) == expected:
+        return data
+    if name == "tests/unit/test_arc_profile_native_end_cap.py":
+        label = b"RELEASE_070_" + b'SHA256 = "'
+        slot = label + RELEASE_070_SHA256.encode("ascii") + b'"'
+        assert data.count(label) == data.count(slot) == 1
+        data = data.replace(slot, label + b"0" * 64 + b'"')
+    return _integration_restore_entry(data, revision["changed"][name], expected)
+
+
+ASSEMBLY_SOURCE_FIXTURE = "tests/fixtures/assembly_v3/source_75c3768.json"
+ASSEMBLY_SOURCE_SHA256 = "697e7c9cd6e084a4d58e81228ac92a569138f28d8d1a25193d3a59344e5e27b2"
+ASSEMBLY_SOURCE_ADDED = frozenset(
+    {
+        "tests/blender_sector_assembly_workflow_smoke.py",
+        "tests/integration/test_sector_assembly_workflow.py",
+        "tests/unit/test_assembly_bridge_v3.py",
+        "tests/unit/test_assembly_sector_service_v3.py",
+        "tests/unit/test_assembly_workflow_ui.py",
+    }
+)
+ASSEMBLY_SOURCE_ORIGINALS = {
+    "blender_addon/mechanical_cad_blender/assembly_bridge.py": (
+        19166,
+        "a464afa6b5a368b33c47ec8416965e39788243d522ddfa9dd96f7b9b868180b9",
+    ),
+    "blender_addon/mechanical_cad_blender/assembly_display.py": (
+        22154,
+        "923f8af188aeb10aa97c3af49645593abe8cb16257dc06b7a3ed9c3797b906c8",
+    ),
+    "blender_addon/mechanical_cad_blender/assembly_operators.py": (
+        21135,
+        "e2ca275d965cfa448520a6b206bc381cd780f292046e3a6ac6747c09de6b7492",
+    ),
+    "blender_addon/mechanical_cad_blender/assembly_state.py": (
+        32722,
+        "d3223cdaed9b2178167142ca3b4022f2d17da0e4fbcbfa2db4600f5a2e7637fb",
+    ),
+    "blender_addon/mechanical_cad_blender/assembly_ui.py": (
+        12670,
+        "3efb15a5057a4205cd19f67c33f3109478b8a6dd1a709786c3e685717d24c1ba",
+    ),
+    "blender_addon/mechanical_cad_blender/assembly_validation_model.py": (
+        22857,
+        "138716801be2e29ea0bb7d25c7eafc9d1c292822356aada9e3b9b29f45a3285f",
+    ),
+    "blender_addon/mechanical_cad_blender/guarded_operations.py": (
+        2558,
+        "5aa3ef7c5295038b38f80d4fe0a995c996eec3d5bfb7478a3140c8dbd4ce11f6",
+    ),
+    "blender_addon/mechanical_cad_blender/help_topics.py": (
+        22231,
+        "06851f5cb15e468e8674d4b2a19dfe3851dbe967cb000fa97ae55e9e9ec6912b",
+    ),
+    "blender_addon/mechanical_cad_blender/operation_contracts.py": (
+        6768,
+        "decc1b4ac93f3704c29cb98f9b02a8dfa6e1b2610277803c576901153395d222",
+    ),
+    "blender_addon/mechanical_cad_blender/part_snapshot_bridge.py": (
+        6362,
+        "447d4bf193c3cd7f8a3cd59c20a58c3ec3ea18630cf2b2db1c23dea8ad39bdc2",
+    ),
+    "src/mechanical_cad/assembly_protocol.py": (
+        1995,
+        "e2f15eb9838dfc3e5362e378c243c9906c45b5b403d71cd0e6901d2f867b36c8",
+    ),
+    "src/mechanical_cad/assembly_service.py": (
+        16619,
+        "2ab6263757abb12a878b124d81de01eae7dd969ea47dd20a35bc08b243b4b4c3",
+    ),
+    "src/mechanical_cad/backend_contract.py": (
+        21646,
+        "6415ac0685f1910c6cb17861c49c1e43d448ff752ab19ccb89daaba4dfb29ceb",
+    ),
+    "src/mechanical_cad/part_snapshot.py": (
+        5057,
+        "767845d5b05659a25af27f96f5670c1292211eb56d3b4f144bbaf0d8b8ecabcd",
+    ),
+    "src/mechanical_cad/sidecar.py": (
+        10526,
+        "f127e0b1afbeac17a75785d5e563046ed8d0804829562434b143b563351de5c4",
+    ),
+    "tests/blender_arc_owner_smoke.py": (
+        18835,
+        "a78ec7e3dfa86312f29eb45031e4dce5d792e59f7329056cb001306381c1945e",
+    ),
+    "tests/integration/test_assembly_result_v2.py": (
+        14268,
+        "91d2a09b06f0e9c240fc8de30f4c980c11d534f121ecba4cc20d126dad9e1c86",
+    ),
+    "tests/unit/test_arc_downstream_barriers.py": (
+        24407,
+        "ad4b02f3635ee60c46c84163442cdd486ae2b31f4580711170f3c56cf0a6f253",
+    ),
+    "tests/unit/test_arc_live_owner_boundary.py": (
+        17801,
+        "fe140a97bf5968a2a801da23e7a442a904225b57c296c56a3fa68190ddf37e66",
+    ),
+    "tests/unit/test_arc_operation_contracts.py": (
+        10217,
+        "869c27b1e0f996904fd7c817e63cf9c6e799536c4d1f5ed079bc69b23df98bab",
+    ),
+    "tests/unit/test_arc_part_owners.py": (
+        25881,
+        "6d9467426750df34cd764aa61394b0ea62a0a68d9d9dc19682ff438fa4ca9cc1",
+    ),
+    "tests/unit/test_assembly_bridge_v2.py": (
+        20472,
+        "a6851617beff8c5523db09ad35bd45c00a85b3bf15d807cec15a4c034b36de6c",
+    ),
+    "tests/unit/test_assembly_publication_binding.py": (
+        6378,
+        "5441d89c9e88cc6ff477202accdbc7210476867d75c224287a02dd978c86cffd",
+    ),
+    "tests/unit/test_backend_contract_server.py": (
+        27054,
+        "63e4046d513c97a95b1a825f2b77e923e84209655a7c41db715d993b532ec4f4",
+    ),
+}
+ASSEMBLY_HARNESS_FIXTURE = "tests/fixtures/assembly_v3/harness_75c3768.json"
+ASSEMBLY_HARNESS_SHA256 = "5aa68f7677ef4ec4a73a52c21296b01fedce2d998d60a0726aebdbf34630cdc3"
+ASSEMBLY_HARNESS_ORIGINALS = {
+    "tests/unit/test_arc_profile_incidence.py": (
+        49595,
+        "09afce10d188ad0a4462abd60c717670a3cd03f8f0009fc60793c7851d6e6646",
+    ),
+    "tests/unit/test_arc_profile_native_end_cap.py": (
+        163016,
+        "6972167871875728c2cb60a2ec5e0ca0fb35abe669f5a22877e05848dbab7b89",
+    ),
+    "tests/unit/test_arc_sector_native_boundary_mutations.py": (
+        39450,
+        "35b1c5a7e762dd218e3f4eae48452247eabf93609e0228ab9f23ced051a7ad6c",
+    ),
+    "tests/unit/test_result_v3_dependency_boundary.py": (
+        19034,
+        "d894454076b2a17755717c54936dcbea69975cdf05573d344e8eb30558da1594",
+    ),
+    "tests/unit/test_standalone_runtime_boundary.py": (
+        114041,
+        "22701544a5058a03991887a3a03c17c81cbde073d19cd2148a070ceac0aceaf5",
+    ),
+}
+
+
+def assembly_source_originals(root):
+    """Undo only the integrated Assembly source/test delta to exact 75c3768."""
+    raw = (root / ASSEMBLY_SOURCE_FIXTURE).read_bytes()
+    assert hashlib.sha256(raw).hexdigest() == ASSEMBLY_SOURCE_SHA256
+    revision = json.loads(raw)
+    assert set(revision) == {"schema", "base_commit", "added", "changed"}
+    assert revision["schema"] == "assembly-v3-source-boundary-v1"
+    assert revision["base_commit"] == "75c37688d146983d0b9599a750821b02412d48b3"
+    assert set(revision["added"]) == ASSEMBLY_SOURCE_ADDED
+    assert set(revision["changed"]) == set(ASSEMBLY_SOURCE_ORIGINALS)
+    assert not ASSEMBLY_SOURCE_ADDED & ASSEMBLY_SOURCE_ORIGINALS.keys()
+    for name, entry in revision["added"].items():
+        assert set(entry) == {"bytes", "sha256"}
+        assert type(entry["bytes"]) is int and entry["bytes"] > 0
+        data = _release_070_bytes(root, name)
+        assert len(data) == entry["bytes"]
+        assert hashlib.sha256(data).hexdigest() == entry["sha256"]
+    return ASSEMBLY_SOURCE_ADDED, {
+        name: _integration_restore_entry(
+            _release_070_bytes(root, name), entry, ASSEMBLY_SOURCE_ORIGINALS[name]
+        )
+        for name, entry in revision["changed"].items()
+    }
+
+
+def assembly_harness_originals(root):
+    """Restore five exact 75c3768 guards; normalize only this fixture's digest."""
+    raw = (root / ASSEMBLY_HARNESS_FIXTURE).read_bytes()
+    assert hashlib.sha256(raw).hexdigest() == ASSEMBLY_HARNESS_SHA256
+    revision = json.loads(raw)
+    assert set(revision) == {"schema", "base_commit", "changed"}
+    assert revision["schema"] == "assembly-v3-harness-boundary-v1"
+    assert revision["base_commit"] == "75c37688d146983d0b9599a750821b02412d48b3"
+    assert set(revision["changed"]) == set(ASSEMBLY_HARNESS_ORIGINALS)
+    restored = {}
+    for name, entry in revision["changed"].items():
+        data = _release_070_bytes(root, name)
+        if name == "tests/unit/test_arc_profile_native_end_cap.py":
+            label = b"ASSEMBLY_HARNESS_" + b'SHA256 = "'
+            slot = label + ASSEMBLY_HARNESS_SHA256.encode("ascii") + b'"'
+            assert data.count(label) == data.count(slot) == 1
+            data = data.replace(slot, label + b"0" * 64 + b'"')
+        restored[name] = _integration_restore_entry(data, entry, ASSEMBLY_HARNESS_ORIGINALS[name])
+    return restored
+
+
+GATE_C_OWNER_SOURCE_FIXTURE = "tests/fixtures/geometry_v3/gate_c_owner_source_de70a45.json"
+GATE_C_OWNER_SOURCE_SHA256 = "eb50cfaa8aaf9223f7c377c8109395490b1e490e9c200049d9f689aebb4710da"
+GATE_C_OWNER_SOURCE_ADDED = frozenset(
+    {
+        "tests/unit/test_geometry3_owner.py",
+        "tests/blender_geometry3_owner_smoke.py",
+        "tests/blender_geometry3_persistence_smoke.py",
+    }
+)
+GATE_C_OWNER_SOURCE_ORIGINALS = {
+    "blender_addon/mechanical_cad_blender/operation_contracts.py": (
+        6384,
+        "56fd489d36da312360274a1c35a85846f83ef3f495444a1e07e3d15bc37a3258",
+    ),
+    "blender_addon/mechanical_cad_blender/geometry_operations.py": (
+        15030,
+        "7643ebd28b4b26f5d84981cce31d09d7d1645cc13f205d269c01ceb49ce48fe6",
+    ),
+    "blender_addon/mechanical_cad_blender/workspace_ui.py": (
+        41686,
+        "5aed3a04330dbc87cb6c0b206df9def26a62da587341d9f65551e078cb1e1ba9",
+    ),
+    "blender_addon/mechanical_cad_blender/help_topics.py": (
+        21131,
+        "7a8add001d718862ca26f1f5ccd93bcb5253bdb6b0bacfc461549d8832154a4c",
+    ),
+    "src/mechanical_cad/actions.py": (
+        9159,
+        "23f7bb6c3de3c09b6bcc513a55c4b40659bdd8bbcd3e73a35473cb571acb8420",
+    ),
+    "src/mechanical_cad/geometry_protocol_v3.py": (
+        3246,
+        "cbec5f30417c52ae704533da7bb290c434e57897866bbc3fb4b57b2a66b419e0",
+    ),
+    "src/mechanical_cad/backend_contract.py": (
+        21395,
+        "904ce69d50d80d07093496b717e78a37789b46d17baaa5cd081cecbe8f5ce52b",
+    ),
+    "tests/unit/test_arc_operation_contracts.py": (
+        7456,
+        "a51207ea1da56abd40ba45956c8859558aadfb5f5074aeda245caa3fa484b206",
+    ),
+    "tests/unit/test_arc_ui_availability.py": (
+        33055,
+        "61b3316a07d5681aa9b9a8c2a88cf1275a5b71253d63ead7e3141b399121c743",
+    ),
+    "tests/unit/test_arc_guarded_evidence.py": (
+        17952,
+        "ff292d3b68198fb613101a556a17b439de116c53bcb77b890ec623c523832b07",
+    ),
+    "tests/unit/test_arc_downstream_barriers.py": (
+        23282,
+        "b83199cbd578cbecc3d4e55bc34190f7cd23cb1770c4ed800d65a39585cda405",
+    ),
+    "tests/unit/test_arc_part_owners.py": (
+        25480,
+        "60d17c236521ed82b7d37962ea3b4de128ed2fbb8d822e95e6754781731327e8",
+    ),
+    "tests/unit/test_arc_live_owner_boundary.py": (
+        17795,
+        "a1c303ed0f2ade91288c001d6ab21fb4a2b5a14d97303dd42db1252cad7a481f",
+    ),
+    "tests/unit/test_backend_contract_server.py": (
+        26791,
+        "13c1d65c484c87db90120909f06d6342cc1838e1e095c2749b1e66d2fc6ea0c7",
+    ),
+    "tests/unit/test_geometry3_core_contracts.py": (
+        23768,
+        "eddb8be5b3fb235ed4eb72c3b18eb0eb0bd14580768a4027dfa449d1f27d160b",
+    ),
+    "tests/unit/test_geometry3_dispatch.py": (
+        15160,
+        "9beceb6679717073385404530ddbf5b73861699891bfd817414dad98dd3fd77e",
+    ),
+    "tests/blender_arc_owner_smoke.py": (
+        18874,
+        "62c098a5b03fb801d7d750c5dc545318bd4a89c84be905a4cf13e078fdd930f3",
+    ),
+    "tests/blender_arc_editor_smoke.py": (
+        11797,
+        "6c64c0abb2470882e9883c88fbd060966b5b4d53722fa3481fea8428ebaf4231",
+    ),
+}
+
+GATE_C_OWNER_HARNESS_FIXTURE = "tests/fixtures/geometry_v3/gate_c_owner_harness_de70a45.json"
+GATE_C_OWNER_HARNESS_SHA256 = "cb123e8f2550c59cdda1d718396188148453727946cf87781eee2b7e147f8bdf"
+GATE_C_OWNER_HARNESS_ORIGINALS = {
+    "tests/unit/test_arc_profile_native_end_cap.py": (
+        142598,
+        "19557cea87dfdc79ce104649d7f38fe6ef852b64a881edb66f76f8f3a416f627",
+    ),
+    "tests/unit/test_arc_profile_incidence.py": (
+        49200,
+        "ac5b575ddf4f5b143408289a3e7cc87ff54a7a07d7f5a0aa0b8c27b16d8999b7",
+    ),
+    "tests/unit/test_arc_sector_native_boundary_mutations.py": (
+        39307,
+        "917619b440f3dc32b340a9c1a1c858b70a7f8405eaa28f12a8771b317dcf3c0d",
+    ),
+    "tests/unit/test_result_v3_dependency_boundary.py": (
+        17931,
+        "d47b65a70ca1b5b94c7c97a312ad52e098f88aa75a719faa3714460e298201a7",
+    ),
+    "tests/unit/test_standalone_runtime_boundary.py": (
+        113570,
+        "978501183c4f1983be92ac2aae933f2037ae45b70fd5f1ebfa77f356f39887b8",
+    ),
+}
+
+
+def gate_c_owner_source_originals(root):
+    """Restore only the finite owner/output source and tests to exact de70a45."""
+    _, before = assembly_source_originals(root)
+    raw = (root / GATE_C_OWNER_SOURCE_FIXTURE).read_bytes()
+    assert hashlib.sha256(raw).hexdigest() == GATE_C_OWNER_SOURCE_SHA256
+    revision = json.loads(raw)
+    assert set(revision) == {"schema", "base_commit", "added", "changed"}
+    assert revision["schema"] == "gate-c-owner-source-boundary-v1"
+    assert revision["base_commit"] == "de70a45c2d34e74d61adb93e7f7db881bd6f8404"
+    assert set(revision["added"]) == GATE_C_OWNER_SOURCE_ADDED
+    assert set(revision["changed"]) == set(GATE_C_OWNER_SOURCE_ORIGINALS)
+    assert not GATE_C_OWNER_SOURCE_ADDED & GATE_C_OWNER_SOURCE_ORIGINALS.keys()
+    for name, entry in revision["added"].items():
+        assert set(entry) == {"bytes", "sha256"}
+        assert type(entry["bytes"]) is int and entry["bytes"] > 0
+        data = (root / name).read_bytes()
+        assert len(data) == entry["bytes"]
+        assert hashlib.sha256(data).hexdigest() == entry["sha256"]
+    restored = {
+        name: _integration_restore_entry(
+            before.get(name, _release_070_bytes(root, name)),
+            entry,
+            GATE_C_OWNER_SOURCE_ORIGINALS[name],
+        )
+        for name, entry in revision["changed"].items()
+    }
+    return GATE_C_OWNER_SOURCE_ADDED, restored
+
+
+def gate_c_owner_harness_originals(root):
+    """Restore five exact de70a45 guards before inventory repair and older layers.
+
+    Only this layer's one digest slot is normalized. All earlier seals remain
+    literal bytes, and copied validators/constants are never executed.
+    """
+    before = assembly_harness_originals(root)
+    raw = (root / GATE_C_OWNER_HARNESS_FIXTURE).read_bytes()
+    assert hashlib.sha256(raw).hexdigest() == GATE_C_OWNER_HARNESS_SHA256
+    revision = json.loads(raw)
+    assert set(revision) == {"schema", "base_commit", "changed"}
+    assert revision["schema"] == "gate-c-owner-harness-boundary-v1"
+    assert revision["base_commit"] == "de70a45c2d34e74d61adb93e7f7db881bd6f8404"
+    assert set(revision["changed"]) == set(GATE_C_OWNER_HARNESS_ORIGINALS)
+    restored = {}
+    for name, entry in revision["changed"].items():
+        data = before[name]
+        if name == "tests/unit/test_arc_profile_native_end_cap.py":
+            label = b"GATE_C_OWNER_HARNESS_" + b'SHA256 = "'
+            assert data.count(label) == 1
+            slot = label + GATE_C_OWNER_HARNESS_SHA256.encode("ascii") + b'"'
+            assert data.count(slot) == 1, "copied outer digest differs from trusted namespace"
+            data = data.replace(slot, label + b"0" * 64 + b'"')
+        restored[name] = _integration_restore_entry(
+            data, entry, GATE_C_OWNER_HARNESS_ORIGINALS[name]
+        )
+    return restored
+
+
+INVENTORY_GUARD_HARNESS_FIXTURE = "tests/fixtures/arc_sector/inventory_guard_harness_a88ac4f.json"
+INVENTORY_GUARD_HARNESS_SHA256 = "03f62007c0e9de6a83df62f1a8e82bef1e3f97f16d868893573a16c922c476d3"
+INVENTORY_GUARD_HARNESS_ORIGINALS = {
+    "tests/unit/test_arc_profile_native_inventory.py": (
+        38971,
+        "58b55f6440605b286a9740e8c9bcbf7ea669ab248a6b01f00c844962c2debbb4",
+    ),
+    "tests/unit/test_arc_profile_native_end_cap.py": (
+        128798,
+        "576e7bc170b4f21237f82a0cc0c4dd3626f0e6f4cbaeb2078067bf9e0c7be0d0",
+    ),
+    "tests/unit/test_arc_profile_incidence.py": (
+        49009,
+        "788836778867f9a535c910f88e9ed213c5c3666220b0023b9598c359c0895823",
+    ),
+    "tests/unit/test_standalone_runtime_boundary.py": (
+        113395,
+        "2691af5da2e969025ad0e15f21e68f40dd432c4c62398514c6534dfcf3d1f162",
+    ),
+    "tests/unit/test_arc_sector_native_boundary_mutations.py": (
+        39233,
+        "d45c50515d2bfe2c922230c5335b1f3148ccdba8b1734712f0996d5d6dc0fe41",
+    ),
+}
+
+
+def inventory_guard_harness_originals(root):
+    """Restore exactly five a88ac4f test files before every older inverse.
+
+    Copied files are data only. Normalize this layer's one digest slot while
+    preserving every old fixture seal, original pin, and historical assertion.
+    """
+    before = gate_c_owner_harness_originals(root)
+    raw = (root / INVENTORY_GUARD_HARNESS_FIXTURE).read_bytes()
+    assert hashlib.sha256(raw).hexdigest() == INVENTORY_GUARD_HARNESS_SHA256
+    revision = json.loads(raw)
+    assert set(revision) == {"schema", "base_commit", "changed"}
+    assert revision["schema"] == "inventory-guard-test-harness-boundary-v1"
+    assert revision["base_commit"] == "a88ac4fa6a5de7b4bc65caff642176ac5b80df32"
+    assert set(revision["changed"]) == set(INVENTORY_GUARD_HARNESS_ORIGINALS)
+    restored = {}
+    for name, entry in revision["changed"].items():
+        data = before.get(name, (root / name).read_bytes())
+        if name == "tests/unit/test_arc_profile_native_end_cap.py":
+            label = b"INVENTORY_GUARD_HARNESS_" + b'SHA256 = "'
+            assert data.count(label) == 1
+            slot = label + INVENTORY_GUARD_HARNESS_SHA256.encode("ascii") + b'"'
+            assert data.count(slot) == 1, "copied outer digest differs from trusted namespace"
+            data = data.replace(slot, label + b"0" * 64 + b'"')
+        restored[name] = _integration_restore_entry(
+            data, entry, INVENTORY_GUARD_HARNESS_ORIGINALS[name]
+        )
+    return restored
+
+
+REDUNDANT_SOLVE_SOURCE_FIXTURE = "tests/fixtures/result_v3/redundant_solve_source_cc130e6.json"
+REDUNDANT_SOLVE_SOURCE_SHA256 = "c68438360877d722d94292cf416ede6ea32e7ab8bc26296228e66ba3f2c7a19b"
+REDUNDANT_SOLVE_SOURCE_ORIGINALS = {
+    "blender_addon/mechanical_cad_blender/sketch_contracts_v3.py": (
+        20060,
+        "ebfb14a9823bed370df89b55d2528522b83a16e42e5d357d414551ed347e6806",
+    ),
+    "tests/unit/test_result_v3_client.py": (
+        27648,
+        "f510c09ad8c0ca3a1e12c2f9c3fa3cf6fd61f0267535987fdf4ee85541b0daa8",
+    ),
+}
+
+REDUNDANT_SOLVE_HARNESS_FIXTURE = "tests/fixtures/result_v3/redundant_solve_harness_cc130e6.json"
+REDUNDANT_SOLVE_HARNESS_SHA256 = "a0a2c73d03c8bc99d9babc5c8b807f53f592871ec9ed1aa36d54412ddea52695"
+REDUNDANT_SOLVE_HARNESS_ORIGINALS = {
+    "tests/unit/test_arc_profile_native_end_cap.py": (
+        117786,
+        "98a68229f6de7b018ca1b0a2aae6efefd15f3f3c6566554f01a566ee76898de1",
+    ),
+    "tests/unit/test_arc_profile_incidence.py": (
+        48631,
+        "01ac1a861767fda75808f7c75e8ba78ed6cd45ea4d3f02cd99c697fe061d6005",
+    ),
+    "tests/unit/test_arc_sector_native_boundary_mutations.py": (
+        39088,
+        "fab922866fe908146fc87b488729adc8e6d2a27519b66a139e26b4ba569fbb9b",
+    ),
+    "tests/unit/test_standalone_runtime_boundary.py": (
+        112931,
+        "e56cc4373ac05c65161ad0f16af9a353a42579e04406e62decc5b809bc25aa11",
+    ),
+}
+
+
+def redundant_solve_source_originals(root):
+    """Restore only the two approved source/test edits to exact cc130e6 bytes."""
+    raw = (root / REDUNDANT_SOLVE_SOURCE_FIXTURE).read_bytes()
+    assert hashlib.sha256(raw).hexdigest() == REDUNDANT_SOLVE_SOURCE_SHA256
+    revision = json.loads(raw)
+    assert set(revision) == {"schema", "base_commit", "changed"}
+    assert revision["schema"] == "schema3-redundant-solve-source-v1"
+    assert revision["base_commit"] == "cc130e667cc30c76e0437f5994059220f1aca25e"
+    assert set(revision["changed"]) == set(REDUNDANT_SOLVE_SOURCE_ORIGINALS)
+    return {
+        name: _integration_restore_entry(
+            (root / name).read_bytes(), entry, REDUNDANT_SOLVE_SOURCE_ORIGINALS[name]
+        )
+        for name, entry in revision["changed"].items()
+    }
+
+
+def redundant_solve_harness_originals(root):
+    """Restore four exact cc130e6 guards before the unchanged older inverses.
+
+    Copied code is data, never the validator. Normalize only this outer layer's
+    single digest slot; all historical digest constants remain sealed bytes.
+    """
+    before = inventory_guard_harness_originals(root)
+    raw = (root / REDUNDANT_SOLVE_HARNESS_FIXTURE).read_bytes()
+    assert hashlib.sha256(raw).hexdigest() == REDUNDANT_SOLVE_HARNESS_SHA256
+    revision = json.loads(raw)
+    assert set(revision) == {"schema", "base_commit", "changed"}
+    assert revision["schema"] == "schema3-redundant-solve-harness-v1"
+    assert revision["base_commit"] == "cc130e667cc30c76e0437f5994059220f1aca25e"
+    assert set(revision["changed"]) == set(REDUNDANT_SOLVE_HARNESS_ORIGINALS)
+    restored = {}
+    for name, entry in revision["changed"].items():
+        data = before[name]
+        if name == "tests/unit/test_arc_profile_native_end_cap.py":
+            label = b"REDUNDANT_SOLVE_HARNESS_" + b'SHA256 = "'
+            assert data.count(label) == 1
+            slot = label + REDUNDANT_SOLVE_HARNESS_SHA256.encode("ascii") + b'"'
+            assert data.count(slot) == 1, "copied outer digest differs from trusted namespace"
+            data = data.replace(slot, label + b"0" * 64 + b'"')
+        restored[name] = _integration_restore_entry(
+            data, entry, REDUNDANT_SOLVE_HARNESS_ORIGINALS[name]
+        )
+    return restored
+
+
+INTEGRATION_SOURCE_FIXTURE = "tests/fixtures/geometry_v3/standalone_integration_source.json"
+
+INTEGRATION_SOURCE_SHA256 = "9b5729489bad6a31eeed1916893ceed80a1e5a67ab04310a8588a941097ae1e0"
+
+INTEGRATION_SOURCE_ADDED = frozenset(
+    {
+        "src/mechanical_cad/geometry_policy_v3.py",
+        "tests/unit/test_geometry3_core_contracts.py",
+        "src/mechanical_cad/geometry_protocol_v3.py",
+        "tests/unit/test_geometry3_dispatch.py",
+        "tests/unit/test_geometry3_legacy_bytes.py",
+        "blender_addon/mechanical_cad_blender/geometry_result_v3.py",
+        "tests/unit/test_geometry_result_v3.py",
+    }
+)
+
+INTEGRATION_SOURCE_ORIGINALS = {
+    "blender_addon/mechanical_cad_blender/result_v3.py": (
+        10912,
+        "cf07a1c445e6b414ca8db5cb170dce62f5ebaf8e27c751289299920c5ccec59a",
+    ),
+    "src/mechanical_cad/actions.py": (
+        8172,
+        "e85b03a54aefb171100252a8a6aa57f00cf0705b84d7e2005918a2dcef2c1649",
+    ),
+    "src/mechanical_cad/backend_contract.py": (
+        19017,
+        "d24a47c78d8e78b6ead6961d99bdba48719f48163c812066d9e2b4a19aa503ad",
+    ),
+    "src/mechanical_cad/sidecar.py": (
+        10301,
+        "ae6180f7ff15efe54cb8a50db1e80349a58f940f7a00d3aa51dcd0c1e12d91e3",
+    ),
+    "tests/unit/test_sector_dispatch_v3.py": (
+        25278,
+        "8d1b88c5e268167032856b61c481534aaf909a05c2f3d584a89b49a14fb8caf3",
+    ),
+}
+
+INTEGRATION_HARNESS_FIXTURE = "tests/fixtures/geometry_v3/standalone_integration_harness.json"
+
+STANDALONE_INTEGRATION_HARNESS_SHA256 = (
+    "91b84db936e6e015d885c950b1175124325932e613ed64babc455d05e022eb5f"
+)
+
+INTEGRATION_HARNESS_ORIGINALS = {
+    "tests/unit/test_arc_profile_incidence.py": (
+        47957,
+        "ae600a2936b45336ccf18eb7680b20cf828d671b9e2d046f393a8b1be4c667ac",
+    ),
+    "tests/unit/test_arc_profile_native_end_cap.py": (
+        97004,
+        "094bec87e229ac938f182e6edf43acd889934506326baa234c3387747e3235bd",
+    ),
+    "tests/unit/test_arc_sector_native_boundary_mutations.py": (
+        36536,
+        "74b123c6d9a33732a98dd5c357c357587ffd26dcc6f288769446cee6e123bdf9",
+    ),
+    "tests/unit/test_result_v3_dependency_boundary.py": (
+        15816,
+        "18f8ad021447e9e738027356c61364ac0278fb35ea687ec6995c108ef3ba47ec",
+    ),
+    "tests/unit/test_standalone_runtime_boundary.py": (
+        109294,
+        "0c6635d08871cfa3f3b198efacabc644de44de2ee6fce11656ed9720168c0406",
+    ),
+}
+
+GEOMETRY_REVISION_FIXTURE = "tests/fixtures/geometry_v3/python_revision_69d0f81.json"
+
+GEOMETRY_REVISION_SHA256 = "0e5bfde75fef63e6933abb5458a95d94893abaaa158dd4b011231f00075bf30d"
+
+
+def _integration_restore_entry(data, entry, expected):
+    """Validate one exact finite inverse against independently pinned before bytes."""
+    assert set(entry) == {
+        "reviewed_bytes",
+        "reviewed_sha256",
+        "original_bytes",
+        "original_sha256",
+        "hunks",
+    }
+    assert type(entry["reviewed_bytes"]) is type(entry["original_bytes"]) is int
+    assert entry["reviewed_bytes"] > 0 and entry["original_bytes"] > 0
+    assert (entry["original_bytes"], entry["original_sha256"]) == expected
+    assert entry["reviewed_sha256"] != entry["original_sha256"]
+    assert len(data) == entry["reviewed_bytes"]
+    assert hashlib.sha256(data).hexdigest() == entry["reviewed_sha256"]
+    assert type(entry["hunks"]) is list and entry["hunks"]
+    previous = 0
+    for hunk in entry["hunks"]:
+        assert set(hunk) == {"new_start", "new_end", "original", "replacement"}
+        start, end = hunk["new_start"], hunk["new_end"]
+        assert type(start) is type(end) is int
+        assert previous <= start <= end <= len(data)
+        assert type(hunk["original"]) is type(hunk["replacement"]) is str
+        assert hunk["original"] != hunk["replacement"]
+        assert data[start:end] == hunk["replacement"].encode("utf-8")
+        previous = end
+    for hunk in reversed(entry["hunks"]):
+        data = (
+            data[: hunk["new_start"]] + hunk["original"].encode("utf-8") + data[hunk["new_end"] :]
+        )
+    assert len(data) == expected[0]
+    assert hashlib.sha256(data).hexdigest() == expected[1]
+    return data
+
+
+def standalone_integration_source_originals(root):
+    """Seal only seven recovered additions and five deltas to standalone 07f2550."""
+    _, assembly_before = assembly_source_originals(root)
+    _, before = gate_c_owner_source_originals(root)
+    before = assembly_before | before
+    raw = (root / INTEGRATION_SOURCE_FIXTURE).read_bytes()
+    assert hashlib.sha256(raw).hexdigest() == INTEGRATION_SOURCE_SHA256
+    revision = json.loads(raw)
+    assert set(revision) == {"schema", "base_commit", "added", "changed"}
+    assert revision["schema"] == "sector-standalone-integration-source-v1"
+    assert revision["base_commit"] == "07f25501d2fcd10bf93d5bf31b82cc62bf483863"
+    assert set(revision["added"]) == INTEGRATION_SOURCE_ADDED
+    assert set(revision["changed"]) == set(INTEGRATION_SOURCE_ORIGINALS)
+    assert not INTEGRATION_SOURCE_ADDED & INTEGRATION_SOURCE_ORIGINALS.keys()
+    for name, entry in revision["added"].items():
+        assert set(entry) == {"bytes", "sha256"}
+        assert type(entry["bytes"]) is int and entry["bytes"] > 0
+        data = before.get(name, (root / name).read_bytes())
+        assert len(data) == entry["bytes"]
+        assert hashlib.sha256(data).hexdigest() == entry["sha256"]
+    restored = {}
+    for name, entry in revision["changed"].items():
+        restored[name] = _integration_restore_entry(
+            before.get(name, _release_070_bytes(root, name)),
+            entry,
+            INTEGRATION_SOURCE_ORIGINALS[name],
+        )
+    return INTEGRATION_SOURCE_ADDED, restored
+
+
+def standalone_integration_harness_originals(root):
+    """Restore five exact 07f2550 guards; trust no copied fixture or validator.
+
+    Only this outer fixture's one digest slot is normalized. Every historical
+    digest and every old assertion remains part of the sealed before bytes.
+    """
+    before = gate_c_owner_harness_originals(root) | redundant_solve_harness_originals(root)
+    raw = (root / INTEGRATION_HARNESS_FIXTURE).read_bytes()
+    assert hashlib.sha256(raw).hexdigest() == STANDALONE_INTEGRATION_HARNESS_SHA256
+    revision = json.loads(raw)
+    assert set(revision) == {"schema", "base_commit", "changed"}
+    assert revision["schema"] == "sector-standalone-integration-harness-v1"
+    assert revision["base_commit"] == "07f25501d2fcd10bf93d5bf31b82cc62bf483863"
+    assert set(revision["changed"]) == set(INTEGRATION_HARNESS_ORIGINALS)
+    restored = {}
+    for name, entry in revision["changed"].items():
+        data = before.get(name, (root / name).read_bytes())
+        if name == "tests/unit/test_arc_profile_native_end_cap.py":
+            label = b"STANDALONE_INTEGRATION_HARNESS_" + b'SHA256 = (\n    "'
+            assert data.count(label) == 1
+            slot = label + STANDALONE_INTEGRATION_HARNESS_SHA256.encode("ascii") + b'"\n)'
+            assert data.count(slot) == 1, "copied guard digest differs from trusted namespace"
+            data = data.replace(slot, label + b"0" * 64 + b'"\n)')
+        restored[name] = _integration_restore_entry(
+            data, entry, INTEGRATION_HARNESS_ORIGINALS[name]
+        )
+    return restored
+
+
+def _geometry_recovered_harness_bytes(original, entry):
+    """Forward only sealed historical hunks to reconstruct the recovered guard view."""
+    assert (len(original), hashlib.sha256(original).hexdigest()) == (
+        entry["original_bytes"],
+        entry["original_sha256"],
+    )
+    data, shift, previous = original, 0, 0
+    for hunk in entry["hunks"]:
+        assert set(hunk) == {"new_start", "new_end", "original", "replacement"}
+        start, end = hunk["new_start"], hunk["new_end"]
+        assert type(start) is type(end) is int and previous <= start <= end
+        before, after = hunk["original"].encode("utf-8"), hunk["replacement"].encode("utf-8")
+        assert len(after) == end - start and before != after
+        old_start = start - shift
+        assert 0 <= old_start <= old_start + len(before) <= len(original)
+        assert original[old_start : old_start + len(before)] == before
+        assert data[start : start + len(before)] == before
+        data = data[:start] + after + data[start + len(before) :]
+        shift += len(after) - len(before)
+        previous = end
+    assert len(data) == entry["reviewed_bytes"]
+    assert hashlib.sha256(data).hexdigest() == entry["reviewed_sha256"]
+    return data
+
+
+def geometry_revision_originals(root):
+    """Prove the recovered geometry inverse separately from standalone restoration.
+
+    The three old guard files are reconstructed from independently sealed 69d0
+    originals, never used as live validators. Five clean deltas use actual source.
+    """
+    _, assembly_before = assembly_source_originals(root)
+    _, before = gate_c_owner_source_originals(root)
+    before = assembly_before | before
+    added, source_originals = standalone_integration_source_originals(root)
+    historical = standalone_harness_originals(root)
+    raw = (root / GEOMETRY_REVISION_FIXTURE).read_bytes()
+    assert hashlib.sha256(raw).hexdigest() == GEOMETRY_REVISION_SHA256
+    revision = json.loads(raw)
+    assert set(revision) == {"schema", "base_commit", "added", "changed", "provenance"}
+    assert revision["schema"] == "geometry-v3-python-boundary-v1"
+    assert revision["base_commit"] == "69d0f8164e73bfbbcdf0c48d6546f97803d12f58"
+    assert set(revision["added"]) == added
+    historical_paths = {
+        "tests/unit/test_arc_profile_incidence.py",
+        "tests/unit/test_arc_sector_native_boundary_mutations.py",
+        "tests/unit/test_result_v3_dependency_boundary.py",
+    }
+    assert set(revision["changed"]) == source_originals.keys() | historical_paths
+    for name, entry in revision["added"].items():
+        assert set(entry) == {"bytes", "sha256"}
+        data = before.get(name, (root / name).read_bytes())
+        assert type(entry["bytes"]) is int and len(data) == entry["bytes"]
+        assert hashlib.sha256(data).hexdigest() == entry["sha256"]
+    restored = {}
+    for name, entry in revision["changed"].items():
+        original = historical[name] if name in historical_paths else source_originals[name]
+        data = (
+            _geometry_recovered_harness_bytes(original, entry)
+            if name in historical_paths
+            else before.get(name, _release_070_bytes(root, name))
+        )
+        expected = (len(original), hashlib.sha256(original).hexdigest())
+        restored[name] = _integration_restore_entry(data, entry, expected)
+        assert restored[name] == original
+    return added, restored
+
+
+WINDOWS_RUNTIME_CACHE_HARNESS_FIXTURE = (
+    "tests/fixtures/standalone/windows_runtime_cache_harness_revision_post_cache.json"
+)
+WINDOWS_RUNTIME_CACHE_HARNESS_SHA256 = (
+    "d959e33a49a9b39a7c25c1255d1418fcf9a0b8a43b7ca6f3fb775119af7f797d"
+)
+WINDOWS_RUNTIME_CACHE_HARNESS_ORIGINALS = {
+    "tests/unit/test_arc_profile_native_end_cap.py": (
+        87130,
+        "423ecfccf4d1ff4f24ec8e0c0779153a5917aadddffe37f5d0809f96eb0b639c",
+    ),
+    "tests/unit/test_arc_profile_incidence.py": (
+        47426,
+        "8c64bcc1d1639a7f0b5399d8cab496ff584948be6e647056a266e6b120e02423",
+    ),
+    "tests/unit/test_arc_sector_native_boundary_mutations.py": (
+        35508,
+        "6bd35a61be264258743b16334b750df82ee98bfaa7a89a4aaafa76bdcca0b42d",
+    ),
+    "tests/unit/test_standalone_runtime_boundary.py": (
+        77346,
+        "f4eb28702f3281e1662bc09814d403616046be999746d8e231da42f0fa670267",
+    ),
+}
+
+
+def windows_runtime_cache_harness_originals(root):
+    """Restore four exact test files before every unchanged historical inverse.
+
+    The reviewed source commit/manifest anchors this validator and fixture. A
+    mutation tree is data: its validator/constants must never replace this
+    trusted namespace. Only this module's one fixture-digest slot is normalized.
+    """
+    integration_harness = standalone_integration_harness_originals(root)
+    raw = (root / WINDOWS_RUNTIME_CACHE_HARNESS_FIXTURE).read_bytes()
+    assert hashlib.sha256(raw).hexdigest() == WINDOWS_RUNTIME_CACHE_HARNESS_SHA256
+    revision = json.loads(raw)
+    assert set(revision) == {"schema", "base_commit", "changed"}
+    assert revision["schema"] == "windows-runtime-cache-test-harness-boundary-v1"
+    assert revision["base_commit"] == "b48ffcd14d3f79c8c02057316684a60f58c83bfc"
+    assert set(revision["changed"]) == set(WINDOWS_RUNTIME_CACHE_HARNESS_ORIGINALS)
+    restored = {}
+    for name, entry in revision["changed"].items():
+        assert set(entry) == {
+            "reviewed_bytes",
+            "reviewed_sha256",
+            "original_bytes",
+            "original_sha256",
+            "hunks",
+        }
+        assert type(entry["reviewed_bytes"]) is type(entry["original_bytes"]) is int
+        assert entry["reviewed_bytes"] > 0 and entry["original_bytes"] > 0
+        assert (entry["original_bytes"], entry["original_sha256"]) == (
+            WINDOWS_RUNTIME_CACHE_HARNESS_ORIGINALS[name]
+        )
+        assert entry["reviewed_sha256"] != entry["original_sha256"]
+        data = integration_harness.get(name, (root / name).read_bytes())
+        if name == "tests/unit/test_arc_profile_native_end_cap.py":
+            label = b"WINDOWS_RUNTIME_CACHE_HARNESS_" + b'SHA256 = (\n    "'
+            assert data.count(label) == 1
+            slot = label + WINDOWS_RUNTIME_CACHE_HARNESS_SHA256.encode("ascii") + b'"\n)'
+            assert data.count(slot) == 1, "copied guard digest differs from trusted namespace"
+            data = data.replace(slot, label + b"0" * 64 + b'"\n)')
+        assert len(data) == entry["reviewed_bytes"], name
+        assert hashlib.sha256(data).hexdigest() == entry["reviewed_sha256"], name
+        assert type(entry["hunks"]) is list and entry["hunks"]
+        previous = 0
+        for hunk in entry["hunks"]:
+            assert set(hunk) == {"new_start", "new_end", "original", "replacement"}
+            start, end = hunk["new_start"], hunk["new_end"]
+            assert type(start) is type(end) is int
+            assert previous <= start <= end <= len(data)
+            assert type(hunk["original"]) is type(hunk["replacement"]) is str
+            assert hunk["original"] != hunk["replacement"]
+            assert data[start:end] == hunk["replacement"].encode("utf-8")
+            previous = end
+        for hunk in reversed(entry["hunks"]):
+            data = (
+                data[: hunk["new_start"]]
+                + hunk["original"].encode("utf-8")
+                + data[hunk["new_end"] :]
+            )
+        assert len(data) == entry["original_bytes"], name
+        assert hashlib.sha256(data).hexdigest() == entry["original_sha256"], name
+        restored[name] = data
+    return restored
+
+
+WINDOWS_RUNTIME_CACHE_REVISION_FIXTURE = (
+    "tests/fixtures/standalone/windows_runtime_cache_revision_post_cache.json"
+)
+WINDOWS_RUNTIME_CACHE_REVISION_SHA256 = (
+    "ee8bd382fd394f8ffc9bd13069d79f72b032731133081a5d9ced33b36ecc5480"
+)
+WINDOWS_RUNTIME_CACHE_REVISION_CHANGED = frozenset(
+    {
+        "blender_addon/mechanical_cad_blender/backend_selection.py",
+        "blender_addon/mechanical_cad_blender/runtime_bundle_launch.py",
+        "blender_addon/mechanical_cad_blender/windows_cache.py",
+        "blender_addon/mechanical_cad_blender/windows_runtime.py",
+        "tests/unit/test_runtime_bundle_launch.py",
+        "tests/unit/test_windows_runtime.py",
+        "tests/unit/test_windows_transport.py",
+        "tests/unit/test_windows_cache.py",
+    }
+)
+WINDOWS_RUNTIME_CACHE_REVISION_ADDED = frozenset(
+    {
+        "tests/unit/test_windows_runtime_cache.py",
+    }
+)
+WINDOWS_RUNTIME_CACHE_REVISION_ORIGINALS = {
+    "blender_addon/mechanical_cad_blender/backend_selection.py": (
+        11851,
+        "90d984ad7d1c6c64507403d390b58880a0ff319a7228529510c62ebd07e0445a",
+    ),
+    "blender_addon/mechanical_cad_blender/runtime_bundle_launch.py": (
+        16560,
+        "c7e828980ceb73ad339388e08ac78704ebe59fab9c2bdbfb9189dafcaf74eca6",
+    ),
+    "blender_addon/mechanical_cad_blender/windows_cache.py": (
+        49746,
+        "c6a1ba162b155262ef8a3df02a5fe89e04c41086d1321dc12f9d852ecf9b0424",
+    ),
+    "blender_addon/mechanical_cad_blender/windows_runtime.py": (
+        28626,
+        "ac4d070a8172c6f717dbffcf0064807467bc42cf459d237dc7ca2f663d672267",
+    ),
+    "tests/unit/test_runtime_bundle_launch.py": (
+        28730,
+        "1ce5f259c45d4f01f1852bd0bf3d5b0bd2e83dbaa375d777d453310a78bcc050",
+    ),
+    "tests/unit/test_windows_runtime.py": (
+        25833,
+        "3d2e23c85e66229cedfea20bb014b0aa290ca5242150f5a3df48000a3d41f6e2",
+    ),
+    "tests/unit/test_windows_transport.py": (
+        19644,
+        "82bfd7b84e94f54f8d128d5e34843fe90718dafccf430fea1a18503cb625777e",
+    ),
+    "tests/unit/test_windows_cache.py": (
+        55294,
+        "30890c8b031f0e6b7e7ee238ae59272813d1c689ababaf71f1c41f81e3093e6b",
+    ),
+}
+
+
+def windows_runtime_cache_originals(root):
+    """Undo only the exact dormant Windows runtime-cache and ordinary-test delta.
+
+    This finite inverse is anchored by the reviewed source manifest, never by
+    constants extracted from a mutation tree. No core or publisher path is allowed.
+    """
+    raw = (root / WINDOWS_RUNTIME_CACHE_REVISION_FIXTURE).read_bytes()
+    assert hashlib.sha256(raw).hexdigest() == WINDOWS_RUNTIME_CACHE_REVISION_SHA256
+    revision = json.loads(raw)
+    assert set(revision) == {"schema", "base_commit", "added", "changed"}
+    assert revision["schema"] == "windows-runtime-cache-python-boundary-v1"
+    assert revision["base_commit"] == "b48ffcd14d3f79c8c02057316684a60f58c83bfc"
+    added, changed = revision["added"], revision["changed"]
+    assert set(added) == WINDOWS_RUNTIME_CACHE_REVISION_ADDED
+    assert set(changed) == WINDOWS_RUNTIME_CACHE_REVISION_CHANGED
+    assert not set(added) & set(changed)
+    restored = {}
+    for name, entry in added.items():
+        assert set(entry) == {"bytes", "sha256"}
+        assert type(entry["bytes"]) is int and entry["bytes"] > 0
+        data = (root / name).read_bytes()
+        assert len(data) == entry["bytes"]
+        assert hashlib.sha256(data).hexdigest() == entry["sha256"]
+    for name, entry in changed.items():
+        assert set(entry) == {
+            "reviewed_bytes",
+            "reviewed_sha256",
+            "original_bytes",
+            "original_sha256",
+            "hunks",
+        }
+        assert type(entry["reviewed_bytes"]) is type(entry["original_bytes"]) is int
+        assert entry["reviewed_bytes"] > 0 and entry["original_bytes"] > 0
+        assert (entry["original_bytes"], entry["original_sha256"]) == (
+            WINDOWS_RUNTIME_CACHE_REVISION_ORIGINALS[name]
+        )
+        assert entry["reviewed_sha256"] != entry["original_sha256"]
+        data = (root / name).read_bytes()
+        assert len(data) == entry["reviewed_bytes"]
+        assert hashlib.sha256(data).hexdigest() == entry["reviewed_sha256"]
+        assert type(entry["hunks"]) is list and entry["hunks"]
+        previous = 0
+        for hunk in entry["hunks"]:
+            assert set(hunk) == {"new_start", "new_end", "original", "replacement"}
+            start, end = hunk["new_start"], hunk["new_end"]
+            assert type(start) is type(end) is int
+            assert previous <= start <= end <= len(data)
+            assert type(hunk["original"]) is type(hunk["replacement"]) is str
+            assert hunk["original"] != hunk["replacement"]
+            assert data[start:end] == hunk["replacement"].encode("utf-8")
+            previous = end
+        for hunk in reversed(entry["hunks"]):
+            data = (
+                data[: hunk["new_start"]]
+                + hunk["original"].encode("utf-8")
+                + data[hunk["new_end"] :]
+            )
+        assert len(data) == entry["original_bytes"]
+        assert hashlib.sha256(data).hexdigest() == entry["original_sha256"]
+        restored[name] = data
+    return frozenset(added), restored
+
+
+WINDOWS_CACHE_HARNESS_FIXTURE = (
+    "tests/fixtures/standalone/windows_cache_harness_revision_post_transport.json"
+)
+WINDOWS_CACHE_HARNESS_SHA256 = "82c2ce22480df92fe427994634758b2613306e5d032fd0017c5f7cffd6bf924e"
+WINDOWS_CACHE_HARNESS_ORIGINALS = {
+    "tests/unit/test_arc_profile_incidence.py": (
+        46940,
+        "daa9ed1f1993eca691429fd753d542235e725473adef84e09f249a0ff2fd9d83",
+    ),
+    "tests/unit/test_arc_profile_native_end_cap.py": (
+        77652,
+        "523b4ba7fc6246f0f0779a5de1082c3ab9267b6cf9574f6d00ab25a7b3cc2cfe",
+    ),
+    "tests/unit/test_arc_sector_native_boundary_mutations.py": (
+        34823,
+        "53d9d6e8ab78cd3801adea34c33444bf4dbc5aaf438301e62102b8e4bd6c8af5",
+    ),
+    "tests/unit/test_result_v3_dependency_boundary.py": (
+        15791,
+        "5c109d3df472f5320cead55ddaf047019b41050fc0340e8ed3802faa6502ee06",
+    ),
+    "tests/unit/test_standalone_runtime_boundary.py": (
+        48473,
+        "faa47e915bda35bdf7be559ebab8e49400394d60164e427c6d293b22257781d6",
+    ),
+}
+
+
+def windows_cache_harness_originals(root):
+    """Restore five exact test files before every unchanged historical inverse.
+
+    The reviewed source commit/manifest anchors this validator and fixture. A
+    mutation tree is data: its validator/constants must never replace this
+    trusted namespace. Only this module's one fixture-digest slot is normalized.
+    """
+    integration_harness = standalone_integration_harness_originals(root)
+    runtime_harness = integration_harness | windows_runtime_cache_harness_originals(root)
+    raw = (root / WINDOWS_CACHE_HARNESS_FIXTURE).read_bytes()
+    assert hashlib.sha256(raw).hexdigest() == WINDOWS_CACHE_HARNESS_SHA256
+    revision = json.loads(raw)
+    assert set(revision) == {"schema", "base_commit", "changed"}
+    assert revision["schema"] == "windows-cache-test-harness-boundary-v1"
+    assert revision["base_commit"] == "6f08ea8ef45051a2430d4010ba7935e578337667"
+    assert set(revision["changed"]) == set(WINDOWS_CACHE_HARNESS_ORIGINALS)
+    restored = {}
+    for name, entry in revision["changed"].items():
+        assert set(entry) == {
+            "reviewed_bytes",
+            "reviewed_sha256",
+            "original_bytes",
+            "original_sha256",
+            "hunks",
+        }
+        assert type(entry["reviewed_bytes"]) is type(entry["original_bytes"]) is int
+        assert entry["reviewed_bytes"] > 0 and entry["original_bytes"] > 0
+        assert (entry["original_bytes"], entry["original_sha256"]) == (
+            WINDOWS_CACHE_HARNESS_ORIGINALS[name]
+        )
+        assert entry["reviewed_sha256"] != entry["original_sha256"]
+        data = runtime_harness.get(name, (root / name).read_bytes())
+        if name == "tests/unit/test_arc_profile_native_end_cap.py":
+            label = b"WINDOWS_CACHE_HARNESS_" + b'SHA256 = "'
+            assert data.count(label) == 1
+            slot = label + WINDOWS_CACHE_HARNESS_SHA256.encode("ascii") + b'"'
+            assert data.count(slot) == 1, "copied guard digest differs from trusted namespace"
+            data = data.replace(slot, label + b"0" * 64 + b'"')
+        assert len(data) == entry["reviewed_bytes"], name
+        assert hashlib.sha256(data).hexdigest() == entry["reviewed_sha256"], name
+        assert type(entry["hunks"]) is list and entry["hunks"]
+        previous = 0
+        for hunk in entry["hunks"]:
+            assert set(hunk) == {"new_start", "new_end", "original", "replacement"}
+            start, end = hunk["new_start"], hunk["new_end"]
+            assert type(start) is type(end) is int
+            assert previous <= start <= end <= len(data)
+            assert type(hunk["original"]) is type(hunk["replacement"]) is str
+            assert hunk["original"] != hunk["replacement"]
+            assert data[start:end] == hunk["replacement"].encode("utf-8")
+            previous = end
+        for hunk in reversed(entry["hunks"]):
+            data = (
+                data[: hunk["new_start"]]
+                + hunk["original"].encode("utf-8")
+                + data[hunk["new_end"] :]
+            )
+        assert len(data) == entry["original_bytes"], name
+        assert hashlib.sha256(data).hexdigest() == entry["original_sha256"], name
+        restored[name] = data
+    return restored
+
+
+WINDOWS_CACHE_REVISION_FIXTURE = (
+    "tests/fixtures/standalone/windows_cache_revision_post_transport.json"
+)
+WINDOWS_CACHE_REVISION_SHA256 = "b9d21fcdfa82809ce7389a81b8bc4a7f39623f36b8c036aab9b49aea01a01851"
+WINDOWS_CACHE_REVISION_CHANGED = frozenset(
+    {
+        "blender_addon/mechanical_cad_blender/registration.py",
+        "blender_addon/mechanical_cad_blender/runtime_bundle_materialize.py",
+        "blender_addon/mechanical_cad_blender/runtime_bundle_prepare.py",
+        "tests/unit/test_bundled_registration.py",
+        "tests/unit/test_runtime_bundle_materialize.py",
+        "tests/unit/test_runtime_bundle_prepare.py",
+        "tests/unit/test_windows_admission.py",
+    }
+)
+WINDOWS_CACHE_REVISION_ADDED = frozenset(
+    {
+        "blender_addon/mechanical_cad_blender/windows_cache.py",
+        "tests/unit/test_windows_cache.py",
+        "tests/unit/test_windows_cache_preparation.py",
+    }
+)
+WINDOWS_CACHE_REVISION_ORIGINALS = {
+    "blender_addon/mechanical_cad_blender/registration.py": (
+        16998,
+        "26109bdec35fc858d65430a5d2d58d754d0d90661a051000fd3067ce1722f024",
+    ),
+    "blender_addon/mechanical_cad_blender/runtime_bundle_materialize.py": (
+        16234,
+        "fabae21b35107bc225bbe527d65a58f60bf884107d70e6379f3dd563af425d3a",
+    ),
+    "blender_addon/mechanical_cad_blender/runtime_bundle_prepare.py": (
+        12926,
+        "3eb36b9271c269b59e03a00b092bfada69947a3d7b3eae0c6f6859cfbbe20a6d",
+    ),
+    "tests/unit/test_bundled_registration.py": (
+        12634,
+        "257377b861ac25b55d86c684aacd342358545baa29016709e71450b0f8665818",
+    ),
+    "tests/unit/test_runtime_bundle_materialize.py": (
+        24097,
+        "08b2d74010fe254157518fac2af8f56991201876ed055b7c1e1a99bad92fb812",
+    ),
+    "tests/unit/test_runtime_bundle_prepare.py": (
+        27099,
+        "d3e95518e8ba7e36debc65734f3030c6acce2960d6f813c2440e5162d25e58fe",
+    ),
+    "tests/unit/test_windows_admission.py": (
+        25982,
+        "e1d0f3e5e85d509cf132a1b0e2c25610c7a928df65f8f1ab18b6745089b65185",
+    ),
+}
+
+
+def windows_cache_originals(root):
+    """Undo only the exact closed Windows cache and ordinary-test delta.
+
+    This finite inverse is anchored by the reviewed source manifest, never by
+    constants extracted from a mutation tree. No core or publisher path is allowed.
+    """
+    _, runtime_originals = windows_runtime_cache_originals(root)
+    raw = (root / WINDOWS_CACHE_REVISION_FIXTURE).read_bytes()
+    assert hashlib.sha256(raw).hexdigest() == WINDOWS_CACHE_REVISION_SHA256
+    revision = json.loads(raw)
+    assert set(revision) == {"schema", "base_commit", "added", "changed"}
+    assert revision["schema"] == "windows-cache-python-boundary-v1"
+    assert revision["base_commit"] == "6f08ea8ef45051a2430d4010ba7935e578337667"
+    added, changed = revision["added"], revision["changed"]
+    assert set(added) == WINDOWS_CACHE_REVISION_ADDED
+    assert set(changed) == WINDOWS_CACHE_REVISION_CHANGED
+    assert not set(added) & set(changed)
+    restored = {}
+    for name, entry in added.items():
+        assert set(entry) == {"bytes", "sha256"}
+        assert type(entry["bytes"]) is int and entry["bytes"] > 0
+        data = runtime_originals.get(name, (root / name).read_bytes())
+        assert len(data) == entry["bytes"]
+        assert hashlib.sha256(data).hexdigest() == entry["sha256"]
+    for name, entry in changed.items():
+        assert set(entry) == {
+            "reviewed_bytes",
+            "reviewed_sha256",
+            "original_bytes",
+            "original_sha256",
+            "hunks",
+        }
+        assert type(entry["reviewed_bytes"]) is type(entry["original_bytes"]) is int
+        assert entry["reviewed_bytes"] > 0 and entry["original_bytes"] > 0
+        assert (entry["original_bytes"], entry["original_sha256"]) == (
+            WINDOWS_CACHE_REVISION_ORIGINALS[name]
+        )
+        assert entry["reviewed_sha256"] != entry["original_sha256"]
+        data = runtime_originals.get(name, _release_070_bytes(root, name))
+        assert len(data) == entry["reviewed_bytes"]
+        assert hashlib.sha256(data).hexdigest() == entry["reviewed_sha256"]
+        assert type(entry["hunks"]) is list and entry["hunks"]
+        previous = 0
+        for hunk in entry["hunks"]:
+            assert set(hunk) == {"new_start", "new_end", "original", "replacement"}
+            start, end = hunk["new_start"], hunk["new_end"]
+            assert type(start) is type(end) is int
+            assert previous <= start <= end <= len(data)
+            assert type(hunk["original"]) is type(hunk["replacement"]) is str
+            assert hunk["original"] != hunk["replacement"]
+            assert data[start:end] == hunk["replacement"].encode("utf-8")
+            previous = end
+        for hunk in reversed(entry["hunks"]):
+            data = (
+                data[: hunk["new_start"]]
+                + hunk["original"].encode("utf-8")
+                + data[hunk["new_end"] :]
+            )
+        assert len(data) == entry["original_bytes"]
+        assert hashlib.sha256(data).hexdigest() == entry["original_sha256"]
+        restored[name] = data
+    return frozenset(added), restored
+
+
+WINDOWS_TRANSPORT_HARNESS_FIXTURE = (
+    "tests/fixtures/standalone/test_windows_transport_harness_revision_2144b11.json"
+)
+WINDOWS_TRANSPORT_HARNESS_SHA256 = (
+    "56d46e6281a9365d2a8e3a9c366994f4ac74ad93e46fa1392a33b7026b486cc5"
+)
+WINDOWS_TRANSPORT_HARNESS_ORIGINALS = {
+    "tests/unit/test_arc_profile_incidence.py": (
+        46478,
+        "d253e7ccc8baac5b439bd023b4ed4b66eef032d3a2c6bcffb5cb58301184990a",
+    ),
+    "tests/unit/test_arc_profile_native_end_cap.py": (
+        69250,
+        "06a56d660bf4b60c1900e24a5cac50cffcc77afd7fd804f0036d90c5fb5fab53",
+    ),
+    "tests/unit/test_arc_sector_native_boundary_mutations.py": (
+        33731,
+        "00ac18e4d34e8b0f6281f8a397e45f278a478d87d94652ff321bc95d0651e3b2",
+    ),
+    "tests/unit/test_result_v3_dependency_boundary.py": (
+        15764,
+        "55dd2edcaf8c189dd7601787a8b0519ceff211059b4d64f9fc19cc6544b40485",
+    ),
+    "tests/unit/test_standalone_runtime_boundary.py": (
+        26460,
+        "f8981575146bf6df1af4ce9cf30efdcb7a81617aef36fbd0f3e1a93161d1e6c0",
+    ),
+}
+
+
+def windows_transport_harness_originals(root):
+    """Restore five exact test files before every unchanged historical inverse.
+
+    The reviewed source commit/manifest anchors this validator and fixture. A
+    mutation tree is data: its validator/constants must never replace this
+    trusted namespace. Only this module's one fixture-digest slot is normalized.
+    """
+    cache_harness = windows_cache_harness_originals(root)
+    raw = (root / WINDOWS_TRANSPORT_HARNESS_FIXTURE).read_bytes()
+    assert hashlib.sha256(raw).hexdigest() == WINDOWS_TRANSPORT_HARNESS_SHA256
+    revision = json.loads(raw)
+    assert set(revision) == {"schema", "base_commit", "changed"}
+    assert revision["schema"] == "windows-transport-test-harness-boundary-v1"
+    assert revision["base_commit"] == "2144b11eb6abe3a011ad1858ab683189e352311f"
+    assert set(revision["changed"]) == set(WINDOWS_TRANSPORT_HARNESS_ORIGINALS)
+    restored = {}
+    for name, entry in revision["changed"].items():
+        assert set(entry) == {
+            "reviewed_bytes",
+            "reviewed_sha256",
+            "original_bytes",
+            "original_sha256",
+            "hunks",
+        }
+        assert type(entry["reviewed_bytes"]) is type(entry["original_bytes"]) is int
+        assert entry["reviewed_bytes"] > 0 and entry["original_bytes"] > 0
+        assert (entry["original_bytes"], entry["original_sha256"]) == (
+            WINDOWS_TRANSPORT_HARNESS_ORIGINALS[name]
+        )
+        assert entry["reviewed_sha256"] != entry["original_sha256"]
+        data = cache_harness.get(name, (root / name).read_bytes())
+        if name == "tests/unit/test_arc_profile_native_end_cap.py":
+            label = b"WINDOWS_TRANSPORT_HARNESS_" + b'SHA256 = (\n    "'
+            assert data.count(label) == 1
+            slot = label + WINDOWS_TRANSPORT_HARNESS_SHA256.encode("ascii") + b'"\n)'
+            assert data.count(slot) == 1, "copied guard digest differs from trusted namespace"
+            data = data.replace(slot, label + b"0" * 64 + b'"\n)')
+        assert len(data) == entry["reviewed_bytes"], name
+        assert hashlib.sha256(data).hexdigest() == entry["reviewed_sha256"], name
+        assert type(entry["hunks"]) is list and entry["hunks"]
+        previous = 0
+        for hunk in entry["hunks"]:
+            assert set(hunk) == {"new_start", "new_end", "original", "replacement"}
+            start, end = hunk["new_start"], hunk["new_end"]
+            assert type(start) is type(end) is int
+            assert previous <= start <= end <= len(data)
+            assert type(hunk["original"]) is type(hunk["replacement"]) is str
+            assert hunk["original"] != hunk["replacement"]
+            assert data[start:end] == hunk["replacement"].encode("utf-8")
+            previous = end
+        for hunk in reversed(entry["hunks"]):
+            data = (
+                data[: hunk["new_start"]]
+                + hunk["original"].encode("utf-8")
+                + data[hunk["new_end"] :]
+            )
+        assert len(data) == entry["original_bytes"], name
+        assert hashlib.sha256(data).hexdigest() == entry["original_sha256"], name
+        restored[name] = data
+    return restored
+
+
+WINDOWS_TRANSPORT_REVISION_FIXTURE = (
+    "tests/fixtures/standalone/python_windows_transport_revision_2144b11.json"
+)
+WINDOWS_TRANSPORT_REVISION_SHA256 = (
+    "6760194e7cfd83d8089e6ffc27f5605150b103b3d0e4edf0ecfb303693044bc5"
+)
+WINDOWS_TRANSPORT_REVISION_CHANGED = frozenset(
+    {
+        "blender_addon/mechanical_cad_blender/backend_selection.py",
+        "blender_addon/mechanical_cad_blender/bridge.py",
+        "blender_addon/mechanical_cad_blender/runtime_bundle_launch.py",
+        "blender_addon/mechanical_cad_blender/sidecar_job.py",
+        "blender_addon/mechanical_cad_blender/windows_process.py",
+        "scripts/standalone_child_bootstrap.py",
+        "tests/unit/test_standalone_child_bootstrap.py",
+        "tests/unit/test_windows_process.py",
+    }
+)
+WINDOWS_TRANSPORT_REVISION_ADDED = frozenset(
+    {
+        "blender_addon/mechanical_cad_blender/windows_runtime.py",
+        "tests/unit/test_windows_admission.py",
+        "tests/unit/test_windows_runtime.py",
+        "tests/unit/test_windows_transport.py",
+    }
+)
+
+
+def windows_transport_originals(root):
+    """Undo only the exact closed Windows transport and ordinary-test delta.
+
+    This finite inverse is anchored by the reviewed source manifest, never by
+    constants extracted from a mutation tree. No core or publisher path is allowed.
+    """
+    _, runtime_originals = windows_runtime_cache_originals(root)
+    _, cache_originals = windows_cache_originals(root)
+    cache_originals = runtime_originals | cache_originals
+    raw = (root / WINDOWS_TRANSPORT_REVISION_FIXTURE).read_bytes()
+    assert hashlib.sha256(raw).hexdigest() == WINDOWS_TRANSPORT_REVISION_SHA256
+    revision = json.loads(raw)
+    assert set(revision) == {"schema", "base_commit", "added", "changed"}
+    assert revision["schema"] == "windows-transport-python-boundary-v1"
+    assert revision["base_commit"] == "2144b11eb6abe3a011ad1858ab683189e352311f"
+    added, changed = revision["added"], revision["changed"]
+    assert set(added) == WINDOWS_TRANSPORT_REVISION_ADDED
+    assert set(changed) == WINDOWS_TRANSPORT_REVISION_CHANGED
+    assert not set(added) & set(changed)
+    restored = {}
+    for name, entry in added.items():
+        assert set(entry) == {"bytes", "sha256"}
+        assert type(entry["bytes"]) is int and entry["bytes"] > 0
+        data = cache_originals[name] if name in cache_originals else _release_070_bytes(root, name)
+        assert len(data) == entry["bytes"]
+        assert hashlib.sha256(data).hexdigest() == entry["sha256"]
+    for name, entry in changed.items():
+        assert set(entry) == {
+            "reviewed_bytes",
+            "reviewed_sha256",
+            "original_bytes",
+            "original_sha256",
+            "hunks",
+        }
+        assert type(entry["reviewed_bytes"]) is type(entry["original_bytes"]) is int
+        assert entry["reviewed_bytes"] > 0 and entry["original_bytes"] > 0
+        assert entry["reviewed_sha256"] != entry["original_sha256"]
+        data = cache_originals[name] if name in cache_originals else _release_070_bytes(root, name)
+        assert len(data) == entry["reviewed_bytes"]
+        assert hashlib.sha256(data).hexdigest() == entry["reviewed_sha256"]
+        assert type(entry["hunks"]) is list and entry["hunks"]
+        previous = 0
+        for hunk in entry["hunks"]:
+            assert set(hunk) == {"new_start", "new_end", "original", "replacement"}
+            start, end = hunk["new_start"], hunk["new_end"]
+            assert type(start) is type(end) is int
+            assert previous <= start <= end <= len(data)
+            assert type(hunk["original"]) is type(hunk["replacement"]) is str
+            assert hunk["original"] != hunk["replacement"]
+            assert data[start:end] == hunk["replacement"].encode("utf-8")
+            previous = end
+        for hunk in reversed(entry["hunks"]):
+            data = (
+                data[: hunk["new_start"]]
+                + hunk["original"].encode("utf-8")
+                + data[hunk["new_end"] :]
+            )
+        assert len(data) == entry["original_bytes"]
+        assert hashlib.sha256(data).hexdigest() == entry["original_sha256"]
+        restored[name] = data
+    return frozenset(added), restored
+
+
+STANDALONE_HARNESS_FIXTURE = "tests/fixtures/standalone/test_harness_revision_1c8f030.json"
+STANDALONE_HARNESS_SHA256 = "e322f261c3fdeb3513b518eca2abfd50b3ea5e888fc067cdc57b1035ca05fcb5"
+STANDALONE_HARNESS_ORIGINALS = {
+    "tests/unit/test_arc_profile_incidence.py": (
+        45374,
+        "b780cbcd1b2fd6f79d2109e85e987e4d3b9a71f812bf67739a0503d55ae5dbc5",
+    ),
+    "tests/unit/test_arc_sector_native_boundary_mutations.py": (
+        32717,
+        "4c068f2d865a98be4d2cadafb82c280822408547966cea90736d7b5e3def169a",
+    ),
+    "tests/unit/test_result_v3_dependency_boundary.py": (
+        12804,
+        "2b048f5d5f04d43b2d8cf9e62d9e14796e9460a05391da0439fbe3cd8b51f10d",
+    ),
+    "tests/unit/test_standalone_extension_builder.py": (
+        30959,
+        "3e4a1282408ad384bfeb8cb43aee8771b5f60b9adc6b810a745b966d77b246eb",
+    ),
+    "tests/unit/test_arc_profile_native_end_cap.py": (
+        64854,
+        "bcb23beeae4c1796ba63964b40d56301e449279151808d815f17ee4bc121c8f9",
+    ),
+    "tests/unit/test_standalone_runtime_boundary.py": (
+        19422,
+        "b538d5ae80fddf25085a05cb2983ed92c8da3de07d9de4012217e699d0de2c13",
+    ),
+}
+
+
+def standalone_harness_originals(root):
+    """Restore six exact test files before every unchanged historical inverse.
+
+    The reviewed source commit/manifest anchors this validator and fixture. A
+    mutation tree is data: its validator/constants must never replace this
+    trusted namespace. Only this module's one fixture-digest slot is normalized.
+    """
+    transport_harness = windows_transport_harness_originals(root)
+    raw = (root / STANDALONE_HARNESS_FIXTURE).read_bytes()
+    assert hashlib.sha256(raw).hexdigest() == STANDALONE_HARNESS_SHA256
+    revision = json.loads(raw)
+    assert set(revision) == {"schema", "base_commit", "changed"}
+    assert revision["schema"] == "standalone-test-harness-boundary-v1"
+    assert revision["base_commit"] == "1c8f03026c814cd69bfb25c35449810b5b858fb2"
+    assert set(revision["changed"]) == set(STANDALONE_HARNESS_ORIGINALS)
+    restored = {}
+    for name, entry in revision["changed"].items():
+        assert set(entry) == {
+            "reviewed_bytes",
+            "reviewed_sha256",
+            "original_bytes",
+            "original_sha256",
+            "hunks",
+        }
+        assert type(entry["reviewed_bytes"]) is type(entry["original_bytes"]) is int
+        assert entry["reviewed_bytes"] > 0 and entry["original_bytes"] > 0
+        assert (entry["original_bytes"], entry["original_sha256"]) == (
+            STANDALONE_HARNESS_ORIGINALS[name]
+        )
+        assert entry["reviewed_sha256"] != entry["original_sha256"]
+        data = (
+            transport_harness[name] if name in transport_harness else _release_070_bytes(root, name)
+        )
+        if name == "tests/unit/test_arc_profile_native_end_cap.py":
+            label = b"STANDALONE_HARNESS_" + b'SHA256 = "'
+            assert data.count(label) == 1
+            slot = label + STANDALONE_HARNESS_SHA256.encode("ascii") + b'"'
+            assert data.count(slot) == 1, "copied guard digest differs from trusted namespace"
+            data = data.replace(slot, label + b"0" * 64 + b'"')
+        assert len(data) == entry["reviewed_bytes"], name
+        assert hashlib.sha256(data).hexdigest() == entry["reviewed_sha256"], name
+        assert type(entry["hunks"]) is list and entry["hunks"]
+        previous = 0
+        for hunk in entry["hunks"]:
+            assert set(hunk) == {"new_start", "new_end", "original", "replacement"}
+            start, end = hunk["new_start"], hunk["new_end"]
+            assert type(start) is type(end) is int
+            assert previous <= start <= end <= len(data)
+            assert type(hunk["original"]) is type(hunk["replacement"]) is str
+            assert hunk["original"] != hunk["replacement"]
+            assert data[start:end] == hunk["replacement"].encode("utf-8")
+            previous = end
+        for hunk in reversed(entry["hunks"]):
+            data = (
+                data[: hunk["new_start"]]
+                + hunk["original"].encode("utf-8")
+                + data[hunk["new_end"] :]
+            )
+        assert len(data) == entry["original_bytes"], name
+        assert hashlib.sha256(data).hexdigest() == entry["original_sha256"], name
+        restored[name] = data
+    return restored
+
+
+STANDALONE_LIVE_FIXTURE = "tests/fixtures/standalone/python_revision_ab7edce.json"
+STANDALONE_LIVE_SHA256 = "28a8c806614dbfd7bb7e81c443630f3b05b34fd089c3684b6b4139c840c038ee"
+STANDALONE_LIVE_CHANGED = frozenset(
+    {
+        "blender_addon/mechanical_cad_blender/assembly_job_ui.py",
+        "blender_addon/mechanical_cad_blender/assembly_operator_helpers.py",
+        "blender_addon/mechanical_cad_blender/assembly_pending.py",
+        "blender_addon/mechanical_cad_blender/assembly_state.py",
+        "blender_addon/mechanical_cad_blender/backend_runtime.py",
+        "blender_addon/mechanical_cad_blender/backend_selection.py",
+        "blender_addon/mechanical_cad_blender/document_state.py",
+        "blender_addon/mechanical_cad_blender/execution_lease.py",
+        "blender_addon/mechanical_cad_blender/guarded_transport.py",
+        "blender_addon/mechanical_cad_blender/help_topics.py",
+        "blender_addon/mechanical_cad_blender/panels.py",
+        "blender_addon/mechanical_cad_blender/properties.py",
+        "blender_addon/mechanical_cad_blender/registration.py",
+        "blender_addon/mechanical_cad_blender/service_v3.py",
+        "blender_addon/mechanical_cad_blender/sidecar_job.py",
+        "blender_addon/mechanical_cad_blender/sketch_pending.py",
+        "blender_addon/mechanical_cad_blender/workspace_ui.py",
+        "scripts/package_standalone_extension.py",
+        "tests/unit/test_standalone_extension_builder.py",
+        "tests/unit/test_standalone_runtime_boundary.py",
+    }
+)
+STANDALONE_LIVE_ADDED = frozenset(
+    {
+        "blender_addon/mechanical_cad_blender/runtime_bundle_launch.py",
+        "blender_addon/mechanical_cad_blender/runtime_bundle_prepare.py",
+        "tests/unit/test_bundled_backend_runtime.py",
+        "tests/unit/test_bundled_registration.py",
+        "tests/unit/test_bundled_status_ui.py",
+        "tests/unit/test_runtime_bundle_launch.py",
+        "tests/unit/test_runtime_bundle_prepare.py",
+        "tests/unit/test_runtime_cleanup_quarantine.py",
+    }
+)
+
+
+def standalone_live_originals(root):
+    """Undo exactly the reviewed live delta to ab7edce before every older guard.
+
+    No core, solver, kernel, publisher or wire-validator bytes are exempted. The
+    original isolated fixture and all 129 baseline hashes remain immutable; only
+    this finite inverse may reconstruct the approved old add-on/runtime paths.
+    """
+    _, assembly_originals = assembly_source_originals(root)
+    _, gate_c_originals = gate_c_owner_source_originals(root)
+    runtime_added, runtime_originals = windows_runtime_cache_originals(root)
+    cache_added, cache_originals = windows_cache_originals(root)
+    cache_originals = runtime_originals | cache_originals
+    transport_added, transport_originals = windows_transport_originals(root)
+    harness_originals = (
+        assembly_originals
+        | gate_c_originals
+        | cache_originals
+        | transport_originals
+        | standalone_harness_originals(root)
+    )
+    raw = (root / STANDALONE_LIVE_FIXTURE).read_bytes()
+    assert hashlib.sha256(raw).hexdigest() == STANDALONE_LIVE_SHA256
+    revision = json.loads(raw)
+    assert set(revision) == {"schema", "base_commit", "added", "changed"}
+    assert revision["schema"] == "standalone-live-python-boundary-v1"
+    assert revision["base_commit"] == "ab7edce1561df34fd9eb12f62772b132f02297b9"
+    added, changed = revision["added"], revision["changed"]
+    assert set(added) == STANDALONE_LIVE_ADDED
+    assert set(changed) == STANDALONE_LIVE_CHANGED
+    assert not set(added) & set(changed)
+    restored = cache_originals | transport_originals
+    for name, entry in added.items():
+        assert set(entry) == {"bytes", "sha256"}
+        assert type(entry["bytes"]) is int and entry["bytes"] > 0
+        data = (
+            harness_originals[name] if name in harness_originals else _release_070_bytes(root, name)
+        )
+        assert len(data) == entry["bytes"]
+        assert hashlib.sha256(data).hexdigest() == entry["sha256"]
+    for name, entry in changed.items():
+        assert set(entry) == {
+            "reviewed_bytes",
+            "reviewed_sha256",
+            "original_bytes",
+            "original_sha256",
+            "hunks",
+        }
+        assert type(entry["reviewed_bytes"]) is type(entry["original_bytes"]) is int
+        assert entry["reviewed_bytes"] > 0 and entry["original_bytes"] > 0
+        assert entry["reviewed_sha256"] != entry["original_sha256"]
+        data = (
+            harness_originals[name] if name in harness_originals else _release_070_bytes(root, name)
+        )
+        assert len(data) == entry["reviewed_bytes"]
+        assert hashlib.sha256(data).hexdigest() == entry["reviewed_sha256"]
+        assert type(entry["hunks"]) is list and entry["hunks"]
+        previous = 0
+        for hunk in entry["hunks"]:
+            assert set(hunk) == {"new_start", "new_end", "original", "replacement"}
+            start, end = hunk["new_start"], hunk["new_end"]
+            assert type(start) is type(end) is int
+            assert previous <= start <= end <= len(data)
+            assert type(hunk["original"]) is type(hunk["replacement"]) is str
+            assert hunk["original"] != hunk["replacement"]
+            assert data[start:end] == hunk["replacement"].encode("utf-8")
+            previous = end
+        for hunk in reversed(entry["hunks"]):
+            data = (
+                data[: hunk["new_start"]]
+                + hunk["original"].encode("utf-8")
+                + data[hunk["new_end"] :]
+            )
+        assert len(data) == entry["original_bytes"]
+        assert hashlib.sha256(data).hexdigest() == entry["original_sha256"]
+        restored[name] = data
+    old_raw = (root / STANDALONE_REVISION_FIXTURE).read_bytes()
+    assert hashlib.sha256(old_raw).hexdigest() == STANDALONE_REVISION_SHA256
+    baseline = json.loads(old_raw)["baseline_runtime"]
+    _, integration_originals = standalone_integration_source_originals(root)
+    integration_originals = (
+        assembly_originals
+        | gate_c_originals
+        | integration_originals
+        | redundant_solve_source_originals(root)
+    )
+    assert len(baseline) == 129
+    for name, expected in baseline.items():
+        data = (
+            restored[name]
+            if name in restored
+            else integration_originals[name]
+            if name in integration_originals
+            else _release_070_bytes(root, name)
+        )
+        assert hashlib.sha256(data).hexdigest() == expected, name
+    return frozenset(added) | transport_added | cache_added | runtime_added, restored
+
+
+AUTHORING_REVISION_FIXTURE = "tests/fixtures/arc_authoring/python_revision_ce5b50b.json"
+AUTHORING_REVISION_SHA256 = "b6c40887813846ffa5036846059ed15382b911a0da5e55d4d660d23035491f46"
+
+
+def authoring_revision_originals(root):
+    """Undo only the complete reviewed authoring delta before older byte guards.
+
+    The guard module itself was already outside the historical digest; all other
+    changed/new Python files must match this sealed finite revision exactly.
+    Core/native/service behavior changes are forbidden by this extension. The
+    separately reviewed 0.6.0 metadata exception permits one exact version file.
+    """
+    _, assembly_originals = assembly_source_originals(root)
+    _, gate_c_originals = gate_c_owner_source_originals(root)
+    geometry_added, geometry_originals = geometry_revision_originals(root)
+    harness_originals = standalone_harness_originals(root)
+    live_added, live_originals = standalone_live_originals(root)
+    raw = (root / AUTHORING_REVISION_FIXTURE).read_bytes()
+    assert hashlib.sha256(raw).hexdigest() == AUTHORING_REVISION_SHA256
+    revision = json.loads(raw)
+    assert revision["base_commit"] == "ce5b50bb011b3949a6599c7cbc28d31024805e0a"
+    assert revision["schema"] == "arc-authoring-python-boundary-v1"
+    added, changed = revision["added"], revision["changed"]
+    assert not set(added) & set(changed)
+    metadata_path = "src/mechanical_cad/__init__.py"
+    assert all(name.startswith(("blender_addon/", "tests/")) for name in added)
+    assert all(
+        name.startswith(("blender_addon/", "tests/")) or name == metadata_path for name in changed
+    )
+    restored = (
+        assembly_step_originals(root)[1]
+        | assembly_originals
+        | geometry_originals
+        | harness_originals
+        | live_originals
+    )
+    before = (
+        assembly_originals
+        | gate_c_originals
+        | geometry_originals
+        | harness_originals
+        | live_originals
+    )
+    for name, entry in added.items():
+        data = before[name] if name in before else _release_070_bytes(root, name)
+        assert len(data) == entry["bytes"]
+        assert hashlib.sha256(data).hexdigest() == entry["sha256"]
+    for name, entry in changed.items():
+        data = before[name] if name in before else _release_070_bytes(root, name)
+        if name == metadata_path:
+            assert data == (
+                b'"""Independent, serializable CAD model. Blender and OCP are optional at import time."""\n'
+                b'\n__version__ = "0.6.0"\n'
+            )
+        assert len(data) == entry["reviewed_bytes"]
+        assert hashlib.sha256(data).hexdigest() == entry["reviewed_sha256"]
+        previous = 0
+        for hunk in entry["hunks"]:
+            start, end = hunk["new_start"], hunk["new_end"]
+            assert type(start) is type(end) is int
+            assert previous <= start <= end <= len(data)
+            assert data[start:end] == hunk["replacement"].encode("utf-8")
+            previous = end
+        for hunk in reversed(entry["hunks"]):
+            data = (
+                data[: hunk["new_start"]]
+                + hunk["original"].encode("utf-8")
+                + data[hunk["new_end"] :]
+            )
+        assert len(data) == entry["original_bytes"]
+        assert hashlib.sha256(data).hexdigest() == entry["original_sha256"]
+        restored[name] = data
+    return frozenset(added) | live_added | geometry_added, restored
+
+
+SERVICE_REVISION_FIXTURE = "tests/fixtures/result_v3/service_python_revision_30383a1.json"
+SERVICE_REVISION_SHA256 = "18c633d6a05c7f0c330b24f0815370b8b164284a43c03fd3daed88f2f84f3de0"
+
+
+def service_revision_originals(root):
+    """Undo only the complete pinned service delta before the historical digest."""
+    authoring_added, authoring_originals = authoring_revision_originals(root)
+    raw = (root / SERVICE_REVISION_FIXTURE).read_bytes()
+    assert hashlib.sha256(raw).hexdigest() == SERVICE_REVISION_SHA256
+    revision = json.loads(raw)
+    assert revision["base_commit"] == "30383a1bbaeae02b447bab2c37290d5f3927df8c"
+    assert revision["schema"] == "result-v3-python-boundary-v1"
+    added = revision["added"]
+    changed = revision["changed"]
+    assert len(added) == 21 and len(changed) == 11
+    assert not set(added) & set(changed)
+    before = authoring_originals | redundant_solve_source_originals(root)
+    for name, entry in added.items():
+        data = before.get(name, (root / name).read_bytes())
+        assert len(data) == entry["bytes"]
+        assert hashlib.sha256(data).hexdigest() == entry["sha256"]
+    restored = dict(authoring_originals)
+    for name, entry in changed.items():
+        data = authoring_originals.get(name, (root / name).read_bytes())
+        assert len(data) == entry["reviewed_bytes"]
+        assert hashlib.sha256(data).hexdigest() == entry["reviewed_sha256"]
+        previous = 0
+        for hunk in entry["hunks"]:
+            start, end = hunk["new_start"], hunk["new_end"]
+            assert type(start) is type(end) is int
+            assert previous <= start <= end <= len(data)
+            assert data[start:end] == hunk["replacement"].encode("utf-8")
+            previous = end
+        for hunk in reversed(entry["hunks"]):
+            data = (
+                data[: hunk["new_start"]]
+                + hunk["original"].encode("utf-8")
+                + data[hunk["new_end"] :]
+            )
+        assert len(data) == entry["original_bytes"]
+        assert hashlib.sha256(data).hexdigest() == entry["original_sha256"]
+        restored[name] = data
+    return frozenset(added) | authoring_added, restored
+
+
+STANDALONE_REVISION_FIXTURE = "tests/fixtures/standalone/python_additions_69d0f81.json"
+STANDALONE_REVISION_SHA256 = "0e6152a913e23079c770f23bbe6daf111d28f82981496e1c85af19ae1bc5c6c9"
+
+
+def standalone_revision_added(root):
+    """Retain the exact isolated fixture after the finite live inverse."""
+    _live_added, live_originals = standalone_live_originals(root)
+    raw = (root / STANDALONE_REVISION_FIXTURE).read_bytes()
+    assert hashlib.sha256(raw).hexdigest() == STANDALONE_REVISION_SHA256
+    revision = json.loads(raw)
+    assert revision["schema"] == "standalone-isolated-additions-v1"
+    assert revision["base_commit"] == "69d0f8164e73bfbbcdf0c48d6546f97803d12f58"
+    assert set(revision) == {"schema", "base_commit", "added", "baseline_runtime"}
+    added = revision["added"]
+    assert set(added) == {
+        "blender_addon/mechanical_cad_blender/backend_platform.py",
+        "blender_addon/mechanical_cad_blender/windows_process.py",
+        "blender_addon/mechanical_cad_blender/runtime_bundle_manifest.py",
+        "blender_addon/mechanical_cad_blender/runtime_bundle_materialize.py",
+        "blender_addon/mechanical_cad_blender/runtime_bundle_pin.py",
+        "scripts/package_standalone_extension.py",
+        "scripts/standalone_child_bootstrap.py",
+        "tests/unit/test_runtime_bundle_manifest.py",
+        "tests/unit/test_runtime_bundle_materialize.py",
+        "tests/unit/test_runtime_bundle_pin.py",
+        "tests/unit/test_standalone_child_bootstrap.py",
+        "tests/unit/test_windows_process.py",
+        "tests/unit/test_standalone_extension_builder.py",
+        "tests/unit/test_standalone_runtime_boundary.py",
+    }
+    for name, entry in added.items():
+        data = live_originals[name] if name in live_originals else _release_070_bytes(root, name)
+        assert len(data) == entry["bytes"]
+        assert hashlib.sha256(data).hexdigest() == entry["sha256"]
+    return frozenset(added)
+
+
+def protected_python_digest(root):
+    visual_added, _ = visual_joint_originals(root)
+    export_added, _ = assembly_step_originals(root)
+    assembly_added, _ = assembly_source_originals(root)
+    gate_c_added, _ = gate_c_owner_source_originals(root)
+    service_added, service_originals = service_revision_originals(root)
+    standalone_added = standalone_revision_added(root)
+    inventory = "tests/unit/test_arc_profile_native_inventory.py"
+    service_originals = {
+        inventory: inventory_guard_harness_originals(root)[inventory],
+        **service_originals,
+    }
+    excluded = {
+        "src/mechanical_cad/kernel_ocp.py",
+        "src/mechanical_cad/arc_profile_native_evidence.py",
+        "tests/unit/test_arc_profile_native_end_cap.py",
+        # Authorized periodic-plan revision; all other snapshot3 paths stay exact.
+        "src/mechanical_cad/arc_profile_native_plan.py",
+        "tests/unit/test_arc_profile_native_periodic.py",
+        "tests/unit/test_arc_profile_native_mass_observations.py",
+        # Precisely revised finite-parameter/count assertions, audited separately.
+        "tests/unit/test_arc_profile_native_plan.py",
+        "tests/unit/test_arc_profile_native_evidence.py",
+        "tests/unit/test_arc_profile_native_radial_trim.py",
+        # Precisely scoped canonical native endpoint/whole-trace controls.
+        "tests/unit/test_arc_profile_native_vertices.py",
+        "tests/unit/test_arc_profile_native_vertex_adapter.py",
+        "tests/unit/test_arc_profile_native_generated_trace.py",
+        # Exact new advisory-only metadata controls; no broader exclusion.
+        "tests/unit/test_arc_profile_native_regularity.py",
+        "tests/unit/test_arc_profile_native_regularity_adapter.py",
+    }
+    paths = sorted(
+        path
+        for directory in ("src", "blender_addon", "tests")
+        for path in (root / directory).rglob("*.py")
+        if path.relative_to(root).as_posix()
+        not in excluded
+        | service_added
+        | standalone_added
+        | gate_c_added
+        | assembly_added
+        | export_added
+        | visual_added
+    )
+    digest = hashlib.sha256()
+    for path in paths:
+        name = path.relative_to(root).as_posix()
+        digest.update(
+            name.encode()
+            + b"\0"
+            + (
+                service_originals[name]
+                if name in service_originals
+                else _release_070_bytes(root, name)
+            )
+            + b"\0"
+        )
+    return len(paths), digest.hexdigest()
+
+
+# Recorded from the independently frozen revised_pure_snapshot3/source. These
+# portable hashes neither read that checkout at test time nor relax old guards.
+SNAPSHOT3_KERNEL_PROTECTED = "623eea032aff3864b5fa2d8329314ef22894a53a59c8f3229348745d46f884c4"
+SNAPSHOT3_EVIDENCE_PROTECTED = "f2f68e0ac97da4020e773ed470b90e7819df67587ed09bde1e1588dbc29f1770"
+SNAPSHOT3_PYTHON_PROTECTED = (
+    259,
+    "f1c9a006975a48a8ef3fb051709eb4ac75a0dadc207090c27783902034e939b7",
+)
+
+
+def copy_python_guard_tree(destination):
+    for directory in ("src", "blender_addon", "tests"):
+        for source in (ROOT / directory).rglob("*.py"):
+            target = destination / source.relative_to(ROOT)
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_bytes(source.read_bytes())
+    for relative in (
+        VISUAL_JOINT_FIXTURE,
+        RELEASE_071_FIXTURE,
+        ASSEMBLY_STEP_FIXTURE,
+        RELEASE_070_FIXTURE,
+        ASSEMBLY_SOURCE_FIXTURE,
+        ASSEMBLY_HARNESS_FIXTURE,
+        GATE_C_OWNER_SOURCE_FIXTURE,
+        GATE_C_OWNER_HARNESS_FIXTURE,
+        INVENTORY_GUARD_HARNESS_FIXTURE,
+        REDUNDANT_SOLVE_SOURCE_FIXTURE,
+        REDUNDANT_SOLVE_HARNESS_FIXTURE,
+        SERVICE_REVISION_FIXTURE,
+        AUTHORING_REVISION_FIXTURE,
+        GEOMETRY_REVISION_FIXTURE,
+        INTEGRATION_SOURCE_FIXTURE,
+        INTEGRATION_HARNESS_FIXTURE,
+        STANDALONE_REVISION_FIXTURE,
+        STANDALONE_LIVE_FIXTURE,
+        STANDALONE_HARNESS_FIXTURE,
+        WINDOWS_TRANSPORT_REVISION_FIXTURE,
+        WINDOWS_TRANSPORT_HARNESS_FIXTURE,
+        WINDOWS_CACHE_REVISION_FIXTURE,
+        WINDOWS_CACHE_HARNESS_FIXTURE,
+        WINDOWS_RUNTIME_CACHE_REVISION_FIXTURE,
+        WINDOWS_RUNTIME_CACHE_HARNESS_FIXTURE,
+        "scripts/package_standalone_extension.py",
+        "scripts/standalone_child_bootstrap.py",
+        *VISUAL_JOINT_ORIGINALS,
+    ):
+        fixture = destination / relative
+        fixture.parent.mkdir(parents=True, exist_ok=True)
+        fixture.write_bytes((ROOT / relative).read_bytes())
+    assert protected_python_digest(destination) == SNAPSHOT3_PYTHON_PROTECTED
+
+
+def test_constructor_and_later_mandatory_gates_remain_in_original_order():
+    method = kernel_method("extrude_sector")
+    calls = [node for node in ast.walk(method) if isinstance(node, ast.Call)]
+    constructor = [
+        node
+        for node in calls
+        if isinstance(node.func, ast.Name) and node.func.id == "BRepPrimAPI_MakePrism"
+    ]
+    assert len(constructor) == 1
+    assert (
+        ast.unparse(constructor[0])
+        == "BRepPrimAPI_MakePrism(profile, gp_Vec(*vector), False, True)"
+    )
+    validator = next(
+        node
+        for node in calls
+        if isinstance(node.func, ast.Name) and node.func.id == "validate_end_cap_observation"
+    )
+    required = {
+        "native_generated_history_changed",
+        "native_split_merged_history",
+        "native_tolerance_exceeded",
+        "native_extrusion_surface_changed",
+    }
+    guards = [
+        node
+        for node in calls
+        if isinstance(node.func, ast.Name)
+        and node.func.id == "_require"
+        and any(isinstance(arg, ast.Constant) and arg.value in required for arg in node.args)
+    ]
+    # The four original gates remain, plus the bounded-history overflow gate.
+    assert len(guards) == 5 and all(validator.lineno < node.lineno for node in guards)
+    codes = [
+        arg.value
+        for node in guards
+        for arg in node.args
+        if isinstance(arg, ast.Constant) and arg.value in required
+    ]
+    assert {code: codes.count(code) for code in required} == {
+        "native_generated_history_changed": 2,
+        "native_split_merged_history": 1,
+        "native_tolerance_exceeded": 1,
+        "native_extrusion_surface_changed": 1,
+    }
+    volume = next(
+        node
+        for node in calls
+        if isinstance(node.func, ast.Name) and node.func.id == "_exact_volume"
+    )
+    masses = next(
+        node for node in calls if isinstance(node.func, ast.Name) and node.func.id == "check_masses"
+    )
+    registration = next(
+        node
+        for node in calls
+        if isinstance(node.func, ast.Attribute) and node.func.attr == "_remember"
+    )
+    assert max(node.lineno for node in guards) < volume.lineno < masses.lineno < registration.lineno
+    assert (
+        ast.unparse(masses)
+        == "check_masses(plan, state.area, context=c, height=height, volume=volume)"
+    )
+    assert not any(
+        isinstance(node.func, ast.Name)
+        and node.func.id in {"PrimitiveContext", "entry_context", "IntervalContext"}
+        for node in calls
+    )
+
+
+@pytest.mark.parametrize("row,column", tuple(itertools.product(range(3), range(3))))
+@pytest.mark.parametrize("location", ["shape_location", "surface_location"])
+def test_every_linear_matrix_entry_is_exact_without_epsilon(plan, row, column, location):
+    record = observation(plan)
+    values = [list(entry) for entry in record[location]["matrix"]]
+    values[row][column] = math.nextafter(values[row][column], math.inf)
+    record[location]["matrix"] = tuple(tuple(entry) for entry in values)
+    with pytest.raises(NativePlanError):
+        validate(plan, record)
+
+
+@pytest.mark.parametrize("where", ["plan", "support", "context", "height"])
+def test_record_context_and_independent_height_subclasses_reject(plan, where):
+    context, height = PrimitiveContext(), 7.0
+    record = observation(plan)
+    if where == "plan":
+
+        class Derived(NativePlan):
+            pass
+
+        plan = Derived(**{field.name: getattr(plan, field.name) for field in fields(NativePlan)})
+    elif where == "support":
+
+        class Derived(NativeActualSupport):
+            pass
+
+        support = Derived(
+            **{
+                field.name: getattr(plan.accepted_support, field.name)
+                for field in fields(NativeActualSupport)
+            }
+        )
+        plan = replace(plan, accepted_support=support)
+    elif where == "context":
+
+        class Derived(PrimitiveContext):
+            pass
+
+        context = Derived()
+    else:
+        height = Float(7.0)
+    with pytest.raises(NativePlanError):
+        validate(plan, record, height=height, context=context)

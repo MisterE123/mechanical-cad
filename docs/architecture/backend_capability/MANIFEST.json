@@ -1,0 +1,11 @@
+{
+  "status": "reviewed design only; not implemented or release-qualified",
+  "base_arc_core": "51ed72d307de26a84c07e620fbb1f452f1e1937a",
+  "files_sha256": {
+    "CAPABILITY_PROPOSAL.md": "bd5c5faf0d0c297491bc1b360fffacdc802b15cf26eb563d734b125632e24c2d",
+    "CAPABILITY_WIRE_REVIEW.md": "cedb2d0d5f5a717469e05f4435cd92fba25736108f20eb406bb40a306ef32071",
+    "CAPABILITY_PUBLICATION_REVIEW.md": "d0729f9a7361fb877ddebf4641988338031dc9aaf6d19608697110c2ba087a2a",
+    "LEGACY_CAPABILITY_REJECTION_PROBE.json": "1b20778c3f02c7632ef67e7a4ee5bb433cd315ab99f941bc2c7ac033fa568ed3",
+    "probe_legacy_capability_rejection.py": "c8f7b437acaa080a1c367b5e465f794f170585719baaa1fd709fa794cdb23098"
+  }
+}

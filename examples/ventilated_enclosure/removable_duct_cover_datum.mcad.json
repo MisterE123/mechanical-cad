@@ -1,0 +1,504 @@
+{
+  "schema_version": 1,
+  "id": "removable_duct_cover_datum",
+  "name": "Datum-stable removable duct cover",
+  "units": "mm",
+  "parameters": {
+    "width": 100,
+    "depth": 70,
+    "height": 35,
+    "wall": 2.4,
+    "cover": 3.6,
+    "vent_count": 7,
+    "vent_pitch": 10,
+    "duct_middle": 20,
+    "duct_wall": 2,
+    "mount_edge": 7,
+    "mount_diameter": 3.2,
+    "mount_depth": "cover+1",
+    "counterbore_diameter": 6.4,
+    "counterbore_depth": 1.6
+  },
+  "features": [
+    {
+      "id": "lid_profile",
+      "kind": "sketch_rectangle",
+      "label": "Lid Profile",
+      "params": {
+        "x": 0,
+        "y": 0,
+        "z": 0,
+        "width": "width",
+        "height": "depth"
+      },
+      "inputs": {}
+    },
+    {
+      "id": "lid",
+      "kind": "extrude",
+      "label": "Lid",
+      "params": {
+        "length": "cover"
+      },
+      "inputs": {
+        "profile": "lid_profile"
+      }
+    },
+    {
+      "id": "lid_rounds",
+      "kind": "fillet",
+      "label": "Lid Rounds",
+      "params": {
+        "radius": 3
+      },
+      "inputs": {
+        "base": "lid"
+      },
+      "edge_pairs": [
+        [
+          "lid/face/side.x_max",
+          "lid/face/side.y_max"
+        ],
+        [
+          "lid/face/side.x_max",
+          "lid/face/side.y_min"
+        ],
+        [
+          "lid/face/side.x_min",
+          "lid/face/side.y_max"
+        ],
+        [
+          "lid/face/side.x_min",
+          "lid/face/side.y_min"
+        ]
+      ]
+    },
+    {
+      "id": "outer_0",
+      "kind": "sketch_circle",
+      "label": "Outer 0",
+      "params": {
+        "x": "width/2",
+        "y": "depth/2",
+        "z": -1,
+        "radius": 24
+      },
+      "inputs": {}
+    },
+    {
+      "id": "outer_1",
+      "kind": "sketch_circle",
+      "label": "Outer 1",
+      "params": {
+        "x": "width/2",
+        "y": "depth/2",
+        "z": 5,
+        "radius": 24
+      },
+      "inputs": {}
+    },
+    {
+      "id": "outer_2",
+      "kind": "sketch_circle",
+      "label": "Outer 2",
+      "params": {
+        "x": "width/2",
+        "y": "depth/2",
+        "z": 24,
+        "radius": "duct_middle"
+      },
+      "inputs": {}
+    },
+    {
+      "id": "outer_3",
+      "kind": "sketch_circle",
+      "label": "Outer 3",
+      "params": {
+        "x": "width/2",
+        "y": "depth/2",
+        "z": 43,
+        "radius": 16
+      },
+      "inputs": {}
+    },
+    {
+      "id": "outer_loft",
+      "kind": "loft",
+      "label": "Outer four-section duct",
+      "params": {
+        "ruled": 0
+      },
+      "inputs": {
+        "section_1": "outer_0",
+        "section_2": "outer_1",
+        "section_3": "outer_2",
+        "section_4": "outer_3"
+      },
+      "loft_sections": {
+        "version": 1,
+        "ports": [
+          "section_1",
+          "section_2",
+          "section_3",
+          "section_4"
+        ]
+      }
+    },
+    {
+      "id": "inner_0",
+      "kind": "sketch_circle",
+      "label": "Inner 0",
+      "params": {
+        "x": "width/2",
+        "y": "depth/2",
+        "z": -1,
+        "radius": "(24)-duct_wall"
+      },
+      "inputs": {}
+    },
+    {
+      "id": "inner_1",
+      "kind": "sketch_circle",
+      "label": "Inner 1",
+      "params": {
+        "x": "width/2",
+        "y": "depth/2",
+        "z": 5,
+        "radius": "(24)-duct_wall"
+      },
+      "inputs": {}
+    },
+    {
+      "id": "inner_2",
+      "kind": "sketch_circle",
+      "label": "Inner 2",
+      "params": {
+        "x": "width/2",
+        "y": "depth/2",
+        "z": 24,
+        "radius": "(duct_middle)-duct_wall"
+      },
+      "inputs": {}
+    },
+    {
+      "id": "inner_3",
+      "kind": "sketch_circle",
+      "label": "Inner 3",
+      "params": {
+        "x": "width/2",
+        "y": "depth/2",
+        "z": 43,
+        "radius": "(16)-duct_wall"
+      },
+      "inputs": {}
+    },
+    {
+      "id": "inner_loft",
+      "kind": "loft",
+      "label": "Inner four-section duct",
+      "params": {
+        "ruled": 0
+      },
+      "inputs": {
+        "section_1": "inner_0",
+        "section_2": "inner_1",
+        "section_3": "inner_2",
+        "section_4": "inner_3"
+      },
+      "loft_sections": {
+        "version": 1,
+        "ports": [
+          "section_1",
+          "section_2",
+          "section_3",
+          "section_4"
+        ]
+      }
+    },
+    {
+      "id": "join_duct",
+      "kind": "union",
+      "label": "Join Duct",
+      "params": {},
+      "inputs": {
+        "base": "lid_rounds",
+        "tool": "outer_loft"
+      }
+    },
+    {
+      "id": "open_airway",
+      "kind": "cut",
+      "label": "Open Airway",
+      "params": {},
+      "inputs": {
+        "base": "join_duct",
+        "tool": "inner_loft"
+      }
+    },
+    {
+      "id": "mount_1_profile",
+      "kind": "sketch_circle",
+      "label": "Mount 1 datum circle",
+      "params": {
+        "x": "mount_edge",
+        "y": "mount_edge",
+        "z": "cover",
+        "radius": "mount_diameter/2"
+      },
+      "inputs": {}
+    },
+    {
+      "id": "mount_1_tool",
+      "kind": "extrude",
+      "label": "Mount 1 bore depth",
+      "params": {
+        "length": "-mount_depth"
+      },
+      "inputs": {
+        "profile": "mount_1_profile"
+      }
+    },
+    {
+      "id": "mount_1_bore",
+      "kind": "cut",
+      "label": "Mount 1 through bore",
+      "params": {},
+      "inputs": {
+        "base": "open_airway",
+        "tool": "mount_1_tool"
+      }
+    },
+    {
+      "id": "mount_1_counter_profile",
+      "kind": "sketch_circle",
+      "label": "Mount 1 counterbore datum",
+      "params": {
+        "x": "mount_edge",
+        "y": "mount_edge",
+        "z": "cover",
+        "radius": "counterbore_diameter/2"
+      },
+      "inputs": {}
+    },
+    {
+      "id": "mount_1_counter_tool",
+      "kind": "extrude",
+      "label": "Mount 1 counterbore depth",
+      "params": {
+        "length": "-counterbore_depth"
+      },
+      "inputs": {
+        "profile": "mount_1_counter_profile"
+      }
+    },
+    {
+      "id": "mount_1",
+      "kind": "cut",
+      "label": "Mount 1 counterbore",
+      "params": {},
+      "inputs": {
+        "base": "mount_1_bore",
+        "tool": "mount_1_counter_tool"
+      }
+    },
+    {
+      "id": "mount_2_profile",
+      "kind": "sketch_circle",
+      "label": "Mount 2 datum circle",
+      "params": {
+        "x": "width-mount_edge",
+        "y": "mount_edge",
+        "z": "cover",
+        "radius": "mount_diameter/2"
+      },
+      "inputs": {}
+    },
+    {
+      "id": "mount_2_tool",
+      "kind": "extrude",
+      "label": "Mount 2 bore depth",
+      "params": {
+        "length": "-mount_depth"
+      },
+      "inputs": {
+        "profile": "mount_2_profile"
+      }
+    },
+    {
+      "id": "mount_2_bore",
+      "kind": "cut",
+      "label": "Mount 2 through bore",
+      "params": {},
+      "inputs": {
+        "base": "mount_1",
+        "tool": "mount_2_tool"
+      }
+    },
+    {
+      "id": "mount_2_counter_profile",
+      "kind": "sketch_circle",
+      "label": "Mount 2 counterbore datum",
+      "params": {
+        "x": "width-mount_edge",
+        "y": "mount_edge",
+        "z": "cover",
+        "radius": "counterbore_diameter/2"
+      },
+      "inputs": {}
+    },
+    {
+      "id": "mount_2_counter_tool",
+      "kind": "extrude",
+      "label": "Mount 2 counterbore depth",
+      "params": {
+        "length": "-counterbore_depth"
+      },
+      "inputs": {
+        "profile": "mount_2_counter_profile"
+      }
+    },
+    {
+      "id": "mount_2",
+      "kind": "cut",
+      "label": "Mount 2 counterbore",
+      "params": {},
+      "inputs": {
+        "base": "mount_2_bore",
+        "tool": "mount_2_counter_tool"
+      }
+    },
+    {
+      "id": "mount_3_profile",
+      "kind": "sketch_circle",
+      "label": "Mount 3 datum circle",
+      "params": {
+        "x": "mount_edge",
+        "y": "depth-mount_edge",
+        "z": "cover",
+        "radius": "mount_diameter/2"
+      },
+      "inputs": {}
+    },
+    {
+      "id": "mount_3_tool",
+      "kind": "extrude",
+      "label": "Mount 3 bore depth",
+      "params": {
+        "length": "-mount_depth"
+      },
+      "inputs": {
+        "profile": "mount_3_profile"
+      }
+    },
+    {
+      "id": "mount_3_bore",
+      "kind": "cut",
+      "label": "Mount 3 through bore",
+      "params": {},
+      "inputs": {
+        "base": "mount_2",
+        "tool": "mount_3_tool"
+      }
+    },
+    {
+      "id": "mount_3_counter_profile",
+      "kind": "sketch_circle",
+      "label": "Mount 3 counterbore datum",
+      "params": {
+        "x": "mount_edge",
+        "y": "depth-mount_edge",
+        "z": "cover",
+        "radius": "counterbore_diameter/2"
+      },
+      "inputs": {}
+    },
+    {
+      "id": "mount_3_counter_tool",
+      "kind": "extrude",
+      "label": "Mount 3 counterbore depth",
+      "params": {
+        "length": "-counterbore_depth"
+      },
+      "inputs": {
+        "profile": "mount_3_counter_profile"
+      }
+    },
+    {
+      "id": "mount_3",
+      "kind": "cut",
+      "label": "Mount 3 counterbore",
+      "params": {},
+      "inputs": {
+        "base": "mount_3_bore",
+        "tool": "mount_3_counter_tool"
+      }
+    },
+    {
+      "id": "mount_4_profile",
+      "kind": "sketch_circle",
+      "label": "Mount 4 datum circle",
+      "params": {
+        "x": "width-mount_edge",
+        "y": "depth-mount_edge",
+        "z": "cover",
+        "radius": "mount_diameter/2"
+      },
+      "inputs": {}
+    },
+    {
+      "id": "mount_4_tool",
+      "kind": "extrude",
+      "label": "Mount 4 bore depth",
+      "params": {
+        "length": "-mount_depth"
+      },
+      "inputs": {
+        "profile": "mount_4_profile"
+      }
+    },
+    {
+      "id": "mount_4_bore",
+      "kind": "cut",
+      "label": "Mount 4 through bore",
+      "params": {},
+      "inputs": {
+        "base": "mount_3",
+        "tool": "mount_4_tool"
+      }
+    },
+    {
+      "id": "mount_4_counter_profile",
+      "kind": "sketch_circle",
+      "label": "Mount 4 counterbore datum",
+      "params": {
+        "x": "width-mount_edge",
+        "y": "depth-mount_edge",
+        "z": "cover",
+        "radius": "counterbore_diameter/2"
+      },
+      "inputs": {}
+    },
+    {
+      "id": "mount_4_counter_tool",
+      "kind": "extrude",
+      "label": "Mount 4 counterbore depth",
+      "params": {
+        "length": "-counterbore_depth"
+      },
+      "inputs": {
+        "profile": "mount_4_counter_profile"
+      }
+    },
+    {
+      "id": "mount_4",
+      "kind": "cut",
+      "label": "Mount 4 counterbore",
+      "params": {},
+      "inputs": {
+        "base": "mount_4_bore",
+        "tool": "mount_4_counter_tool"
+      }
+    }
+  ],
+  "active_feature": "mount_4"
+}

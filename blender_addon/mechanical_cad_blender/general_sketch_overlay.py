@@ -1,0 +1,1104 @@
+"""Drawing-only general sketch primitives for an owner's POST_PIXEL callback.
+
+``build_frame`` consumes a detached ``SketchGeometry`` plus one unchanged camera's
+world-mm-to-pixel projector. Selection, annotations and proposal use the detached
+``GeneralSketchAuthoringState.ui`` shapes. ``draw_frame`` consumes only that frame.
+The owner checks scene/base/revision/lifetime, rebuilds on changes, and supplies
+its CURRENT request fingerprint to both calls for solved display. A matching
+fingerprint is a currency guard, never evidence created by this renderer.
+
+No context lookup, registration, input, timer, native solver, canonical mutation,
+datablock or persistent cache belongs here. Projection/refinement and draw output
+are bounded. Incomplete projection is visibly reported. These display records
+cannot certify geometry, DoF, profile validity or export readiness.
+
+All GPU state changed here is restored in finally, including on failed draws.
+BLF has no font-state getters: the owner may supply its own font_id; these helpers
+set its size/position/color but do not toggle font options or own its lifetime.
+The owner must use an ordinary unrotated, unclipped BLF font. No GUI qualification,
+IME, grapheme navigation, bidi shaping or accessibility parity is implied.
+"""
+
+from __future__ import annotations
+
+import math
+from contextlib import contextmanager
+from dataclasses import dataclass
+
+import blf
+import gpu
+from gpu_extras.batch import batch_for_shader
+
+from .arc_geometry import (
+    MAX_ARC_RADIUS_RELATIVE_RESIDUAL,
+    MAX_ARC_RADIUS_RESIDUAL_MM,
+    ArcGeometryError,
+    arc_geometry,
+)
+from .dimension_text_buffer import TextBuffer
+from .general_view_geometry import (
+    MAX_CIRCLE_SEGMENTS,
+    MAX_PROJECT_CALLS,
+    ArcGeometry,
+    CircleGeometry,
+    ProjectionIssue,
+    SketchGeometry,
+    _arc_point,
+    _curve_segments,
+    _Projection,
+    _ProjectionLimit,
+    annotation_geometry,
+)
+from .reference_dimensions import is_reference
+from .sketch_bridge import _identifier, _keys, _require
+
+MAX_FRAME_SEGMENTS = 16384
+MAX_VISIBLE_SCALARS = 256
+AUTHORED = (1.0, 0.57, 0.22, 1.0)
+SOLVED = (0.18, 0.82, 0.96, 1.0)
+SELECTED = (1.0, 0.91, 0.25, 1.0)
+PROPOSAL = (0.86, 0.56, 1.0, 1.0)
+CONSTRUCTION = (0.3, 0.72, 0.9, 0.85)
+TEXT = (0.95, 0.97, 1.0, 1.0)
+MUTED = (0.71, 0.76, 0.83, 1.0)
+BACKGROUND = (0.025, 0.035, 0.055, 0.94)
+ERROR = (1.0, 0.48, 0.28, 1.0)
+
+
+@dataclass(frozen=True)
+class Stroke:
+    kind: str
+    identifier: str
+    segments: tuple
+    selected: bool = False
+    proposal: bool = False
+    construction: bool = False
+
+
+@dataclass(frozen=True)
+class Marker:
+    identifier: str
+    position: tuple
+    selected: bool = False
+    proposal: bool = False
+    role: str | None = None
+    contextual: bool = False
+
+
+@dataclass(frozen=True)
+class DimensionLabel:
+    constraint_id: str
+    kind: str
+    raw_value: int | float | str | None
+    measured_mm: float
+    position: tuple
+    text: str
+    detail: str
+    selected: bool
+
+
+@dataclass(frozen=True)
+class ArcLabel:
+    """Display-only sweep/stage explanation, never a dimension edit target."""
+
+    identifier: str
+    position: tuple
+    text: str
+    detail: str
+    selected: bool = False
+    proposal: bool = False
+    contextual: bool = False
+
+
+@dataclass(frozen=True)
+class AxisBadge:
+    """Authored intent only; no hit target or constraint satisfaction claim."""
+
+    line_id: str
+    constraint_ids: tuple
+    position: tuple
+    text: str
+
+
+@dataclass(frozen=True)
+class OverlayFrame:
+    source: str
+    request_fingerprint: str | None
+    strokes: tuple
+    markers: tuple
+    labels: tuple
+    unavailable: tuple
+    projection_calls: int
+    arc_labels: tuple = ()
+    axis_badges: tuple = ()
+
+
+@dataclass(frozen=True)
+class EditorLayout:
+    """Pixel diagnostics only; raw indices count scalars, never glyphs or bytes."""
+
+    bounds: tuple
+    visible_range: tuple
+    display_text: str
+    caret: tuple
+    selection: tuple | None
+
+
+def _currency(source, fingerprint, current):
+    _require(source in {"authored", "solved", "retained"}, "Unknown display source.")
+    if source == "solved":
+        _require(
+            type(current) is str and current == fingerprint,
+            "Solved display requires the owner's current request fingerprint.",
+        )
+    else:
+        _require(fingerprint is None, "Unverified display cannot carry solved evidence.")
+
+
+def _xy(value):
+    _require(type(value) in (tuple, list) and len(value) == 2, "Expected XY coordinates.")
+    _require(
+        all(
+            type(item) in (int, float) and math.isfinite(item) and abs(item) <= 1e6
+            for item in value
+        ),
+        "Invalid proposal coordinates.",
+    )
+    return tuple(value)
+
+
+def _display_raw(raw, limit=96):
+    # Limit both Unicode-scalar work and displayed glyphs, without changing raw.
+    text = f"{raw:.6g}" if type(raw) in (int, float) else str(raw)
+    parts = TextBuffer(text[:limit]).display_parts()
+    escaped = "".join(parts)
+    return escaped[:limit] + ("…" if len(escaped) > limit or len(text) > limit else "")
+
+
+def dashed_segments(segments, limit=MAX_FRAME_SEGMENTS):
+    """Bounded screen-space dashes, continuous through sampled curved segments."""
+    result, phase = [], 0.0
+    for a, b in segments:
+        length = math.dist(a, b)
+        offset = 0.0
+        while length - offset > 1e-9 and len(result) < limit:
+            on = phase < 7.0
+            step = min(length - offset, (7.0 if on else 12.0) - phase)
+            if step <= 1e-9:
+                phase = 0.0 if not on else 7.0
+                continue
+            if on:
+                result.append(
+                    tuple(
+                        tuple(x + (y - x) * t / length for x, y in zip(a, b, strict=True))
+                        for t in (offset, offset + step)
+                    )
+                )
+            offset += step
+            phase = (phase + step) % 12.0
+        if len(result) >= limit:
+            break
+    return tuple(result)
+
+
+def build_frame(
+    geometry,
+    project,
+    *,
+    current_request_fingerprint=None,
+    selection=(),
+    relation_ids=(),
+    annotations=None,
+    proposal=None,
+    circle_error_px=0.5,
+    max_circle_segments=512,
+    max_project_calls=32768,
+    max_segments=MAX_FRAME_SEGMENTS,
+):
+    """Project detached data; no fallback to seeds or last-good solved geometry.
+
+    Invalid or unavailable annotation/proposal bindings become visible issues;
+    their owning recovery data remains untouched. Straight spans with invisible
+    endpoints are omitted. Curve error is sampled deviation, not a proven bound.
+    ``annotations=None`` draws no dimensions: the owner chooses their placements.
+    Labels separate measured geometry (about six significant digits) from exact
+    raw input retained in ``DimensionLabel.raw_value``. Unverified measures use ~.
+    """
+    _require(type(geometry) is SketchGeometry, "Expected detached sketch geometry.")
+    _currency(geometry.source, geometry.request_fingerprint, current_request_fingerprint)
+    _require(callable(project), "Expected an explicit projection callback.")
+    _require(
+        type(max_project_calls) is int and 1 <= max_project_calls <= MAX_PROJECT_CALLS,
+        "Projection limit exceeded.",
+    )
+    _require(
+        type(max_circle_segments) is int and 8 <= max_circle_segments <= MAX_CIRCLE_SEGMENTS,
+        "Circle limit exceeded.",
+    )
+    _require(
+        type(max_segments) is int and 1 <= max_segments <= MAX_FRAME_SEGMENTS,
+        "Segment limit exceeded.",
+    )
+    _require(
+        type(circle_error_px) in (int, float) and 1e-6 <= circle_error_px <= 4,
+        "Invalid sampled circle deviation.",
+    )
+    _require(type(selection) in (list, tuple) and len(selection) <= 32, "Invalid selection.")
+    selected = set()
+    for binding in selection:
+        _keys(binding, {"kind", "id"})
+        _require(
+            binding["kind"] in {"point", "line", "circle", "arc", "constraint"},
+            "Unknown selection kind.",
+        )
+        _identifier(binding["id"])
+        selected.add((binding["kind"], binding["id"]))
+    _require(
+        type(relation_ids) in (tuple, list) and len(relation_ids) <= 512,
+        "Invalid authored relation identities.",
+    )
+    for identifier in relation_ids:
+        _identifier(identifier)
+    _require(len(set(relation_ids)) == len(relation_ids), "Duplicate relation identity.")
+    authored_relations = set(relation_ids) | set(geometry.dimensions)
+    annotations = {} if annotations is None else annotations
+    _require(type(annotations) is dict and len(annotations) <= 512, "Too many annotations.")
+    projection = _Projection(geometry.plane, project, max_project_calls)
+    strokes, markers, labels, issues = [], [], [], []
+    arc_labels = []
+    remaining = max_segments
+
+    def issue(kind, identifier, reason):
+        issues.append(ProjectionIssue(kind, identifier, reason))
+
+    def stroke(kind, identifier, segments, *, preview=False):
+        nonlocal remaining
+        entity = getattr(geometry, kind + "s", {}).get(identifier)
+        construction = bool(not preview and getattr(entity, "construction", False))
+        if construction:
+            segments = dashed_segments(segments, remaining)
+        if len(segments) > remaining:
+            issue(kind, identifier, "segment_budget")
+            segments = segments[:remaining]
+        if segments:
+            strokes.append(
+                Stroke(
+                    kind,
+                    identifier,
+                    tuple(segments),
+                    (kind, identifier) in selected,
+                    preview,
+                    construction,
+                )
+            )
+            remaining -= len(segments)
+
+    def span(kind, identifier, a, b, *, preview=False):
+        try:
+            a, b = projection.at(a), projection.at(b)
+            if a is None or b is None:
+                issue(kind, identifier, "invisible_endpoint")
+            else:
+                stroke(kind, identifier, ((a, b),), preview=preview)
+        except _ProjectionLimit:
+            issue(kind, identifier, "projection_budget")
+
+    def marker(identifier, point, *, preview=False, role=None, contextual=False):
+        try:
+            position = projection.at(point)
+            if position is None:
+                issue("point", identifier, "invisible_point")
+            else:
+                markers.append(
+                    Marker(identifier, position, ("point", identifier) in selected,
+                           preview, role, contextual)
+                )
+        except _ProjectionLimit:
+            issue("point", identifier, "projection_budget")
+
+    def curve(kind, identifier, entity, *, preview=False):
+        if not remaining:
+            issue(kind, identifier, "segment_budget")
+            return
+        segments, _error, missing = _curve_segments(
+            entity, projection, circle_error_px, max_circle_segments
+        )
+        issues.extend(ProjectionIssue(kind, identifier, reason, turns) for reason, turns in missing)
+        stroke(kind, identifier, segments, preview=preview)
+
+    def arc_label(identifier, point, text, detail, *, preview=False):
+        try:
+            position = projection.at(point)
+        except _ProjectionLimit:
+            issue("arc", identifier, "projection_budget")
+            return
+        if position is None:
+            issue("arc", identifier, "invisible_label")
+            return
+        arc_labels.append(
+            ArcLabel(
+                identifier,
+                (position[0] + 12, position[1] + 12),
+                text,
+                detail,
+                ("arc", identifier) in selected,
+                preview,
+                not preview and geometry.source == "solved"
+                and arc_selected(identifier, geometry.arcs[identifier]),
+            )
+        )
+
+    def arc_selected(identifier, entity):
+        return ("arc", identifier) in selected or any(
+            ("point", point_id) in selected
+            for point_id in (entity.center_id, entity.start_id, entity.end_id)
+        )
+
+    def arc_discrepant(entity):
+        # Match the shared solved-arc policy without changing discrepancy strokes.
+        limit = min(
+            MAX_ARC_RADIUS_RESIDUAL_MM,
+            MAX_ARC_RADIUS_RELATIVE_RESIDUAL * entity.radius_mm,
+        )
+        return abs(math.dist(entity.center_mm, entity.end_mm) - entity.radius_mm) > limit
+
+    def arc_details(identifier, entity):
+        # Currency is checked above; this is presentation, not a DoF claim.
+        return (
+            geometry.source != "solved"
+            or arc_selected(identifier, entity)
+            or arc_discrepant(entity)
+        )
+
+    def arc(identifier, entity, *, preview=False):
+        curve("arc", identifier, entity, preview=preview)
+        residual = math.dist(entity.center_mm, entity.end_mm) - entity.radius_mm
+        if residual:
+            span(
+                "arc_discrepancy", identifier, _arc_point(entity, 1), entity.end_mm, preview=preview
+            )
+        if not preview:
+            if not arc_details(identifier, entity):
+                return  # Selection reveals routine details, never hides dimensions.
+            if entity.corner_fillet and geometry.source == "solved" and not arc_discrepant(entity):
+                return  # The editable radius annotation is the compact fillet label.
+        sweep = abs(entity.sweep_radians)
+        meaning = "semicircle" if sweep == math.pi else "minor" if sweep < math.pi else "major"
+        provisional = preview or geometry.source != "solved"
+        if not provisional and not arc_discrepant(entity):
+            detail = f"R {entity.radius_mm:.6g} mm"
+            if entity.construction:
+                detail += " · construction reference"
+        else:
+            detail = "Provisional until Check · " if provisional else "Current solved · "
+            detail += f"support R {entity.radius_mm:.6g} mm · raw end radius Δ {residual:+.6g} mm"
+        arc_label(
+            identifier,
+            _arc_point(entity, 0.5),
+            f"{entity.direction.upper()} (local UV) {math.degrees(entity.sweep_radians):+.6g}°"
+            f" · {meaning}",
+            detail,
+            preview=preview,
+        )
+
+    def anchor_point(anchor):
+        _require(type(anchor) is dict, "Invalid proposal anchor.")
+        if anchor.get("kind") == "existing":
+            _keys(anchor, {"kind", "point_id"})
+            _identifier(anchor["point_id"])
+            return geometry.points.get(anchor["point_id"])
+        _keys(anchor, {"kind", "position"})
+        _require(anchor["kind"] == "new", "Unknown proposal anchor.")
+        return _xy(anchor["position"])
+
+    def arc_proposal(value):
+        _keys(value, {"kind", "phase", "center", "start", "observation", "direction"})
+        _require(
+            type(value["phase"]) is str and value["phase"] in {"start", "end"},
+            "Unknown arc proposal phase.",
+        )
+        _require(
+            type(value["direction"]) is str and value["direction"] in {"ccw", "cw"},
+            "Unknown arc proposal direction.",
+        )
+        if value["phase"] == "start":
+            _require(value["start"] is None, "Arc start is not chosen in start phase.")
+        center = anchor_point(value["center"])
+        start = None if value["phase"] == "start" else anchor_point(value["start"])
+        if value["phase"] == "end":
+            _require(
+                value["center"]["kind"] != "existing"
+                or value["start"]["kind"] != "existing"
+                or value["center"]["point_id"] != value["start"]["point_id"],
+                "Arc center and start must have distinct point IDs.",
+            )
+        observed = None if value["observation"] is None else anchor_point(value["observation"])
+        for role, point in (("center", center), ("start", start), ("observation", observed)):
+            if value[role] is not None:
+                if point is None:
+                    issue("proposal", "preview", role + "_unavailable")
+                else:
+                    caption = "Observed start" if value["phase"] == "start" else "Observed end"
+                    marker(
+                        "preview_" + role,
+                        point,
+                        preview=True,
+                        role=caption if role == "observation" else role.title(),
+                    )
+        if center is None:
+            return
+        if value["phase"] == "start":
+            if observed is not None:
+                span("arc_guide", "preview", center, observed, preview=True)
+        elif start is not None:
+            span("arc_guide", "preview", center, start, preview=True)
+            if observed is not None:
+                try:
+                    measured = arc_geometry(center, start, observed, value["direction"])
+                except ArcGeometryError as exc:
+                    issue("proposal", "preview", exc.code)
+                else:
+                    arc(
+                        "preview",
+                        ArcGeometry(
+                            "preview_center",
+                            "preview_start",
+                            "preview_observation",
+                            center,
+                            start,
+                            observed,
+                            value["direction"],
+                            measured.start_radius,
+                            measured.sweep_radians,
+                        ),
+                        preview=True,
+                    )
+                    return
+        arc_label(
+            "preview",
+            center,
+            f"Center Arc: choose {value['phase']} · {value['direction'].upper()} (local UV)",
+            "Provisional observations; no checked sweep",
+            preview=True,
+        )
+
+    for identifier, entity in geometry.lines.items():
+        span("line", identifier, entity.start_mm, entity.end_mm)
+    for identifier, entity in geometry.circles.items():
+        curve("circle", identifier, entity)
+    roles = {}
+    contextual_points = set()
+    for identifier, entity in geometry.arcs.items():
+        arc(identifier, entity)
+        if not arc_details(identifier, entity):
+            continue
+        if geometry.source == "solved" and arc_selected(identifier, entity):
+            contextual_points.update((entity.center_id, entity.start_id, entity.end_id))
+        for role in ("center", "start", "end"):
+            caption = "Raw end" if role == "end" and geometry.source != "solved" else role.title()
+            roles.setdefault(getattr(entity, role + "_id"), set()).add(caption)
+    for identifier, point in geometry.points.items():
+        marker(
+            identifier,
+            point,
+            role="/".join(sorted(roles[identifier])) if identifier in roles else None,
+            contextual=identifier in contextual_points,
+        )
+    for kind, identifier in sorted(selected):
+        collection = authored_relations if kind == "constraint" else getattr(geometry, kind + "s")
+        if identifier not in collection:
+            issue(kind, identifier, "selection_unavailable")
+
+    for identifier, placement in annotations.items():
+        try:
+            annotation = annotation_geometry(geometry, identifier, placement)
+        except (ValueError, KeyError):
+            issue("constraint", identifier, "annotation_binding_unavailable")
+            continue
+        for a, b in annotation.segments_mm:
+            span("constraint", identifier, a, b)
+        try:
+            position = projection.at(annotation.label_mm)
+        except _ProjectionLimit:
+            issue("constraint", identifier, "projection_budget")
+            continue
+        if position is None:
+            issue("constraint", identifier, "invisible_label")
+            continue
+        measured = (
+            (
+                geometry.circles.get(annotation.refs[0]) or geometry.arcs[annotation.refs[0]]
+            ).radius_mm
+            if annotation.kind in {"radius", "diameter"}
+            else math.dist(*annotation.anchors_mm)
+        )
+        if annotation.kind == "angle":
+            first, second = (geometry.lines[reference] for reference in annotation.refs)
+            a, b = (
+                tuple(y - x for x, y in zip(line.start_mm, line.end_mm, strict=True))
+                for line in (first, second)
+            )
+            denominator = math.hypot(*a) * math.hypot(*b)
+            if denominator <= 1e-12:
+                issue("constraint", identifier, "collapsed_angle_direction")
+                continue
+            measured = (
+                math.degrees(
+                    math.acos(
+                        max(-1, min(1, sum(x * y for x, y in zip(a, b, strict=True)) / denominator))
+                    )
+                )
+                if denominator
+                else 0
+            )
+        if annotation.kind == "diameter":
+            measured *= 2
+        prefix = (
+            "R "
+            if annotation.kind == "radius"
+            else "⌀ "
+            if annotation.kind == "diameter"
+            else "∠ "
+            if annotation.kind == "angle"
+            else ""
+        )
+        reference = is_reference(placement)
+        units = "°" if annotation.kind == "angle" else " mm"
+        approximate = "" if geometry.source == "solved" else "~"
+        labels.append(
+            DimensionLabel(
+                identifier,
+                annotation.kind,
+                annotation.value,
+                measured,
+                position,
+                f"{prefix}{approximate}{measured:.6g}{units}" + (" (REF)" if reference else ""),
+                (
+                    "Read-only reference"
+                    + (" · unsolved estimate" if geometry.source != "solved" else "")
+                )
+                if reference
+                else ("radius value: " if annotation.kind == "diameter" else "value: ") + _display_raw(annotation.value),
+                ("constraint", identifier) in selected,
+            )
+        )
+
+    if proposal is not None:
+        _require(type(proposal) is dict, "Invalid detached proposal.")
+        kind = proposal.get("kind")
+        _require(kind in {"line", "rectangle", "circle", "arc"}, "Unknown proposal kind.")
+        if kind == "arc":
+            arc_proposal(proposal)
+        else:
+            _build_legacy_proposal(proposal, kind, anchor_point, issue, marker, span, curve)
+
+    # Use only visible selected strokes, never seed fallbacks or inferred alignment.
+    # One badge per selected line combines duplicate-kind authored relations without
+    # changing them. No badge is published as a dimension or selection hit target.
+    axis_badges = []
+    for line in strokes:
+        if line.kind != "line" or not line.selected or line.proposal:
+            continue
+        relations = sorted(
+            (identifier, kind)
+            for identifier, (kind, line_id) in geometry.axis_relations.items()
+            if line_id == line.identifier
+        )
+        if not relations:
+            continue
+        kinds = {kind for _, kind in relations}
+        captions = [caption for kind, caption in (
+            ("horizontal", "H Horizontal"), ("vertical", "V Vertical")
+        ) if kind in kinds]
+        a, b = line.segments[len(line.segments) // 2]
+        axis_badges.append(AxisBadge(
+            line.identifier, tuple(identifier for identifier, _ in relations),
+            ((a[0] + b[0]) / 2, (a[1] + b[1]) / 2),
+            " / ".join(captions) + " · authored",
+        ))
+
+    return OverlayFrame(
+        geometry.source,
+        geometry.request_fingerprint,
+        tuple(strokes),
+        tuple(markers),
+        tuple(labels),
+        tuple(issues),
+        projection.calls,
+        tuple(arc_labels),
+        tuple(axis_badges),
+    )
+
+
+def _build_legacy_proposal(proposal, kind, anchor_point, issue, marker, span, curve):
+    """Keep the existing line/circle detached proposal semantics unchanged."""
+    _keys(proposal, {"kind", "anchor", "endpoint" if kind in {"line", "rectangle"} else "radius"})
+    point = anchor_point(proposal["anchor"])
+    if point is None:
+        issue("proposal", "preview", "anchor_unavailable")
+    else:
+        marker("preview_anchor", point, preview=True)
+        if kind == "line" and proposal["endpoint"] is not None:
+            endpoint = _xy(proposal["endpoint"])
+            span("line", "preview", point, endpoint, preview=True)
+            marker("preview_endpoint", endpoint, preview=True)
+        elif kind == "rectangle" and proposal["endpoint"] is not None:
+            from .rectangle_tool import rectangle_corners
+
+            corners = rectangle_corners(point, _xy(proposal["endpoint"]))
+            for index, corner in enumerate(corners):
+                span("line", f"preview_{index}", corner, corners[(index + 1) % 4], preview=True)
+                marker(f"preview_corner_{index}", corner, preview=True)
+        elif kind == "circle" and proposal["radius"] is not None:
+            radius = proposal["radius"]
+            _require(
+                type(radius) in (int, float) and 0 <= radius <= 1e6, "Invalid proposal radius."
+            )
+            if radius:
+                curve(
+                    "circle",
+                    "preview",
+                    CircleGeometry("preview_anchor", point, radius),
+                    preview=True,
+                )
+
+
+@contextmanager
+def _drawing_state():
+    previous = (
+        gpu.state.blend_get(),
+        gpu.state.depth_test_get(),
+        gpu.state.depth_mask_get(),
+        gpu.state.line_width_get(),
+    )
+    try:
+        gpu.state.blend_set("ALPHA")
+        gpu.state.depth_test_set("NONE")
+        gpu.state.depth_mask_set(False)
+        yield
+    finally:
+        # Nested finally blocks attempt every restoration even if one setter fails.
+        try:
+            gpu.state.line_width_set(previous[3])
+        finally:
+            try:
+                gpu.state.depth_mask_set(previous[2])
+            finally:
+                try:
+                    gpu.state.depth_test_set(previous[1])
+                finally:
+                    gpu.state.blend_set(previous[0])
+
+
+def _batch(shader, mode, positions, color):
+    if not positions:
+        return
+    shader.bind()
+    shader.uniform_float("color", color)
+    batch_for_shader(shader, mode, {"pos": [(x, y, 0) for x, y in positions]}).draw(shader)
+
+
+def _box(shader, bounds, color):
+    x, y, right, top = bounds
+    _batch(
+        shader, "TRIS", ((x, y), (right, y), (right, top), (x, y), (right, top), (x, top)), color
+    )
+
+
+def _text(font_id, x, y, text, size, color):
+    blf.size(font_id, size)
+    blf.position(font_id, x, y, 0)
+    blf.color(font_id, *color)
+    blf.draw(font_id, text)
+
+
+def _rect(value):
+    if value is None:
+        return None
+    _require(
+        type(value) in (tuple, list)
+        and len(value) == 4
+        and all(type(v) in (int, float) and math.isfinite(v) and abs(v) <= 1e12 for v in value)
+        and value[2] > value[0]
+        and value[3] > value[1],
+        "Invalid usable rectangle.",
+    )
+    return tuple(value)
+
+
+def _screen_origin(value):
+    _require(
+        type(value) in (tuple, list)
+        and len(value) == 2
+        and all(type(v) in (int, float) and math.isfinite(v) and abs(v) <= 1e12 for v in value),
+        "Invalid screen origin.",
+    )
+    return tuple(value)
+
+
+def _clamp_box(origin, width, height, usable_rect):
+    x, y = origin
+    if usable_rect is not None:
+        left, bottom, right, top = usable_rect
+        width, height = min(width, right - left), min(height, top - bottom)
+        x, y = max(left, min(x, right - width)), max(bottom, min(y, top - height))
+    return x, y, x + width, y + height
+
+
+def _fit_text(font_id, text, width):
+    # Fractional UI scaling can subtract a few ulps from an exactly fitted box.
+    width += 1e-6
+    if blf.dimensions(font_id, text)[0] <= width:
+        return text
+    if blf.dimensions(font_id, "…")[0] > width:
+        return ""
+    left, right = 0, len(text)
+    while left < right:
+        middle = (left + right + 1) // 2
+        if blf.dimensions(font_id, text[:middle] + "…")[0] <= width:
+            left = middle
+        else:
+            right = middle - 1
+    return text[:left] + "…"
+
+
+def _scale(value):
+    _require(
+        type(value) in (int, float) and math.isfinite(value) and 0.5 <= value <= 4,
+        "UI scale must be between 0.5 and 4.",
+    )
+    return float(value)
+
+
+def _axis_badge_bounds(position, width, scale, usable_rect, occupied):
+    """Read-only decluttering; skip rather than overlap or truncate meaning."""
+    height = 20 * scale
+    for dy in (14, -34, 38):
+        bounds = _clamp_box(
+            (position[0] + 12 * scale, position[1] + dy * scale),
+            width, height, usable_rect,
+        )
+        x, y, right, top = bounds
+        if right - x < width - 1e-6 or top - y < height - 1e-6:
+            continue
+        if any(x < other[2] and right > other[0] and y < other[3] and top > other[1]
+               for other in occupied):
+            continue
+        return bounds
+    return None
+
+
+def _caption_bounds(origin, width, height, scale, usable_rect, occupied):
+    """Move explanatory text only; bounded vertical slots preserve fixed typography."""
+    original = _clamp_box(origin, width, height, usable_rect)
+    for direction in (1, -1):
+        bounds = original
+        for _ in range(16):
+            x, y, right, top = bounds
+            collisions = [other for other in occupied
+                          if x < other[2] and right > other[0]
+                          and y < other[3] and top > other[1]]
+            if not collisions:
+                return bounds
+            next_y = (max(other[3] for other in collisions) + 4 * scale
+                      if direction > 0 else
+                      min(other[1] for other in collisions) - height - 4 * scale)
+            moved = _clamp_box((x, next_y), width, height, usable_rect)
+            if moved == bounds:
+                break
+            bounds = moved
+    # Crowded/narrow viewports retain the existing visible/clipped guidance.
+    return original
+
+
+def _label_bounds(label, font_id, scale, usable_rect):
+    blf.size(font_id, 13 * scale)
+    width = max(blf.dimensions(font_id, label.text)[0],
+                blf.dimensions(font_id, label.detail)[0]) + 12 * scale
+    return _clamp_box(label.position, width, 41 * scale, usable_rect)
+
+
+def draw_frame(
+    frame,
+    *,
+    current_request_fingerprint=None,
+    origin=(24, 24),
+    scale=1.0,
+    usable_rect=None,
+    font_id=0,
+):
+    """Draw a current detached frame; stale solved frames raise before GPU work.
+
+    usable_rect=(xmin,ymin,xmax,ymax) reserves toolbar/sidebar space for labels and
+    status. Geometry stays at its projected position. Very small label areas omit
+    text rather than drawing beyond them. Dimension label placement is not a
+    collision-avoidance engine. Owners can supply a separate authoritative status.
+    """
+    _require(type(frame) is OverlayFrame, "Expected a detached overlay frame.")
+    _currency(frame.source, frame.request_fingerprint, current_request_fingerprint)
+    scale, usable_rect = _scale(scale), _rect(usable_rect)
+    origin = _screen_origin(origin)
+    color = SOLVED if frame.source == "solved" else AUTHORED
+    label_bounds = []
+    with _drawing_state():
+        shader = gpu.shader.from_builtin("UNIFORM_COLOR")
+        for stroke in frame.strokes:
+            tint = (
+                PROPOSAL
+                if stroke.proposal
+                else SELECTED
+                if stroke.selected
+                else CONSTRUCTION
+                if stroke.construction
+                else color
+            )
+            if stroke.kind == "arc_discrepancy":
+                tint = ERROR
+            gpu.state.line_width_set((3 if stroke.selected else 1.5) * scale)
+            _batch(
+                shader, "LINES", [point for segment in stroke.segments for point in segment], tint
+            )
+        contextual = any(marker.contextual for marker in frame.markers)
+        # Dimensions and point markers never move for selected-arc captions.
+        occupied = ([_label_bounds(label, font_id, scale, usable_rect) for label in frame.labels]
+                    if contextual else [])
+        occupied.extend(
+            (marker.position[0] - 6 * scale, marker.position[1] - 6 * scale,
+             marker.position[0] + 6 * scale, marker.position[1] + 6 * scale)
+            for marker in frame.markers if contextual
+        )
+        if contextual:
+            # Non-contextual warnings and proposal captions keep their original placement.
+            occupied.extend(_label_bounds(label, font_id, scale, usable_rect)
+                            for label in frame.arc_labels if not label.contextual)
+            blf.size(font_id, 11 * scale)
+            occupied.extend(
+                _clamp_box((marker.position[0] + 8 * scale, marker.position[1] - 19 * scale),
+                           blf.dimensions(font_id, marker.role)[0] + 8 * scale,
+                           18 * scale, usable_rect)
+                for marker in frame.markers if marker.role and not marker.contextual
+            )
+        for marker in frame.markers:
+            x, y = marker.position
+            radius = (4.5 if marker.selected else 3) * scale
+            tint = PROPOSAL if marker.proposal else SELECTED if marker.selected else color
+            _box(
+                shader,
+                (x - radius - scale, y - radius - scale, x + radius + scale, y + radius + scale),
+                BACKGROUND,
+            )
+            _box(shader, (x - radius, y - radius, x + radius, y + radius), tint)
+            if marker.role:
+                blf.size(font_id, 11 * scale)
+                role_origin = (x + 8 * scale, y - 19 * scale)
+                width = blf.dimensions(font_id, marker.role)[0] + 8 * scale
+                bounds = (_caption_bounds(
+                    role_origin, width, 18 * scale, scale, usable_rect, occupied,
+                ) if marker.contextual else _clamp_box(role_origin, width, 18 * scale, usable_rect))
+                if marker.contextual:
+                    occupied.append(bounds)
+                left, bottom, right, top = bounds
+                if top - bottom >= 18 * scale - 1e-6:
+                    if bounds != _clamp_box(role_origin, width, 18 * scale, usable_rect):
+                        # A displaced role stays visibly bound to its original point.
+                        target = (min(max(x, left), right), min(max(y, bottom), top))
+                        gpu.state.line_width_set(scale)
+                        _batch(shader, "LINES", [marker.position, target], tint)
+                    _box(shader, bounds, BACKGROUND)
+                    text = _fit_text(font_id, marker.role, right - left - 8 * scale)
+                    _text(font_id, left + 4 * scale, bottom + 4 * scale, text, 11 * scale, tint)
+        for label in (*frame.labels, *frame.arc_labels):
+            bounds = _label_bounds(label, font_id, scale, usable_rect)
+            if type(label) is ArcLabel and label.contextual:
+                bounds = _caption_bounds(
+                    bounds[:2], bounds[2] - bounds[0], 41 * scale,
+                    scale, usable_rect, occupied,
+                )
+                occupied.append(bounds)
+            _box(shader, bounds, BACKGROUND)
+            x, y, right, top = bounds
+            if top - y >= 41 * scale - 1e-6:
+                if type(label) is DimensionLabel:
+                    label_bounds.append((label.constraint_id, bounds))
+                tint = SELECTED if label.selected else color
+                if type(label) is ArcLabel and label.proposal:
+                    tint = PROPOSAL
+                for text, baseline, text_color in (
+                    (label.text, y + 24 * scale, tint),
+                    (label.detail, y + 7 * scale, MUTED),
+                ):
+                    text = _fit_text(font_id, text, right - x - 12 * scale)
+                    _text(font_id, x + 6 * scale, baseline, text, 13 * scale, text_color)
+        badge_bounds = []
+        for badge in frame.axis_badges:
+            blf.size(font_id, 11 * scale)
+            width = blf.dimensions(font_id, badge.text)[0] + 12 * scale
+            bounds = _axis_badge_bounds(
+                badge.position, width, scale, usable_rect,
+                [other for _, other in label_bounds] + badge_bounds,
+            )
+            if bounds is None:
+                continue  # Authored relation remains available in the inspector.
+            badge_bounds.append(bounds)
+            x, y, right, top = bounds
+            _box(shader, bounds, BACKGROUND)
+            _text(font_id, x + 6 * scale, y + 5 * scale,
+                  badge.text, 11 * scale, SELECTED)
+        status = {
+            "solved": "Current solved sketch",
+            "authored": "Unverified draft",
+            "retained": "Unverified edit · retained outline",
+        }[frame.source]
+        status_color = color
+        if frame.unavailable:
+            # Keep the warning ahead of optional text when a narrow viewport clips it.
+            status = f"Incomplete display ({len(frame.unavailable)}) · " + status
+            status_color = ERROR
+        if any(item.proposal for item in frame.markers):
+            status += " · Purple: unaccepted proposal"
+        blf.size(font_id, 13 * scale)
+        bounds = _clamp_box(
+            origin, blf.dimensions(font_id, status)[0] + 16 * scale, 27 * scale, usable_rect
+        )
+        _box(shader, bounds, BACKGROUND)
+        x, y, right, top = bounds
+        if top - y >= 27 * scale - 1e-6:
+            text = _fit_text(font_id, status, right - x - 16 * scale)
+            _text(font_id, x + 8 * scale, y + 8 * scale, text, 13 * scale, status_color)
+    return tuple(label_bounds)
+
+
+
+def draw_reuse_hint(position, *, usable_rect, scale=1.0, font_id=0):
+    """A small display-only target, separate from status and dimension labels."""
+    x, y = position
+    radius = 8 * scale
+    ring = [
+        (x + radius * math.cos(i * math.tau / 32),
+         y + radius * math.sin(i * math.tau / 32))
+        for i in range(33)
+    ]
+    with _drawing_state():
+        shader = gpu.shader.from_builtin("UNIFORM_COLOR")
+        gpu.state.line_width_set(2 * scale)
+        _batch(shader, "LINE_STRIP", ring, SELECTED)
+        blf.size(font_id, 11 * scale)
+        width = blf.dimensions(font_id, "Reuse point")[0] + 8 * scale
+        bounds = _clamp_box((x + 13 * scale, y + 12 * scale), width, 20 * scale, usable_rect)
+        _box(shader, bounds, BACKGROUND)
+        _text(font_id, bounds[0] + 4 * scale, bounds[1] + 5 * scale,
+              _fit_text(font_id, "Reuse point", bounds[2] - bounds[0] - 8 * scale),
+              11 * scale, SELECTED)
+
+def draw_editor(
+    raw,
+    caret,
+    anchor,
+    *,
+    error=None,
+    origin=(24, 64),
+    width=360,
+    scale=1.0,
+    usable_rect=None,
+    font_id=0,
+    caret_visible=True,
+    title="Raw dimension input",
+):
+    """Draw a compact raw-text field; never edit, evaluate, blink or capture input.
+
+    The owner passes detached exact text, scalar caret/anchor and local error.
+    Escaped controls consume one raw scalar; selection/caret use the same measured
+    display projection. Visible measurement is capped at 256 scalars regardless
+    of the raw retention budget. Return layout diagnostics without owning a cache.
+    The owner supplies caret_visible; this helper registers no timer.
+    """
+    buffer = TextBuffer(raw)  # Validation/display projection only, no edit/history use.
+    _require(
+        type(caret) is int
+        and type(anchor) is int
+        and 0 <= caret <= len(raw)
+        and 0 <= anchor <= len(raw),
+        "Invalid scalar selection.",
+    )
+    _require(type(caret_visible) is bool, "Invalid caret visibility.")
+    _require(error is None or type(error) is str, "Invalid editor error.")
+    _require(
+        type(width) in (int, float) and math.isfinite(width) and 80 <= width <= 4096,
+        "Invalid editor width.",
+    )
+    scale, usable_rect = _scale(scale), _rect(usable_rect)
+    origin = _screen_origin(origin)
+    parts = buffer.display_parts()
+    height = (91 if error else 67) * scale
+    bounds = _clamp_box(origin, width * scale, height, usable_rect)
+    x, y, right, top = bounds
+    # A collapsed safe area is allowed, but no text may escape it.
+    if right - x < 80 * scale - 1e-6 or top - y < height - 1e-6:
+        return EditorLayout(bounds, (caret, caret), "", (x, y, x, y), None)
+    with _drawing_state():
+        shader = gpu.shader.from_builtin("UNIFORM_COLOR")
+        _box(shader, bounds, BACKGROUND)
+        blf.size(font_id, 14 * scale)
+        content_width = right - x - 32 * scale
+        start = caret
+        while start > 0 and caret - start < MAX_VISIBLE_SCALARS // 2:
+            if blf.dimensions(font_id, "".join(parts[start - 1 : caret]))[0] > content_width * 0.7:
+                break
+            start -= 1
+        end = caret
+        while end < len(parts) and end - start < MAX_VISIBLE_SCALARS:
+            if blf.dimensions(font_id, "".join(parts[start : end + 1]))[0] > content_width:
+                break
+            end += 1
+        display = "".join(parts[start:end])
+        baseline = top - 48 * scale
+        text_x = x + 16 * scale
+
+        def boundary(index):
+            index = max(start, min(end, index))
+            return text_x + blf.dimensions(font_id, "".join(parts[start:index]))[0]
+
+        caret_x = boundary(caret)
+        caret_bounds = (caret_x, baseline - 3 * scale, caret_x + scale, baseline + 15 * scale)
+        lo, hi = max(start, min(anchor, caret)), min(end, max(anchor, caret))
+        selection = None
+        if lo < hi:
+            selection = (boundary(lo), baseline - 3 * scale, boundary(hi), baseline + 15 * scale)
+            _box(shader, selection, (0.15, 0.32, 0.57, 0.9))
+        _text(font_id, text_x, baseline, display, 14 * scale, TEXT)
+        if caret_visible:
+            _box(shader, caret_bounds, TEXT)
+        title = title + (" · more text" if start or end < len(parts) else "")
+        blf.size(font_id, 12 * scale)
+        _text(
+            font_id,
+            x + 10 * scale,
+            top - 20 * scale,
+            _fit_text(font_id, title, right - x - 20 * scale),
+            12 * scale,
+            MUTED,
+        )
+        if error:
+            message = _fit_text(font_id, _display_raw(error, 160), right - x - 20 * scale)
+            _text(font_id, x + 10 * scale, y + 9 * scale, message, 12 * scale, ERROR)
+        return EditorLayout(bounds, (start, end), display, caret_bounds, selection)
+
+
+def draw_corner_fillet_preview(plan, positions, project):
+    """Display-only tessellation of the explicit proposal; never solver evidence."""
+    start_angle = math.atan2(plan.start[1] - plan.center[1], plan.start[0] - plan.center[0])
+    end_angle = math.atan2(plan.end[1] - plan.center[1], plan.end[0] - plan.center[0])
+    sweep = (end_angle - start_angle) % (2 * math.pi)
+    if plan.direction == "cw":
+        sweep -= 2 * math.pi
+    radius = math.dist(plan.center, plan.start)
+    points = [positions[plan.segment_ends[0]], plan.start]
+    points += [(plan.center[0] + radius * math.cos(start_angle + sweep*i/64),
+                plan.center[1] + radius * math.sin(start_angle + sweep*i/64)) for i in range(1, 64)]
+    points += [plan.end, positions[plan.segment_ends[1]]]
+    screen = [project(p) for p in points]
+    if any(p is None for p in screen):
+        return
+    with _drawing_state():
+        gpu.state.line_width_set(3)
+        _batch(gpu.shader.from_builtin("UNIFORM_COLOR"), "LINE_STRIP", screen, (0.8, 0.3, 1.0, 1.0))

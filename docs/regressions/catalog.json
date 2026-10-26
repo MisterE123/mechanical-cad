@@ -1,0 +1,1807 @@
+{
+  "schema_version": 1,
+  "catalog_version": 10,
+  "canonical_length_unit": "mm",
+  "description": "Bounded MVP acceptance cases; implemented unit contracts are not claims of real B-rep or Blender UI coverage.",
+  "taxonomy": {
+    "topology": [
+      "semantic_identity",
+      "evolution",
+      "matching"
+    ],
+    "history": [
+      "availability",
+      "dependency_graph",
+      "schema_migration"
+    ],
+    "parameters": [
+      "units"
+    ],
+    "intent": [
+      "repair",
+      "constraint_release"
+    ],
+    "sketch": [
+      "constraints",
+      "regions",
+      "resolution",
+      "editor_contract"
+    ],
+    "assembly": [
+      "source_identity",
+      "pending_lifecycle"
+    ],
+    "display": [
+      "viewport_clipping"
+    ],
+    "protocol": [
+      "evidence",
+      "resource_bounds"
+    ]
+  },
+  "id_policy": "Case IDs are permanent. Do not renumber on sorting or reclassification. Retired cases retain an alias/replacement record.",
+  "sources": [
+    {
+      "title": "OCCT modeling algorithms: history support",
+      "url": "https://github.com/Open-Cascade-SAS/OCCT/blob/master/dox/user_guides/modeling_algos/modeling_algos.md"
+    },
+    {
+      "title": "OCCT TNaming_Evolution: split, merge and delete semantics",
+      "url": "https://occt3d.com/dev/doc/refman/html/_t_naming___evolution_8hxx.html"
+    }
+  ],
+  "cases": [
+    {
+      "id": "MCAD-TOPO-001",
+      "title": "Dimension edits preserve supported semantic roles",
+      "category_path": [
+        "topology",
+        "semantic_identity",
+        "dimension_change"
+      ],
+      "tags": [
+        "extrude",
+        "cap",
+        "side",
+        "recompute"
+      ],
+      "coverage": "partial",
+      "minimal_fixture": "Rectangle from (0,0) to (40,30) mm, extruded +Z by 5 mm. Select cap.end and side.x_min by stable feature UUID and role.",
+      "mutation": "Change extrusion height 5 to 8 mm, then rectangle width 40 to 50 mm, keeping feature and profile-boundary IDs.",
+      "acceptance": [
+        "References resolve to the same semantic roles despite new local face IDs, areas and centroids.",
+        "Real B-rep is valid and volumes progress 6000, 9600, 12000 mm^3.",
+        "The saved reference does not change; no inferred geometry match is accepted."
+      ],
+      "repair_policy": "If the adapter cannot establish stable provenance, stop the dependent operation and display evidence rather than assuming the nearest face.",
+      "tests": [
+        {
+          "nodeid": "tests/unit/test_topology.py::test_dimension_change_preserves_semantic_reference",
+          "layer": "unit",
+          "status": "implemented"
+        },
+        {
+          "nodeid": "tests/integration/test_kernel.py::test_extrude_semantic_roles_survive_dimension_change",
+          "layer": "brep",
+          "status": "implemented",
+          "scope": "Real construction role provenance across width/height edits."
+        },
+        {
+          "nodeid": "tests/integration/test_replay.py::test_semantic_cap_survives_dimension_edit",
+          "layer": "brep",
+          "status": "implemented",
+          "scope": "Real document replay and resolver cap identity across parameter changes."
+        },
+        {
+          "nodeid": "tests/integration/test_replay.py::test_drilled_plate_real_geometry_and_edit_replay",
+          "layer": "brep",
+          "status": "implemented",
+          "scope": "Real dimensional edit affects mass and mesh; exact fixture differs from the minimal acceptance specimen."
+        }
+      ],
+      "code_symbols": [
+        "mechanical_cad.topology.resolve_reference"
+      ]
+    },
+    {
+      "id": "MCAD-TOPO-002",
+      "title": "Enumeration and display names never define identity",
+      "category_path": [
+        "topology",
+        "semantic_identity",
+        "snapshot_handles"
+      ],
+      "tags": [
+        "determinism",
+        "serialization",
+        "rename"
+      ],
+      "coverage": "partial",
+      "minimal_fixture": "Extruded rectangular plate with a reference to cap.end.",
+      "mutation": "Reverse candidate order, rebuild with fresh face IDs, rename the feature, and save/reload the document.",
+      "acceptance": [
+        "The feature UUID and reference UUID survive rename and serialization.",
+        "The selected role remains cap.end regardless of enumeration.",
+        "Duplicate snapshot IDs are rejected as invalid adapter output."
+      ],
+      "repair_policy": "Never persist or repair a selection using face-list index, Blender polygon index or a kernel handle.",
+      "tests": [
+        {
+          "nodeid": "tests/unit/test_topology.py::test_enumeration_order_never_defines_identity",
+          "layer": "unit",
+          "status": "implemented"
+        },
+        {
+          "nodeid": "tests/unit/test_topology.py::test_duplicate_snapshot_ids_fail_loudly",
+          "layer": "unit",
+          "status": "implemented"
+        },
+        {
+          "nodeid": "tests/integration/test_regression_acceptance.py::test_reference_roundtrip_survives_rename",
+          "layer": "brep",
+          "status": "planned"
+        },
+        {
+          "nodeid": "tests/unit/test_model.py::test_document_round_trip_is_canonical_and_deterministic",
+          "layer": "unit",
+          "status": "implemented",
+          "scope": "Canonical source persistence, not saved topology selection persistence."
+        },
+        {
+          "nodeid": "tests/unit/test_model.py::test_parameter_edit_preserves_old_document_and_feature_ids",
+          "layer": "unit",
+          "status": "implemented",
+          "scope": "Stable feature IDs through immutable document edit."
+        },
+        {
+          "nodeid": "tests/integration/test_kernel.py::test_identical_replay_has_deterministic_snapshot_ids_and_mesh",
+          "layer": "brep",
+          "status": "implemented",
+          "scope": "Generated and split handles are deterministic for identical replay but explicitly snapshot-only, never persisted identity."
+        }
+      ],
+      "code_symbols": [
+        "mechanical_cad.topology.TopologyReference",
+        "mechanical_cad.topology.TopologyCandidate"
+      ]
+    },
+    {
+      "id": "MCAD-TOPO-003",
+      "title": "One source face splits into multiple descendants",
+      "category_path": [
+        "topology",
+        "evolution",
+        "split"
+      ],
+      "tags": [
+        "cut",
+        "one_to_many",
+        "ambiguity"
+      ],
+      "coverage": "partial",
+      "minimal_fixture": "40 x 30 x 5 mm rectangular plate; select its top face. Cutting box spans x=19..21, y=-1..31, z=2..6 mm.",
+      "mutation": "Apply the shallow crossing slot. The 2 mm lower web keeps one connected solid while the top face splits.",
+      "acceptance": [
+        "B-rep remains valid, contains one solid and has volume 5820 mm^3.",
+        "Both descendants retain source lineage and semantic_status=split.",
+        "The old single-face reference returns ambiguous, even when one descendant has much greater area.",
+        "No dependent feature executes using an arbitrary descendant."
+      ],
+      "repair_policy": "Highlight all descendants. Ask whether the operation applies to a specific supported region, both regions, or a datum; persist only a supported explicit intent.",
+      "tests": [
+        {
+          "nodeid": "tests/unit/test_topology.py::test_split_role_is_ambiguous_even_with_unequal_geometry",
+          "layer": "unit",
+          "status": "implemented"
+        },
+        {
+          "nodeid": "tests/integration/test_kernel.py::test_crossing_slot_marks_split_caps_instead_of_renumbering",
+          "layer": "brep",
+          "status": "implemented",
+          "scope": "Full-depth slot creates two solids and correctly marked split caps; complements the connected shallow-slot fixture."
+        },
+        {
+          "nodeid": "tests/integration/test_kernel.py::test_shallow_slot_is_one_solid_but_cap_reference_fails_closed",
+          "layer": "brep",
+          "status": "implemented",
+          "scope": "Full real-kernel-to-resolver shallow-slot fixture: one solid, 5820 mm^3, two cap descendants, ambiguous reference and watertight mesh."
+        }
+      ],
+      "code_symbols": [
+        "mechanical_cad.topology.resolve_reference"
+      ]
+    },
+    {
+      "id": "MCAD-TOPO-004",
+      "title": "Merged or unsupported provenance cannot masquerade as identity",
+      "category_path": [
+        "topology",
+        "evolution",
+        "merge"
+      ],
+      "tags": [
+        "many_to_one",
+        "provenance",
+        "fail_closed"
+      ],
+      "coverage": "partial",
+      "minimal_fixture": "Two adjacent 20 x 30 x 5 mm solids with separate top-face ancestors; fuse and explicitly unify same-domain faces.",
+      "mutation": "Replace both ancestral faces with one coplanar merged descendant.",
+      "acceptance": [
+        "The descendant records both source ancestors and semantic_status=merged.",
+        "A singular reference to either ancestor requires repair, even if there is only one result candidate.",
+        "Missing semantic_status, generated-only provenance and unknown provenance fail closed.",
+        "MVP does not claim real merge support until the fuse/unification fixture is implemented."
+      ],
+      "repair_policy": "Explain that multiple original regions became one. A whole-face selection is a new user intent, not implicit equivalence to either ancestor.",
+      "tests": [
+        {
+          "nodeid": "tests/unit/test_topology.py::test_untrusted_single_match_requires_repair",
+          "layer": "unit",
+          "status": "implemented"
+        },
+        {
+          "nodeid": "tests/integration/test_regression_acceptance.py::test_coplanar_fuse_records_merge",
+          "layer": "brep",
+          "status": "planned"
+        }
+      ],
+      "code_symbols": [
+        "mechanical_cad.topology.resolve_reference"
+      ]
+    },
+    {
+      "id": "MCAD-TOPO-005",
+      "title": "Deleted face cannot silently bind to a replacement",
+      "category_path": [
+        "topology",
+        "evolution",
+        "delete"
+      ],
+      "tags": [
+        "cut",
+        "missing",
+        "replacement"
+      ],
+      "coverage": "partial",
+      "minimal_fixture": "40 x 30 x 5 mm plate; select side.x_min at x=0 mm.",
+      "mutation": "Trim using a box spanning x=-1..5, y=-1..31, z=-1..6 mm. The old side disappears and a cutter-generated side appears at x=5.",
+      "acceptance": [
+        "Result is valid with volume 5250 mm^3.",
+        "Old side.x_min lineage is deleted; reference is missing.",
+        "A visually similar new side is at most a labeled proposal.",
+        "Reverting the trim restores the original semantic reference."
+      ],
+      "repair_policy": "Show the old intent and the new candidate side, with an explicit correction action. Never reuse the old name for a new cutter-generated face by geometric resemblance.",
+      "tests": [
+        {
+          "nodeid": "tests/unit/test_topology.py::test_deleted_face_does_not_bind_identical_replacement",
+          "layer": "unit",
+          "status": "implemented"
+        },
+        {
+          "nodeid": "tests/integration/test_regression_acceptance.py::test_trim_deletes_original_side",
+          "layer": "brep",
+          "status": "planned"
+        },
+        {
+          "nodeid": "tests/integration/test_kernel.py::test_trimming_cut_does_not_retarget_deleted_side",
+          "layer": "brep",
+          "status": "implemented",
+          "scope": "Real trimming deletes source-side lineage; trim width differs from the minimal specimen."
+        },
+        {
+          "nodeid": "tests/integration/test_kernel.py::test_real_bore_cap_reference_resolves_and_deleted_side_does_not",
+          "layer": "brep",
+          "status": "implemented",
+          "scope": "Full real-kernel-to-resolver deleted-side failure after bore and trim."
+        }
+      ],
+      "code_symbols": [
+        "mechanical_cad.topology.resolve_reference"
+      ]
+    },
+    {
+      "id": "MCAD-TOPO-006",
+      "title": "Symmetry ties remain visible and unresolved",
+      "category_path": [
+        "topology",
+        "matching",
+        "symmetry"
+      ],
+      "tags": [
+        "ties",
+        "inference",
+        "human_confirmation"
+      ],
+      "coverage": "partial",
+      "minimal_fixture": "Symmetric 40 x 30 x 5 mm plate with two equal radius-3 mm through-holes at (10,15) and (30,15). A missing central-hole intent is equidistant from both.",
+      "mutation": "Request repair using matching surface type, area and equal centroid distances.",
+      "acceptance": [
+        "Both candidates have equal geometric evidence and tied_with_best=true.",
+        "Candidate display order is deterministic but never becomes a semantic tie-break.",
+        "No candidate is accepted, including a high-scoring unique geometric suggestion."
+      ],
+      "repair_policy": "Label the guesses and ask left/right or a new parametric relation. Store the chosen relation rather than an unqualified nearest-face rule.",
+      "tests": [
+        {
+          "nodeid": "tests/unit/test_topology.py::test_symmetric_geometry_ties_remain_unresolved",
+          "layer": "unit",
+          "status": "implemented"
+        },
+        {
+          "nodeid": "tests/integration/test_regression_acceptance.py::test_symmetric_holes_are_not_auto_selected",
+          "layer": "brep",
+          "status": "planned"
+        }
+      ],
+      "code_symbols": [
+        "mechanical_cad.topology.TopologySuggestion",
+        "mechanical_cad.topology._suggestions"
+      ]
+    },
+    {
+      "id": "MCAD-TOPO-007",
+      "title": "Bodies and topology kinds are separate scopes",
+      "category_path": [
+        "topology",
+        "semantic_identity",
+        "body_scope"
+      ],
+      "tags": [
+        "multi_body",
+        "coincident",
+        "kind"
+      ],
+      "coverage": "unit_covered",
+      "minimal_fixture": "Two coincident body candidates with the same semantic role, plus an edge candidate whose role text matches a face.",
+      "mutation": "Resolve with an explicit body ID, then omit the body ID.",
+      "acceptance": [
+        "An explicit body ID excludes candidates and geometric suggestions from another body.",
+        "An omitted body ID does not make duplicate semantic roles unambiguous.",
+        "Entity kind is required to match."
+      ],
+      "repair_policy": "Ask for body scope when necessary. Never infer the correct body from visibility or enumeration.",
+      "tests": [
+        {
+          "nodeid": "tests/unit/test_topology.py::test_body_scope_prevents_cross_body_resolution_and_suggestions",
+          "layer": "unit",
+          "status": "implemented"
+        },
+        {
+          "nodeid": "tests/unit/test_topology.py::test_omitted_body_scope_cannot_hide_duplicate_roles",
+          "layer": "unit",
+          "status": "implemented"
+        },
+        {
+          "nodeid": "tests/unit/test_topology.py::test_entity_kind_is_part_of_identity",
+          "layer": "unit",
+          "status": "implemented"
+        }
+      ],
+      "code_symbols": [
+        "mechanical_cad.topology.TopologyReference"
+      ]
+    },
+    {
+      "id": "MCAD-HIST-001",
+      "title": "Rollback and suppression cannot leak stale topology",
+      "category_path": [
+        "history",
+        "availability",
+        "rollback_and_suppression"
+      ],
+      "tags": [
+        "snapshot",
+        "last_good",
+        "restore"
+      ],
+      "coverage": "partial",
+      "minimal_fixture": "Profile -> pad -> hole, with saved references to the pad cap and generated hole wall.",
+      "mutation": "Rollback before hole; suppress hole; restore hole; rollback before pad; attempt a failed rebuild.",
+      "acceptance": [
+        "References to absent features are missing while feature IDs and saved intents remain in the document.",
+        "Restoring an unchanged supported source restores its reference.",
+        "Only topology from the current successful evaluation participates in resolution.",
+        "A failed rebuild is reported as failure; a displayed last-good shape is labeled stale and cannot count as current geometry."
+      ],
+      "repair_policy": "Restore or unsuppress the source, or explicitly change the dependency. Never rebind to a face from a different history state.",
+      "tests": [
+        {
+          "nodeid": "tests/unit/test_topology.py::test_suppressed_or_rolled_back_feature_is_missing_then_restorable",
+          "layer": "unit",
+          "status": "implemented"
+        },
+        {
+          "nodeid": "tests/integration/test_regression_acceptance.py::test_rollback_suppression_and_failed_rebuild",
+          "layer": "brep",
+          "status": "planned"
+        },
+        {
+          "nodeid": "tests/integration/test_replay.py::test_replay_old_document_restores_original_geometry",
+          "layer": "brep",
+          "status": "implemented",
+          "scope": "Restoring the old source document reproduces original geometry; not feature suppression."
+        },
+        {
+          "nodeid": "tests/integration/test_replay.py::test_sidecar_reports_failure_and_no_stale_active_mesh",
+          "layer": "brep",
+          "status": "implemented",
+          "scope": "Failed dependency yields blocked result and no current active mesh."
+        }
+      ],
+      "code_symbols": [
+        "mechanical_cad.topology.resolve_reference"
+      ],
+      "implementation_boundary": "Suppression and interactive rollback-tip editing are not implemented. Old source-document replay and failure isolation are implemented; the resolver snapshot-absence unit test is not suppression integration coverage."
+    },
+    {
+      "id": "MCAD-HIST-002",
+      "title": "Feature reorder respects dependencies and stable IDs",
+      "category_path": [
+        "history",
+        "dependency_graph",
+        "reorder"
+      ],
+      "tags": [
+        "dag",
+        "cycle",
+        "atomic_edit"
+      ],
+      "coverage": "partial",
+      "minimal_fixture": "Two independent profile/pad branches plus a cut that consumes one pad and a tool.",
+      "mutation": "Reorder source-list records without changing dependency edges, then attempt a dependency edit that introduces a cycle or missing input. Chronological operation reordering that intentionally rewires edges is a separate planned feature.",
+      "acceptance": [
+        "Arbitrary source-list order preserves stable feature IDs and geometry because execution follows the dependency DAG.",
+        "Cyclic or missing dependency edits are rejected before publishing a new valid document state.",
+        "Failure preserves the prior valid source and reports the offending dependency.",
+        "Future operation-history reorder must show and validate any dependency rewiring; source-list sorting alone is not that capability."
+      ],
+      "repair_policy": "Explain the required dependency and reject cyclic or dangling references. Do not silently rewrite operation intent when reordering history.",
+      "tests": [
+        {
+          "nodeid": "tests/integration/test_regression_acceptance.py::test_reorder_preserves_ids_and_rejects_invalid_dependency",
+          "layer": "brep",
+          "status": "planned"
+        },
+        {
+          "nodeid": "tests/integration/test_replay.py::test_source_reorder_preserves_geometry",
+          "layer": "brep",
+          "status": "implemented",
+          "scope": "Source-list permutation retains actual B-rep geometry."
+        },
+        {
+          "nodeid": "tests/unit/test_model.py::test_feature_cycle_rejected",
+          "layer": "unit",
+          "status": "implemented",
+          "scope": "Invalid dependency cycle rejected."
+        },
+        {
+          "nodeid": "tests/unit/test_model.py::test_dangling_reference_rejected",
+          "layer": "unit",
+          "status": "implemented",
+          "scope": "Missing feature dependency rejected."
+        }
+      ],
+      "code_symbols": []
+    },
+    {
+      "id": "MCAD-UNIT-001",
+      "title": "Display-unit changes do not alter physical geometry or identity",
+      "category_path": [
+        "parameters",
+        "units",
+        "canonical_values"
+      ],
+      "tags": [
+        "mm",
+        "inch",
+        "dimension",
+        "conversion"
+      ],
+      "coverage": "partial",
+      "minimal_fixture": "Square profile with 25.4 mm sides and 2.54 mm extrusion; canonical internal units are mm.",
+      "mutation": "Express dimensions as 1 in and 0.1 in, then switch the display unit without editing dimensions.",
+      "acceptance": [
+        "Equivalent unit inputs yield equal lengths, areas, volume and semantic references within documented tolerance.",
+        "Display-unit changes do not trigger an unintended model scaling.",
+        "Geometry suggestions reject explicitly noncanonical units; input conversion happens before scoring.",
+        "Dimensionally invalid expressions are rejected rather than coerced."
+      ],
+      "repair_policy": "Show the parsed physical value and unit at the input boundary; require a valid dimensional expression.",
+      "tests": [
+        {
+          "nodeid": "tests/unit/test_topology.py::test_explicit_noncanonical_units_are_not_geometrically_compared",
+          "layer": "unit",
+          "status": "implemented"
+        },
+        {
+          "nodeid": "tests/integration/test_regression_acceptance.py::test_equivalent_mm_inch_inputs_preserve_geometry",
+          "layer": "brep",
+          "status": "planned"
+        },
+        {
+          "nodeid": "tests/unit/test_model.py::test_document_rejects_invalid_header",
+          "layer": "unit",
+          "status": "implemented",
+          "scope": "Unsupported source units rejected rather than silently coerced."
+        }
+      ],
+      "code_symbols": [
+        "mechanical_cad.topology._geometry_score"
+      ],
+      "implementation_boundary": "The source schema currently accepts mm only and arithmetic has no dimensional type system. Blender scene-unit conversion is a separate display boundary; inch-bearing formulas and display-unit controls are planned."
+    },
+    {
+      "id": "MCAD-INTENT-001",
+      "title": "User corrections are explicit and auditable",
+      "category_path": [
+        "intent",
+        "repair",
+        "user_correction"
+      ],
+      "tags": [
+        "proposal",
+        "confirm",
+        "cancel",
+        "audit"
+      ],
+      "coverage": "partial",
+      "minimal_fixture": "Missing saved cap reference with a similar stable cap on another feature in the same body.",
+      "mutation": "Show a geometric proposal; cancel; then explicitly accept a supported semantic replacement.",
+      "acceptance": [
+        "Showing or canceling a proposal leaves the saved reference unchanged.",
+        "Acceptance stores the new semantic target and records the old target, candidate evidence and user decision.",
+        "Downstream recompute occurs only after accepted correction.",
+        "Snapshot-only generated faces are not falsely promised persistent identity."
+      ],
+      "repair_policy": "State the guess in plain language, highlight the candidate, and let the user choose a supported role or datum. Undo restores the prior saved intent.",
+      "tests": [
+        {
+          "nodeid": "tests/unit/test_topology.py::test_user_correction_requires_an_explicit_new_semantic_reference",
+          "layer": "unit",
+          "status": "implemented"
+        },
+        {
+          "nodeid": "tests/ui/test_topology_repair.py::test_preview_cancel_accept_and_undo",
+          "layer": "blender_ui",
+          "status": "planned"
+        }
+      ],
+      "code_symbols": [
+        "mechanical_cad.topology.Resolution",
+        "mechanical_cad.topology.TopologySuggestion"
+      ],
+      "implementation_boundary": "Resolver proposals are implemented. Persistent topology selections, repair-decision audit history, natural-language operation parsing and preview/confirm/undo UI are design requirements, not implemented features."
+    },
+    {
+      "id": "MCAD-TOPO-008",
+      "title": "One-to-one modified faces preserve supported source lineage",
+      "category_path": [
+        "topology",
+        "evolution",
+        "modified_one_to_one"
+      ],
+      "tags": [
+        "cut",
+        "history",
+        "ancestry"
+      ],
+      "coverage": "partial",
+      "minimal_fixture": "40 x 30 x 5 mm plate, selected top cap, cut by radius-3 mm through-cylinder at (12,15).",
+      "mutation": "Move the hole within the plate or change radius 3 to 4 mm without splitting the cap.",
+      "acceptance": [
+        "B-rep is valid; volumes are 6000 - 45*pi then 6000 - 80*pi mm^3.",
+        "The cap has exactly one descendant and that descendant exactly one source ancestor.",
+        "The stable cap retains source feature UUID and semantic role, with cut operation ID and modified evolution recorded.",
+        "One-to-many or many-to-one ancestry must downgrade to split or merged instead."
+      ],
+      "repair_policy": "Keep the source role only when the supported operation proves one-to-one history; otherwise return explicit ambiguity.",
+      "tests": [
+        {
+          "nodeid": "tests/integration/test_kernel.py::test_through_hole_cut_valid_volume_and_one_to_one_cap_provenance",
+          "layer": "brep",
+          "status": "implemented",
+          "scope": "Real through-hole dimensions, valid solid, retained cap role and one-to-one modified provenance."
+        },
+        {
+          "nodeid": "tests/integration/test_kernel.py::test_real_bore_cap_reference_resolves_and_deleted_side_does_not",
+          "layer": "brep",
+          "status": "implemented",
+          "scope": "Real modified cap resolves through the conservative resolver before a later trim."
+        }
+      ],
+      "code_symbols": []
+    },
+    {
+      "id": "MCAD-SKETCH-001",
+      "title": "Exact repeated relations are explicit redundancy, not false inconsistency",
+      "category_path": [
+        "sketch",
+        "constraints",
+        "duplicate_relations"
+      ],
+      "tags": [
+        "libslvs",
+        "seed_sensitivity",
+        "diagnostics",
+        "idempotence"
+      ],
+      "coverage": "partial",
+      "minimal_fixture": "Constrained rectangle with initially unsolved endpoint seeds, H/V, coincidence, width/depth and anchor relations.",
+      "mutation": "Append an exact copy of a relation with a distinct stable ID; reverse symmetric point references; separately try near-equal distances and different fixed targets.",
+      "acceptance": [
+        "Every saved constraint/ID remains unchanged; exact duplicates are omitted only from temporary native equations.",
+        "Successful solve reports redundant_okay, zero remaining DoF and duplicate IDs; all original residuals are independently checked.",
+        "Real extrusion retains exact analytic volume; distinct formulas equal now can correctly conflict after a later parameter edit.",
+        "Native failed IDs are diagnostic candidates, never proof that the user should delete the anchor.",
+        "Adding a lower-ID reversed coincidence duplicate does not translate the underconstrained seed solution."
+      ],
+      "repair_policy": "Applying an identical existing relation should be idempotent in future constraint tools. Explain redundancy; never silently delete saved relations or relax conflicting values.",
+      "tests": [
+        {
+          "nodeid": "tests/integration/test_sketch_solver.py::test_exact_redundancy_from_unsolved_seeds_is_reported_without_losing_records",
+          "layer": "solver",
+          "status": "implemented"
+        },
+        {
+          "nodeid": "tests/integration/test_sketch_solver.py::test_near_equal_distances_are_not_classified_as_exact_duplicates",
+          "layer": "solver",
+          "status": "implemented"
+        },
+        {
+          "nodeid": "tests/integration/test_sketch_solver.py::test_conflicting_fixed_targets_are_not_classified_as_duplicates",
+          "layer": "solver",
+          "status": "implemented"
+        },
+        {
+          "nodeid": "tests/integration/test_constrained_replay.py::test_redundant_relation_keeps_ids_and_rebuilds_real_solid",
+          "layer": "brep",
+          "status": "implemented"
+        },
+        {
+          "nodeid": "tests/integration/test_constrained_replay.py::test_equal_resolved_formulas_remain_distinct_after_parameter_edit",
+          "layer": "brep",
+          "status": "implemented"
+        },
+        {
+          "nodeid": "tests/integration/test_sketch_solver.py::test_reversed_duplicate_does_not_translate_underconstrained_seed_solution",
+          "layer": "solver",
+          "status": "implemented"
+        }
+      ],
+      "code_symbols": [
+        "mechanical_cad.sketch_solver._unique_relations"
+      ]
+    },
+    {
+      "id": "MCAD-SKETCH-002",
+      "title": "Only identity-connected supported closed regions become profiles",
+      "category_path": [
+        "sketch",
+        "regions",
+        "connectivity"
+      ],
+      "tags": [
+        "open",
+        "self_intersection",
+        "branch",
+        "holes",
+        "no_guess"
+      ],
+      "coverage": "partial",
+      "minimal_fixture": "Solved planar line records with stable point/line IDs and explicit coincidence constraints.",
+      "mutation": "Remove a boundary, branch an endpoint, add a second loop/hole, self-cross or place separate unjoined endpoints at identical coordinates.",
+      "acceptance": [
+        "Only one closed non-self-intersecting line loop is accepted.",
+        "Endpoint sharing comes from stable IDs or explicit coincidence, never a nearest-point repair.",
+        "Unsupported linework fails with a structured profile error and blocked downstream solid."
+      ],
+      "repair_policy": "Keep source linework and identify the unsupported connectivity. Require explicit relations or profile selection before creating a solid.",
+      "tests": [
+        {
+          "nodeid": "tests/unit/test_profile_region.py::test_unsupported_connectivity_is_not_silently_repaired",
+          "layer": "unit",
+          "status": "implemented"
+        },
+        {
+          "nodeid": "tests/unit/test_profile_region.py::test_explicit_coincidence_connects_separate_endpoint_ids",
+          "layer": "unit",
+          "status": "implemented"
+        },
+        {
+          "nodeid": "tests/integration/test_constrained_replay.py::test_open_solved_linework_is_not_silently_filled",
+          "layer": "brep",
+          "status": "implemented"
+        },
+        {
+          "nodeid": "tests/integration/test_kernel_sketch_profile.py::test_self_intersection_and_invalid_plane_do_not_make_solids",
+          "layer": "brep",
+          "status": "implemented"
+        }
+      ],
+      "code_symbols": [
+        "mechanical_cad.profile_region.closed_profile"
+      ]
+    },
+    {
+      "id": "MCAD-TOPO-009",
+      "title": "Stable sketch line IDs preserve extrusion side-face provenance",
+      "category_path": [
+        "topology",
+        "semantic_identity",
+        "sketch_boundary"
+      ],
+      "tags": [
+        "sketch",
+        "line_id",
+        "order",
+        "plane",
+        "extrude"
+      ],
+      "coverage": "partial",
+      "minimal_fixture": "Constrained 40 x 30 mm rectangle with stable line IDs, explicit plane and 10 mm extrusion.",
+      "mutation": "Change width to 60 mm, reorder serialized point/line/constraint records and feature source records; independently reverse polygon winding.",
+      "acceptance": [
+        "Volume changes from 12000 to 18000 mm^3 with the same downstream feature ID.",
+        "Each side.line.<stable-ID> follows actual OCCT builder provenance, not list position.",
+        "Supported cap/side references resolve across dimension changes; plane-normal extrusion is explicit.",
+        "Rebuild does not rewrite saved seeds, expressions or source hashes."
+      ],
+      "repair_policy": "If a line disappears or construction provenance becomes split/merged, use the existing conservative missing/ambiguous repair policy.",
+      "tests": [
+        {
+          "nodeid": "tests/integration/test_constrained_replay.py::test_dimension_edit_rebuilds_same_extrusion_and_stable_line_references",
+          "layer": "brep",
+          "status": "implemented"
+        },
+        {
+          "nodeid": "tests/integration/test_constrained_replay.py::test_serialized_entity_and_feature_reordering_preserves_solution_and_provenance",
+          "layer": "brep",
+          "status": "implemented"
+        },
+        {
+          "nodeid": "tests/integration/test_kernel_sketch_profile.py::test_dimension_changes_and_boundary_order_keep_semantic_line_provenance",
+          "layer": "brep",
+          "status": "implemented"
+        },
+        {
+          "nodeid": "tests/integration/test_kernel_sketch_profile.py::test_extrusion_follows_explicit_sketch_plane_normal",
+          "layer": "brep",
+          "status": "implemented"
+        }
+      ],
+      "code_symbols": [
+        "mechanical_cad.kernel_ocp.OCPKernel.polygon"
+      ]
+    },
+    {
+      "id": "MCAD-HIST-003",
+      "title": "Schema migration is explicit and preserves legacy source hashes",
+      "category_path": [
+        "history",
+        "schema_migration",
+        "version_two"
+      ],
+      "tags": [
+        "schema1",
+        "schema2",
+        "hash",
+        "formulas",
+        "snapshot"
+      ],
+      "coverage": "partial",
+      "minimal_fixture": "Delivered schema-1 drilled-plate and parameter-chain fixtures plus a typed constrained-sketch schema-2 fixture.",
+      "mutation": "Replay/serialize the legacy files, explicitly migrate a copy to schema 2, and attempt a constrained feature in unmigrated schema 1.",
+      "acceptance": [
+        "Legacy schema-1 canonical bytes and historical hashes remain unchanged.",
+        "Explicit migration changes only schema version and preserves all feature IDs, labels, params, dependencies and active result.",
+        "Constrained features require schema 2 and a strict typed sketch payload; no automatic primitive conversion."
+      ],
+      "repair_policy": "Keep the old snapshot available. Reject unsupported new features until the user explicitly migrates the edit transaction.",
+      "tests": [
+        {
+          "nodeid": "tests/unit/test_schema_two.py::test_schema_one_matches_delivered_689a414_hash",
+          "layer": "unit",
+          "status": "implemented"
+        },
+        {
+          "nodeid": "tests/unit/test_schema_two.py::test_explicit_migration_preserves_all_feature_intent_and_old_snapshot",
+          "layer": "unit",
+          "status": "implemented"
+        },
+        {
+          "nodeid": "tests/unit/test_schema_two.py::test_constrained_feature_requires_explicit_schema_migration",
+          "layer": "unit",
+          "status": "implemented"
+        }
+      ],
+      "code_symbols": [
+        "mechanical_cad.model.Document.migrate_to_v2"
+      ]
+    },
+    {
+      "id": "MCAD-SKETCH-003",
+      "title": "Input bounds are not promises of usable native geometry resolution",
+      "category_path": [
+        "sketch",
+        "resolution",
+        "thin_regions"
+      ],
+      "tags": [
+        "nanometre",
+        "tolerance",
+        "fail_closed",
+        "aspect_ratio"
+      ],
+      "coverage": "partial",
+      "minimal_fixture": "40 x 30 mm constrained rectangle extruded by 10 mm.",
+      "mutation": "Set width or depth to the documented inclusive input minimum 1e-6 mm.",
+      "acceptance": [
+        "Unsupported extremely thin native profiles fail closed as degenerate_profile or kernel_error.",
+        "No current downstream mesh/shape is published; stored source remains available for correction.",
+        "Validation tolerances are not silently relaxed to force a result."
+      ],
+      "repair_policy": "Explain the native resolution/aspect-ratio limitation and require a physically usable feature size. Do not imply every value inside parser bounds is manufacturable.",
+      "tests": [
+        {
+          "nodeid": "tests/integration/test_constrained_replay.py::test_nanometre_profile_boundary_fails_closed_at_native_resolution",
+          "layer": "brep",
+          "status": "implemented"
+        }
+      ],
+      "code_symbols": [
+        "mechanical_cad.profile_region.validate_polygon"
+      ]
+    },
+    {
+      "id": "MCAD-SKETCH-004",
+      "title": "Explicit workplanes avoid ill-conditioned plane fitting",
+      "category_path": [
+        "sketch",
+        "resolution",
+        "arbitrary_plane"
+      ],
+      "tags": [
+        "quaternion",
+        "near_unit",
+        "high_aspect_ratio",
+        "explicit_plane"
+      ],
+      "coverage": "partial",
+      "minimal_fixture": "Constrained 1e6 x 30 mm rectangle, 10 mm extrusion, origin (3,4,5), quaternion (2,-3,5,7)/sqrt(87).",
+      "mutation": "Scale the quaternion by sqrt(1+epsilon), epsilon in {0,+5e-10,-5e-10,+9.9e-10}, within the documented unit-norm acceptance tolerance.",
+      "acceptance": [
+        "The temporary quaternion is normalized only for B-rep construction; persisted plane remains byte-for-byte unchanged.",
+        "The face uses the authoritative gp_Pln rather than fitting a plane from an ill-conditioned long thin wire.",
+        "All fixtures solve within residual tolerance and build valid solids of volume 3e8 mm^3."
+      ],
+      "repair_policy": "Reject truly invalid workplanes. Never rewrite the source orientation or loosen geometry checks to force a fit.",
+      "tests": [
+        {
+          "nodeid": "tests/integration/test_constrained_replay.py::test_long_thin_rotated_profile_uses_authoritative_plane",
+          "layer": "brep",
+          "status": "implemented"
+        }
+      ],
+      "code_symbols": [
+        "mechanical_cad.kernel_ocp.OCPKernel.polygon"
+      ]
+    },
+    {
+      "id": "MCAD-INTENT-002",
+      "title": "Releasing a positional constraint preserves the current solved placement",
+      "category_path": [
+        "intent",
+        "constraint_release",
+        "seed_continuity"
+      ],
+      "tags": [
+        "viewport_rectangle",
+        "fixed",
+        "underconstrained",
+        "undo",
+        "reopen"
+      ],
+      "coverage": "partial",
+      "minimal_fixture": "Viewport four-corner rectangle created 40 x 30 mm and extruded 10 mm. Edit width to 60 mm while preserving original authoring seeds.",
+      "mutation": "Explicitly turn Fix rectangle position off, Apply and Finish; then re-enable the anchor. Also cancel a validated release and save/reopen the released document.",
+      "acceptance": [
+        "Removing only the anchor leaves the visible solved coordinates unchanged and changes real remaining DoF from 0 to 2.",
+        "Only this explicit position-constraint edit reseeds the same point IDs from the last validated solution. Ordinary dimension replay does not rewrite seeds.",
+        "Re-fixing pins the displayed current corner; downstream feature and entity IDs remain unchanged.",
+        "Cancel preserves the original canonical JSON byte-for-byte. Native Undo/Redo restores the corresponding constraint state and geometry."
+      ],
+      "repair_policy": "Do not replay stale creation seeds when the user only releases a positional relation. Simultaneous dimension edits can move a free sketch and require a fresh truthful preview.",
+      "tests": [
+        {
+          "nodeid": "tests/unit/test_sketch_draft.py::test_release_reseeds_current_solution_only_after_explicit_position_edit",
+          "layer": "unit",
+          "status": "implemented"
+        }
+      ],
+      "supplementary_evidence": [
+        "tests/blender_viewport_sketch_smoke.py: real solver release/refix/cancel/reopen assertions",
+        "docs/UX.md: actual Blender 5.2.2 GUI release and Undo/Redo review"
+      ],
+      "code_symbols": [
+        "mechanical_cad_blender.sketch_draft.RectangleDraft.set_dimensions"
+      ]
+    },
+    {
+      "id": "MCAD-SKETCH-005",
+      "title": "A bounded editor rejects imported geometry branches it cannot preview truthfully",
+      "category_path": [
+        "sketch",
+        "editor_contract",
+        "mirrored_branch"
+      ],
+      "tags": [
+        "viewport_rectangle",
+        "import",
+        "orientation",
+        "finish",
+        "fail_closed"
+      ],
+      "coverage": "partial",
+      "minimal_fixture": "Four same-ID rectangle corners with horizontal/vertical/distance constraints. Mirror X or Y seeds, or move the fixed anchor so a positive seed arrangement solves onto a negative branch.",
+      "mutation": "Open the imported sketch, Apply, or Finish directly without a prior Apply.",
+      "acceptance": [
+        "Mirrored source definitions and unsupported solved orientation are explicitly rejected by the narrow +X/+Y rectangle editor.",
+        "Neither the preview nor a current DoF badge claims validation for an unsupported branch.",
+        "Finish performs one fresh guarded replay and validates orientation before any canonical mutation; source JSON and accepted downstream geometry remain intact."
+      ],
+      "repair_policy": "Keep the imported definition available for another supported editor or explicit correction. Never silently mirror geometry or relabel a corner to fit the overlay.",
+      "tests": [
+        {
+          "nodeid": "tests/unit/test_sketch_draft.py::test_reversed_imported_seed_order_is_outside_bounded_editor",
+          "layer": "unit",
+          "status": "implemented"
+        },
+        {
+          "nodeid": "tests/unit/test_sketch_draft.py::test_reversed_solved_branch_clears_current_report_before_rejection",
+          "layer": "unit",
+          "status": "implemented"
+        }
+      ],
+      "supplementary_evidence": [
+        "tests/blender_viewport_sketch_smoke.py: native direct-Finish and changed-snapshot regressions",
+        "Independent native Blender5.2.2 audit: nine fixed/free/moved-anchor rejection cases"
+      ],
+      "code_symbols": [
+        "mechanical_cad_blender.sketch_draft.RectangleDraft.accept_replay",
+        "mechanical_cad_blender.document_state._commit_candidate_locked"
+      ]
+    },
+    {
+      "id": "MCAD-ASSEMBLY-001",
+      "title": "Viewport schema-2 sources use authoritative canonical snapshot identity",
+      "category_path": [
+        "assembly",
+        "source_identity",
+        "canonical_capture"
+      ],
+      "tags": [
+        "schema2",
+        "formulas",
+        "normalization",
+        "reopen",
+        "all_instance_update"
+      ],
+      "coverage": "partial",
+      "minimal_fixture": "Exact GUI-authored 12 x 8 x 4 mm Part in examples/regressions/viewport_schema2_capture.mcad.json, including omitted optional constraint fields and expression dimensions.",
+      "mutation": "Capture into an assembly, reuse twice, save/reopen, change working width expression to 12 + 4, explicitly update every instance.",
+      "acceptance": [
+        "Raw working editor JSON, feature/entity IDs, references, formulas and seeds remain unchanged by capture.",
+        "Canonical Document.to_json bytes define the accepted source digest; omitted defaults and record ordering never weaken identity checks.",
+        "Both instances update atomically; source hashes enter new report fingerprints and late pending responses are rejected."
+      ],
+      "repair_policy": "Request an authoritative snapshot receipt and preserve editor text. Reject forged receipts or changed revisions; never hash raw UI JSON as a substitute for canonical Part identity.",
+      "tests": [
+        {
+          "nodeid": "tests/unit/test_part_snapshot.py::test_capture_save_reload_parameter_edit_updates_two_instances_and_preserves_identity",
+          "layer": "unit",
+          "status": "implemented"
+        },
+        {
+          "nodeid": "tests/unit/test_part_snapshot.py::test_existing_schema_one_serialized_bytes_and_hashes_stay_unchanged",
+          "layer": "unit",
+          "status": "implemented"
+        }
+      ],
+      "supplementary_evidence": [
+        "tests/blender_assembly_schema2_capture.py: native fresh-process capture/reopen/edit/all-instance-update and pending-response rejection"
+      ],
+      "code_symbols": [
+        "mechanical_cad.part_snapshot.canonical_snapshot",
+        "mechanical_cad_blender.part_snapshot_bridge.canonical_equivalent"
+      ]
+    },
+    {
+      "id": "MCAD-DISPLAY-001",
+      "title": "Owned CAD Focus does not slice a millimetre part with the near plane",
+      "category_path": [
+        "display",
+        "viewport_clipping",
+        "small_geometry"
+      ],
+      "tags": [
+        "focus",
+        "near_plane",
+        "units",
+        "far_origin"
+      ],
+      "coverage": "partial",
+      "minimal_fixture": "A 12 x 8 x 4 mm Part viewed in the CAD Part workspace with Blender default clip_start 0.01 scene units.",
+      "mutation": "Focus Result while orbiting the unchanged valid solid; repeat with unit scales and translated instances.",
+      "acceptance": [
+        "Near plane is lowered from excessive settings using transformed local bounds and the native RNA floor.",
+        "Finer chosen settings, unrelated workspaces/viewports and Whole Scene remain unchanged.",
+        "Extreme tiny/far-origin native framing and clipping floors remain explicit limitations."
+      ],
+      "repair_policy": "Adjust only the owned CAD viewport on an explicit geometry Focus. Do not alter canonical dimensions or global user scene units to hide clipping.",
+      "tests": [
+        {
+          "nodeid": "tests/unit/test_cad_view_clipping.py::test_millimetre_part_lowers_clip_before_native_framing",
+          "layer": "unit",
+          "status": "implemented"
+        },
+        {
+          "nodeid": "tests/unit/test_cad_view_clipping.py::test_far_origin_does_not_erase_local_extent_or_enlarge_near_plane",
+          "layer": "unit",
+          "status": "implemented"
+        },
+        {
+          "nodeid": "tests/unit/test_cad_view_clipping.py::test_unowned_or_unrecognized_workspace_retains_clipping",
+          "layer": "unit",
+          "status": "implemented"
+        }
+      ],
+      "supplementary_evidence": [
+        "Native5.2.2 original GUI comparison established unchanged valid B-rep and near-plane cause; fixed GUI recheck remains separately qualified."
+      ],
+      "code_symbols": [
+        "mechanical_cad_blender.display._lower_focus_clip"
+      ]
+    },
+    {
+      "id": "MCAD-SKETCH-009",
+      "title": "Successful open sketch has no manufactured solid",
+      "category_path": [
+        "sketch",
+        "regions",
+        "open_output"
+      ],
+      "tags": [
+        "circle",
+        "open_sketch",
+        "typed_output",
+        "compatibility"
+      ],
+      "coverage": "partial",
+      "minimal_fixture": "An independent two-line connected chain in embedded sketch schema 2.",
+      "mutation": "Add an extrusion consumer, then request check/STEP/STL export.",
+      "acceptance": [
+        "The open sketch keeps successful solve and true DoF evidence, with no mesh/shape/volume.",
+        "The extrusion is blocked with profile_unavailable; active open export fails not_a_solid without replacing files."
+      ],
+      "repair_policy": "Keep the authored candidate recoverable; never substitute a stale solid or silently downgrade the response contract.",
+      "tests": [
+        {
+          "nodeid": "tests/integration/test_versioned_sketch_service.py::test_open_solver_success_is_separate_from_profile_readiness_and_replay",
+          "layer": "integration",
+          "status": "implemented"
+        },
+        {
+          "nodeid": "tests/integration/test_versioned_sketch_service.py::test_open_consumed_sketch_blocks_extrusion_without_losing_valid_sketch",
+          "layer": "integration",
+          "status": "implemented"
+        },
+        {
+          "nodeid": "tests/integration/test_versioned_sketch_service.py::test_active_open_sketch_is_not_a_solid_and_preserves_destination",
+          "layer": "integration",
+          "status": "implemented"
+        }
+      ],
+      "code_symbols": [
+        "mechanical_cad.engine.regenerate",
+        "mechanical_cad.sketch_service.solve_sketch"
+      ]
+    },
+    {
+      "id": "MCAD-SKETCH-010",
+      "title": "Version negotiation prevents silent open-sketch downgrade",
+      "category_path": [
+        "history",
+        "schema_migration",
+        "typed_outputs"
+      ],
+      "tags": [
+        "circle",
+        "open_sketch",
+        "typed_output",
+        "compatibility"
+      ],
+      "coverage": "partial",
+      "minimal_fixture": "Embedded sketch schema 2 circle or open chain, unchanged Part schema 2.",
+      "mutation": "Send legacy, supported new, and malformed result-version requests.",
+      "acceptance": [
+        "Legacy clients get an explicit upgrade error for new capability data.",
+        "Solve-only cannot request file writes and binds all candidate input fields."
+      ],
+      "repair_policy": "Keep the authored candidate recoverable; never substitute a stale solid or silently downgrade the response contract.",
+      "tests": [
+        {
+          "nodeid": "tests/integration/test_versioned_sketch_service.py::test_new_document_cannot_silently_downgrade_to_legacy_result",
+          "layer": "integration",
+          "status": "implemented"
+        },
+        {
+          "nodeid": "tests/integration/test_versioned_sketch_service.py::test_unknown_result_version_fails_before_native_execution",
+          "layer": "integration",
+          "status": "implemented"
+        },
+        {
+          "nodeid": "tests/integration/test_versioned_sketch_service.py::test_solve_only_rejects_export_and_geometry_options",
+          "layer": "integration",
+          "status": "implemented"
+        }
+      ],
+      "code_symbols": [
+        "mechanical_cad.engine.regenerate",
+        "mechanical_cad.sketch_service.solve_sketch"
+      ]
+    },
+    {
+      "id": "MCAD-PROTOCOL-001",
+      "title": "Successful output must consume current typed inputs",
+      "category_path": [
+        "protocol",
+        "evidence",
+        "dependency_ports"
+      ],
+      "tags": [
+        "typed_output",
+        "strict_evidence"
+      ],
+      "coverage": "partial",
+      "minimal_fixture": "Native circle solid and a separately solved open two-line chain.",
+      "mutation": "Substitute a structurally valid extrusion result into the open chain replay, keeping the exact request hash.",
+      "acceptance": [
+        "An unavailable or failed profile cannot support a successful extrusion.",
+        "A matching request hash is necessary but cannot authorize contradictory evidence."
+      ],
+      "repair_policy": "Reject inconsistent evidence and keep the editable candidate; do not publish a successful geometry claim.",
+      "tests": [
+        {
+          "nodeid": "tests/integration/test_part_result_v2.py::test_successful_extrusion_cannot_consume_unavailable_or_failed_profile",
+          "layer": "integration",
+          "status": "implemented"
+        }
+      ],
+      "code_symbols": [
+        "mechanical_cad_blender.part_result_bridge.validate_response"
+      ]
+    },
+    {
+      "id": "MCAD-PROTOCOL-002",
+      "title": "Nested geometry and export evidence must be complete",
+      "category_path": [
+        "protocol",
+        "evidence",
+        "manufacturing_receipt"
+      ],
+      "tags": [
+        "typed_output",
+        "strict_evidence"
+      ],
+      "coverage": "partial",
+      "minimal_fixture": "Native circle check and STEP/STL export responses.",
+      "mutation": "Corrupt check areas/counts/schema, remove export receipt, or alter output identity.",
+      "acceptance": [
+        "Malformed nested reports fail before display/publication.",
+        "Completed export receipt binds destination, revision and encoded STL triangle size."
+      ],
+      "repair_policy": "Reject inconsistent evidence and keep the editable candidate; do not publish a successful geometry claim.",
+      "tests": [
+        {
+          "nodeid": "tests/integration/test_part_result_v2.py::test_strict_geometry_check_and_signature_schema_rejects_nested_corruption",
+          "layer": "integration",
+          "status": "implemented"
+        },
+        {
+          "nodeid": "tests/integration/test_part_result_v2.py::test_actual_export_receipt_is_required_and_bound",
+          "layer": "integration",
+          "status": "implemented"
+        }
+      ],
+      "code_symbols": [
+        "mechanical_cad_blender.part_result_bridge.validate_response"
+      ]
+    },
+    {
+      "id": "MCAD-TOPO-010",
+      "title": "Transport preserves source-bound ambiguous cut lineage",
+      "category_path": [
+        "topology",
+        "semantic_identity",
+        "strict_transport"
+      ],
+      "tags": [
+        "typed_output",
+        "strict_evidence"
+      ],
+      "coverage": "partial",
+      "minimal_fixture": "A connected shallow slot followed by a bore, plus an analytic circle extrusion.",
+      "mutation": "Reverse source-list order, forge a missing boundary ID, or promote a split inherited cap to stable.",
+      "acceptance": [
+        "Correct multi-cut lineage survives source-list reorder.",
+        "Missing source curves/tool faces and promoted ambiguity are rejected."
+      ],
+      "repair_policy": "Reject inconsistent evidence and keep the editable candidate; do not publish a successful geometry claim.",
+      "tests": [
+        {
+          "nodeid": "tests/integration/test_part_result_v2.py::test_split_cut_lineage_stays_ambiguous_across_a_second_cut_and_list_reorder",
+          "layer": "integration",
+          "status": "implemented"
+        },
+        {
+          "nodeid": "tests/integration/test_part_result_v2.py::test_circle_side_and_cut_wall_sources_must_belong_to_authored_geometry",
+          "layer": "integration",
+          "status": "implemented"
+        }
+      ],
+      "code_symbols": [
+        "mechanical_cad_blender.part_result_bridge.validate_response"
+      ]
+    },
+    {
+      "id": "MCAD-SKETCH-011",
+      "title": "Pruned draft history never reuses identities or overflows counters",
+      "category_path": [
+        "sketch",
+        "editor_contract",
+        "journal_recovery"
+      ],
+      "tags": [
+        "draft",
+        "stable_ids",
+        "resource_limits"
+      ],
+      "coverage": "partial",
+      "minimal_fixture": "General circle/line draft with more than 64 local commands and deleted imported/generated IDs.",
+      "mutation": "Forge a retained add to reuse a pruned ID; restore maximum counters then attempt an edit.",
+      "acceptance": [
+        "Restore rejects identity reuse after pruning and branching.",
+        "Counter exhaustion rejects before changing raw input, history, accepted intent or evidence."
+      ],
+      "repair_policy": "Retain the original saved bytes for explicit recovery or Discard; do not silently migrate old journal versions.",
+      "tests": [
+        {
+          "nodeid": "tests/unit/test_general_draft_store.py::test_pruned_history_cannot_reintroduce_a_deleted_generated_identity",
+          "layer": "unit",
+          "status": "implemented"
+        },
+        {
+          "nodeid": "tests/unit/test_general_sketch_draft.py::test_exhausted_counters_fail_before_any_live_mutation",
+          "layer": "unit",
+          "status": "implemented"
+        }
+      ],
+      "code_symbols": [
+        "mechanical_cad_blender.general_sketch_journal.restore_history"
+      ]
+    },
+    {
+      "id": "MCAD-SKETCH-012",
+      "title": "Endpoint selection is explicit when curve and point occupy one pixel",
+      "category_path": [
+        "sketch",
+        "editor_contract",
+        "point_selection"
+      ],
+      "tags": [
+        "selection",
+        "ambiguity",
+        "stable_ids"
+      ],
+      "coverage": "partial",
+      "minimal_fixture": "A line endpoint and its incident line project to the same pixel.",
+      "mutation": "Use generic Select, then explicit Points; add a distinct overlapping point.",
+      "acceptance": [
+        "Generic selection retains the endpoint/curve ambiguity.",
+        "Point-only selection resolves only the curve tie, never two distinct point IDs."
+      ],
+      "repair_policy": "Use explicit point filtering or the selected curve\u2019s named endpoint/center control.",
+      "tests": [
+        {
+          "nodeid": "tests/unit/test_constraint_selection.py::test_actual_generic_endpoint_tie_and_explicit_point_route",
+          "layer": "unit",
+          "status": "implemented"
+        },
+        {
+          "nodeid": "tests/unit/test_constraint_selection.py::test_point_filter_does_not_resolve_distinct_overlapping_ids_or_incomplete_picks",
+          "layer": "unit",
+          "status": "implemented"
+        }
+      ],
+      "code_symbols": [
+        "mechanical_cad_blender.constraint_selection.pick_kinds"
+      ],
+      "implementation_boundary": "Pure/native contracts; interactive GUI and installed-package coverage are separate gates."
+    },
+    {
+      "id": "MCAD-SKETCH-013",
+      "title": "Failed solve diagnostics never acquire current geometry authority",
+      "category_path": [
+        "sketch",
+        "editor_contract",
+        "failure_binding"
+      ],
+      "tags": [
+        "diagnostics",
+        "request_identity",
+        "raw_input"
+      ],
+      "coverage": "partial",
+      "minimal_fixture": "A native failed sketch report with authored conflict candidate IDs.",
+      "mutation": "Change input A\u2192B\u2192A or the exact request/session/revision.",
+      "acceptance": [
+        "Only exactly bound failed reports supply inspection candidates.",
+        "No failed diagnostic supplies solved geometry, DoF or publication authority."
+      ],
+      "repair_policy": "Retire observed stale diagnostics; use explicit fresh Check.",
+      "tests": [
+        {
+          "nodeid": "tests/unit/test_constraint_diagnostics.py::test_raw_input_a_to_b_to_a_never_revives_old_diagnostics_with_same_lease_and_request",
+          "layer": "unit",
+          "status": "implemented"
+        },
+        {
+          "nodeid": "tests/unit/test_constraint_diagnostics.py::test_no_mutable_aliases_or_current_solve_authority_are_retained",
+          "layer": "unit",
+          "status": "implemented"
+        }
+      ],
+      "code_symbols": [
+        "mechanical_cad_blender.constraint_diagnostics.FailureDiagnostics",
+        "mechanical_cad_blender.general_session.GeneralSession.current_diagnostics"
+      ],
+      "implementation_boundary": "Pure/native contracts; interactive GUI and installed-package coverage are separate gates."
+    },
+    {
+      "id": "MCAD-INTENT-003",
+      "title": "Conflict recovery preserves its explicit authored-position policy",
+      "category_path": [
+        "intent",
+        "constraint_release",
+        "authored_recovery"
+      ],
+      "tags": [
+        "recovery",
+        "constraints",
+        "journal",
+        "seeds"
+      ],
+      "coverage": "partial",
+      "minimal_fixture": "A general sketch with incompatible H/V or fixed relations and no current successful solution.",
+      "mutation": "Explicitly remove one named relation using authored seeds, then Undo/Redo and reopen.",
+      "acceptance": [
+        "Only that relation is removed; geometry and surviving identities/expressions remain.",
+        "Ordinary solved release is not weakened or silently replaced.",
+        "Authored seeds remain exact and new solve evidence is required."
+      ],
+      "repair_policy": "Use the separately disclosed recovery command or local Undo; never choose a candidate automatically.",
+      "tests": [
+        {
+          "nodeid": "tests/unit/test_general_sketch_draft.py::test_recovery_copies_exact_current_authored_seeds_not_retained_solved_positions",
+          "layer": "unit",
+          "status": "implemented"
+        },
+        {
+          "nodeid": "tests/integration/test_general_sketch_draft_native.py::test_failed_native_relations_recover_with_authored_seeds_and_reversible_history",
+          "layer": "integration",
+          "status": "implemented"
+        },
+        {
+          "nodeid": "tests/unit/test_general_sketch_draft.py::test_released_delete_snapshot_bytes_remain_exact",
+          "layer": "unit",
+          "status": "implemented"
+        }
+      ],
+      "code_symbols": [
+        "mechanical_cad_blender.general_sketch_commands.RecoverRemoveRelation"
+      ],
+      "implementation_boundary": "Pure/native contracts; interactive GUI and installed-package coverage are separate gates."
+    },
+    {
+      "id": "MCAD-TOPO-011",
+      "title": "Ordinary Cut preserves exact tool wall ancestry",
+      "category_path": [
+        "topology",
+        "semantic_identity",
+        "cut_tool_ancestry"
+      ],
+      "tags": [
+        "cut",
+        "fillet",
+        "chamfer",
+        "strict_evidence"
+      ],
+      "coverage": "partial",
+      "minimal_fixture": "Parametric cylinder through or partly into a rectangular pad, including reversed tool-face orientation.",
+      "mutation": "Edit radius/height; split the wall with a transverse slot; use a patterned or aliased tool; forge lineage evidence.",
+      "acceptance": [
+        "One exact Modified/unchanged stable tool face remains selectable through edits.",
+        "Selected hole-edge blends rebuild as valid solids.",
+        "Split, patterned, aliased or forged tool lineage is not promoted."
+      ],
+      "repair_policy": "Fail closed when exact unique ancestry is unavailable; never nearest-face repair.",
+      "tests": [
+        {
+          "nodeid": "tests/integration/test_cut_tool_lineage.py::test_native_tool_face_history_and_orientation_reversal",
+          "layer": "brep",
+          "status": "implemented"
+        },
+        {
+          "nodeid": "tests/integration/test_cut_tool_lineage.py::test_picked_hole_edge_replays_and_validates_across_radius_height_edits",
+          "layer": "brep",
+          "status": "implemented"
+        },
+        {
+          "nodeid": "tests/integration/test_cut_tool_lineage.py::test_multi_image_tool_wall_is_snapshot_only_and_cannot_be_blended",
+          "layer": "brep",
+          "status": "implemented"
+        },
+        {
+          "nodeid": "tests/integration/test_cut_tool_lineage.py::test_patterned_cut_does_not_promote_tool_face",
+          "layer": "brep",
+          "status": "implemented"
+        },
+        {
+          "nodeid": "tests/integration/test_cut_tool_lineage.py::test_client_rejects_false_tool_ancestry",
+          "layer": "integration",
+          "status": "implemented"
+        },
+        {
+          "nodeid": "tests/integration/test_cut_tool_lineage.py::test_blind_cut_planar_tool_cap_uses_current_reversed_normal",
+          "layer": "brep",
+          "status": "implemented"
+        },
+        {
+          "nodeid": "tests/integration/test_cut_tool_lineage.py::test_transformed_alias_tool_cannot_claim_base_identity",
+          "layer": "brep",
+          "status": "implemented"
+        },
+        {
+          "nodeid": "tests/integration/test_cut_tool_lineage.py::test_reused_kernel_resets_legacy_topology_policy_and_current_ui_selects_v2",
+          "layer": "integration",
+          "status": "implemented"
+        },
+        {
+          "nodeid": "tests/integration/test_cut_tool_lineage.py::test_merged_base_ancestry_cannot_be_resurrected_by_tool_or_forged_client",
+          "layer": "integration",
+          "status": "implemented"
+        }
+      ],
+      "code_symbols": [
+        "mechanical_cad.kernel_ocp.OCPKernel._cut_topology",
+        "mechanical_cad_blender.topology_evidence.validate_topology"
+      ],
+      "implementation_boundary": "Native and strict-client contracts only; GUI/installed-package exercise remains separate."
+    },
+    {
+      "id": "MCAD-TNP-SUPPORT-001",
+      "title": "Saved logical sketch plane survives a proven coplanar Cut split",
+      "category_path": [
+        "topology",
+        "evolution",
+        "split",
+        "logical_support_plane"
+      ],
+      "tags": [
+        "TNP",
+        "sketch",
+        "support",
+        "anchor",
+        "assumption",
+        "repair",
+        "undo",
+        "slot"
+      ],
+      "coverage": "partial",
+      "minimal_fixture": "20\u00d720\u00d710 mm block, shallow 2\u00d722 slot and attached radius-2 sketch.",
+      "mutation": "Extend the slot through the top face, creating two equal coplanar descendants.",
+      "acceptance": [
+        "Retain saved in-plane anchor, not a fragment centroid; downstream volume remains correct.",
+        "Keep native descendants split with snapshot-only IDs; do not invent face identity.",
+        "Persist versioned intent; save/replay and reordered snapshots produce the same plane.",
+        "Follow the original stable source workplane through width/position/normal changes; different planes or missing source ancestry require correction.",
+        "Keep a nonzero saved source-relative anchor continuous through asymmetric single Modified face, split, and unsplit; distinguish exact face identity from assumed placement policy."
+      ],
+      "repair_policy": "Preserve the common logical plane only under saved preserve_plane intent; otherwise choose a current stable support explicitly. See docs/regressions/topology/support/MCAD-TNP-SUPPORT-001.md.",
+      "tests": [
+        {
+          "nodeid": "tests/integration/test_split_support_intent.py",
+          "layer": "brep",
+          "status": "implemented",
+          "scope": "Native split/tilt/source-frame transport/refusal, save/replay, downstream geometry and client result binding."
+        },
+        {
+          "nodeid": "tests/unit/test_support_intent.py",
+          "layer": "unit",
+          "status": "implemented",
+          "scope": "Bounded persisted intent and native-free mirror equality."
+        },
+        {
+          "nodeid": "tests/blender_support_intent_smoke.py",
+          "layer": "blender",
+          "status": "implemented",
+          "scope": "Native registered review with dialog/layout harness, atomic correction, Cancel, stale evidence, .blend create and independent reopen; not mouse/Undo qualification."
+        }
+      ]
+    },
+    {
+      "id": "MCAD-TNP-BLEND-001",
+      "title": "Selected blend surface owns exact generated identity",
+      "category_path": [
+        "topology",
+        "evolution",
+        "construction",
+        "blend"
+      ],
+      "tags": [
+        "TNP",
+        "native_history",
+        "persistence",
+        "sketch",
+        "projection"
+      ],
+      "coverage": "partial",
+      "minimal_fixture": "Selected box-edge chamfer and circular cylinder fillet.",
+      "mutation": "Change profile size and blend size; save and reopen.",
+      "acceptance": [
+        "Native unique construction provenance remains stable through parameter edits.",
+        "Ambiguous source or image history is not promoted.",
+        "Planar sketch and supported edge references replay after persistence; curved surfaces remain nonplanar."
+      ],
+      "repair_policy": "Edit the owning feature to change authored construction intent; ambiguous history remains unresolved. See docs/regressions/topology/blend/MCAD-TNP-BLEND-001.md.",
+      "tests": [
+        {
+          "nodeid": "tests/integration/test_selected_blend_surface.py",
+          "layer": "brep",
+          "status": "implemented",
+          "scope": "Native construction, dimensions, edit/save/replay and ambiguity/transport rejection."
+        },
+        {
+          "nodeid": "tests/blender_selected_blend_surface_smoke.py",
+          "layer": "blender",
+          "status": "implemented",
+          "scope": "Registered operators, face resolution, sketch, parameter edit and independent .blend reopen; no interactive mouse qualification."
+        }
+      ]
+    },
+    {
+      "id": "MCAD-TNP-SHELL-001",
+      "title": "Open Shell inner wall and lip own exact native construction",
+      "category_path": [
+        "topology",
+        "evolution",
+        "construction",
+        "shell"
+      ],
+      "tags": [
+        "TNP",
+        "native_history",
+        "persistence",
+        "sketch",
+        "projection"
+      ],
+      "coverage": "partial",
+      "minimal_fixture": "20\u00d715\u00d710 open enclosure and cylindrical cup.",
+      "mutation": "Change wall thickness and base size; deliberately change the selected opening; save and reopen.",
+      "acceptance": [
+        "Native unique construction provenance remains stable through parameter edits.",
+        "Ambiguous source or image history is not promoted.",
+        "Planar sketch and supported edge references replay after persistence; curved surfaces remain nonplanar.",
+        "The explicit current-opening lip intent follows deliberate opening edits, while inner-wall identities remain source-bound."
+      ],
+      "repair_policy": "Edit the owning feature to change authored construction intent; ambiguous history remains unresolved. See docs/regressions/topology/shell/MCAD-TNP-SHELL-001.md.",
+      "tests": [
+        {
+          "nodeid": "tests/integration/test_shell_generated_surfaces.py",
+          "layer": "brep",
+          "status": "implemented",
+          "scope": "Native construction, dimensions, edit/save/replay and ambiguity/transport rejection."
+        },
+        {
+          "nodeid": "tests/blender_shell_inner_surface_smoke.py",
+          "layer": "blender",
+          "status": "implemented",
+          "scope": "Registered operators, face resolution, sketch, parameter edit and independent .blend reopen; no interactive mouse qualification."
+        }
+      ]
+    },
+    {
+      "id": "MCAD-TNP-SUPPORT-002",
+      "title": "Saved minimal-twist support frame crosses the projected-world-axis threshold",
+      "category_path": [
+        "topology",
+        "evolution",
+        "support_frame",
+        "orientation"
+      ],
+      "tags": [
+        "TNP",
+        "tangent",
+        "minimal_twist",
+        "antiparallel",
+        "orientation",
+        "reset"
+      ],
+      "coverage": "partial",
+      "minimal_fixture": "Asymmetric 6\u00d74 sketch with source/local offsets on source plane rotated 64 degrees about Y.",
+      "mutation": "Rotate source through 64.3,65,90,110 degrees and back, including Cut split; test antiparallel baseline.",
+      "acceptance": [
+        "Saved tangent transports deterministically across the old normal.x threshold without inferring material spin.",
+        "Saved/replayed geometry and client world-plane validation agree.",
+        "Omitted orientation and Strict preserve existing behavior.",
+        "Antiparallel/degenerate cases refuse with deliberate World axes/reset correction."
+      ],
+      "repair_policy": "Explicit Orientation or Reset saved frame here, warning of rotation/movement; no hidden axis fallback.",
+      "tests": [
+        {
+          "nodeid": "tests/integration/test_support_orientation_intent.py",
+          "layer": "brep",
+          "status": "implemented",
+          "scope": "Threshold/normal changes, asymmetric geometry, persistence, antiparallel/reset and independent client frame validation."
+        },
+        {
+          "nodeid": "tests/unit/test_support_intent.py",
+          "layer": "unit",
+          "status": "implemented",
+          "scope": "Bounded tangent record and core/client mirror equality."
+        },
+        {
+          "nodeid": "tests/blender_support_intent_smoke.py",
+          "layer": "blender",
+          "status": "implemented",
+          "scope": "Bounded native registered review/Cancel/legacy/orientation/reset/Strict/stale evidence and independent .blend reopen; not mouse/Undo qualification."
+        }
+      ]
+    },
+    {
+      "id": "MCAD-TNP-PATTERN-001",
+      "title": "Feature-owned authored hole-pattern occurrence surfaces",
+      "category_path": [
+        "topology",
+        "evolution",
+        "pattern",
+        "occurrence"
+      ],
+      "tags": [
+        "TNP",
+        "pattern",
+        "cut",
+        "occurrence",
+        "construction_intent"
+      ],
+      "coverage": "partial",
+      "minimal_fixture": "Separate cylindrical tools cut a plate; blind floors support an attached sketch.",
+      "mutation": "Edit size, pitch, count and sweep; remove/overlap/split a referenced occurrence; save and replay.",
+      "acceptance": [
+        "Numbered authored placement plus stable source tool face owns only one exact native image.",
+        "Count or sweep changes may move the same occurrence, never nearest-hole rebind.",
+        "Missing, split, overlapping or competing histories stay snapshot-only; downstream references fail closed.",
+        "Legacy result v1 is unchanged and native-free clients reject forged source/count/hash evidence."
+      ],
+      "repair_policy": "Edit Pattern placement/count or explicitly replace the reference; no collective overlap naming.",
+      "tests": [
+        {
+          "nodeid": "tests/integration/test_pattern_face_intent.py",
+          "layer": "brep",
+          "status": "implemented",
+          "scope": "Native occurrence provenance, edits/save/replay, downstream references, refusal/forgery cases and labels; no interactive GUI qualification."
+        }
+      ]
+    },
+    {
+      "id": "MCAD-TNP-SUPPORT-003",
+      "title": "Source-bound logical workplanes survive complete successive Cut ancestry",
+      "category_path": [
+        "topology",
+        "evolution",
+        "split",
+        "logical_support_plane"
+      ],
+      "tags": [
+        "TNP",
+        "sketch",
+        "support",
+        "cut_chain",
+        "source_binding",
+        "deletion"
+      ],
+      "coverage": "partial",
+      "minimal_fixture": "20 x 20 x 10 mm block, two or three 2 mm top slots, and an attached radius-2 sketch.",
+      "mutation": "Edit width/depth, delete some/all fragments, alter source ancestry, save/reopen and replay in a fresh process.",
+      "acceptance": [
+        "Compose complete native Modified/unchanged/deleted evidence through ordinary Cut base chains only.",
+        "Retain the saved source-relative anchor without fragment selection or identity promotion.",
+        "Permit proven partial deletion; reject complete disappearance, competing/generated origins, aliases and noncoplanarity.",
+        "Persist only the authored source feature and signatures, never snapshot IDs or native ledgers.",
+        "Independent v2/v3 replay and solve clients bind every ledger to current input/output catalogs; legacy unbound intent remains unchanged."
+      ],
+      "repair_policy": "Use existing Review Support, Strict, another stable support or explicit frame reset; no guessed replacement face.",
+      "tests": [
+        {
+          "nodeid": "tests/integration/test_cut_ancestry_ledger.py",
+          "layer": "brep",
+          "status": "implemented",
+          "scope": "Exact native source/claim completeness, splits/deletion, competing relations, catalog and request-local handle guards."
+        },
+        {
+          "nodeid": "tests/integration/test_cut_chain_support.py",
+          "layer": "brep",
+          "status": "implemented",
+          "scope": "Two/three Cuts, exact geometry, edits/removal, fresh-process persistence, independent clients, forgery refusal and review helper corrections."
+        },
+        {
+          "nodeid": "tests/unit/test_support_intent.py",
+          "layer": "unit",
+          "status": "implemented",
+          "scope": "Bounded authored source binding, missing-context refusal and native-free mirror equality."
+        }
+      ],
+      "implementation_boundary": "Native and pure authoring/transport tests; no interactive GUI, installed-package or universal TNP claim."
+    },
+    {
+      "id": "MCAD-TNP-END-001",
+      "title": "Explicit staged Up to Face end-reference correction",
+      "category_path": [
+        "topology",
+        "evolution",
+        "end_face",
+        "explicit_repair"
+      ],
+      "tags": [
+        "TNP",
+        "extrusion",
+        "end_face",
+        "staged_repair",
+        "persistence"
+      ],
+      "coverage": "partial",
+      "minimal_fixture": "Block with shallow slot and two Up to Face consumers; an earlier translated solid retains the same semantic face ID.",
+      "mutation": "Deepen slot to split or remove target, explicitly replace end targets, retain partial repairs, Save/Resume/Undo and freshly replay.",
+      "acceptance": [
+        "Only known target gates classify as repairable; unexpected native/profile/offset failures remain failures.",
+        "Choose an earlier dependency-safe solid and stable parallel plane explicitly, preserving profile/direction/offset types and formulas.",
+        "Keep accepted state unchanged until full replay; partial corrections and original-branch eligibility survive intent-only Save/Resume/Undo.",
+        "Never persist native tokens/snapshots or choose by proximity; unrelated branches and malformed transitions reject."
+      ],
+      "repair_policy": "Replace End Face on the retained proposal; no automatic target or face selection. Cancel keeps work, Discard abandons it.",
+      "tests": [
+        {
+          "nodeid": "tests/integration/test_extrusion_end_face_failures.py",
+          "layer": "brep",
+          "status": "implemented",
+          "scope": "Native split/deletion, exact geometry and precise target error classification."
+        },
+        {
+          "nodeid": "tests/integration/test_end_face_repair_catalog.py",
+          "layer": "brep",
+          "status": "implemented",
+          "scope": "Current native geometry, profile frames, explicit catalog choices and v2/v3 clients."
+        },
+        {
+          "nodeid": "tests/unit/test_staged_end_face_repair.py",
+          "layer": "unit",
+          "status": "implemented",
+          "scope": "Bounded transitions, partial chains, stale ownership, intent codec and fresh Resume."
+        }
+      ],
+      "implementation_boundary": "Source/native and background Blender evidence; actual GUI and installed package qualification remain separate."
+    }
+  ]
+}

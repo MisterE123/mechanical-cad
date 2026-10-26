@@ -1,0 +1,23 @@
+{
+  "baseline_commit": "ed090271a1c35fdc95d1ecd5d69e3ab8ea550354",
+  "integrated_base_commit": "d6f13afbda1dbae5516e5fe53cda533902c595b2",
+  "preserved_snapshot_sha256": "ce95ffb43152965620118fd7eff9e8e1f2681136786cbfdb91e36d52f55a847f",
+  "example_files": [
+    "circle_sketch_part.mcad.json",
+    "clevis_hinge/base.mcad.json",
+    "clevis_hinge/leaf.mcad.json",
+    "clevis_hinge/pin.mcad.json",
+    "constrained_plate.mcad.json",
+    "drilled_plate.mcad.json",
+    "explicit_constraint_plate.mcad.json",
+    "open_line_sketch.mcad.json",
+    "parameter_chain.mcad.json",
+    "regressions/viewport_schema2_capture.mcad.json",
+    "viewport_rectangle.mcad.json"
+  ],
+  "synthetic_cases": 80,
+  "output_bytes": 1046933,
+  "baseline_preserved_integrated_and_final_probe_output_sha256": "aac22cbd78f92c6acb28e170b009721cf78894079dc9319e619c90a9b7eac5ad",
+  "exact_cmp_passed": true,
+  "scope": "Canonical JSON/hash/snapshot; v1/v2 replay envelopes; selected-sketch solve responses; 80 seeded v1/v2 numeric solves. Does not remove the deliberate 0.5.1 cycle rejection."
+}

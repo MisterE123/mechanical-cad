@@ -1,0 +1,16 @@
+{
+  "schema": 1,
+  "frozen_utc": "2026-10-17T04:40:44.231246+00:00",
+  "source_commit": "e3d83544510aa07b99dc638665c91b91b1e6bce7",
+  "status": "proposed independent native-mass consistency criterion; empirical, not production admission",
+  "R0_sha256": "ae573f070c65dd68998290f05c49499a206cb8961f695e3012487c661e3fd20a",
+  "formula": "E_consistency = E_V + abs(H)*E_A, using frozen R0 definitions",
+  "comparison": "abs(V_native_local - A_native_face * H) <= E_consistency",
+  "rationale": "Triangle-inequality propagation of the two predeclared R0 measurement allowances; no additional fitted coefficient.",
+  "important": [
+    "The endpoint-gap area interval is not added to this internal consistency allowance.",
+    "Use a separately certified actual perpendicular-height interval in a future production gate. Existing calibration has only a reported double, so its comparison is diagnostic.",
+    "Frozen after initial calibration exposed a separate consistency question and before independent holdout results were inspected.",
+    "Never widen this allowance per failing request."
+  ]
+}

@@ -1,0 +1,484 @@
+{
+  "added": {
+    "blender_addon/mechanical_cad_blender/assembly_joint_draft.py": {
+      "bytes": 17394,
+      "sha256": "db76eed483366b9fa882d95c72d73720aadf74b1b3b85bd67f6b8cbe55372e58"
+    },
+    "blender_addon/mechanical_cad_blender/assembly_joint_overlay.py": {
+      "bytes": 16055,
+      "sha256": "30eb5471b34783de67b0d68c8c74a6580f9cb975b77e5a7110371211970bb275"
+    },
+    "blender_addon/mechanical_cad_blender/assembly_joint_viewport.py": {
+      "bytes": 36624,
+      "sha256": "18ce486072966b46fee6fb927515ec04e609799a33181f73aaa7ed88798e9ef3"
+    },
+    "tests/blender_visual_joint_smoke.py": {
+      "bytes": 23293,
+      "sha256": "d4f29330ac26e093ba1ff5d31264527bd89452caa65b369e374c3b2db797da33"
+    },
+    "tests/unit/test_assembly_joint_draft.py": {
+      "bytes": 14083,
+      "sha256": "d23d9e1c664f461d938c3edc89cb6a54985fadf8c37721a0cb42c246db16d9ff"
+    },
+    "tests/unit/test_assembly_joint_overlay.py": {
+      "bytes": 4285,
+      "sha256": "ffbd31f6bf47191ec1915b54d092620bbe67220d2d9a3848637126c67294fbcf"
+    },
+    "tests/unit/test_visual_joint_owner.py": {
+      "bytes": 25554,
+      "sha256": "0a839dff0b94eabf6ab0e951165ebd9e60354603c2423df98b6910caff1489b6"
+    }
+  },
+  "base_commit": "edc574e23bdb361e6566915842befb91526abaf2",
+  "changed": {
+    "blender_addon/mechanical_cad_blender/__init__.py": {
+      "hunks": [
+        {
+          "new_end": 459,
+          "new_start": 433,
+          "original": "    \"version\": (0, 7, 1),\n",
+          "replacement": "    \"version\": (0, 8, 0),\n"
+        }
+      ],
+      "original_bytes": 1649,
+      "original_sha256": "f225727fa5aec5d3c527a53a200116231fcf3b9c485e97df6c80913a570510f1",
+      "reviewed_bytes": 1649,
+      "reviewed_sha256": "1742bc82361288269b6a1509f4ca4d0c584d37d7276687b3d899e3123f51bec2"
+    },
+    "blender_addon/mechanical_cad_blender/assembly_state.py": {
+      "hunks": [
+        {
+          "new_end": 22113,
+          "new_start": 20999,
+          "original": "",
+          "replacement": "def current_display_response(context):\n    \"\"\"Return live display evidence for a detached, nonauthoritative UI preview.\n\n    Saved report JSON and Blender object transforms are not a pose source. The\n    caller may retain this detached projection of immutable evidence for drawing, but an edit still\n    needs its opening-context checks and a fresh commit_candidate operation.\n    \"\"\"\n    if not display_is_current(context):\n        raise bridge.BridgeError(\"Replay the Assembly before placing a visual joint.\")\n    state = _state(context)\n    key = _key(context.scene)\n    runtime = _RUNTIME[key]\n    owner, document = state.owner_id, state.document_json\n    response = assembly_display._validated(\n        runtime.get(\"display_evidence\"),\n        runtime.get(\"display_owner_token\"),\n        lambda: backend_runtime.capture(_backend_context(context)),\n    )\n    if (\n        _RUNTIME.get(key) is not runtime\n        or state.owner_id != owner\n        or state.document_json != document\n    ):\n        raise bridge.BridgeError(\"Assembly display changed while opening the visual joint tool.\")\n    return response\n\n\n"
+        }
+      ],
+      "original_bytes": 32954,
+      "original_sha256": "b30faa603a42a43ad85e96c31561c0b2b4484969af741481e311a02a185e5c4d",
+      "reviewed_bytes": 34068,
+      "reviewed_sha256": "ff0cf52e92370b75dfb1e0b36ea3a5bcaeda58c86eaa6334b649b38bf07c295f"
+    },
+    "blender_addon/mechanical_cad_blender/assembly_ui.py": {
+      "hunks": [
+        {
+          "new_end": 330,
+          "new_start": 175,
+          "original": "from . import assembly_display, assembly_export_owner, assembly_operators, assembly_state, workspace\n",
+          "replacement": "from . import (\n    assembly_display,\n    assembly_export_owner,\n    assembly_joint_viewport,\n    assembly_operators,\n    assembly_state,\n    workspace,\n)\n"
+        },
+        {
+          "new_end": 8398,
+          "new_start": 7994,
+          "original": "",
+          "replacement": "    display_current = assembly_state.display_is_current(context)\n    place = box.row()\n    place.enabled = len(data[\"instances\"]) > 1 and display_current\n    place.operator(\n        \"mcad.assembly_visual_joint\", text=\"Place Joint in Viewport\", icon=\"PIVOT_CURSOR\"\n    )\n    message(\n        box,\n        context,\n        \"Pick parent and child, position their connectors, then preview and Apply.\",\n    )\n"
+        },
+        {
+          "new_end": 9283,
+          "new_start": 9018,
+          "original": "",
+          "replacement": "        visual = box.row()\n        visual.enabled = display_current and joint[\"kind\"] in {\"fixed\", \"slider\"}\n        visual.operator(\n            \"mcad.assembly_visual_joint\", text=\"Edit Connectors in Viewport\", icon=\"PIVOT_CURSOR\"\n        ).joint_id = joint[\"id\"]\n"
+        },
+        {
+          "new_end": 10814,
+          "new_start": 10384,
+          "original": "",
+          "replacement": "    if assembly_joint_viewport.active(context):\n        message(\n            layout,\n            context,\n            \"Visual joint preview is not saved or checked. Use Apply or Cancel in the viewport.\",\n            icon=\"INFO\",\n        )\n        layout.operator(\n            \"mcad.assembly_visual_joint_cancel\", text=\"Cancel Joint Preview\", icon=\"CANCEL\"\n        )\n        layout = layout.column()\n        layout.enabled = False\n"
+        },
+        {
+          "new_end": 14215,
+          "new_start": 14025,
+          "original": "",
+          "replacement": "    if assembly_joint_viewport.active(context):\n        layout.operator(\n            \"mcad.assembly_visual_joint_cancel\", text=\"Cancel Joint Preview\", icon=\"CANCEL\"\n        )\n        return\n"
+        },
+        {
+          "new_end": 14840,
+          "new_start": 14769,
+          "original": "",
+          "replacement": "    layout.operator(\"mcad.assembly_visual_joint\", icon=\"PIVOT_CURSOR\")\n"
+        }
+      ],
+      "original_bytes": 14030,
+      "original_sha256": "a523c608a3714a08a8366a751edd766e27db62bdd2a0c58748037c621cbf3df9",
+      "reviewed_bytes": 15444,
+      "reviewed_sha256": "2599c6d94fe155ac66e623afacaac26d88e50d629f423a0e0c3263dd86cfaccc"
+    },
+    "blender_addon/mechanical_cad_blender/registration.py": {
+      "hunks": [
+        {
+          "new_end": 453,
+          "new_start": 424,
+          "original": "",
+          "replacement": "    assembly_joint_viewport,\n"
+        },
+        {
+          "new_end": 6586,
+          "new_start": 6548,
+          "original": "",
+          "replacement": "    *assembly_joint_viewport.CLASSES,\n"
+        },
+        {
+          "new_end": 8412,
+          "new_start": 8256,
+          "original": "",
+          "replacement": "    try:\n        assembly_joint_viewport.cancel_active(reason)\n    except Exception as exc:\n        print(\"Mechanical CAD visual joint cleanup:\", str(exc))\n"
+        }
+      ],
+      "original_bytes": 17204,
+      "original_sha256": "90cfa1462da7d68c6958c2c050988b625278addcdd98b66478150aaffdb7d816",
+      "reviewed_bytes": 17427,
+      "reviewed_sha256": "854a6e537350deb14af4d60841732df25526a9081847c0e5e15e5042bd8c3e23"
+    },
+    "pyproject.toml": {
+      "hunks": [
+        {
+          "new_end": 138,
+          "new_start": 120,
+          "original": "version = \"0.7.1\"\n",
+          "replacement": "version = \"0.8.0\"\n"
+        },
+        {
+          "new_end": 1025,
+          "new_start": 587,
+          "original": "scope = \"Assembly STEP standalone preview candidate: offline Linux x86_64 Blender 5.2.2 extension; constrained lines/circles and bounded sectors, editable Parts, rooted-tree box/sector assemblies, pose checks, save/reopen, individual-Part STEP/STL and checked Assembly STEP preserving reusable definitions and placements; exact 0.7.1 installer qualification and distribution clearance pending; Windows deferred\"\n",
+          "replacement": "scope = \"Visual joint placement standalone preview candidate: offline Linux x86_64 Blender 5.2.2 extension; constrained lines/circles and bounded sectors, editable Parts, rooted-tree box/sector assemblies, pose checks, save/reopen, individual-Part STEP/STL and checked Assembly STEP preserving reusable definitions and placements; visual fixed/slider connector placement and exact 0.8.0 installer qualification pending; Windows deferred\"\n"
+        }
+      ],
+      "original_bytes": 1456,
+      "original_sha256": "31b85385bd3979a7acd202c7baf3e4d69ad01b0f6d664f5109a6624bf209761c",
+      "reviewed_bytes": 1482,
+      "reviewed_sha256": "2837674b2aa3f3d8edb233bb80c8aaac211de39bae6346c889110898a0897f04"
+    },
+    "scripts/standalone_child_bootstrap.py": {
+      "hunks": [
+        {
+          "new_end": 15332,
+          "new_start": 15286,
+          "original": "            or package.__version__ != \"0.7.1\"\n",
+          "replacement": "            or package.__version__ != \"0.8.0\"\n"
+        }
+      ],
+      "original_bytes": 22806,
+      "original_sha256": "a16a7b49064091c9ac2b22224944395a8ef36b69f4a6610293aa8b8d99236525",
+      "reviewed_bytes": 22806,
+      "reviewed_sha256": "2ccfd1bb2099e2d86bbdfa8d0dd5269e5130c1eca0507fde1666576e740638b7"
+    },
+    "scripts/tests/test_standalone_package_materials.py": {
+      "hunks": [
+        {
+          "new_end": 2654,
+          "new_start": 2589,
+          "original": "            \"pyproject.toml\": b'[project]\\nversion = \"0.7.1\"\\n',\n",
+          "replacement": "            \"pyproject.toml\": b'[project]\\nversion = \"0.8.0\"\\n',\n"
+        },
+        {
+          "new_end": 42307,
+          "new_start": 42251,
+          "original": "            current = b'package.__version__ != \"0.7.1\"'\n",
+          "replacement": "            current = b'package.__version__ != \"0.8.0\"'\n"
+        }
+      ],
+      "original_bytes": 43054,
+      "original_sha256": "6c32ce7ccedf55d0480ada13f5b96a2e7ed3a7392e5f8ba15e0e9be15b3cfc84",
+      "reviewed_bytes": 43054,
+      "reviewed_sha256": "c8d8abe4a6ee323221d74a7e18ac3d73d06a8489381613a65c641df5528de773"
+    },
+    "scripts/verify_sidecar_install.py": {
+      "hunks": [
+        {
+          "new_end": 105,
+          "new_start": 23,
+          "original": "\"\"\"Verify the 0.7.1 source root and interpreter intended for Blender preferences.\n",
+          "replacement": "\"\"\"Verify the 0.8.0 source root and interpreter intended for Blender preferences.\n"
+        },
+        {
+          "new_end": 424,
+          "new_start": 397,
+          "original": "EXPECTED_VERSION = \"0.7.1\"\n",
+          "replacement": "EXPECTED_VERSION = \"0.8.0\"\n"
+        }
+      ],
+      "original_bytes": 3372,
+      "original_sha256": "d73a15a0a837258c4e0b7fb265ff5d981e12879a5bee031ff62523a7ee1aaceb",
+      "reviewed_bytes": 3372,
+      "reviewed_sha256": "3d8caca8d9871573a7e71f26815fddb334944750750f048bcbc9bf4cbd3aafcd"
+    },
+    "src/mechanical_cad/__init__.py": {
+      "hunks": [
+        {
+          "new_end": 111,
+          "new_start": 89,
+          "original": "__version__ = \"0.7.1\"\n",
+          "replacement": "__version__ = \"0.8.0\"\n"
+        }
+      ],
+      "original_bytes": 111,
+      "original_sha256": "b98087d6c8052f1f2aee05d117a54dcd4ecec0cd3e1112a4bc618946939e979c",
+      "reviewed_bytes": 111,
+      "reviewed_sha256": "4c643b434777f60aa4fc37d0cf72722d95b0bef87f40665710fe32a95520974e"
+    },
+    "tests/integration/test_sidecar_install_verifier.py": {
+      "hunks": [
+        {
+          "new_end": 768,
+          "new_start": 706,
+          "original": "    assert result[\"ok\"] and result[\"core_version\"] == \"0.7.1\"\n",
+          "replacement": "    assert result[\"ok\"] and result[\"core_version\"] == \"0.8.0\"\n"
+        },
+        {
+          "new_end": 1833,
+          "new_start": 1744,
+          "original": "    assert not result[\"ok\"] and result[\"error\"] == \"Expected core 0.7.1; imported 0.5.0\"\n",
+          "replacement": "    assert not result[\"ok\"] and result[\"error\"] == \"Expected core 0.8.0; imported 0.5.0\"\n"
+        }
+      ],
+      "original_bytes": 1833,
+      "original_sha256": "4ef58fa9663e328ec5cfef17a5b160d1aa46dd5243ef0be44c69920944ba8177",
+      "reviewed_bytes": 1833,
+      "reviewed_sha256": "4999aa8a9cf0c67cc09df1ab3356250d40f3be66fd1943bc0930ca631c87aa15"
+    },
+    "tests/unit/test_arc_profile_incidence.py": {
+      "hunks": [
+        {
+          "new_end": 31063,
+          "new_start": 30992,
+          "original": "",
+          "replacement": "            \"VISUAL_JOINT_FIXTURE\",\n            \"VISUAL_JOINT_SHA256\",\n"
+        },
+        {
+          "new_end": 33123,
+          "new_start": 33089,
+          "original": "",
+          "replacement": "            \"VISUAL_JOINT_ADDED\",\n"
+        },
+        {
+          "new_end": 33715,
+          "new_start": 33677,
+          "original": "",
+          "replacement": "            \"VISUAL_JOINT_ORIGINALS\",\n"
+        },
+        {
+          "new_end": 34681,
+          "new_start": 34570,
+          "original": "",
+          "replacement": "            \"_visual_joint_revision\",\n            \"_visual_joint_bytes\",\n            \"visual_joint_originals\",\n"
+        }
+      ],
+      "original_bytes": 50547,
+      "original_sha256": "5924909a8dc9d0a092a463583e65351df57f55f0bdc10fb92d2f7839ed0744d3",
+      "reviewed_bytes": 50801,
+      "reviewed_sha256": "6cff7a9e1eb93d1d25365d080fde506ccc66e951507e77f53beb09279ead8a84"
+    },
+    "tests/unit/test_arc_profile_native_end_cap.py": {
+      "hunks": [
+        {
+          "new_end": 48617,
+          "new_start": 42853,
+          "original": "",
+          "replacement": "VISUAL_JOINT_FIXTURE = \"tests/fixtures/visual_assembly_joints/source_edc574e.json\"\nVISUAL_JOINT_SHA256 = \"0000000000000000000000000000000000000000000000000000000000000000\"\nVISUAL_JOINT_ADDED = frozenset(\n    {\n        \"blender_addon/mechanical_cad_blender/assembly_joint_draft.py\",\n        \"blender_addon/mechanical_cad_blender/assembly_joint_overlay.py\",\n        \"blender_addon/mechanical_cad_blender/assembly_joint_viewport.py\",\n        \"tests/blender_visual_joint_smoke.py\",\n        \"tests/unit/test_assembly_joint_draft.py\",\n        \"tests/unit/test_assembly_joint_overlay.py\",\n        \"tests/unit/test_visual_joint_owner.py\",\n    }\n)\nVISUAL_JOINT_ORIGINALS = {\n    \"tests/unit/test_backend_contract_server.py\": (\n        26402,\n        \"9489bf21f8d894ef89f5f811e373aa4208b1e5638b6a6d1bd623366565a20589\",\n    ),\n    \"tests/unit/test_arc_ui_availability.py\": (\n        41391,\n        \"9ec7d95d169f0fc9383a29fdec6115d206e9ba47da88cc6ab81a27839b6e9503\",\n    ),\n    \"blender_addon/mechanical_cad_blender/__init__.py\": (\n        1649,\n        \"f225727fa5aec5d3c527a53a200116231fcf3b9c485e97df6c80913a570510f1\",\n    ),\n    \"pyproject.toml\": (\n        1456,\n        \"31b85385bd3979a7acd202c7baf3e4d69ad01b0f6d664f5109a6624bf209761c\",\n    ),\n    \"scripts/standalone_child_bootstrap.py\": (\n        22806,\n        \"a16a7b49064091c9ac2b22224944395a8ef36b69f4a6610293aa8b8d99236525\",\n    ),\n    \"scripts/tests/test_standalone_package_materials.py\": (\n        43054,\n        \"6c32ce7ccedf55d0480ada13f5b96a2e7ed3a7392e5f8ba15e0e9be15b3cfc84\",\n    ),\n    \"scripts/verify_sidecar_install.py\": (\n        3372,\n        \"d73a15a0a837258c4e0b7fb265ff5d981e12879a5bee031ff62523a7ee1aaceb\",\n    ),\n    \"src/mechanical_cad/__init__.py\": (\n        111,\n        \"b98087d6c8052f1f2aee05d117a54dcd4ecec0cd3e1112a4bc618946939e979c\",\n    ),\n    \"tests/integration/test_sidecar_install_verifier.py\": (\n        1833,\n        \"4ef58fa9663e328ec5cfef17a5b160d1aa46dd5243ef0be44c69920944ba8177\",\n    ),\n    \"tests/unit/test_assembly_workflow_ui.py\": (\n        3431,\n        \"081808ad7153bf96c773618aa91d8fae0111e62d1498162cc65a173f987df4c6\",\n    ),\n    \"tests/unit/test_standalone_child_bootstrap.py\": (\n        40818,\n        \"8473174615ba3652ffa8c7f562599f3be531662315855339836be3d30d28605e\",\n    ),\n    \"tests/unit/test_standalone_extension_builder.py\": (\n        37158,\n        \"469855aa067c4f8f7f7b77e3fa1207733d2ebb3f8dc8ad609b9850edbbabf57f\",\n    ),\n    \"blender_addon/mechanical_cad_blender/assembly_state.py\": (\n        32954,\n        \"b30faa603a42a43ad85e96c31561c0b2b4484969af741481e311a02a185e5c4d\",\n    ),\n    \"blender_addon/mechanical_cad_blender/assembly_ui.py\": (\n        14030,\n        \"a523c608a3714a08a8366a751edd766e27db62bdd2a0c58748037c621cbf3df9\",\n    ),\n    \"blender_addon/mechanical_cad_blender/registration.py\": (\n        17204,\n        \"90cfa1462da7d68c6958c2c050988b625278addcdd98b66478150aaffdb7d816\",\n    ),\n    \"tests/unit/test_arc_profile_incidence.py\": (\n        50547,\n        \"5924909a8dc9d0a092a463583e65351df57f55f0bdc10fb92d2f7839ed0744d3\",\n    ),\n    \"tests/unit/test_arc_profile_native_end_cap.py\": (\n        201470,\n        \"47a079bd77a1b76e00b69f9c7ce81d22b565313f8646276fd9d24ee84ef78e53\",\n    ),\n    \"tests/unit/test_arc_sector_native_boundary_mutations.py\": (\n        39694,\n        \"361a64fc4225b241b418b54706afa98d285fe2b398870e170313200b2115d74c\",\n    ),\n    \"tests/unit/test_result_v3_dependency_boundary.py\": (\n        19728,\n        \"391d992c1cb7d117d8269a186e1f0520962af4a78bbfa5509457b7438f90b570\",\n    ),\n    \"tests/unit/test_standalone_runtime_boundary.py\": (\n        115099,\n        \"ecac4076de53d874eb9e250c090daec9c3db07e328b275bc5e45e0220de22167\",\n    ),\n}\n\n\ndef _visual_joint_revision(root):\n    assert (root / VISUAL_JOINT_FIXTURE).is_file()\n    raw = (root / VISUAL_JOINT_FIXTURE).read_bytes()\n    assert hashlib.sha256(raw).hexdigest() == VISUAL_JOINT_SHA256\n    revision = json.loads(raw)\n    assert set(revision) == {\"schema\", \"base_commit\", \"added\", \"changed\"}\n    assert revision[\"schema\"] == \"visual-assembly-joint-boundary-v1\"\n    assert revision[\"base_commit\"] == \"edc574e23bdb361e6566915842befb91526abaf2\"\n    assert set(revision[\"changed\"]) == set(VISUAL_JOINT_ORIGINALS)\n    assert set(revision[\"added\"]) == VISUAL_JOINT_ADDED\n    assert not VISUAL_JOINT_ADDED & VISUAL_JOINT_ORIGINALS.keys()\n    return revision\n\n\ndef _visual_joint_bytes(root, name, data=None):\n    \"\"\"Undo only the finite visual joint UI delta before every historical guard.\"\"\"\n    data = (root / name).read_bytes() if data is None else data\n    if name not in VISUAL_JOINT_ORIGINALS:\n        return data\n    expected = VISUAL_JOINT_ORIGINALS[name]\n    if (len(data), hashlib.sha256(data).hexdigest()) == expected:\n        return data\n    revision = _visual_joint_revision(root)\n    if name == \"tests/unit/test_arc_profile_native_end_cap.py\":\n        label = b\"VISUAL_JOINT_\" + b'SHA256 = \"'\n        slot = label + VISUAL_JOINT_SHA256.encode(\"ascii\") + b'\"'\n        assert data.count(label) == data.count(slot) == 1\n        data = data.replace(slot, label + b\"0\" * 64 + b'\"')\n    return _integration_restore_entry(data, revision[\"changed\"][name], expected)\n\n\ndef visual_joint_originals(root):\n    \"\"\"Seal each explicit addition and restore the exact edc574e source and guards.\"\"\"\n    revision = _visual_joint_revision(root)\n    for name, entry in revision[\"added\"].items():\n        assert set(entry) == {\"bytes\", \"sha256\"}\n        assert type(entry[\"bytes\"]) is int and entry[\"bytes\"] > 0\n        data = (root / name).read_bytes()\n        assert (len(data), hashlib.sha256(data).hexdigest()) == (entry[\"bytes\"], entry[\"sha256\"])\n    return VISUAL_JOINT_ADDED, {\n        name: _visual_joint_bytes(root, name) for name in VISUAL_JOINT_ORIGINALS\n    }\n\n\n"
+        },
+        {
+          "new_end": 51064,
+          "new_start": 51015,
+          "original": "    data = (root / name).read_bytes() if data is None else data\n",
+          "replacement": "    data = _visual_joint_bytes(root, name, data)\n"
+        },
+        {
+          "new_end": 139960,
+          "new_start": 139909,
+          "original": "",
+          "replacement": "    visual_added, _ = visual_joint_originals(root)\n"
+        },
+        {
+          "new_end": 141981,
+          "new_start": 141958,
+          "original": "",
+          "replacement": "        | visual_added\n"
+        },
+        {
+          "new_end": 143741,
+          "new_start": 143711,
+          "original": "",
+          "replacement": "        VISUAL_JOINT_FIXTURE,\n"
+        },
+        {
+          "new_end": 144772,
+          "new_start": 144739,
+          "original": "",
+          "replacement": "        *VISUAL_JOINT_ORIGINALS,\n"
+        },
+        {
+          "new_end": 204128,
+          "new_start": 204081,
+          "original": "        data = (ROOT / name).read_bytes()\n",
+          "replacement": "        data = _visual_joint_bytes(ROOT, name)\n"
+        },
+        {
+          "new_end": 216430,
+          "new_start": 207361,
+          "original": "",
+          "replacement": "\n\ndef test_visual_joint_inverse_restores_exact_parent_and_all_historical_guards():\n    added, originals = visual_joint_originals(ROOT)\n    assert added == VISUAL_JOINT_ADDED\n    assert set(originals) == set(VISUAL_JOINT_ORIGINALS)\n    assert {name for name in originals if name.startswith(\"blender_addon/\")} == {\n        \"blender_addon/mechanical_cad_blender/__init__.py\",\n        \"blender_addon/mechanical_cad_blender/assembly_state.py\",\n        \"blender_addon/mechanical_cad_blender/assembly_ui.py\",\n        \"blender_addon/mechanical_cad_blender/registration.py\",\n    }\n    assert {name for name in added if not name.startswith(\"tests/\")} == {\n        \"blender_addon/mechanical_cad_blender/assembly_joint_draft.py\",\n        \"blender_addon/mechanical_cad_blender/assembly_joint_overlay.py\",\n        \"blender_addon/mechanical_cad_blender/assembly_joint_viewport.py\",\n    }\n    assert {name for name in originals.keys() | added if name.startswith(\"src/\")} == {\n        \"src/mechanical_cad/__init__.py\"\n    }\n    for name, data in originals.items():\n        assert (len(data), hashlib.sha256(data).hexdigest()) == VISUAL_JOINT_ORIGINALS[name]\n    test_release_071_metadata_restores_exact_parent_before_every_older_guard()\n\n\ndef test_visual_joint_inverse_rejects_every_changed_added_or_fixture_byte(monkeypatch):\n    read = Path.read_bytes\n    for name in sorted(VISUAL_JOINT_ADDED | VISUAL_JOINT_ORIGINALS.keys() | {VISUAL_JOINT_FIXTURE}):\n        target = ROOT / name\n        with monkeypatch.context() as patch:\n            patch.setattr(\n                Path,\n                \"read_bytes\",\n                lambda path, target=target: (\n                    read(path)\n                    + (b\"\\n# unreviewed visual joint mutation\\n\" if path == target else b\"\")\n                ),\n            )\n            with pytest.raises(AssertionError):\n                visual_joint_originals(ROOT)\n\n\n@pytest.mark.parametrize(\"mutation\", [\"fixture\", \"slot\", \"helper\", \"coordinated\"])\ndef test_visual_joint_copied_fixture_and_validator_are_only_data(monkeypatch, mutation):\n    read = Path.read_bytes\n    fixture = ROOT / VISUAL_JOINT_FIXTURE\n    guard = ROOT / \"tests/unit/test_arc_profile_native_end_cap.py\"\n    raw = read(fixture) + (b\"\\n\" if mutation in {\"fixture\", \"coordinated\"} else b\"\")\n    data = read(guard)\n    if mutation in {\"slot\", \"coordinated\"}:\n        digest = hashlib.sha256(raw).hexdigest() if mutation == \"coordinated\" else \"f\" * 64\n        assert data.count(VISUAL_JOINT_SHA256.encode()) == 1\n        data = data.replace(VISUAL_JOINT_SHA256.encode(), digest.encode())\n    if mutation == \"helper\":\n        marker = b\"def _visual_joint_revision(root):\\n\"\n        assert data.count(marker) == 1\n        data = data.replace(marker, marker + b\"    # copied validators are not trusted\\n\")\n    monkeypatch.setattr(\n        Path,\n        \"read_bytes\",\n        lambda path: raw if path == fixture else data if path == guard else read(path),\n    )\n    with pytest.raises(AssertionError):\n        visual_joint_originals(ROOT)\n\n\n@pytest.mark.parametrize(\n    \"mutation\",\n    [\n        \"equivalent\",\n        \"schema\",\n        \"base\",\n        \"extra_key\",\n        \"missing_changed\",\n        \"missing_added\",\n        \"changed_path\",\n        \"added_path\",\n        \"core_path\",\n        \"original_hash\",\n        \"original_length\",\n        \"reviewed_hash\",\n        \"reviewed_length\",\n        \"entry_key\",\n        \"empty_hunks\",\n        \"hunk_key\",\n        \"start_bool\",\n        \"start_negative\",\n        \"end_before_start\",\n        \"end_overflow\",\n        \"replacement\",\n        \"original\",\n        \"duplicate_hunk\",\n        \"reversed_hunks\",\n        \"forged_original\",\n        \"added_hash\",\n        \"added_length\",\n        \"added_key\",\n    ],\n)\ndef test_visual_joint_inner_controls_keep_finite_paths_hunks_and_before_pins(monkeypatch, mutation):\n    expected = visual_joint_originals(ROOT)\n    fixture = ROOT / VISUAL_JOINT_FIXTURE\n    guard = ROOT / \"tests/unit/test_arc_profile_native_end_cap.py\"\n    read = Path.read_bytes\n    revision = json.loads(read(fixture))\n    name = \"tests/unit/test_arc_profile_native_end_cap.py\"\n    entry = revision[\"changed\"][name]\n    hunk = entry[\"hunks\"][0]\n    added = revision[\"added\"][sorted(VISUAL_JOINT_ADDED)[0]]\n    if mutation == \"schema\":\n        revision[\"schema\"] = \"unreviewed\"\n    elif mutation == \"base\":\n        revision[\"base_commit\"] = \"f\" * 40\n    elif mutation == \"extra_key\":\n        revision[\"allow_other_paths\"] = True\n    elif mutation == \"missing_changed\":\n        revision[\"changed\"].pop(name)\n    elif mutation == \"missing_added\":\n        revision[\"added\"].pop(sorted(VISUAL_JOINT_ADDED)[0])\n    elif mutation == \"changed_path\":\n        revision[\"changed\"][\"tests/unit/../unreviewed.py\"] = revision[\"changed\"].pop(name)\n    elif mutation == \"added_path\":\n        revision[\"added\"][\"../unreviewed.py\"] = revision[\"added\"].pop(sorted(VISUAL_JOINT_ADDED)[0])\n    elif mutation == \"core_path\":\n        revision[\"changed\"][\"src/mechanical_cad/kernel_ocp.py\"] = revision[\"changed\"].pop(name)\n    elif mutation in {\"original_hash\", \"reviewed_hash\"}:\n        entry[mutation.replace(\"_hash\", \"_sha256\")] = \"f\" * 64\n    elif mutation in {\"original_length\", \"reviewed_length\"}:\n        entry[mutation.replace(\"_length\", \"_bytes\")] = True\n    elif mutation == \"entry_key\":\n        entry[\"exempt\"] = True\n    elif mutation == \"empty_hunks\":\n        entry[\"hunks\"] = []\n    elif mutation == \"hunk_key\":\n        hunk[\"skip_validation\"] = True\n    elif mutation == \"start_bool\":\n        hunk[\"new_start\"] = True\n    elif mutation == \"start_negative\":\n        hunk[\"new_start\"] = -1\n    elif mutation == \"end_before_start\":\n        hunk[\"new_end\"] = hunk[\"new_start\"] - 1\n    elif mutation == \"end_overflow\":\n        hunk[\"new_end\"] = entry[\"reviewed_bytes\"] + 1\n    elif mutation == \"replacement\":\n        hunk[\"replacement\"] += \"# altered reviewed bytes\\n\"\n    elif mutation == \"original\":\n        hunk[\"original\"] += \"# altered before bytes\\n\"\n    elif mutation == \"duplicate_hunk\":\n        entry[\"hunks\"].insert(1, dict(hunk))\n    elif mutation == \"reversed_hunks\":\n        assert len(entry[\"hunks\"]) > 1\n        entry[\"hunks\"].reverse()\n    elif mutation == \"forged_original\":\n        before = expected[1][name] + b\"\\n# forged historical source\\n\"\n        current = read(guard).replace(VISUAL_JOINT_SHA256.encode(), b\"0\" * 64)\n        entry[\"original_bytes\"] = len(before)\n        entry[\"original_sha256\"] = hashlib.sha256(before).hexdigest()\n        entry[\"hunks\"] = [\n            {\n                \"new_start\": 0,\n                \"new_end\": len(current),\n                \"original\": before.decode(),\n                \"replacement\": current.decode(),\n            }\n        ]\n    elif mutation == \"added_hash\":\n        added[\"sha256\"] = \"f\" * 64\n    elif mutation == \"added_length\":\n        added[\"bytes\"] = True\n    elif mutation == \"added_key\":\n        added[\"original_sha256\"] = \"f\" * 64\n    else:\n        assert mutation == \"equivalent\"\n    raw = (json.dumps(revision, sort_keys=True) + \"\\n\").encode()\n    assert raw != read(fixture)\n    digest = hashlib.sha256(raw).hexdigest()\n    data = read(guard)\n    assert data.count(VISUAL_JOINT_SHA256.encode()) == 1\n    data = data.replace(VISUAL_JOINT_SHA256.encode(), digest.encode())\n    monkeypatch.setattr(\n        Path,\n        \"read_bytes\",\n        lambda path: raw if path == fixture else data if path == guard else read(path),\n    )\n    monkeypatch.setitem(globals(), \"VISUAL_JOINT_SHA256\", digest)\n    if mutation == \"equivalent\":\n        assert visual_joint_originals(ROOT) == expected\n    else:\n        with pytest.raises(AssertionError):\n            visual_joint_originals(ROOT)\n\n\n@pytest.mark.parametrize(\n    \"constant\",\n    sorted(\n        name for name in globals() if name.endswith(\"_SHA256\") and name != \"VISUAL_JOINT_SHA256\"\n    ),\n)\ndef test_visual_joint_normalizes_no_historical_digest_slot(monkeypatch, constant):\n    read = Path.read_bytes\n    guard = ROOT / \"tests/unit/test_arc_profile_native_end_cap.py\"\n    data = read(guard)\n    digest = globals()[constant].encode()\n    assert data.count(digest) == 1\n    data = data.replace(digest, b\"f\" * 64)\n    monkeypatch.setattr(Path, \"read_bytes\", lambda path: data if path == guard else read(path))\n    with pytest.raises(AssertionError):\n        visual_joint_originals(ROOT)\n\n\n@pytest.mark.parametrize(\"name\", sorted(VISUAL_JOINT_ADDED))\ndef test_visual_joint_missing_addition_is_never_reconstructed(monkeypatch, name):\n    read, target = Path.read_bytes, ROOT / name\n\n    def observed(path):\n        if path == target:\n            raise FileNotFoundError(str(path))\n        return read(path)\n\n    monkeypatch.setattr(Path, \"read_bytes\", observed)\n    with pytest.raises(FileNotFoundError):\n        visual_joint_originals(ROOT)\n\n\ndef test_visual_joint_unlisted_python_remains_in_original_digest(tmp_path):\n    copy_python_guard_tree(tmp_path)\n    (tmp_path / \"tests/unit/test_unreviewed_visual_joint.py\").write_bytes(b\"# unreviewed\\n\")\n    assert protected_python_digest(tmp_path) != SNAPSHOT3_PYTHON_PROTECTED\n"
+        }
+      ],
+      "original_bytes": 201470,
+      "original_sha256": "47a079bd77a1b76e00b69f9c7ce81d22b565313f8646276fd9d24ee84ef78e53",
+      "reviewed_bytes": 216430,
+      "reviewed_sha256": "695efbc54fd524448899f4002051af9e1efc53be7db6411c7552ecdfac2153f7"
+    },
+    "tests/unit/test_arc_sector_native_boundary_mutations.py": {
+      "hunks": [
+        {
+          "new_end": 25937,
+          "new_start": 25808,
+          "original": "",
+          "replacement": "        \"tests/fixtures/visual_assembly_joints/source_edc574e.json\",\n        \"tests/fixtures/release_071/metadata_56a13b3.json\",\n"
+        }
+      ],
+      "original_bytes": 39694,
+      "original_sha256": "361a64fc4225b241b418b54706afa98d285fe2b398870e170313200b2115d74c",
+      "reviewed_bytes": 39823,
+      "reviewed_sha256": "ec643355e32ac1b9db6390ab21629fea85a4e6e15f6b32ba977bcd21b6b51ab5"
+    },
+    "tests/unit/test_arc_ui_availability.py": {
+      "hunks": [
+        {
+          "new_end": 3524,
+          "new_start": 3205,
+          "original": "",
+          "replacement": "        # This availability fixture has no active visual session. Actual\n        # viewport-owner behavior has its own synthetic-host and native tests.\n        ports.PACKAGE + \".assembly_joint_viewport\": ports.module(\n            ports.PACKAGE + \".assembly_joint_viewport\", active=lambda _context=None: None\n        ),\n"
+        }
+      ],
+      "original_bytes": 41391,
+      "original_sha256": "9ec7d95d169f0fc9383a29fdec6115d206e9ba47da88cc6ab81a27839b6e9503",
+      "reviewed_bytes": 41710,
+      "reviewed_sha256": "05fe10dbf09474e4d8d9648fd698360f9fc6a50cebe8e0487f60c2da2da1050e"
+    },
+    "tests/unit/test_assembly_workflow_ui.py": {
+      "hunks": [
+        {
+          "new_end": 867,
+          "new_start": 812,
+          "original": "def draw_controls(reason=\"\"):\n",
+          "replacement": "def draw_controls(reason=\"\", *, display_current=True):\n"
+        },
+        {
+          "new_end": 1700,
+          "new_start": 1611,
+          "original": "",
+          "replacement": "        \"assembly_state\": SimpleNamespace(display_is_current=lambda _: display_current),\n"
+        },
+        {
+          "new_end": 4490,
+          "new_start": 3545,
+          "original": "",
+          "replacement": "\n\ndef test_visual_joint_controls_require_current_display_and_retain_advanced_joint_edit():\n    for current in (False, True):\n        events, data = draw_controls(display_current=current)\n        operators = [event for event in events if event[0] == \"operator\"]\n        placement = next(\n            event for event in operators if event[2].get(\"text\") == \"Place Joint in Viewport\"\n        )\n        assert placement[1] == \"mcad.assembly_visual_joint\"\n        assert placement[3] is current\n        edits = [\n            event for event in operators if event[2].get(\"text\") == \"Edit Connectors in Viewport\"\n        ]\n        assert len(edits) == len(data[\"joints\"])\n        for event, joint in zip(edits, data[\"joints\"], strict=True):\n            assert event[4].joint_id == joint[\"id\"]\n            assert event[3] is (current and joint[\"kind\"] in {\"fixed\", \"slider\"})\n        assert any(event[1] == \"mcad.assembly_joint\" for event in operators)\n"
+        }
+      ],
+      "original_bytes": 3431,
+      "original_sha256": "081808ad7153bf96c773618aa91d8fae0111e62d1498162cc65a173f987df4c6",
+      "reviewed_bytes": 4490,
+      "reviewed_sha256": "2f6576cd199c8a24c09d1469a1dc1452d53da21f9e80d0879e88d0fc9cde6172"
+    },
+    "tests/unit/test_backend_contract_server.py": {
+      "hunks": [
+        {
+          "new_end": 12827,
+          "new_start": 12794,
+          "original": "        \"core_version\": \"0.7.0\",\n",
+          "replacement": "        \"core_version\": \"0.8.0\",\n"
+        }
+      ],
+      "original_bytes": 26402,
+      "original_sha256": "9489bf21f8d894ef89f5f811e373aa4208b1e5638b6a6d1bd623366565a20589",
+      "reviewed_bytes": 26402,
+      "reviewed_sha256": "660621903b3eb9ad8f0332721ac814dbc1d2607b40a4dc015baf4fd0f90cc96d"
+    },
+    "tests/unit/test_result_v3_dependency_boundary.py": {
+      "hunks": [
+        {
+          "new_end": 421,
+          "new_start": 397,
+          "original": "",
+          "replacement": "    VISUAL_JOINT_ADDED,\n"
+        },
+        {
+          "new_end": 642,
+          "new_start": 614,
+          "original": "",
+          "replacement": "    visual_joint_originals,\n"
+        },
+        {
+          "new_end": 7517,
+          "new_start": 7483,
+          "original": "",
+          "replacement": "    visual_joint_new=frozenset(),\n"
+        },
+        {
+          "new_end": 9306,
+          "new_start": 8640,
+          "original": "    historical_observed = observed - standalone_new - geometry_new - assembly_step_new\n",
+          "replacement": "    expected_visual = frozenset(\n        name for name in VISUAL_JOINT_ADDED if name.startswith((\"src/\", \"blender_addon/\"))\n    )\n    assert expected_visual == {\n        \"blender_addon/mechanical_cad_blender/assembly_joint_draft.py\",\n        \"blender_addon/mechanical_cad_blender/assembly_joint_overlay.py\",\n        \"blender_addon/mechanical_cad_blender/assembly_joint_viewport.py\",\n    }\n    assert visual_joint_new in (frozenset(), expected_visual)\n    assert visual_joint_new <= observed, \"missing sealed visual Assembly joint runtime path\"\n    historical_observed = (\n        observed - standalone_new - geometry_new - assembly_step_new - visual_joint_new\n    )\n"
+        },
+        {
+          "new_end": 11369,
+          "new_start": 11190,
+          "original": "",
+          "replacement": "            if name.startswith((\"src/\", \"blender_addon/\"))\n        ),\n        visual_joint_new=frozenset(\n            name\n            for name in visual_joint_originals(ROOT)[0]\n"
+        },
+        {
+          "new_end": 21812,
+          "new_start": 20572,
+          "original": "",
+          "replacement": "\n\n@pytest.mark.parametrize(\"mutation\", [\"missing\", \"extra\", \"wrong_directory\", \"partial_set\"])\ndef test_visual_joint_paths_cannot_expand_or_shrink_historical_boundary(tmp_path, mutation):\n    added = frozenset(name for name in VISUAL_JOINT_ADDED if name.startswith(\"blender_addon/\"))\n    for relative in added:\n        path = tmp_path / relative\n        path.parent.mkdir(parents=True, exist_ok=True)\n        path.write_bytes(b\"# path-only control; the outer inverse separately checks hashes\\n\")\n    _assert_new_paths(tmp_path, {}, visual_joint_new=added)\n    relative = sorted(added)[0]\n    if mutation == \"missing\":\n        (tmp_path / relative).unlink()\n    elif mutation == \"extra\":\n        (tmp_path / \"blender_addon/mechanical_cad_blender/unreviewed.py\").write_bytes(b\"pass\\n\")\n    elif mutation == \"wrong_directory\":\n        target = tmp_path / \"blender_addon/impostor\" / Path(relative).name\n        target.parent.mkdir(parents=True)\n        (tmp_path / relative).rename(target)\n    else:\n        with pytest.raises(AssertionError):\n            _assert_new_paths(tmp_path, {}, visual_joint_new=added - {relative})\n        return\n    with pytest.raises(AssertionError):\n        _assert_new_paths(tmp_path, {}, visual_joint_new=added)\n"
+        }
+      ],
+      "original_bytes": 19728,
+      "original_sha256": "391d992c1cb7d117d8269a186e1f0520962af4a78bbfa5509457b7438f90b570",
+      "reviewed_bytes": 21812,
+      "reviewed_sha256": "8903f3b355c2e8e37a389e4992c3a92cc6a5bda8558341cd6f4b13a1699e819c"
+    },
+    "tests/unit/test_standalone_child_bootstrap.py": {
+      "hunks": [
+        {
+          "new_end": 6787,
+          "new_start": 6758,
+          "original": "        __version__=\"0.7.1\",\n",
+          "replacement": "        __version__=\"0.8.0\",\n"
+        }
+      ],
+      "original_bytes": 40818,
+      "original_sha256": "8473174615ba3652ffa8c7f562599f3be531662315855339836be3d30d28605e",
+      "reviewed_bytes": 40818,
+      "reviewed_sha256": "b5b2d9349c4c2fef6de4f2dcd4ace2f1be8684899c83b7facab74049ff077e75"
+    },
+    "tests/unit/test_standalone_extension_builder.py": {
+      "hunks": [
+        {
+          "new_end": 35459,
+          "new_start": 35429,
+          "original": "    assert version == \"0.7.1\"\n",
+          "replacement": "    assert version == \"0.8.0\"\n"
+        }
+      ],
+      "original_bytes": 37158,
+      "original_sha256": "469855aa067c4f8f7f7b77e3fa1207733d2ebb3f8dc8ad609b9850edbbabf57f",
+      "reviewed_bytes": 37158,
+      "reviewed_sha256": "039a8c56f732484b7cc8c07b29ee948cbc342df3fce35d587468199fb8697059"
+    },
+    "tests/unit/test_standalone_runtime_boundary.py": {
+      "hunks": [
+        {
+          "new_end": 4159,
+          "new_start": 3933,
+          "original": "",
+          "replacement": "        \"VISUAL_JOINT_FIXTURE\",\n        \"VISUAL_JOINT_SHA256\",\n        \"VISUAL_JOINT_ADDED\",\n        \"VISUAL_JOINT_ORIGINALS\",\n        \"_visual_joint_revision\",\n        \"_visual_joint_bytes\",\n        \"visual_joint_originals\",\n"
+        }
+      ],
+      "original_bytes": 115099,
+      "original_sha256": "ecac4076de53d874eb9e250c090daec9c3db07e328b275bc5e45e0220de22167",
+      "reviewed_bytes": 115325,
+      "reviewed_sha256": "d2fde94cc96e39813d5d3497202db52b7c5feca75a76b2cc1e758414acc1eff8"
+    }
+  },
+  "schema": "visual-assembly-joint-boundary-v1"
+}

@@ -1,0 +1,1666 @@
+"""Synthetic-only exact translated-cap controls; never native success evidence.
+
+The pure helper consumes detached observations. Collector and adapter statements
+are extracted from the real source into explicit binding doubles; the native
+kernel is never imported, constructed, or run by this module. Frozen snapshot3
+fingerprints below protect all pre-existing spans without an external checkout.
+"""
+
+from __future__ import annotations
+
+import ast
+import copy
+import hashlib
+import importlib.abc
+import itertools
+import json
+import math
+import sys
+from dataclasses import fields, replace
+from fractions import Fraction as F
+from pathlib import Path
+from types import SimpleNamespace
+
+import pytest
+
+import mechanical_cad.arc_profile_native_evidence as evidence
+from mechanical_cad.arc_profile_native_plan import (
+    NativeActualSupport,
+    NativePlan,
+    NativePlane,
+    NativePlanError,
+    NativeRadialDirection,
+    _continue_actual_support,
+    entry_context,
+    prepare_native_geometry,
+    transform,
+)
+from mechanical_cad.arc_profile_primitives import PrimitiveContext, PrimitiveError
+from mechanical_cad.arc_profile_sector_source import (
+    SectorArc,
+    SectorGeometrySource,
+    SectorLine,
+    SectorPoint,
+)
+
+ROOT = Path(__file__).resolve().parents[2]
+KERNEL = ROOT / "src/mechanical_cad/kernel_ocp.py"
+IDENTITY = ((1.0, 0.0, 0.0, 0.0), (0.0, 1.0, 0.0, 0.0), (0.0, 0.0, 1.0, 0.0))
+RAW_KEYS = {
+    "shape_type",
+    "is_null",
+    "orientation",
+    "profile_orientation",
+    "first_is_equal",
+    "shape_location",
+    "surface_location",
+    "surface_type",
+    "surface_fields",
+    "surface_is_retained",
+    "is_partner",
+    "is_same",
+    "is_equal",
+    "actual_vector",
+    "height",
+}
+HEIGHTS = (1.0, 1000.0, 7.25, math.nextafter(1.0, math.inf), math.nextafter(1000.0, 0.0), 7.0)
+COORDINATES = ((F(0), F(0)), (F(1), F(0)), (F(0), F(1)), (F(3, 2), F(-7, 4)))
+
+
+class NoNativeImports(importlib.abc.MetaPathFinder):
+    def find_spec(self, fullname, path=None, target=None):
+        if fullname.split(".")[0] in {"OCP", "OCC", "cadquery", "slvs", "bpy"}:
+            raise AssertionError(f"native import forbidden: {fullname}")
+        if fullname == "mechanical_cad.kernel_ocp":
+            raise AssertionError("parse the real native kernel; never import it")
+        return None
+
+
+@pytest.fixture(autouse=True)
+def no_native_imports():
+    blocker = NoNativeImports()
+    sys.meta_path.insert(0, blocker)
+    try:
+        yield
+    finally:
+        sys.meta_path.remove(blocker)
+
+
+def quaternions():
+    """24 rotations, selecting one sign of every equivalent quaternion pair."""
+    answer = []
+    for index in range(4):
+        answer.append(tuple(float(axis == index) for axis in range(4)))
+    for a, b in itertools.combinations(range(4), 2):
+        for sign in (-1.0, 1.0):
+            values = [0.0] * 4
+            values[a], values[b] = math.sqrt(0.5), sign * math.sqrt(0.5)
+            answer.append(tuple(values))
+    answer.extend((0.5, *values) for values in itertools.product((-0.5, 0.5), repeat=3))
+    assert len(answer) == 24
+    return tuple(answer)
+
+
+def fresh_plan(quaternion=(1.0, 0.0, 0.0, 0.0)):
+    source = SectorGeometrySource(
+        (SectorPoint("c", 0.0, 0.0), SectorPoint("a", 5.0, 0.0), SectorPoint("b", 0.0, 5.0)),
+        (SectorLine("ra", "c", "a"), SectorLine("rb", "c", "b")),
+        (SectorArc("arc", "c", "a", "b", "ccw"),),
+    )
+    context = entry_context()
+    plan = prepare_native_geometry(source, NativePlane(quaternion=quaternion), context=context)
+    observed = tuple(
+        NativeRadialDirection(line.entity_id, transform(plan.frame, line.direction))
+        for line in plan.lines
+    )
+    return _continue_actual_support(plan, observed, context), context
+
+
+@pytest.fixture(scope="module")
+def plan():
+    return fresh_plan()[0]
+
+
+@pytest.fixture(scope="module", params=quaternions(), ids=lambda q: "q=" + str(q))
+def frame_plan(request):
+    return fresh_plan(request.param)
+
+
+def matrix(vector):
+    return tuple((*IDENTITY[index][:3], value) for index, value in enumerate(vector))
+
+
+def observation(plan, height=7.0):
+    vector = tuple(height * component for component in plan.frame.normal)
+    return {
+        "shape_type": 4,
+        "is_null": False,
+        "orientation": 0,
+        "profile_orientation": 0,
+        "first_is_equal": True,
+        "shape_location": {"identity": False, "matrix": matrix(vector)},
+        "surface_location": {"identity": False, "matrix": matrix(vector)},
+        "surface_type": "Geom_Plane",
+        "surface_fields": {
+            "kind": "Geom_Plane",
+            "origin": (0.0, 0.0, 0.0),
+            "u": plan.frame.u,
+            "v": plan.frame.v,
+            "normal": plan.frame.normal,
+            "radius": None,
+        },
+        "surface_is_retained": True,
+        "is_partner": True,
+        "is_same": False,
+        "is_equal": False,
+        "actual_vector": vector,
+        "height": height,
+    }
+
+
+def validate(plan, record, height=7.0, context=None):
+    return evidence.validate_end_cap_observation(
+        plan, record, height=height, context=PrimitiveContext() if context is None else context
+    )
+
+
+def cross(a, b):
+    return (a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0])
+
+
+@pytest.mark.parametrize("height", HEIGHTS)
+def test_all_24_frames_and_six_heights_transfer_once_exactly(frame_plan, height):
+    plan, context = frame_plan
+    before, original = context.operations, copy.deepcopy(plan)
+    record = observation(plan, height)
+    derived = validate(plan, record, height, context)
+    assert set(record) == RAW_KEYS
+    assert derived == {
+        "origin": record["actual_vector"],
+        "u": plan.frame.u,
+        "v": plan.frame.v,
+        "normal": plan.frame.normal,
+        "placement_rule": "checked_surface_translation_applied_once",
+    }
+    assert before < context.operations <= 200_000
+    assert context.max_operations == 200_000
+    assert plan == original
+    assert derived["origin"] != tuple(2.0 * x for x in record["actual_vector"])
+    u, v, n = (tuple(map(F, derived[key])) for key in ("u", "v", "normal"))
+    assert cross(u, v) == n and sum(x * x for x in n) == 1
+    points = []
+    for a, b in COORDINATES:
+        local = tuple(a * x + b * y for x, y in zip(u, v, strict=True))
+        world = tuple(x + F(t) for x, t in zip(local, derived["origin"], strict=True))
+        reference = tuple(a * x + b * y + F(height) * z for x, y, z in zip(u, v, n, strict=True))
+        assert world == reference
+        points.append((local, world))
+    for (local_a, world_a), (local_b, world_b) in itertools.combinations(points, 2):
+        assert sum((a - b) ** 2 for a, b in zip(local_a, local_b, strict=True)) == sum(
+            (a - b) ** 2 for a, b in zip(world_a, world_b, strict=True)
+        )
+    assert plan.source_comparison_area == original.source_comparison_area
+    assert plan.area_allowance == original.area_allowance
+
+
+def test_controls_cover_every_signed_normal_and_all_right_handed_frames():
+    from mechanical_cad.arc_profile_native_plan import _frame
+
+    frames = [_frame(PrimitiveContext(), NativePlane(quaternion=q)) for q in quaternions()]
+    assert len({(frame.u, frame.v, frame.normal) for frame in frames}) == 24
+    assert {frame.normal for frame in frames} == {
+        (1.0, 0.0, 0.0),
+        (-1.0, 0.0, 0.0),
+        (0.0, 1.0, 0.0),
+        (0.0, -1.0, 0.0),
+        (0.0, 0.0, 1.0),
+        (0.0, 0.0, -1.0),
+    }
+    assert all(cross(frame.u, frame.v) == frame.normal for frame in frames)
+
+
+@pytest.mark.parametrize(
+    "change",
+    [
+        "one_ulp",
+        "tangential",
+        "zero",
+        "negative",
+        "wrong_height",
+        "identity_shape",
+        "identity_surface",
+        "shape_only_wrong",
+        "surface_only_wrong",
+        "halves",
+        "complementary",
+        "double",
+        "vector_only_wrong",
+        "all_vector_fields_wrong",
+    ],
+)
+def test_translation_is_independent_exact_and_never_composed(plan, change):
+    record = observation(plan)
+    vector = record["actual_vector"]
+    if change in {"one_ulp", "tangential", "zero", "negative", "wrong_height", "double"}:
+        wrong = {
+            "one_ulp": (0.0, 0.0, math.nextafter(7.0, math.inf)),
+            "tangential": (math.ulp(0.0), 0.0, 7.0),
+            "zero": (0.0, 0.0, 0.0),
+            "negative": (0.0, 0.0, -7.0),
+            "wrong_height": (0.0, 0.0, 8.0),
+            "double": (0.0, 0.0, 14.0),
+        }[change]
+        record["shape_location"]["matrix"] = record["surface_location"]["matrix"] = matrix(wrong)
+    elif change.startswith("identity_"):
+        record[change.removeprefix("identity_") + "_location"] = {
+            "identity": True,
+            "matrix": IDENTITY,
+        }
+    elif change.endswith("only_wrong") and change != "vector_only_wrong":
+        record[change.removesuffix("_only_wrong") + "_location"]["matrix"] = IDENTITY
+    elif change == "halves":
+        for key in ("shape_location", "surface_location"):
+            record[key]["matrix"] = matrix(tuple(t / 2.0 for t in vector))
+    elif change == "complementary":
+        record["shape_location"]["matrix"] = matrix((0.0, 0.0, 2.0))
+        record["surface_location"]["matrix"] = matrix((0.0, 0.0, 5.0))
+    else:
+        record["actual_vector"] = (0.0, 0.0, 8.0)
+        if change == "all_vector_fields_wrong":
+            for key in ("shape_location", "surface_location"):
+                record[key]["matrix"] = matrix(record["actual_vector"])
+    with pytest.raises(NativePlanError):
+        validate(plan, record)
+
+
+@pytest.mark.parametrize("location", ["shape_location", "surface_location", "both"])
+@pytest.mark.parametrize(
+    "linear",
+    [
+        ((1.0, math.ulp(0.0), 0.0), (0.0, 1.0, 0.0), (0.0, 0.0, 1.0)),
+        ((0.0, -1.0, 0.0), (1.0, 0.0, 0.0), (0.0, 0.0, 1.0)),
+        ((2.0, 0.0, 0.0), (0.0, 2.0, 0.0), (0.0, 0.0, 2.0)),
+        ((1.0, 0.25, 0.0), (0.0, 1.0, 0.0), (0.0, 0.0, 1.0)),
+        ((-1.0, 0.0, 0.0), (0.0, 1.0, 0.0), (0.0, 0.0, 1.0)),
+        ((math.nextafter(1.0, 0.0), 0.0, 0.0), (0.0, 1.0, 0.0), (0.0, 0.0, 1.0)),
+    ],
+    ids=["ulp_off_diagonal", "rotation", "scale", "shear", "reflection", "ulp_diagonal"],
+)
+def test_no_general_affine_matrix_is_admitted(plan, location, linear):
+    record = observation(plan)
+    for key in ("shape_location", "surface_location") if location == "both" else (location,):
+        record[key]["matrix"] = tuple(
+            (*row, t) for row, t in zip(linear, record["actual_vector"], strict=True)
+        )
+    with pytest.raises(NativePlanError):
+        validate(plan, record)
+
+
+@pytest.mark.parametrize(
+    "field,value",
+    [
+        ("shape_type", 6),
+        ("is_null", True),
+        ("orientation", 1),
+        ("profile_orientation", 1),
+        ("first_is_equal", False),
+        ("surface_is_retained", False),
+        ("is_partner", False),
+        ("is_same", True),
+        ("is_equal", True),
+        ("surface_type", "Geom_CylindricalSurface"),
+        ("surface_type", "Geom_BSplineSurface"),
+        ("surface_fields", None),
+        ("height", 0.0),
+        ("height", -7.0),
+        ("height", 8.0),
+        ("height", 1001.0),
+    ],
+)
+def test_shape_identity_orientation_kind_and_observed_height_are_mandatory(plan, field, value):
+    record = observation(plan)
+    record[field] = value
+    with pytest.raises(NativePlanError):
+        validate(plan, record)
+
+
+@pytest.mark.parametrize(
+    "field,value",
+    [
+        ("origin", (math.ulp(0.0), 0.0, 0.0)),
+        ("origin", (0.0, 0.0, 7.0)),
+        ("u", (0.0, 1.0, 0.0)),
+        ("v", (1.0, 0.0, 0.0)),
+        ("normal", (0.0, 0.0, -1.0)),
+        ("u", (math.nextafter(1.0, 0.0), 0.0, 0.0)),
+        ("radius", 0.0),
+        ("radius", 5.0),
+        ("kind", "Geom_CylindricalSurface"),
+    ],
+)
+def test_raw_local_plane_is_not_a_baked_or_fitted_world_plane(plan, field, value):
+    record = observation(plan)
+    record["surface_fields"][field] = value
+    with pytest.raises(NativePlanError):
+        validate(plan, record)
+
+
+@pytest.mark.parametrize(
+    "height",
+    [True, False, 0.0, -7.0, 1001.0, math.nan, math.inf, -math.inf, "7", 1 << 100_000],
+    ids=["true", "false", "zero", "negative", "large", "nan", "inf", "neginf", "string", "huge"],
+)
+def test_independently_supplied_height_cannot_be_forged(plan, height):
+    with pytest.raises(NativePlanError):
+        validate(plan, observation(plan), height=height)
+
+
+def test_coherent_wrong_observed_height_vector_and_locations_do_not_override_input(plan):
+    record = observation(plan, height=8.0)
+    with pytest.raises(NativePlanError):
+        validate(plan, record, height=7.0)
+
+
+@pytest.mark.parametrize(
+    "field",
+    [
+        "expected_vector",
+        "effective_origin",
+        "effective_world_plane",
+        "expected_matrix",
+        "placement_rule",
+        "same_tshape",
+        "expected_height",
+    ],
+)
+def test_forged_derived_or_caller_expected_fields_are_not_premises(plan, field):
+    record = observation(plan)
+    record[field] = {"origin": (0.0, 0.0, 14.0)}
+    with pytest.raises(NativePlanError):
+        validate(plan, record)
+
+
+@pytest.mark.parametrize("where", ["root", "shape_location", "surface_location", "surface_fields"])
+@pytest.mark.parametrize("change", ["missing", "extra", "nonstring"])
+def test_record_schema_exact_at_every_level(plan, where, change):
+    record = observation(plan)
+    target = record if where == "root" else record[where]
+    if change == "missing":
+        target.pop(next(iter(target)))
+    elif change == "extra":
+        target["unapproved"] = 0
+    else:
+        target[1] = target.pop(next(iter(target)))
+    with pytest.raises(NativePlanError):
+        validate(plan, record)
+
+
+class Dict(dict):
+    pass
+
+
+class Tuple(tuple):
+    pass
+
+
+class Float(float):
+    pass
+
+
+class Int(int):
+    pass
+
+
+class String(str):
+    pass
+
+
+class Hostile:
+    def __eq__(self, other):
+        raise AssertionError("untrusted equality must not run")
+
+    def __float__(self):
+        raise AssertionError("untrusted conversion must not run")
+
+    def __hash__(self):
+        return 1
+
+
+@pytest.mark.parametrize("field", ["shape_type", "orientation", "profile_orientation"])
+@pytest.mark.parametrize("bad", [True, False, 0.0, 4.0, Int(0), Int(4), "0", None, Hostile()])
+def test_integer_observation_fields_require_builtin_int(plan, field, bad):
+    record = observation(plan)
+    record[field] = bad
+    with pytest.raises(NativePlanError):
+        validate(plan, record)
+
+
+@pytest.mark.parametrize(
+    "field",
+    ["is_null", "first_is_equal", "surface_is_retained", "is_partner", "is_same", "is_equal"],
+)
+@pytest.mark.parametrize("bad", [0, 1, None, "true", Hostile()])
+def test_observation_flags_require_builtin_bool(plan, field, bad):
+    record = observation(plan)
+    record[field] = bad
+    with pytest.raises(NativePlanError):
+        validate(plan, record)
+
+
+@pytest.mark.parametrize(
+    "where", ["actual_vector", "origin", "u", "v", "normal", "matrix_scalar", "height"]
+)
+@pytest.mark.parametrize(
+    "bad",
+    [True, 0, Float(0.0), math.nan, math.inf, -math.inf, 1 << 100_000, Hostile()],
+    ids=["bool", "int", "subclass", "nan", "inf", "neginf", "huge", "hostile"],
+)
+def test_every_numeric_leaf_rejects_nonfinite_nonfloat_and_hooks(plan, where, bad):
+    record = observation(plan)
+    if where == "height":
+        record["height"] = bad
+    elif where == "matrix_scalar":
+        record["surface_location"]["matrix"] = (
+            (bad, 0.0, 0.0, 0.0),
+            *record["surface_location"]["matrix"][1:],
+        )
+    else:
+        target = record if where == "actual_vector" else record["surface_fields"]
+        target[where] = (bad, *target[where][1:])
+    with pytest.raises(NativePlanError):
+        validate(plan, record)
+
+
+@pytest.mark.parametrize("where", ["root", "shape_location", "surface_location", "surface_fields"])
+@pytest.mark.parametrize("kind", ["subclass", "list", "none"])
+def test_dict_records_require_builtin_dict(plan, where, kind):
+    record = observation(plan)
+    target = record if where == "root" else record[where]
+    bad = Dict(target) if kind == "subclass" else (list(target.items()) if kind == "list" else None)
+    if where == "root":
+        record = bad
+    else:
+        record[where] = bad
+    with pytest.raises(NativePlanError):
+        validate(plan, record)
+
+
+@pytest.mark.parametrize("where", ["actual_vector", "origin", "u", "v", "normal", "matrix", "row"])
+@pytest.mark.parametrize("kind", ["subclass", "list", "short", "long", "none"])
+def test_tuple_shape_and_builtin_container_grammar(plan, where, kind):
+    record = observation(plan)
+    if where in {"matrix", "row"}:
+        target, key = record["shape_location"], "matrix"
+        value = target[key] if where == "matrix" else target[key][0]
+    else:
+        target = record if where == "actual_vector" else record["surface_fields"]
+        key, value = where, target[where]
+    bad = {
+        "subclass": lambda: Tuple(value),
+        "list": lambda: list(value),
+        "short": lambda: value[:-1],
+        "long": lambda: (*value, 0.0),
+        "none": lambda: None,
+    }[kind]()
+    target[key] = (bad, *target[key][1:]) if where == "row" else bad
+    with pytest.raises(NativePlanError):
+        validate(plan, record)
+
+
+@pytest.mark.parametrize("where", ["surface_type", "kind"])
+@pytest.mark.parametrize("bad", [String("Geom_Plane"), Hostile(), None, 0])
+def test_surface_type_tokens_are_plain_strings(plan, where, bad):
+    record = observation(plan)
+    (record if where == "surface_type" else record["surface_fields"])[where] = bad
+    with pytest.raises(NativePlanError):
+        validate(plan, record)
+
+
+@pytest.mark.parametrize("location", ["shape_location", "surface_location"])
+@pytest.mark.parametrize("value", [True, 0, 1, None, Hostile()])
+def test_location_identity_is_exact_false_boolean(plan, location, value):
+    record = observation(plan)
+    record[location]["identity"] = value
+    with pytest.raises(NativePlanError):
+        validate(plan, record)
+
+
+def test_hostile_dictionary_key_is_not_compared(plan):
+    record = observation(plan)
+    record[Hostile()] = record.pop("height")
+    with pytest.raises(NativePlanError):
+        validate(plan, record)
+
+
+def test_intended_only_plan_and_unproved_support_never_authorize_transfer(plan):
+    with pytest.raises(NativePlanError, match="unproved_native_support"):
+        validate(replace(plan, accepted_support=None), observation(plan))
+    for wrong in (None, {}, object(), replace(plan, accepted_support=object())):
+        with pytest.raises(NativePlanError):
+            validate(wrong, observation(plan))
+
+
+@pytest.mark.parametrize("missing", [field.name for field in fields(NativeActualSupport)])
+def test_incomplete_actual_support_record_rejects(plan, missing):
+    support = object.__new__(NativeActualSupport)
+    for field in fields(NativeActualSupport):
+        if field.name != missing:
+            object.__setattr__(support, field.name, getattr(plan.accepted_support, field.name))
+    with pytest.raises(NativePlanError, match="invalid_native_support_record"):
+        validate(replace(plan, accepted_support=support), observation(plan))
+
+
+def test_original_arithmetic_context_is_continued_without_reset(plan):
+    context = PrimitiveContext(max_operations=200_000)
+    context._make(17, 0)
+    before = context.operations
+    validate(plan, observation(plan), context=context)
+    after = context.operations
+    validate(plan, observation(plan), context=context)
+    assert before < after < context.operations
+    assert context.operations - after == after - before
+    assert context.max_operations == 200_000
+
+
+def test_exhausted_original_context_rejects_instead_of_starting_auxiliary_budget(plan):
+    context = PrimitiveContext(max_operations=1)
+    context._tick()
+    with pytest.raises(PrimitiveError, match="operation_limit"):
+        validate(plan, observation(plan), context=context)
+    assert context.operations == context.max_operations == 1
+
+
+@pytest.mark.parametrize("missing", [field.name for field in fields(NativePlan)])
+def test_incomplete_native_plan_is_controlled_rejection(plan, missing):
+    broken = object.__new__(type(plan))
+    for field in fields(type(plan)):
+        if field.name != missing:
+            object.__setattr__(broken, field.name, getattr(plan, field.name))
+    with pytest.raises(NativePlanError, match="invalid_native_plan"):
+        validate(broken, observation(plan))
+
+
+class Coord:
+    def __init__(self, values):
+        self.values = values
+
+    def Coord(self):
+        return self.values
+
+
+class Location:
+    def __init__(self, values=IDENTITY, identity=None):
+        self.values = values
+        self.identity = values == IDENTITY if identity is None else identity
+
+    def IsIdentity(self):
+        return self.identity
+
+    def Transformation(self):
+        return self
+
+    def Value(self, row, column):
+        return self.values[row - 1][column - 1]
+
+
+class Surface:
+    """Separate handles intentionally compare equal by their geometry."""
+
+    def __init__(self, plan, kind="Geom_Plane"):
+        self.kind = kind
+        self.origin = (0.0, 0.0, 0.0)
+        self.u, self.v, self.normal = plan.frame.u, plan.frame.v, plan.frame.normal
+        self.plane_calls = 0
+
+    def __eq__(self, other):
+        return isinstance(other, Surface) and self.kind == other.kind
+
+    def DynamicType(self):
+        return SimpleNamespace(Name=lambda: self.kind)
+
+    def Pln(self):
+        self.plane_calls += 1
+        assert self.kind == "Geom_Plane", "never request plane fields from a nonplane"
+        return self
+
+    def Position(self):
+        return SimpleNamespace(
+            XDirection=lambda: Coord(self.u),
+            YDirection=lambda: Coord(self.v),
+            Direction=lambda: Coord(self.normal),
+        )
+
+    def Location(self):
+        return Coord(self.origin)
+
+
+class Shape:
+    """Only genuine identity/occurrence predicates supply the collected flags."""
+
+    def __init__(self, tshape, location, surface, surface_location):
+        self.tshape, self.location = tshape, location
+        self.surface, self.surface_location = surface, surface_location
+        self.orientation, self.shape_type, self.is_null = 0, 4, False
+        self.comparisons = []
+
+    def IsNull(self):
+        return self.is_null
+
+    def ShapeType(self):
+        assert not self.is_null
+        return self.shape_type
+
+    def Orientation(self):
+        assert not self.is_null
+        return self.orientation
+
+    def Location(self):
+        assert not self.is_null
+        return self.location
+
+    def IsPartner(self, other):
+        self.comparisons.append(("IsPartner", other))
+        return self.tshape is other.tshape
+
+    def IsSame(self, other):
+        self.comparisons.append(("IsSame", other))
+        return self.tshape is other.tshape and self.location.values == other.location.values
+
+    def IsEqual(self, other):
+        self.comparisons.append(("IsEqual", other))
+        return (
+            self.tshape is other.tshape
+            and self.location.values == other.location.values
+            and self.orientation == other.orientation
+        )
+
+
+def fake_shapes(plan, height=7.0):
+    surface, tshape = Surface(plan), object()
+    profile = Shape(tshape, Location(), surface, Location())
+    first = Shape(tshape, Location(), surface, Location())
+    placement = matrix(tuple(height * n for n in plan.frame.normal))
+    last = Shape(tshape, Location(placement), surface, Location(placement))
+    return profile, first, last, surface
+
+
+def kernel_method(name):
+    tree = ast.parse(KERNEL.read_bytes())
+    kernel = next(
+        node for node in tree.body if isinstance(node, ast.ClassDef) and node.name == "OCPKernel"
+    )
+    return next(
+        node for node in kernel.body if isinstance(node, ast.FunctionDef) and node.name == name
+    )
+
+
+@pytest.fixture(scope="module")
+def collectors():
+    names = {
+        "_curve_profile_location_record",
+        "_curve_profile_surface_record",
+        "_curve_profile_end_cap_record",
+    }
+    tree = ast.parse(KERNEL.read_bytes())
+    selected = [
+        node for node in tree.body if isinstance(node, ast.FunctionDef) and node.name in names
+    ]
+    assert {node.name for node in selected} == names
+    calls = []
+
+    def face(shape):
+        calls.append(("Face", shape))
+        assert not shape.is_null and shape.shape_type == 4
+        return shape
+
+    def surface(shape, location):
+        calls.append(("Surface_s", shape, location))
+        location.values, location.identity = (
+            shape.surface_location.values,
+            shape.surface_location.identity,
+        )
+        return shape.surface
+
+    namespace = {
+        "__name__": "mechanical_cad._synthetic_end_cap_collectors",
+        "__package__": "mechanical_cad",
+        "TopAbs_FACE": 4,
+        "TopLoc_Location": Location,
+        "TopoDS": SimpleNamespace(Face=face),
+        "BRep_Tool": SimpleNamespace(Surface_s=surface),
+    }
+    exec(compile(ast.Module(body=selected, type_ignores=[]), str(KERNEL), "exec"), namespace)
+    return SimpleNamespace(record=namespace["_curve_profile_end_cap_record"], calls=calls)
+
+
+@pytest.fixture(scope="module")
+def inspection_block():
+    method = kernel_method("extrude_sector")
+    body = next(node.body for node in method.body if isinstance(node, ast.Try))
+    start = next(
+        index
+        for index, node in enumerate(body)
+        if isinstance(node, ast.Assign)
+        and any(
+            isinstance(target, ast.Name) and target.id == "end_record" for target in node.targets
+        )
+    )
+    stop = next(
+        index
+        for index, node in enumerate(body)
+        if isinstance(node, ast.Assign)
+        and any(isinstance(target, ast.Name) and target.id == "roles" for target in node.targets)
+    )
+    selected = body[start:stop]
+    assert len(selected) == 4
+    assert ast.unparse(selected[1]) == "event('raw_last_cap_representation', end_record)"
+    assert (
+        ast.unparse(selected[2])
+        == "end_fields = validate_end_cap_observation(plan, end_record, height=height, context=c)"
+    )
+    assert ast.unparse(selected[3]) == "event('actual_last_cap_plane', end_fields)"
+    return compile(ast.Module(body=selected, type_ignores=[]), str(KERNEL), "exec")
+
+
+def collect(collectors, plan, shapes=None, height=7.0, vector=None):
+    shapes = fake_shapes(plan, height) if shapes is None else shapes
+    vector = tuple(height * n for n in plan.frame.normal) if vector is None else vector
+    return collectors.record(*shapes, vector, height)
+
+
+def test_collector_observes_genuine_identity_and_exact_raw_schema(collectors, plan):
+    shapes = fake_shapes(plan)
+    record = collect(collectors, plan, shapes)
+    profile, first, last, retained = shapes
+    assert record == observation(plan)
+    assert set(record) == RAW_KEYS
+    assert first.comparisons == [("IsEqual", profile)]
+    assert last.comparisons == [("IsPartner", profile), ("IsSame", profile), ("IsEqual", profile)]
+    assert retained.plane_calls == 1
+    assert collectors.calls[-1][0] == "Surface_s" and collectors.calls[-1][1] is last
+    validate(plan, record)
+
+
+def test_equal_geometry_on_different_handle_is_raw_foreign_evidence(collectors, plan):
+    shapes = fake_shapes(plan)
+    shapes[2].surface = Surface(plan)
+    assert shapes[2].surface == shapes[3] and shapes[2].surface is not shapes[3]
+    record = collect(collectors, plan, shapes)
+    assert record["surface_fields"] == observation(plan)["surface_fields"]
+    assert record["surface_is_retained"] is False
+    with pytest.raises(NativePlanError):
+        validate(plan, record)
+
+
+BAD_COLLECTOR_CASES = (
+    "nonplane",
+    "wrong_handle",
+    "wrong_partner",
+    "last_reversed",
+    "profile_reversed",
+    "first_mismatch",
+    "null",
+    "nonface",
+    "shape_location",
+    "surface_location",
+    "half_locations",
+    "double_locations",
+    "complementary_locations",
+    "raw_origin",
+    "raw_u",
+    "raw_v",
+    "raw_normal",
+    "wrong_vector",
+    "tangential",
+    "identity_flags",
+    "same_equal",
+    "combined",
+)
+
+
+def mutate_shapes(shapes, change, plan):
+    profile, first, last, retained = shapes
+    if change == "nonplane":
+        last.surface.kind = "Geom_BSplineSurface"
+    elif change == "wrong_handle":
+        last.surface = Surface(plan)
+    elif change == "wrong_partner":
+        last.tshape = object()
+    elif change == "last_reversed":
+        last.orientation = 1
+    elif change == "profile_reversed":
+        profile.orientation = 1
+    elif change == "first_mismatch":
+        first.orientation = 1
+    elif change == "null":
+        last.is_null = True
+    elif change == "nonface":
+        last.shape_type = 6
+    elif change in {"shape_location", "surface_location"}:
+        target = last.location if change == "shape_location" else last.surface_location
+        target.values = IDENTITY
+    elif change in {"half_locations", "double_locations", "complementary_locations", "tangential"}:
+        a, b = {
+            "half_locations": (3.5, 3.5),
+            "double_locations": (14.0, 14.0),
+            "complementary_locations": (2.0, 5.0),
+            "tangential": (7.0, 7.0),
+        }[change]
+        tangent = math.ulp(0.0) if change == "tangential" else 0.0
+        last.location.values = matrix((tangent, 0.0, a))
+        last.surface_location.values = matrix((tangent, 0.0, b))
+    elif change.startswith("raw_"):
+        setattr(retained, change.removeprefix("raw_"), (1.0, 1.0, 1.0))
+    elif change == "identity_flags":
+        last.location.identity = last.surface_location.identity = True
+    elif change == "same_equal":
+        last.location.values = profile.location.values
+    elif change == "combined":
+        last.tshape, last.orientation, last.surface = object(), 1, Surface(plan)
+        last.location.values = matrix((0.0, 0.0, 3.5))
+        last.surface_location.values = matrix((0.0, 0.0, 3.5))
+    return (0.0, 0.0, 8.0) if change == "wrong_vector" else (0.0, 0.0, 7.0)
+
+
+@pytest.mark.parametrize("change", BAD_COLLECTOR_CASES)
+def test_actual_additive_block_emits_raw_before_each_new_predicate_rejection(
+    collectors, inspection_block, plan, change
+):
+    shapes, events = fake_shapes(plan), []
+    vector = mutate_shapes(shapes, change, plan)
+    profile, first, last, retained = shapes
+    before_calls = len(collectors.calls)
+    namespace = {
+        "profile": profile,
+        "first": first,
+        "last": last,
+        "state": SimpleNamespace(surface=retained),
+        "plan": plan,
+        "c": PrimitiveContext(),
+        "actual_vector": vector,
+        "height": 7.0,
+        "_curve_profile_end_cap_record": collectors.record,
+        "validate_end_cap_observation": evidence.validate_end_cap_observation,
+        "event": lambda stage, value: events.append((stage, copy.deepcopy(value))),
+    }
+    with pytest.raises(NativePlanError):
+        exec(inspection_block, namespace)
+    assert len(events) == 1 and events[0][0] == "raw_last_cap_representation"
+    raw = events[0][1]
+    assert set(raw) == RAW_KEYS and raw["actual_vector"] == vector
+    assert "placement_rule" not in raw
+    if change in {"null", "nonface"}:
+        assert len(collectors.calls) == before_calls
+        assert raw["surface_fields"] is raw["surface_location"] is raw["surface_type"] is None
+    if change == "nonplane":
+        assert raw["surface_type"] == "Geom_BSplineSurface" and raw["surface_fields"] is None
+        assert retained.plane_calls == 0
+
+
+def test_actual_additive_block_keeps_raw_and_derived_separate(collectors, inspection_block, plan):
+    profile, first, last, retained = fake_shapes(plan)
+    events, context = [], PrimitiveContext()
+    namespace = {
+        "profile": profile,
+        "first": first,
+        "last": last,
+        "state": SimpleNamespace(surface=retained),
+        "plan": plan,
+        "c": context,
+        "actual_vector": (0.0, 0.0, 7.0),
+        "height": 7.0,
+        "_curve_profile_end_cap_record": collectors.record,
+        "validate_end_cap_observation": evidence.validate_end_cap_observation,
+        "event": lambda stage, value: events.append(
+            (stage, copy.deepcopy(value), context.operations)
+        ),
+    }
+    exec(inspection_block, namespace)
+    assert [item[0] for item in events] == ["raw_last_cap_representation", "actual_last_cap_plane"]
+    assert events[0][1] == observation(plan)
+    assert events[1][1]["origin"] == (0.0, 0.0, 7.0)
+    assert events[0][2] < events[1][2]
+    assert events[0][1]["surface_fields"]["origin"] == (0.0, 0.0, 0.0)
+
+
+def test_no_transformed_copy_healing_accessor_or_constructor_is_added():
+    tree = ast.parse(KERNEL.read_bytes())
+    collector = next(
+        node
+        for node in tree.body
+        if isinstance(node, ast.FunctionDef) and node.name == "_curve_profile_end_cap_record"
+    )
+    calls = [node for node in ast.walk(collector) if isinstance(node, ast.Call)]
+    names = {node.func.id for node in calls if isinstance(node.func, ast.Name)}
+    attributes = {node.func.attr for node in calls if isinstance(node.func, ast.Attribute)}
+    assert names == {
+        "TopLoc_Location",
+        "int",
+        "_curve_profile_location_record",
+        "_curve_profile_surface_record",
+    }
+    assert attributes == {
+        "IsNull",
+        "ShapeType",
+        "Surface_s",
+        "Face",
+        "DynamicType",
+        "Name",
+        "Orientation",
+        "IsEqual",
+        "Location",
+        "IsPartner",
+        "IsSame",
+    }
+    assert not any(
+        isinstance(node, (ast.Import, ast.ImportFrom, ast.Raise)) for node in ast.walk(collector)
+    )
+    assert [arg.arg for arg in collector.args.args] == [
+        "profile",
+        "first",
+        "last",
+        "retained_surface",
+        "actual_vector",
+        "height",
+    ]
+
+
+def test_bounded_raw_event_overflow_precedes_helper_and_registration(
+    collectors, inspection_block, plan
+):
+    profile, first, last, retained = fake_shapes(plan)
+    context = PrimitiveContext()
+    record = {
+        "operation": "curve_profile",
+        "operations_start": 0,
+        "events": [{"stage": "synthetic_only_padding", "value": "", "operations": 0}],
+    }
+    overhead = len(evidence.bounded_evidence_bytes(record))
+    record["events"][0]["value"] = "x" * (1_048_576 - overhead)
+    assert len(evidence.bounded_evidence_bytes(record)) == 1_048_576
+    before = copy.deepcopy(record)
+    helper_called = []
+    method = kernel_method("extrude_sector")
+    event = next(
+        node for node in method.body if isinstance(node, ast.FunctionDef) and node.name == "event"
+    )
+    namespace = {
+        "profile": profile,
+        "first": first,
+        "last": last,
+        "state": SimpleNamespace(surface=retained),
+        "plan": plan,
+        "c": context,
+        "actual_vector": (0.0, 0.0, 7.0),
+        "height": 7.0,
+        "_curve_profile_end_cap_record": collectors.record,
+        "validate_end_cap_observation": lambda *args, **kwargs: helper_called.append(True),
+        "evidence": record,
+        "bounded_evidence_bytes": evidence.bounded_evidence_bytes,
+        "evidence_sink": None,
+    }
+    exec(compile(ast.Module(body=[event], type_ignores=[]), str(KERNEL), "exec"), namespace)
+    with pytest.raises(NativePlanError, match="native_evidence_limit"):
+        exec(inspection_block, namespace)
+    assert record == before and not helper_called and context.operations == 0
+    bounds = [
+        node.lineno
+        for node in ast.walk(method)
+        if isinstance(node, ast.Call)
+        and isinstance(node.func, ast.Name)
+        and node.func.id == "bounded_evidence_bytes"
+    ]
+    registration = [
+        node.lineno
+        for node in ast.walk(method)
+        if isinstance(node, ast.Call)
+        and isinstance(node.func, ast.Attribute)
+        and node.func.attr == "_remember"
+    ]
+    assert len(registration) == 1 and max(bounds) < registration[0]
+
+
+def undo_regularity_metadata_revision(data, relative):
+    """Apply only exact reviewed hunks; leave every other old byte observable."""
+    path = ROOT / "tests/fixtures/arc_sector/regularity_metadata_inverse.json"
+    raw = path.read_bytes()
+    assert hashlib.sha256(raw).hexdigest() == (
+        "86b0357993ac11c4c885d1b4eaf6d78cc1adbcacd89281a1e361ffe03b3b0c9f"
+    )
+    fixture = json.loads(raw)
+    assert fixture["schema"] == 1
+    lines = data.splitlines(keepends=True)
+    for hunk in reversed(fixture["files"][relative]["hunks"]):
+        start = hunk["line"]
+        current = hunk["current"].encode().splitlines(keepends=True)
+        assert current and lines[start : start + len(current)] == current
+        lines[start : start + len(current)] = hunk["historical"].encode().splitlines(keepends=True)
+    return b"".join(lines)
+
+
+def undo_canonical_vertex_revision(data, relative):
+    """Apply only exact reviewed hunks; leave every other old byte observable."""
+    path = ROOT / "tests/fixtures/arc_sector/canonical_vertex_inverse.json"
+    raw = path.read_bytes()
+    assert hashlib.sha256(raw).hexdigest() == (
+        "0c6f93e8e6defd7398a011249ff2c7b4302798a25374a1d0194eba72a41bafae"
+    )
+    fixture = json.loads(raw)
+    assert fixture["schema"] == 1
+    lines = data.splitlines(keepends=True)
+    for hunk in reversed(fixture["files"][relative]["hunks"]):
+        start = hunk["line"]
+        current = hunk["current"].encode().splitlines(keepends=True)
+        assert current and lines[start : start + len(current)] == current
+        lines[start : start + len(current)] = hunk["historical"].encode().splitlines(keepends=True)
+    return b"".join(lines)
+
+
+def test_vertex_inverse_rejects_an_altered_fixture(monkeypatch):
+    fixture = ROOT / "tests/fixtures/arc_sector/canonical_vertex_inverse.json"
+    original = Path.read_bytes
+    monkeypatch.setattr(
+        Path, "read_bytes", lambda path: original(path) + (b" " if path == fixture else b"")
+    )
+    with pytest.raises(AssertionError):
+        undo_canonical_vertex_revision(KERNEL.read_bytes(), "src/mechanical_cad/kernel_ocp.py")
+
+
+def test_regularity_inverse_rejects_an_altered_fixture(monkeypatch):
+    fixture = ROOT / "tests/fixtures/arc_sector/regularity_metadata_inverse.json"
+    original = Path.read_bytes
+    monkeypatch.setattr(
+        Path, "read_bytes", lambda path: original(path) + (b" " if path == fixture else b"")
+    )
+    with pytest.raises(AssertionError):
+        undo_regularity_metadata_revision(KERNEL.read_bytes(), "src/mechanical_cad/kernel_ocp.py")
+
+
+def protected_kernel_bytes(data):
+    """Old spans, excising only the sealed inspection and exact raw observations."""
+    data = undo_regularity_metadata_revision(data, "src/mechanical_cad/kernel_ocp.py")
+    data = undo_canonical_vertex_revision(data, "src/mechanical_cad/kernel_ocp.py")
+    for added in (
+        b'            event("raw_face_empirical_area", {"area": area})\n',
+        b"            event(\n"
+        b'                "raw_prism_empirical_masses",\n'
+        b'                {"area": state.area, "height": height, "volume": volume},\n'
+        b"            )\n",
+    ):
+        assert data.count(added) == 1
+        data = data.replace(added, b"")
+    # Undo only the two sealed radial finite-range substitutions.
+    replacements = (
+        (b"(curve, (0.0, line.trim_parameter), True, 3)", b"(curve, (0.0, line.length), True, 3)"),
+        (
+            b"                maker = BRepBuilderAPI_MakeEdge(\n                    curve,\n                    vertices[arc.center_id],\n                    vertices[line.point_id],\n                    0.0,\n                    line.trim_parameter,\n                )",
+            b"                maker = BRepBuilderAPI_MakeEdge(\n                    curve, vertices[arc.center_id], vertices[line.point_id], 0.0, line.length\n                )",
+        ),
+    )
+    for current, historical in replacements:
+        assert data.count(current) == 1
+        data = data.replace(current, historical)
+    lines = data.splitlines(keepends=True)
+    tree = ast.parse(data)
+
+    def span(node):
+        first = min([node.lineno, *[item.lineno for item in getattr(node, "decorator_list", ())]])
+        return b"".join(lines[first - 1 : node.end_lineno])
+
+    def is_assignment(node, name):
+        return isinstance(node, ast.Assign) and any(
+            isinstance(target, ast.Name) and target.id == name for target in node.targets
+        )
+
+    segments = []
+    for node in tree.body:
+        if isinstance(node, ast.FunctionDef) and node.name == "_curve_profile_end_cap_record":
+            continue
+        if not isinstance(node, ast.ClassDef) or node.name != "OCPKernel":
+            segments.append(span(node))
+            continue
+        segments.append(b"".join(lines[node.lineno - 1 : node.body[0].lineno - 1]))
+        for method in node.body:
+            if not isinstance(method, ast.FunctionDef) or method.name != "extrude_sector":
+                segments.append(span(method))
+                continue
+            body = next(item.body for item in method.body if isinstance(item, ast.Try))
+            start = next(
+                item
+                for item in body
+                if is_assignment(item, "end_record") or is_assignment(item, "end_location")
+            )
+            stop = next(
+                item
+                for item in body
+                if isinstance(item, ast.Expr)
+                and isinstance(item.value, ast.Call)
+                and isinstance(item.value.func, ast.Name)
+                and item.value.func.id == "event"
+                and item.value.args
+                and isinstance(item.value.args[0], ast.Constant)
+                and item.value.args[0].value == "actual_last_cap_plane"
+            )
+            old = b"".join(
+                lines[method.lineno - 1 : start.lineno - 1]
+                + lines[stop.end_lineno : method.end_lineno]
+            )
+            old = old.replace(b"            validate_end_cap_observation,\n", b"")
+            segments.append(old)
+    return b"\0".join(segments)
+
+
+def protected_evidence_bytes(data):
+    data = undo_regularity_metadata_revision(
+        data, "src/mechanical_cad/arc_profile_native_evidence.py"
+    )
+    data = undo_canonical_vertex_revision(data, "src/mechanical_cad/arc_profile_native_evidence.py")
+    assert data.count(b'"range": (0.0, line.trim_parameter),') == 1
+    data = data.replace(b'"range": (0.0, line.trim_parameter),', b'"range": (0.0, line.length),')
+    lines = data.splitlines(keepends=True)
+    return b"\0".join(
+        b"".join(lines[node.lineno - 1 : node.end_lineno])
+        for node in ast.parse(data).body
+        if not isinstance(node, ast.FunctionDef) or node.name != "validate_end_cap_observation"
+    )
+
+
+STANDALONE_LIVE_FIXTURE = "tests/fixtures/standalone/python_revision_ab7edce.json"
+STANDALONE_LIVE_SHA256 = "28a8c806614dbfd7bb7e81c443630f3b05b34fd089c3684b6b4139c840c038ee"
+STANDALONE_LIVE_CHANGED = frozenset(
+    {
+        "blender_addon/mechanical_cad_blender/assembly_job_ui.py",
+        "blender_addon/mechanical_cad_blender/assembly_operator_helpers.py",
+        "blender_addon/mechanical_cad_blender/assembly_pending.py",
+        "blender_addon/mechanical_cad_blender/assembly_state.py",
+        "blender_addon/mechanical_cad_blender/backend_runtime.py",
+        "blender_addon/mechanical_cad_blender/backend_selection.py",
+        "blender_addon/mechanical_cad_blender/document_state.py",
+        "blender_addon/mechanical_cad_blender/execution_lease.py",
+        "blender_addon/mechanical_cad_blender/guarded_transport.py",
+        "blender_addon/mechanical_cad_blender/help_topics.py",
+        "blender_addon/mechanical_cad_blender/panels.py",
+        "blender_addon/mechanical_cad_blender/properties.py",
+        "blender_addon/mechanical_cad_blender/registration.py",
+        "blender_addon/mechanical_cad_blender/service_v3.py",
+        "blender_addon/mechanical_cad_blender/sidecar_job.py",
+        "blender_addon/mechanical_cad_blender/sketch_pending.py",
+        "blender_addon/mechanical_cad_blender/workspace_ui.py",
+        "scripts/package_standalone_extension.py",
+        "tests/unit/test_standalone_extension_builder.py",
+        "tests/unit/test_standalone_runtime_boundary.py",
+    }
+)
+STANDALONE_LIVE_ADDED = frozenset(
+    {
+        "blender_addon/mechanical_cad_blender/runtime_bundle_launch.py",
+        "blender_addon/mechanical_cad_blender/runtime_bundle_prepare.py",
+        "tests/unit/test_bundled_backend_runtime.py",
+        "tests/unit/test_bundled_registration.py",
+        "tests/unit/test_bundled_status_ui.py",
+        "tests/unit/test_runtime_bundle_launch.py",
+        "tests/unit/test_runtime_bundle_prepare.py",
+        "tests/unit/test_runtime_cleanup_quarantine.py",
+    }
+)
+
+
+def standalone_live_originals(root):
+    """Undo exactly the reviewed live delta to ab7edce before every older guard.
+
+    No core, solver, kernel, publisher or wire-validator bytes are exempted. The
+    original isolated fixture and all 129 baseline hashes remain immutable; only
+    this finite inverse may reconstruct the approved old add-on/runtime paths.
+    """
+    raw = (root / STANDALONE_LIVE_FIXTURE).read_bytes()
+    assert hashlib.sha256(raw).hexdigest() == STANDALONE_LIVE_SHA256
+    revision = json.loads(raw)
+    assert set(revision) == {"schema", "base_commit", "added", "changed"}
+    assert revision["schema"] == "standalone-live-python-boundary-v1"
+    assert revision["base_commit"] == "ab7edce1561df34fd9eb12f62772b132f02297b9"
+    added, changed = revision["added"], revision["changed"]
+    assert set(added) == STANDALONE_LIVE_ADDED
+    assert set(changed) == STANDALONE_LIVE_CHANGED
+    assert not set(added) & set(changed)
+    restored = {}
+    for name, entry in added.items():
+        assert set(entry) == {"bytes", "sha256"}
+        assert type(entry["bytes"]) is int and entry["bytes"] > 0
+        data = (root / name).read_bytes()
+        assert len(data) == entry["bytes"]
+        assert hashlib.sha256(data).hexdigest() == entry["sha256"]
+    for name, entry in changed.items():
+        assert set(entry) == {
+            "reviewed_bytes",
+            "reviewed_sha256",
+            "original_bytes",
+            "original_sha256",
+            "hunks",
+        }
+        assert type(entry["reviewed_bytes"]) is type(entry["original_bytes"]) is int
+        assert entry["reviewed_bytes"] > 0 and entry["original_bytes"] > 0
+        assert entry["reviewed_sha256"] != entry["original_sha256"]
+        data = (root / name).read_bytes()
+        assert len(data) == entry["reviewed_bytes"]
+        assert hashlib.sha256(data).hexdigest() == entry["reviewed_sha256"]
+        assert type(entry["hunks"]) is list and entry["hunks"]
+        previous = 0
+        for hunk in entry["hunks"]:
+            assert set(hunk) == {"new_start", "new_end", "original", "replacement"}
+            start, end = hunk["new_start"], hunk["new_end"]
+            assert type(start) is type(end) is int
+            assert previous <= start <= end <= len(data)
+            assert type(hunk["original"]) is type(hunk["replacement"]) is str
+            assert hunk["original"] != hunk["replacement"]
+            assert data[start:end] == hunk["replacement"].encode("utf-8")
+            previous = end
+        for hunk in reversed(entry["hunks"]):
+            data = (
+                data[: hunk["new_start"]]
+                + hunk["original"].encode("utf-8")
+                + data[hunk["new_end"] :]
+            )
+        assert len(data) == entry["original_bytes"]
+        assert hashlib.sha256(data).hexdigest() == entry["original_sha256"]
+        restored[name] = data
+    old_raw = (root / STANDALONE_REVISION_FIXTURE).read_bytes()
+    assert hashlib.sha256(old_raw).hexdigest() == STANDALONE_REVISION_SHA256
+    baseline = json.loads(old_raw)["baseline_runtime"]
+    assert len(baseline) == 129
+    for name, expected in baseline.items():
+        data = restored.get(name, (root / name).read_bytes())
+        assert hashlib.sha256(data).hexdigest() == expected, name
+    return frozenset(added), restored
+
+
+AUTHORING_REVISION_FIXTURE = "tests/fixtures/arc_authoring/python_revision_ce5b50b.json"
+AUTHORING_REVISION_SHA256 = "b6c40887813846ffa5036846059ed15382b911a0da5e55d4d660d23035491f46"
+
+
+def authoring_revision_originals(root):
+    """Undo only the complete reviewed authoring delta before older byte guards.
+
+    The guard module itself was already outside the historical digest; all other
+    changed/new Python files must match this sealed finite revision exactly.
+    Core/native/service behavior changes are forbidden by this extension. The
+    separately reviewed 0.6.0 metadata exception permits one exact version file.
+    """
+    live_added, live_originals = standalone_live_originals(root)
+    raw = (root / AUTHORING_REVISION_FIXTURE).read_bytes()
+    assert hashlib.sha256(raw).hexdigest() == AUTHORING_REVISION_SHA256
+    revision = json.loads(raw)
+    assert revision["base_commit"] == "ce5b50bb011b3949a6599c7cbc28d31024805e0a"
+    assert revision["schema"] == "arc-authoring-python-boundary-v1"
+    added, changed = revision["added"], revision["changed"]
+    assert not set(added) & set(changed)
+    metadata_path = "src/mechanical_cad/__init__.py"
+    assert all(name.startswith(("blender_addon/", "tests/")) for name in added)
+    assert all(
+        name.startswith(("blender_addon/", "tests/")) or name == metadata_path for name in changed
+    )
+    restored = dict(live_originals)
+    for name, entry in added.items():
+        data = live_originals.get(name, (root / name).read_bytes())
+        assert len(data) == entry["bytes"]
+        assert hashlib.sha256(data).hexdigest() == entry["sha256"]
+    for name, entry in changed.items():
+        data = live_originals.get(name, (root / name).read_bytes())
+        if name == metadata_path:
+            assert data == (
+                b'"""Independent, serializable CAD model. Blender and OCP are optional at import time."""\n'
+                b'\n__version__ = "0.6.0"\n'
+            )
+        assert len(data) == entry["reviewed_bytes"]
+        assert hashlib.sha256(data).hexdigest() == entry["reviewed_sha256"]
+        previous = 0
+        for hunk in entry["hunks"]:
+            start, end = hunk["new_start"], hunk["new_end"]
+            assert type(start) is type(end) is int
+            assert previous <= start <= end <= len(data)
+            assert data[start:end] == hunk["replacement"].encode("utf-8")
+            previous = end
+        for hunk in reversed(entry["hunks"]):
+            data = (
+                data[: hunk["new_start"]]
+                + hunk["original"].encode("utf-8")
+                + data[hunk["new_end"] :]
+            )
+        assert len(data) == entry["original_bytes"]
+        assert hashlib.sha256(data).hexdigest() == entry["original_sha256"]
+        restored[name] = data
+    return frozenset(added) | live_added, restored
+
+
+SERVICE_REVISION_FIXTURE = "tests/fixtures/result_v3/service_python_revision_30383a1.json"
+SERVICE_REVISION_SHA256 = "18c633d6a05c7f0c330b24f0815370b8b164284a43c03fd3daed88f2f84f3de0"
+
+
+def service_revision_originals(root):
+    """Undo only the complete pinned service delta before the historical digest."""
+    authoring_added, authoring_originals = authoring_revision_originals(root)
+    raw = (root / SERVICE_REVISION_FIXTURE).read_bytes()
+    assert hashlib.sha256(raw).hexdigest() == SERVICE_REVISION_SHA256
+    revision = json.loads(raw)
+    assert revision["base_commit"] == "30383a1bbaeae02b447bab2c37290d5f3927df8c"
+    assert revision["schema"] == "result-v3-python-boundary-v1"
+    added = revision["added"]
+    changed = revision["changed"]
+    assert len(added) == 21 and len(changed) == 11
+    assert not set(added) & set(changed)
+    for name, entry in added.items():
+        data = authoring_originals.get(name, (root / name).read_bytes())
+        assert len(data) == entry["bytes"]
+        assert hashlib.sha256(data).hexdigest() == entry["sha256"]
+    restored = dict(authoring_originals)
+    for name, entry in changed.items():
+        data = authoring_originals.get(name, (root / name).read_bytes())
+        assert len(data) == entry["reviewed_bytes"]
+        assert hashlib.sha256(data).hexdigest() == entry["reviewed_sha256"]
+        previous = 0
+        for hunk in entry["hunks"]:
+            start, end = hunk["new_start"], hunk["new_end"]
+            assert type(start) is type(end) is int
+            assert previous <= start <= end <= len(data)
+            assert data[start:end] == hunk["replacement"].encode("utf-8")
+            previous = end
+        for hunk in reversed(entry["hunks"]):
+            data = (
+                data[: hunk["new_start"]]
+                + hunk["original"].encode("utf-8")
+                + data[hunk["new_end"] :]
+            )
+        assert len(data) == entry["original_bytes"]
+        assert hashlib.sha256(data).hexdigest() == entry["original_sha256"]
+        restored[name] = data
+    return frozenset(added) | authoring_added, restored
+
+
+STANDALONE_REVISION_FIXTURE = "tests/fixtures/standalone/python_additions_69d0f81.json"
+STANDALONE_REVISION_SHA256 = "0e6152a913e23079c770f23bbe6daf111d28f82981496e1c85af19ae1bc5c6c9"
+
+
+def standalone_revision_added(root):
+    """Retain the exact isolated fixture after the finite live inverse."""
+    _live_added, live_originals = standalone_live_originals(root)
+    raw = (root / STANDALONE_REVISION_FIXTURE).read_bytes()
+    assert hashlib.sha256(raw).hexdigest() == STANDALONE_REVISION_SHA256
+    revision = json.loads(raw)
+    assert revision["schema"] == "standalone-isolated-additions-v1"
+    assert revision["base_commit"] == "69d0f8164e73bfbbcdf0c48d6546f97803d12f58"
+    assert set(revision) == {"schema", "base_commit", "added", "baseline_runtime"}
+    added = revision["added"]
+    assert set(added) == {
+        "blender_addon/mechanical_cad_blender/backend_platform.py",
+        "blender_addon/mechanical_cad_blender/windows_process.py",
+        "blender_addon/mechanical_cad_blender/runtime_bundle_manifest.py",
+        "blender_addon/mechanical_cad_blender/runtime_bundle_materialize.py",
+        "blender_addon/mechanical_cad_blender/runtime_bundle_pin.py",
+        "scripts/package_standalone_extension.py",
+        "scripts/standalone_child_bootstrap.py",
+        "tests/unit/test_runtime_bundle_manifest.py",
+        "tests/unit/test_runtime_bundle_materialize.py",
+        "tests/unit/test_runtime_bundle_pin.py",
+        "tests/unit/test_standalone_child_bootstrap.py",
+        "tests/unit/test_windows_process.py",
+        "tests/unit/test_standalone_extension_builder.py",
+        "tests/unit/test_standalone_runtime_boundary.py",
+    }
+    for name, entry in added.items():
+        data = live_originals.get(name, (root / name).read_bytes())
+        assert len(data) == entry["bytes"]
+        assert hashlib.sha256(data).hexdigest() == entry["sha256"]
+    return frozenset(added)
+
+
+def protected_python_digest(root):
+    service_added, service_originals = service_revision_originals(root)
+    standalone_added = standalone_revision_added(root)
+    excluded = {
+        "src/mechanical_cad/kernel_ocp.py",
+        "src/mechanical_cad/arc_profile_native_evidence.py",
+        "tests/unit/test_arc_profile_native_end_cap.py",
+        # Authorized periodic-plan revision; all other snapshot3 paths stay exact.
+        "src/mechanical_cad/arc_profile_native_plan.py",
+        "tests/unit/test_arc_profile_native_periodic.py",
+        "tests/unit/test_arc_profile_native_mass_observations.py",
+        # Precisely revised finite-parameter/count assertions, audited separately.
+        "tests/unit/test_arc_profile_native_plan.py",
+        "tests/unit/test_arc_profile_native_evidence.py",
+        "tests/unit/test_arc_profile_native_radial_trim.py",
+        # Precisely scoped canonical native endpoint/whole-trace controls.
+        "tests/unit/test_arc_profile_native_vertices.py",
+        "tests/unit/test_arc_profile_native_vertex_adapter.py",
+        "tests/unit/test_arc_profile_native_generated_trace.py",
+        # Exact new advisory-only metadata controls; no broader exclusion.
+        "tests/unit/test_arc_profile_native_regularity.py",
+        "tests/unit/test_arc_profile_native_regularity_adapter.py",
+    }
+    paths = sorted(
+        path
+        for directory in ("src", "blender_addon", "tests")
+        for path in (root / directory).rglob("*.py")
+        if path.relative_to(root).as_posix() not in excluded | service_added | standalone_added
+    )
+    digest = hashlib.sha256()
+    for path in paths:
+        name = path.relative_to(root).as_posix()
+        digest.update(
+            name.encode() + b"\0" + service_originals.get(name, path.read_bytes()) + b"\0"
+        )
+    return len(paths), digest.hexdigest()
+
+
+# Recorded from the independently frozen revised_pure_snapshot3/source. These
+# portable hashes neither read that checkout at test time nor relax old guards.
+SNAPSHOT3_KERNEL_PROTECTED = "623eea032aff3864b5fa2d8329314ef22894a53a59c8f3229348745d46f884c4"
+SNAPSHOT3_EVIDENCE_PROTECTED = "f2f68e0ac97da4020e773ed470b90e7819df67587ed09bde1e1588dbc29f1770"
+SNAPSHOT3_PYTHON_PROTECTED = (
+    259,
+    "f1c9a006975a48a8ef3fb051709eb4ac75a0dadc207090c27783902034e939b7",
+)
+
+
+def test_snapshot3_source_and_all_old_kernel_evidence_spans_are_protected():
+    assert (
+        hashlib.sha256(protected_kernel_bytes(KERNEL.read_bytes())).hexdigest()
+        == SNAPSHOT3_KERNEL_PROTECTED
+    )
+    path = ROOT / "src/mechanical_cad/arc_profile_native_evidence.py"
+    assert (
+        hashlib.sha256(protected_evidence_bytes(path.read_bytes())).hexdigest()
+        == SNAPSHOT3_EVIDENCE_PROTECTED
+    )
+    assert protected_python_digest(ROOT) == SNAPSHOT3_PYTHON_PROTECTED
+
+
+def copy_python_guard_tree(destination):
+    for directory in ("src", "blender_addon", "tests"):
+        for source in (ROOT / directory).rglob("*.py"):
+            target = destination / source.relative_to(ROOT)
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_bytes(source.read_bytes())
+    for relative in (
+        SERVICE_REVISION_FIXTURE,
+        AUTHORING_REVISION_FIXTURE,
+        STANDALONE_REVISION_FIXTURE,
+        STANDALONE_LIVE_FIXTURE,
+        "scripts/package_standalone_extension.py",
+        "scripts/standalone_child_bootstrap.py",
+    ):
+        fixture = destination / relative
+        fixture.parent.mkdir(parents=True, exist_ok=True)
+        fixture.write_bytes((ROOT / relative).read_bytes())
+    assert protected_python_digest(destination) == SNAPSHOT3_PYTHON_PROTECTED
+
+
+@pytest.mark.parametrize(
+    "name",
+    [
+        "src/mechanical_cad/profile_adapter_v3.py",
+        "blender_addon/mechanical_cad_blender/result_v3.py",
+        "tests/unit/test_sector_service_v3.py",
+        "src/mechanical_cad/engine.py",
+        "tests/unit/test_backend_contract_server.py",
+        "src/mechanical_cad/model.py",
+    ],
+)
+def test_service_extension_never_exempts_unreviewed_python_bytes(tmp_path, name):
+    copy_python_guard_tree(tmp_path)
+    path = tmp_path / name
+    path.write_bytes(path.read_bytes() + b"\n# Unreviewed mutation.\n")
+    with pytest.raises(AssertionError):
+        assert protected_python_digest(tmp_path) == SNAPSHOT3_PYTHON_PROTECTED
+
+
+def test_service_extension_never_exempts_unlisted_python_path(tmp_path):
+    copy_python_guard_tree(tmp_path)
+    (tmp_path / "src/mechanical_cad/unreviewed.py").write_text("pass\n")
+    assert protected_python_digest(tmp_path) != SNAPSHOT3_PYTHON_PROTECTED
+
+
+def test_service_extension_rejects_tampered_revision_fixture(tmp_path):
+    copy_python_guard_tree(tmp_path)
+    path = tmp_path / SERVICE_REVISION_FIXTURE
+    path.write_bytes(path.read_bytes() + b"\n")
+    with pytest.raises(AssertionError):
+        protected_python_digest(tmp_path)
+
+
+@pytest.mark.parametrize(
+    "name",
+    (
+        "blender_addon/mechanical_cad_blender/general_sketch_commands.py",
+        "blender_addon/mechanical_cad_blender/guarded_evidence.py",
+        "blender_addon/mechanical_cad_blender/operation_contracts.py",
+        "tests/integration/test_service_v3_owner_rejection.py",
+    ),
+)
+def test_authoring_extension_never_exempts_unreviewed_python_bytes(tmp_path, name):
+    copy_python_guard_tree(tmp_path)
+    path = tmp_path / name
+    path.write_bytes(path.read_bytes() + b"\n# Unreviewed authoring mutation.\n")
+    with pytest.raises(AssertionError):
+        protected_python_digest(tmp_path)
+
+
+def test_authoring_extension_rejects_tampered_revision_fixture(tmp_path):
+    copy_python_guard_tree(tmp_path)
+    path = tmp_path / AUTHORING_REVISION_FIXTURE
+    path.write_bytes(path.read_bytes() + b"\n")
+    with pytest.raises(AssertionError):
+        protected_python_digest(tmp_path)
+
+
+def test_constructor_and_later_mandatory_gates_remain_in_original_order():
+    method = kernel_method("extrude_sector")
+    calls = [node for node in ast.walk(method) if isinstance(node, ast.Call)]
+    constructor = [
+        node
+        for node in calls
+        if isinstance(node.func, ast.Name) and node.func.id == "BRepPrimAPI_MakePrism"
+    ]
+    assert len(constructor) == 1
+    assert (
+        ast.unparse(constructor[0])
+        == "BRepPrimAPI_MakePrism(profile, gp_Vec(*vector), False, True)"
+    )
+    validator = next(
+        node
+        for node in calls
+        if isinstance(node.func, ast.Name) and node.func.id == "validate_end_cap_observation"
+    )
+    required = {
+        "native_generated_history_changed",
+        "native_split_merged_history",
+        "native_tolerance_exceeded",
+        "native_extrusion_surface_changed",
+    }
+    guards = [
+        node
+        for node in calls
+        if isinstance(node.func, ast.Name)
+        and node.func.id == "_require"
+        and any(isinstance(arg, ast.Constant) and arg.value in required for arg in node.args)
+    ]
+    # The four original gates remain, plus the bounded-history overflow gate.
+    assert len(guards) == 5 and all(validator.lineno < node.lineno for node in guards)
+    codes = [
+        arg.value
+        for node in guards
+        for arg in node.args
+        if isinstance(arg, ast.Constant) and arg.value in required
+    ]
+    assert {code: codes.count(code) for code in required} == {
+        "native_generated_history_changed": 2,
+        "native_split_merged_history": 1,
+        "native_tolerance_exceeded": 1,
+        "native_extrusion_surface_changed": 1,
+    }
+    volume = next(
+        node
+        for node in calls
+        if isinstance(node.func, ast.Name) and node.func.id == "_exact_volume"
+    )
+    masses = next(
+        node for node in calls if isinstance(node.func, ast.Name) and node.func.id == "check_masses"
+    )
+    registration = next(
+        node
+        for node in calls
+        if isinstance(node.func, ast.Attribute) and node.func.attr == "_remember"
+    )
+    assert max(node.lineno for node in guards) < volume.lineno < masses.lineno < registration.lineno
+    assert (
+        ast.unparse(masses)
+        == "check_masses(plan, state.area, context=c, height=height, volume=volume)"
+    )
+    assert not any(
+        isinstance(node.func, ast.Name)
+        and node.func.id in {"PrimitiveContext", "entry_context", "IntervalContext"}
+        for node in calls
+    )
+
+
+@pytest.mark.parametrize("row,column", itertools.product(range(3), range(3)))
+@pytest.mark.parametrize("location", ["shape_location", "surface_location"])
+def test_every_linear_matrix_entry_is_exact_without_epsilon(plan, row, column, location):
+    record = observation(plan)
+    values = [list(entry) for entry in record[location]["matrix"]]
+    values[row][column] = math.nextafter(values[row][column], math.inf)
+    record[location]["matrix"] = tuple(tuple(entry) for entry in values)
+    with pytest.raises(NativePlanError):
+        validate(plan, record)
+
+
+@pytest.mark.parametrize("where", ["plan", "support", "context", "height"])
+def test_record_context_and_independent_height_subclasses_reject(plan, where):
+    context, height = PrimitiveContext(), 7.0
+    record = observation(plan)
+    if where == "plan":
+
+        class Derived(NativePlan):
+            pass
+
+        plan = Derived(**{field.name: getattr(plan, field.name) for field in fields(NativePlan)})
+    elif where == "support":
+
+        class Derived(NativeActualSupport):
+            pass
+
+        support = Derived(
+            **{
+                field.name: getattr(plan.accepted_support, field.name)
+                for field in fields(NativeActualSupport)
+            }
+        )
+        plan = replace(plan, accepted_support=support)
+    elif where == "context":
+
+        class Derived(PrimitiveContext):
+            pass
+
+        context = Derived()
+    else:
+        height = Float(7.0)
+    with pytest.raises(NativePlanError):
+        validate(plan, record, height=height, context=context)

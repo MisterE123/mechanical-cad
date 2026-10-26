@@ -1,0 +1,228 @@
+{
+  "schema_version": 2,
+  "id": "doc",
+  "name": "Arc reference",
+  "units": "mm",
+  "parameters": {},
+  "features": [
+    {
+      "id": "sketch_1",
+      "kind": "sketch_constrained",
+      "label": "Sketch",
+      "params": {},
+      "inputs": {},
+      "sketch": {
+        "schema_version": 3,
+        "id": "sketch_1_geometry",
+        "units": "mm",
+        "plane": {
+          "id": "xy",
+          "origin": [
+            0,
+            0,
+            0
+          ],
+          "quaternion": [
+            1,
+            0,
+            0,
+            0
+          ]
+        },
+        "points": [
+          {
+            "id": "p_d1",
+            "u": 0,
+            "v": 0
+          },
+          {
+            "id": "p_d2",
+            "u": 20,
+            "v": 0
+          },
+          {
+            "id": "p_d3",
+            "u": 20,
+            "v": 10
+          },
+          {
+            "id": "p_d4",
+            "u": 0,
+            "v": 10
+          },
+          {
+            "id": "p_d16",
+            "u": 18.0,
+            "v": 2.0
+          },
+          {
+            "id": "p_d17",
+            "u": 18.0,
+            "v": 0.0
+          },
+          {
+            "id": "p_d18",
+            "u": 20.0,
+            "v": 2.0000000000000004
+          }
+        ],
+        "lines": [
+          {
+            "id": "l_d5",
+            "start": "p_d1",
+            "end": "p_d17"
+          },
+          {
+            "id": "l_d6",
+            "start": "p_d18",
+            "end": "p_d3"
+          },
+          {
+            "id": "l_d7",
+            "start": "p_d3",
+            "end": "p_d4"
+          },
+          {
+            "id": "l_d8",
+            "start": "p_d4",
+            "end": "p_d1"
+          }
+        ],
+        "circles": [],
+        "constraints": [
+          {
+            "id": "r_d9",
+            "kind": "horizontal",
+            "refs": [
+              "l_d5"
+            ]
+          },
+          {
+            "id": "r_d10",
+            "kind": "vertical",
+            "refs": [
+              "l_d6"
+            ]
+          },
+          {
+            "id": "r_d11",
+            "kind": "horizontal",
+            "refs": [
+              "l_d7"
+            ]
+          },
+          {
+            "id": "r_d12",
+            "kind": "vertical",
+            "refs": [
+              "l_d8"
+            ]
+          },
+          {
+            "id": "r_d13",
+            "kind": "fixed",
+            "refs": [
+              "p_d1"
+            ],
+            "target": [
+              0,
+              0
+            ]
+          },
+          {
+            "id": "r_d14",
+            "kind": "distance",
+            "refs": [
+              "p_d1",
+              "p_d2"
+            ],
+            "value": 20
+          },
+          {
+            "id": "r_d15",
+            "kind": "distance",
+            "refs": [
+              "p_d2",
+              "p_d3"
+            ],
+            "value": 10
+          },
+          {
+            "id": "r_d20",
+            "kind": "radius",
+            "refs": [
+              "a_d19"
+            ],
+            "value": 2
+          },
+          {
+            "id": "r_d21",
+            "kind": "tangent",
+            "refs": [
+              "a_d19",
+              "l_d5"
+            ]
+          },
+          {
+            "id": "r_d22",
+            "kind": "tangent",
+            "refs": [
+              "a_d19",
+              "l_d6"
+            ]
+          },
+          {
+            "id": "r_d23",
+            "kind": "point_on_line",
+            "refs": [
+              "p_d2",
+              "l_d5"
+            ]
+          },
+          {
+            "id": "r_d24",
+            "kind": "point_on_line",
+            "refs": [
+              "p_d2",
+              "l_d6"
+            ]
+          }
+        ],
+        "arcs": [
+          {
+            "id": "a_d19",
+            "center": "p_d16",
+            "start": "p_d17",
+            "end": "p_d18",
+            "direction": "ccw",
+            "fillet_intent": {
+              "version": 1,
+              "corner": "p_d2",
+              "lines": [
+                "l_d5",
+                "l_d6"
+              ],
+              "outer": [
+                "p_d1",
+                "p_d3"
+              ],
+              "turn": "cw"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "pad",
+      "kind": "extrude",
+      "label": "Plate",
+      "params": {
+        "length": 5
+      },
+      "inputs": {
+        "profile": "sketch_1"
+      }
+    }
+  ],
+  "active_feature": "pad"
+}

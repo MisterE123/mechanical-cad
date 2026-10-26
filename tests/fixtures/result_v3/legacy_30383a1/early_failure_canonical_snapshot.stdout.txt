@@ -1,0 +1,1 @@
+{"protocol_version":1,"ok":false,"result":null,"error":{"code":"invalid_document","message":"Document must be an object."}}

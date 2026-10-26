@@ -1,0 +1,270 @@
+{
+  "base_commit": "1c8f03026c814cd69bfb25c35449810b5b858fb2",
+  "changed": {
+    "tests/unit/test_arc_profile_incidence.py": {
+      "hunks": [
+        {
+          "new_end": 31578,
+          "new_start": 30930,
+          "original": "",
+          "replacement": "        constants = {\n            \"AUTHORING_REVISION_FIXTURE\",\n            \"AUTHORING_REVISION_SHA256\",\n            \"STANDALONE_REVISION_FIXTURE\",\n            \"STANDALONE_REVISION_SHA256\",\n            \"STANDALONE_LIVE_FIXTURE\",\n            \"STANDALONE_LIVE_SHA256\",\n            \"STANDALONE_HARNESS_FIXTURE\",\n            \"STANDALONE_HARNESS_SHA256\",\n        }\n        finite_sets = {\"STANDALONE_LIVE_CHANGED\", \"STANDALONE_LIVE_ADDED\"}\n        mappings = {\"STANDALONE_HARNESS_ORIGINALS\"}\n        functions = {\n            \"standalone_harness_originals\",\n            \"standalone_live_originals\",\n            \"authoring_revision_originals\",\n        }\n"
+        },
+        {
+          "new_end": 32643,
+          "new_start": 31768,
+          "original": "                if isinstance(target, ast.Name) and target.id in {\n                    \"AUTHORING_REVISION_FIXTURE\",\n                    \"AUTHORING_REVISION_SHA256\",\n                }:\n                    assert isinstance(node.value, ast.Constant)\n                    assert type(node.value.value) is str\n",
+          "replacement": "                if isinstance(target, ast.Name) and target.id in constants | finite_sets | mappings:\n                    if target.id in constants:\n                        assert isinstance(node.value, ast.Constant)\n                        assert type(node.value.value) is str\n                    elif target.id in finite_sets:\n                        assert isinstance(node.value, ast.Call)\n                        assert isinstance(node.value.func, ast.Name)\n                        assert node.value.func.id == \"frozenset\"\n                        assert len(node.value.args) == 1 and not node.value.keywords\n                        value = ast.literal_eval(node.value.args[0])\n                        assert type(value) is set and all(type(item) is str for item in value)\n                    else:\n                        assert type(ast.literal_eval(node.value)) is dict\n"
+        },
+        {
+          "new_end": 32822,
+          "new_start": 32743,
+          "original": "            elif isinstance(node, ast.FunctionDef) and node.name == \"authoring_revision_originals\":\n",
+          "replacement": "            elif isinstance(node, ast.FunctionDef) and node.name in functions:\n"
+        },
+        {
+          "new_end": 32993,
+          "new_start": 32914,
+          "original": "        assert set(selected) == {\n            \"AUTHORING_REVISION_FIXTURE\",\n            \"AUTHORING_REVISION_SHA256\",\n            \"authoring_revision_originals\",\n        }\n",
+          "replacement": "        assert set(selected) == constants | finite_sets | mappings | functions\n"
+        }
+      ],
+      "original_bytes": 45374,
+      "original_sha256": "b780cbcd1b2fd6f79d2109e85e987e4d3b9a71f812bf67739a0503d55ae5dbc5",
+      "reviewed_bytes": 46478,
+      "reviewed_sha256": "d253e7ccc8baac5b439bd023b4ed4b66eef032d3a2c6bcffb5cb58301184990a"
+    },
+    "tests/unit/test_arc_profile_native_end_cap.py": {
+      "hunks": [
+        {
+          "new_end": 46955,
+          "new_start": 42773,
+          "original": "",
+          "replacement": "STANDALONE_HARNESS_FIXTURE = \"tests/fixtures/standalone/test_harness_revision_1c8f030.json\"\nSTANDALONE_HARNESS_SHA256 = \"0000000000000000000000000000000000000000000000000000000000000000\"\nSTANDALONE_HARNESS_ORIGINALS = {\n    \"tests/unit/test_arc_profile_incidence.py\": (\n        45374,\n        \"b780cbcd1b2fd6f79d2109e85e987e4d3b9a71f812bf67739a0503d55ae5dbc5\",\n    ),\n    \"tests/unit/test_arc_sector_native_boundary_mutations.py\": (\n        32717,\n        \"4c068f2d865a98be4d2cadafb82c280822408547966cea90736d7b5e3def169a\",\n    ),\n    \"tests/unit/test_result_v3_dependency_boundary.py\": (\n        12804,\n        \"2b048f5d5f04d43b2d8cf9e62d9e14796e9460a05391da0439fbe3cd8b51f10d\",\n    ),\n    \"tests/unit/test_standalone_extension_builder.py\": (\n        30959,\n        \"3e4a1282408ad384bfeb8cb43aee8771b5f60b9adc6b810a745b966d77b246eb\",\n    ),\n    \"tests/unit/test_arc_profile_native_end_cap.py\": (\n        64854,\n        \"bcb23beeae4c1796ba63964b40d56301e449279151808d815f17ee4bc121c8f9\",\n    ),\n    \"tests/unit/test_standalone_runtime_boundary.py\": (\n        19422,\n        \"b538d5ae80fddf25085a05cb2983ed92c8da3de07d9de4012217e699d0de2c13\",\n    ),\n}\n\n\ndef standalone_harness_originals(root):\n    \"\"\"Restore six exact test files before every unchanged historical inverse.\n\n    The reviewed source commit/manifest anchors this validator and fixture. A\n    mutation tree is data: its validator/constants must never replace this\n    trusted namespace. Only this module's one fixture-digest slot is normalized.\n    \"\"\"\n    raw = (root / STANDALONE_HARNESS_FIXTURE).read_bytes()\n    assert hashlib.sha256(raw).hexdigest() == STANDALONE_HARNESS_SHA256\n    revision = json.loads(raw)\n    assert set(revision) == {\"schema\", \"base_commit\", \"changed\"}\n    assert revision[\"schema\"] == \"standalone-test-harness-boundary-v1\"\n    assert revision[\"base_commit\"] == \"1c8f03026c814cd69bfb25c35449810b5b858fb2\"\n    assert set(revision[\"changed\"]) == set(STANDALONE_HARNESS_ORIGINALS)\n    restored = {}\n    for name, entry in revision[\"changed\"].items():\n        assert set(entry) == {\n            \"reviewed_bytes\",\n            \"reviewed_sha256\",\n            \"original_bytes\",\n            \"original_sha256\",\n            \"hunks\",\n        }\n        assert type(entry[\"reviewed_bytes\"]) is type(entry[\"original_bytes\"]) is int\n        assert entry[\"reviewed_bytes\"] > 0 and entry[\"original_bytes\"] > 0\n        assert (entry[\"original_bytes\"], entry[\"original_sha256\"]) == (\n            STANDALONE_HARNESS_ORIGINALS[name]\n        )\n        assert entry[\"reviewed_sha256\"] != entry[\"original_sha256\"]\n        data = (root / name).read_bytes()\n        if name == \"tests/unit/test_arc_profile_native_end_cap.py\":\n            label = b\"STANDALONE_HARNESS_\" + b'SHA256 = \"'\n            assert data.count(label) == 1\n            slot = label + STANDALONE_HARNESS_SHA256.encode(\"ascii\") + b'\"'\n            assert data.count(slot) == 1, \"copied guard digest differs from trusted namespace\"\n            data = data.replace(slot, label + b\"0\" * 64 + b'\"')\n        assert len(data) == entry[\"reviewed_bytes\"], name\n        assert hashlib.sha256(data).hexdigest() == entry[\"reviewed_sha256\"], name\n        assert type(entry[\"hunks\"]) is list and entry[\"hunks\"]\n        previous = 0\n        for hunk in entry[\"hunks\"]:\n            assert set(hunk) == {\"new_start\", \"new_end\", \"original\", \"replacement\"}\n            start, end = hunk[\"new_start\"], hunk[\"new_end\"]\n            assert type(start) is type(end) is int\n            assert previous <= start <= end <= len(data)\n            assert type(hunk[\"original\"]) is type(hunk[\"replacement\"]) is str\n            assert hunk[\"original\"] != hunk[\"replacement\"]\n            assert data[start:end] == hunk[\"replacement\"].encode(\"utf-8\")\n            previous = end\n        for hunk in reversed(entry[\"hunks\"]):\n            data = (\n                data[: hunk[\"new_start\"]]\n                + hunk[\"original\"].encode(\"utf-8\")\n                + data[hunk[\"new_end\"] :]\n            )\n        assert len(data) == entry[\"original_bytes\"], name\n        assert hashlib.sha256(data).hexdigest() == entry[\"original_sha256\"], name\n        restored[name] = data\n    return restored\n\n\n"
+        },
+        {
+          "new_end": 49407,
+          "new_start": 49348,
+          "original": "",
+          "replacement": "    harness_originals = standalone_harness_originals(root)\n"
+        },
+        {
+          "new_end": 50229,
+          "new_start": 50158,
+          "original": "        data = (root / name).read_bytes()\n",
+          "replacement": "        data = harness_originals.get(name, (root / name).read_bytes())\n"
+        },
+        {
+          "new_end": 50862,
+          "new_start": 50791,
+          "original": "        data = (root / name).read_bytes()\n",
+          "replacement": "        data = harness_originals.get(name, (root / name).read_bytes())\n"
+        },
+        {
+          "new_end": 53106,
+          "new_start": 53047,
+          "original": "",
+          "replacement": "    harness_originals = standalone_harness_originals(root)\n"
+        },
+        {
+          "new_end": 53887,
+          "new_start": 53837,
+          "original": "    restored = dict(live_originals)\n",
+          "replacement": "    restored = harness_originals | live_originals\n"
+        },
+        {
+          "new_end": 53987,
+          "new_start": 53925,
+          "original": "        data = live_originals.get(name, (root / name).read_bytes())\n",
+          "replacement": "        data = restored.get(name, (root / name).read_bytes())\n"
+        },
+        {
+          "new_end": 54199,
+          "new_start": 54137,
+          "original": "        data = live_originals.get(name, (root / name).read_bytes())\n",
+          "replacement": "        data = restored.get(name, (root / name).read_bytes())\n"
+        },
+        {
+          "new_end": 62662,
+          "new_start": 62626,
+          "original": "",
+          "replacement": "        STANDALONE_HARNESS_FIXTURE,\n"
+        }
+      ],
+      "original_bytes": 64854,
+      "original_sha256": "bcb23beeae4c1796ba63964b40d56301e449279151808d815f17ee4bc121c8f9",
+      "reviewed_bytes": 69250,
+      "reviewed_sha256": "c265225e4b8905d000b6818a7dcec44178945a38893b132205cc9cac123da64f"
+    },
+    "tests/unit/test_arc_sector_native_boundary_mutations.py": {
+      "hunks": [
+        {
+          "new_end": 23800,
+          "new_start": 23039,
+          "original": "",
+          "replacement": "    standalone_fixtures = {\n        \"tests/fixtures/standalone/python_additions_69d0f81.json\": \"0e6152a913e23079c770f23bbe6daf111d28f82981496e1c85af19ae1bc5c6c9\",\n        \"tests/fixtures/standalone/python_revision_ab7edce.json\": \"28a8c806614dbfd7bb7e81c443630f3b05b34fd089c3684b6b4139c840c038ee\",\n    }\n    support = {\"tests/fixtures/standalone/test_harness_revision_1c8f030.json\"}\n    for relative, expected in standalone_fixtures.items():\n        raw = (ROOT / relative).read_bytes()\n        assert hashlib.sha256(raw).hexdigest() == expected\n        fixture = json.loads(raw)\n        support.add(relative)\n        support.update(fixture[\"added\"])\n        support.update(fixture.get(\"changed\", {}))\n        support.update(fixture.get(\"baseline_runtime\", {}))\n"
+        },
+        {
+          "new_end": 24051,
+          "new_start": 24033,
+          "original": "",
+          "replacement": "        | support\n"
+        },
+        {
+          "new_end": 25483,
+          "new_start": 25181,
+          "original": "        data = (\n",
+          "replacement": "        data = (ROOT / relative).read_bytes()\n        # The live inverse checks the current kernel against its unchanged129\n        # baseline. Historical kernel bytes remain the separate fixture used by\n        # this original hash assertion and the original additive-span guard.\n        original = (\n"
+        },
+        {
+          "new_end": 25623,
+          "new_start": 25566,
+          "original": "            else (ROOT / relative).read_bytes()\n",
+          "replacement": "            else authoring_originals.get(relative, data)\n"
+        },
+        {
+          "new_end": 25633,
+          "new_start": 25633,
+          "original": "        original = authoring_originals.get(relative, data)\n",
+          "replacement": ""
+        }
+      ],
+      "original_bytes": 32717,
+      "original_sha256": "4c068f2d865a98be4d2cadafb82c280822408547966cea90736d7b5e3def169a",
+      "reviewed_bytes": 33731,
+      "reviewed_sha256": "00ac18e4d34e8b0f6281f8a397e45f278a478d87d94652ff321bc95d0651e3b2"
+    },
+    "tests/unit/test_result_v3_dependency_boundary.py": {
+      "hunks": [
+        {
+          "new_end": 404,
+          "new_start": 197,
+          "original": "from test_arc_profile_native_end_cap import authoring_revision_originals\n",
+          "replacement": "from test_arc_profile_native_end_cap import (\n    AUTHORING_REVISION_FIXTURE,\n    AUTHORING_REVISION_SHA256,\n    authoring_revision_originals,\n    standalone_live_originals,\n    standalone_revision_added,\n)\n"
+        },
+        {
+          "new_end": 1312,
+          "new_start": 966,
+          "original": "",
+          "replacement": ")\nSTANDALONE_RUNTIME_NEW = frozenset(\n    \"blender_addon/mechanical_cad_blender/\" + name + \".py\"\n    for name in (\n        \"backend_platform\",\n        \"windows_process\",\n        \"runtime_bundle_manifest\",\n        \"runtime_bundle_materialize\",\n        \"runtime_bundle_pin\",\n        \"runtime_bundle_prepare\",\n        \"runtime_bundle_launch\",\n    )\n"
+        },
+        {
+          "new_end": 6507,
+          "new_start": 5694,
+          "original": "def _assert_new_paths(root, original):\n",
+          "replacement": "def _reviewed_history(root):\n    \"\"\"Keep standalone restoration distinct from the historical arc revision.\"\"\"\n    live_added, live_originals = standalone_live_originals(root)\n    isolated_added = standalone_revision_added(root)\n    standalone_runtime = frozenset(\n        name for name in live_added | isolated_added if name.startswith((\"src/\", \"blender_addon/\"))\n    )\n    assert standalone_runtime == STANDALONE_RUNTIME_NEW\n    added, originals = authoring_revision_originals(root)\n    raw = (root / AUTHORING_REVISION_FIXTURE).read_bytes()\n    assert hashlib.sha256(raw).hexdigest() == AUTHORING_REVISION_SHA256\n    arc_changed = frozenset(json.loads(raw)[\"changed\"])\n    return added - live_added, originals, live_originals, arc_changed\n\n\ndef _assert_new_paths(root, original, *, standalone_new=frozenset()):\n"
+        },
+        {
+          "new_end": 7397,
+          "new_start": 7059,
+          "original": "    assert observed - set(original) <= ALLOWED_NEW | AUTHORING_RUNTIME_NEW, sorted(\n        observed - set(original)\n",
+          "replacement": "    assert standalone_new in (frozenset(), STANDALONE_RUNTIME_NEW)\n    assert standalone_new <= observed, \"missing sealed standalone runtime path\"\n    historical_observed = observed - standalone_new\n    assert historical_observed - set(original) <= ALLOWED_NEW | AUTHORING_RUNTIME_NEW, sorted(\n        historical_observed - set(original)\n"
+        },
+        {
+          "new_end": 7717,
+          "new_start": 7664,
+          "original": "    added, originals = authoring_revision_originals(ROOT)\n",
+          "replacement": "    added, originals, _, _ = _reviewed_history(ROOT)\n"
+        },
+        {
+          "new_end": 10032,
+          "new_start": 8635,
+          "original": "    _assert_new_paths(ROOT, _baseline()[\"files\"])\n",
+          "replacement": "    _reviewed_history(ROOT)  # All seven current source files must match sealed bytes first.\n    _assert_new_paths(ROOT, _baseline()[\"files\"], standalone_new=STANDALONE_RUNTIME_NEW)\n\n\n@pytest.mark.parametrize(\"mutation\", [\"missing\", \"extra\", \"wrong_directory\", \"partial_set\"])\ndef test_standalone_paths_cannot_expand_or_shrink_historical_boundary(tmp_path, mutation):\n    for relative in STANDALONE_RUNTIME_NEW:\n        path = tmp_path / relative\n        path.parent.mkdir(parents=True, exist_ok=True)\n        path.write_bytes(b\"# path-only control; source hashes are checked separately\\n\")\n    _assert_new_paths(tmp_path, {}, standalone_new=STANDALONE_RUNTIME_NEW)\n    relative = sorted(STANDALONE_RUNTIME_NEW)[0]\n    if mutation == \"missing\":\n        (tmp_path / relative).unlink()\n    elif mutation == \"extra\":\n        (tmp_path / \"blender_addon/mechanical_cad_blender/unreviewed.py\").write_bytes(b\"pass\\n\")\n    elif mutation == \"wrong_directory\":\n        target = tmp_path / \"blender_addon/impostor\" / Path(relative).name\n        target.parent.mkdir(parents=True)\n        (tmp_path / relative).rename(target)\n    else:\n        with pytest.raises(AssertionError):\n            _assert_new_paths(tmp_path, {}, standalone_new=STANDALONE_RUNTIME_NEW - {relative})\n        return\n    with pytest.raises(AssertionError):\n        _assert_new_paths(tmp_path, {}, standalone_new=STANDALONE_RUNTIME_NEW)\n"
+        },
+        {
+          "new_end": 11030,
+          "new_start": 10968,
+          "original": "    _, originals = authoring_revision_originals(ROOT)\n",
+          "replacement": "    _, originals, live_originals, _ = _reviewed_history(ROOT)\n"
+        },
+        {
+          "new_end": 12046,
+          "new_start": 11970,
+          "original": "        for node in ast.walk(ast.parse(raw)):\n",
+          "replacement": "        for node in ast.walk(ast.parse(live_originals.get(relative, raw))):\n"
+        },
+        {
+          "new_end": 12808,
+          "new_start": 12674,
+          "original": "    _, originals = authoring_revision_originals(ROOT)\n",
+          "replacement": "    _, restored, live_originals, arc_changed = _reviewed_history(ROOT)\n    originals = {name: restored[name] for name in arc_changed}\n"
+        },
+        {
+          "new_end": 13408,
+          "new_start": 13324,
+          "original": "        _assert_preserved(ROOT, {relative: baseline[relative]}, originals=originals)\n",
+          "replacement": "        _assert_preserved(ROOT, {relative: baseline[relative]}, originals=restored)\n"
+        },
+        {
+          "new_end": 13745,
+          "new_start": 13655,
+          "original": "        _assert_preserved(ROOT, {relative: baseline[relative]})\n",
+          "replacement": "        _assert_preserved(ROOT, {relative: baseline[relative]}, originals=live_originals)\n"
+        }
+      ],
+      "original_bytes": 12804,
+      "original_sha256": "2b048f5d5f04d43b2d8cf9e62d9e14796e9460a05391da0439fbe3cd8b51f10d",
+      "reviewed_bytes": 15764,
+      "reviewed_sha256": "55dd2edcaf8c189dd7601787a8b0519ceff211059b4d64f9fc19cc6544b40485"
+    },
+    "tests/unit/test_standalone_extension_builder.py": {
+      "hunks": [
+        {
+          "new_end": 203,
+          "new_start": 185,
+          "original": "",
+          "replacement": "import subprocess\n"
+        },
+        {
+          "new_end": 13341,
+          "new_start": 13295,
+          "original": "def test_generated_payload_is_admitted_by_actual_materializer_with_fake_pin(inputs, tmp_path):\n",
+          "replacement": "def _materializer_exercise(inputs, tmp_path):\n"
+        },
+        {
+          "new_end": 19216,
+          "new_start": 14885,
+          "original": "",
+          "replacement": "\n\ndef _run_isolated_materializer(inputs, tmp_path, forbidden=\"\"):\n    \"\"\"Run the complete inert exercise without ambient pytest/native imports.\"\"\"\n    encoded = dict(inputs)\n    for key in (\"source_root\", \"runtime_root\", \"destination\"):\n        encoded[key] = str(encoded[key])\n    encoded[\"runtime_lock\"] = encoded[\"runtime_lock\"].hex()\n    program = r\"\"\"\nimport ast\nimport importlib.abc\nimport importlib.util\nimport json\nimport sys\nimport types\nimport zipfile\nfrom pathlib import Path\n\nROOT = Path(sys.argv[1])\ntmp_path = Path(sys.argv[2])\ninputs = json.loads(sys.argv[3])\nfor key in (\"source_root\", \"runtime_root\", \"destination\"):\n    inputs[key] = Path(inputs[key])\ninputs[\"runtime_lock\"] = bytes.fromhex(inputs[\"runtime_lock\"])\nforbidden = sys.argv[4]\nroots = {\"OCP\", \"OCC\", \"cadquery\", \"slvs\", \"bpy\"}\nassert not roots.intersection(sys.modules)\nassert \"mechanical_cad.kernel_ocp\" not in sys.modules\nattempts = []\n\nclass DenyNative(importlib.abc.MetaPathFinder):\n    def find_spec(self, fullname, path=None, target=None):\n        if fullname.split(\".\")[0] in roots or fullname == \"mechanical_cad.kernel_ocp\":\n            attempts.append(fullname)\n            raise AssertionError(\"ISOLATED_NATIVE_IMPORT_BLOCKED:\" + fullname)\n        return None\n\nblocker = DenyNative()\nsys.meta_path.insert(0, blocker)\nif forbidden:\n    assert forbidden in roots | {\"mechanical_cad.kernel_ocp\"}\n    if forbidden == \"mechanical_cad.kernel_ocp\":\n        parent = types.ModuleType(\"mechanical_cad\")\n        parent.__path__ = []\n        sys.modules[\"mechanical_cad\"] = parent\n    importlib.import_module(forbidden)\n    raise AssertionError(\"native import blocker failed\")\n\nspec = importlib.util.spec_from_file_location(\n    \"isolated_standalone_builder\", ROOT / \"scripts/package_standalone_extension.py\"\n)\nbuilder = importlib.util.module_from_spec(spec)\nspec.loader.exec_module(builder)\n# Extract only the inert exercise body. Never import this pytest module, its\n# fixtures, production model, site-packages or any replacement validator.\npath = ROOT / \"tests/unit/test_standalone_extension_builder.py\"\nmatches = [\n    node for node in ast.parse(path.read_bytes()).body\n    if isinstance(node, ast.FunctionDef) and node.name == \"_materializer_exercise\"\n]\nassert len(matches) == 1 and not matches[0].decorator_list\nexec(compile(ast.Module(body=matches, type_ignores=[]), str(path), \"exec\"), globals())\n_materializer_exercise(inputs, tmp_path)\nassert sys.meta_path[0] is blocker\nassert not attempts\nassert not roots.intersection(sys.modules)\nassert \"mechanical_cad.kernel_ocp\" not in sys.modules\nprint(\"ISOLATED_INERT_BUILD_MATERIALIZE_OK\")\n\"\"\"\n    return subprocess.run(\n        [\n            sys.executable,\n            \"-I\",\n            \"-S\",\n            \"-B\",\n            \"-c\",\n            program,\n            str(ROOT),\n            str(tmp_path),\n            json.dumps(encoded),\n            forbidden,\n        ],\n        capture_output=True,\n        text=True,\n        timeout=30,\n        check=False,\n    )\n\n\ndef test_generated_payload_is_admitted_by_actual_materializer_with_fake_pin(inputs, tmp_path):\n    result = _run_isolated_materializer(inputs, tmp_path)\n    assert result.returncode == 0, (result.stdout, result.stderr)\n    assert result.stdout == \"ISOLATED_INERT_BUILD_MATERIALIZE_OK\\n\"\n    assert result.stderr == \"\"\n\n\n@pytest.mark.parametrize(\n    \"forbidden\", [\"OCP\", \"OCC\", \"cadquery\", \"slvs\", \"bpy\", \"mechanical_cad.kernel_ocp\"]\n)\ndef test_isolated_materializer_rejects_every_forbidden_import(inputs, tmp_path, forbidden):\n    result = _run_isolated_materializer(inputs, tmp_path, forbidden)\n    assert result.returncode != 0\n    assert result.stdout == \"\"\n    assert \"AssertionError: ISOLATED_NATIVE_IMPORT_BLOCKED:\" + forbidden in result.stderr\n\n\ndef test_isolated_materializer_ignores_parent_collection_imports(inputs, tmp_path, monkeypatch):\n    poisoned = {name: types.ModuleType(name) for name in (\"bpy\", \"OCP\", \"slvs\")}\n    for name, module in poisoned.items():\n        monkeypatch.setitem(sys.modules, name, module)\n    result = _run_isolated_materializer(inputs, tmp_path)\n    assert result.returncode == 0, (result.stdout, result.stderr)\n    assert result.stdout == \"ISOLATED_INERT_BUILD_MATERIALIZE_OK\\n\"\n    assert result.stderr == \"\"\n    assert all(sys.modules[name] is module for name, module in poisoned.items())\n"
+        }
+      ],
+      "original_bytes": 30959,
+      "original_sha256": "3e4a1282408ad384bfeb8cb43aee8771b5f60b9adc6b810a745b966d77b246eb",
+      "reviewed_bytes": 35259,
+      "reviewed_sha256": "85f64586b0327e2a2f9b55073c77655b2c209b1e8daaf379f4bda4347c3118c6"
+    },
+    "tests/unit/test_standalone_runtime_boundary.py": {
+      "hunks": [
+        {
+          "new_end": 2819,
+          "new_start": 2664,
+          "original": "",
+          "replacement": "        \"STANDALONE_HARNESS_FIXTURE\",\n        \"STANDALONE_HARNESS_SHA256\",\n        \"STANDALONE_HARNESS_ORIGINALS\",\n        \"standalone_harness_originals\",\n"
+        },
+        {
+          "new_end": 4595,
+          "new_start": 4474,
+          "original": "    raw = (ROOT / \"tests/unit/test_arc_profile_native_end_cap.py\").read_bytes()\n",
+          "replacement": "    raw = namespace[\"standalone_harness_originals\"](ROOT)[\n        \"tests/unit/test_arc_profile_native_end_cap.py\"\n    ]\n"
+        },
+        {
+          "new_end": 5786,
+          "new_start": 5665,
+          "original": "    raw = (ROOT / \"tests/unit/test_arc_profile_native_end_cap.py\").read_bytes()\n",
+          "replacement": "    raw = namespace[\"standalone_harness_originals\"](ROOT)[\n        \"tests/unit/test_arc_profile_native_end_cap.py\"\n    ]\n"
+        },
+        {
+          "new_end": 12760,
+          "new_start": 5959,
+          "original": "",
+          "replacement": "\n\ndef test_harness_inverse_restores_exact_parent_test_bytes_and_original_guard_seal():\n    namespace = guard_namespace()\n    restored = namespace[\"standalone_harness_originals\"](ROOT)\n    assert set(restored) == set(namespace[\"STANDALONE_HARNESS_ORIGINALS\"])\n    assert len(restored) == 6\n    for path, raw in restored.items():\n        assert path.startswith(\"tests/unit/\")\n        assert (len(raw), hashlib.sha256(raw).hexdigest()) == (\n            namespace[\"STANDALONE_HARNESS_ORIGINALS\"][path]\n        )\n    assert_guard_source_bytes(\n        restored[\"tests/unit/test_arc_profile_native_end_cap.py\"],\n        namespace[\"STANDALONE_LIVE_SHA256\"],\n    )\n\n\n@pytest.mark.parametrize(\"path\", sorted(guard_namespace()[\"STANDALONE_HARNESS_ORIGINALS\"]))\ndef test_each_repaired_test_path_rejects_unreviewed_current_bytes(tmp_path, path):\n    namespace = guard_namespace()\n    namespace[\"copy_python_guard_tree\"](tmp_path)\n    target = tmp_path / path\n    target.write_bytes(target.read_bytes() + b\"\\n# unreviewed test mutation\\n\")\n    with pytest.raises(AssertionError):\n        namespace[\"standalone_harness_originals\"](tmp_path)\n\n\n@pytest.mark.parametrize(\"mutation\", [\"fixture\", \"slot\", \"helper\", \"coordinated\"])\ndef test_harness_pair_tampering_cannot_replace_trusted_validator(tmp_path, mutation):\n    # The namespace always comes from the trusted source, never the copied tree.\n    namespace = guard_namespace()\n    namespace[\"copy_python_guard_tree\"](tmp_path)\n    fixture = tmp_path / namespace[\"STANDALONE_HARNESS_FIXTURE\"]\n    guard = tmp_path / \"tests/unit/test_arc_profile_native_end_cap.py\"\n    if mutation in {\"fixture\", \"coordinated\"}:\n        fixture.write_bytes(fixture.read_bytes() + b\"\\n\")\n    if mutation in {\"slot\", \"coordinated\"}:\n        new_digest = hashlib.sha256(fixture.read_bytes()).hexdigest()\n        if mutation == \"slot\":\n            new_digest = \"f\" * 64\n        old_slot = (\n            'STANDALONE_HARNESS_SHA256 = \"' + namespace[\"STANDALONE_HARNESS_SHA256\"] + '\"'\n        ).encode()\n        new_slot = ('STANDALONE_HARNESS_SHA256 = \"' + new_digest + '\"').encode()\n        raw = guard.read_bytes()\n        assert raw.count(old_slot) == 1\n        guard.write_bytes(raw.replace(old_slot, new_slot))\n    if mutation == \"helper\":\n        raw = guard.read_bytes()\n        before = b\"def standalone_harness_originals(root):\"\n        assert raw.count(before) == 1\n        guard.write_bytes(raw.replace(before, before + b\" # unreviewed\"))\n    with pytest.raises(AssertionError):\n        namespace[\"standalone_harness_originals\"](tmp_path)\n\n\ndef repin_harness_fixture_for_inner_control(namespace, root, revision):\n    \"\"\"Explicitly bypass the outer digest/slot only to test inner assertions.\"\"\"\n    raw = (json.dumps(revision, sort_keys=True, indent=2) + \"\\n\").encode()\n    (root / namespace[\"STANDALONE_HARNESS_FIXTURE\"]).write_bytes(raw)\n    digest = hashlib.sha256(raw).hexdigest()\n    guard = root / \"tests/unit/test_arc_profile_native_end_cap.py\"\n    old_slot = (\n        'STANDALONE_HARNESS_SHA256 = \"' + namespace[\"STANDALONE_HARNESS_SHA256\"] + '\"'\n    ).encode()\n    new_slot = ('STANDALONE_HARNESS_SHA256 = \"' + digest + '\"').encode()\n    data = guard.read_bytes()\n    assert data.count(old_slot) == 1\n    guard.write_bytes(data.replace(old_slot, new_slot))\n    namespace[\"STANDALONE_HARNESS_SHA256\"] = digest\n\n\n@pytest.mark.parametrize(\n    \"mutation\",\n    [\n        \"schema\",\n        \"base\",\n        \"extra_key\",\n        \"missing_path\",\n        \"extra_path\",\n        \"production_path\",\n        \"original_hash\",\n        \"reviewed_hash\",\n        \"original_length\",\n        \"reviewed_length\",\n        \"entry_key\",\n        \"hunk_key\",\n        \"empty_hunks\",\n        \"start_negative\",\n        \"start_bool\",\n        \"end_bool\",\n        \"end_before_start\",\n        \"end_overflow\",\n        \"replacement\",\n        \"original\",\n        \"duplicate_hunk\",\n        \"reversed_hunks\",\n        \"forged_original\",\n    ],\n)\ndef test_harness_inverse_rejects_invalid_hunks_metadata_and_non_test_paths(tmp_path, mutation):\n    namespace = guard_namespace()\n    namespace[\"copy_python_guard_tree\"](tmp_path)\n    revision = json.loads((tmp_path / namespace[\"STANDALONE_HARNESS_FIXTURE\"]).read_bytes())\n    name = \"tests/unit/test_arc_profile_incidence.py\"\n    entry = revision[\"changed\"][name]\n    hunk = entry[\"hunks\"][0]\n    if mutation == \"schema\":\n        revision[\"schema\"] = \"other\"\n    elif mutation == \"base\":\n        revision[\"base_commit\"] = \"0\" * 40\n    elif mutation == \"extra_key\":\n        revision[\"allow_other_paths\"] = True\n    elif mutation == \"missing_path\":\n        revision[\"changed\"].pop(name)\n    elif mutation == \"extra_path\":\n        revision[\"changed\"][\"tests/unit/test_unreviewed.py\"] = dict(entry)\n    elif mutation == \"production_path\":\n        revision[\"changed\"][\"src/mechanical_cad/kernel_ocp.py\"] = revision[\"changed\"].pop(name)\n    elif mutation in {\"original_hash\", \"reviewed_hash\"}:\n        entry[mutation.replace(\"_hash\", \"_sha256\")] = \"0\" * 64\n    elif mutation in {\"original_length\", \"reviewed_length\"}:\n        entry[mutation.replace(\"_length\", \"_bytes\")] = True\n    elif mutation == \"entry_key\":\n        entry[\"exempt\"] = True\n    elif mutation == \"hunk_key\":\n        hunk[\"skip_validation\"] = True\n    elif mutation == \"empty_hunks\":\n        entry[\"hunks\"] = []\n    elif mutation == \"start_negative\":\n        hunk[\"new_start\"] = -1\n    elif mutation == \"start_bool\":\n        hunk[\"new_start\"] = False\n    elif mutation == \"end_bool\":\n        hunk[\"new_end\"] = True\n    elif mutation == \"end_before_start\":\n        hunk[\"new_end\"] = hunk[\"new_start\"] - 1\n    elif mutation == \"end_overflow\":\n        hunk[\"new_end\"] = entry[\"reviewed_bytes\"] + 1\n    elif mutation == \"replacement\":\n        hunk[\"replacement\"] += \"# altered reviewed bytes\\n\"\n    elif mutation == \"original\":\n        hunk[\"original\"] += \"# altered before bytes\\n\"\n    elif mutation == \"duplicate_hunk\":\n        entry[\"hunks\"].insert(1, dict(hunk))\n    elif mutation == \"reversed_hunks\":\n        assert len(entry[\"hunks\"]) > 1\n        entry[\"hunks\"].reverse()\n    else:\n        assert mutation == \"forged_original\"\n        restored = namespace[\"standalone_harness_originals\"](tmp_path)[name] + b\"\\n# forged\\n\"\n        current = (tmp_path / name).read_bytes()\n        entry[\"original_bytes\"] = len(restored)\n        entry[\"original_sha256\"] = hashlib.sha256(restored).hexdigest()\n        entry[\"hunks\"] = [\n            {\n                \"new_start\": 0,\n                \"new_end\": len(current),\n                \"original\": restored.decode(),\n                \"replacement\": current.decode(),\n            }\n        ]\n    repin_harness_fixture_for_inner_control(namespace, tmp_path, revision)\n    with pytest.raises(AssertionError):\n        namespace[\"standalone_harness_originals\"](tmp_path)\n"
+        }
+      ],
+      "original_bytes": 19422,
+      "original_sha256": "b538d5ae80fddf25085a05cb2983ed92c8da3de07d9de4012217e699d0de2c13",
+      "reviewed_bytes": 26460,
+      "reviewed_sha256": "f8981575146bf6df1af4ce9cf30efdcb7a81617aef36fbd0f3e1a93161d1e6c0"
+    }
+  },
+  "schema": "standalone-test-harness-boundary-v1"
+}

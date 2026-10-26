@@ -1,0 +1,50 @@
+{
+  "description": "Original targeted CAD designs; no upstream artwork copied",
+  "generator": "scripts/build_tool_glyphs.py",
+  "assets": [
+    {
+      "action": "LOFT",
+      "author": "Mechanical CAD contributors",
+      "license": "GPL-3.0-or-later",
+      "source": "../../tool_glyphs.py",
+      "files": {
+        "svg/LOFT.svg": "efff65749dc9c03d536f17f9b042359fd21a5aafd9140b17e919ce24a0fe0739",
+        "dark/LOFT.png": "6c384923a9b12fda70e3a94ce3ffd2764b9a71a312e59c960a640eb4a4e7ac66",
+        "light/LOFT.png": "cd67b3a645322d157cc92b456324163b42d5706b2ac08aaab6d5d90b7273b2c0"
+      }
+    },
+    {
+      "action": "SWEEP",
+      "author": "Mechanical CAD contributors",
+      "license": "GPL-3.0-or-later",
+      "source": "../../tool_glyphs.py",
+      "files": {
+        "svg/SWEEP.svg": "b00110657ff033e4dcc4f392ed7133237f9472d271f60a68ac0167d67c0ae7e1",
+        "dark/SWEEP.png": "5a43793c6824d2ceaa4a9fed08c161fcabf7c04b48ab5075399edbdee31db92a",
+        "light/SWEEP.png": "482939ebceeb9476b6e5aab60b8f27602a1a59ed0f1288c17e9d9e7b89c87a38"
+      }
+    },
+    {
+      "action": "HOLE",
+      "author": "Mechanical CAD contributors",
+      "license": "GPL-3.0-or-later",
+      "source": "../../tool_glyphs.py",
+      "files": {
+        "svg/HOLE.svg": "70370bb3fc482033a6a3b666ea2e3d9aef849d672e1fd27cb3609b3a8422888d",
+        "dark/HOLE.png": "d53f2f4454c5ecf9cc9763fe957d72b71320bd2f6127e490210b334a1bfc3526",
+        "light/HOLE.png": "8b1e284dce9f3f28011fbe086ce2803fe60314f5e28941187d62e5ce571dc00d"
+      }
+    },
+    {
+      "action": "SHELL",
+      "author": "Mechanical CAD contributors",
+      "license": "GPL-3.0-or-later",
+      "source": "../../tool_glyphs.py",
+      "files": {
+        "svg/SHELL.svg": "88a8f0e69b25c080cf7cb9821fad8fcfb77f2e0fd417fe9de7611a49f00dd800",
+        "dark/SHELL.png": "fe8562577bfb15a0bad3e2c1c33f8aec7f1dfcc5c792fa6f60df44d7055e2639",
+        "light/SHELL.png": "8ae4bf005fa04f485cbcde36e3c7d2adf97550751b556064ec3c8eb357236b70"
+      }
+    }
+  ]
+}

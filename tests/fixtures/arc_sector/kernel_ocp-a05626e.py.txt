@@ -1,0 +1,1204 @@
+"""Small OCCT adapter. Native shapes and builders never cross the worker boundary.
+
+The document owns feature identity; OCCT owns exact B-rep geometry. Display meshes
+and geometric signatures are disposable. Semantic names below come from explicit
+construction and operation history, never face enumeration or nearest geometry.
+This adapter deliberately does not claim arbitrary persistent topological naming.
+"""
+
+from __future__ import annotations
+
+import math
+import platform
+import struct
+from collections import Counter, defaultdict
+from dataclasses import dataclass, field
+from importlib.metadata import PackageNotFoundError, version
+from io import BytesIO
+from itertools import product
+from pathlib import Path
+from typing import Any
+
+import OCP
+from OCP.Bnd import Bnd_Box
+from OCP.BRep import BRep_Builder, BRep_Tool
+from OCP.BRepAdaptor import BRepAdaptor_Curve, BRepAdaptor_Surface
+from OCP.BRepAlgoAPI import BRepAlgoAPI_Common, BRepAlgoAPI_Cut
+from OCP.BRepBndLib import BRepBndLib
+from OCP.BRepBuilderAPI import (
+    BRepBuilderAPI_MakeEdge,
+    BRepBuilderAPI_MakeFace,
+    BRepBuilderAPI_MakeWire,
+    BRepBuilderAPI_Transform,
+)
+from OCP.BRepCheck import BRepCheck_Analyzer
+from OCP.BRepExtrema import BRepExtrema_DistShapeShape
+from OCP.BRepGProp import BRepGProp
+from OCP.BRepMesh import BRepMesh_IncrementalMesh
+from OCP.BRepPrimAPI import BRepPrimAPI_MakePrism
+from OCP.collections import List_TopoDS_Shape
+from OCP.GeomAbs import GeomAbs_Circle, GeomAbs_Cylinder, GeomAbs_Plane
+from OCP.gp import gp_Ax2, gp_Circ, gp_Dir, gp_Pln, gp_Pnt, gp_Trsf, gp_Vec
+from OCP.GProp import GProp_GProps
+from OCP.IFSelect import IFSelect_RetDone
+from OCP.STEPControl import STEPControl_AsIs, STEPControl_Reader, STEPControl_Writer
+from OCP.StlAPI import StlAPI_Writer
+from OCP.TopAbs import (
+    TopAbs_COMPOUND,
+    TopAbs_COMPSOLID,
+    TopAbs_EDGE,
+    TopAbs_FACE,
+    TopAbs_REVERSED,
+    TopAbs_SHELL,
+    TopAbs_SOLID,
+    TopAbs_VERTEX,
+)
+from OCP.TopExp import TopExp_Explorer
+from OCP.TopLoc import TopLoc_Location
+from OCP.TopoDS import TopoDS, TopoDS_Compound, TopoDS_Iterator, TopoDS_Shape
+
+
+class KernelError(ValueError):
+    """A modeling operation did not produce the requested valid geometry."""
+
+
+class _AssemblyQueryError(KernelError):
+    def __init__(self, code: str, message: str) -> None:
+        super().__init__(message)
+        self.code = code
+
+
+@dataclass
+class _Operation:
+    shape: TopoDS_Shape
+    kind: str
+    builder: Any = None
+    inputs: dict[str, TopoDS_Shape] = field(default_factory=dict)
+    boundaries: dict[str, TopoDS_Shape] = field(default_factory=dict)
+    faces: list[tuple[TopoDS_Shape, dict[str, Any]]] = field(default_factory=list)
+    normal: tuple[float, float, float] = (0.0, 0.0, 1.0)
+
+
+def _number(value: float, name: str, *, positive: bool = False) -> float:
+    try:
+        result = float(value)
+    except (ValueError, TypeError) as exc:
+        raise KernelError(f"{name} must be a finite number") from exc
+    if not math.isfinite(result) or (positive and result <= 0):
+        qualifier = "positive finite" if positive else "finite"
+        raise KernelError(f"{name} must be a {qualifier} number")
+    return result
+
+
+def _profile_plane(origin, quaternion, *, strict: bool = False):
+    """Temporary normalized origin/U/V/normal; authored quaternion stays untouched."""
+    if (
+        not isinstance(origin, (tuple, list))
+        or not isinstance(quaternion, (tuple, list))
+        or len(origin) != 3
+        or len(quaternion) != 4
+    ):
+        raise KernelError("Profile plane requires a 3D origin and unit quaternion")
+    if strict:
+        origin = tuple(_query_number(value, "plane origin", bound=1e6) for value in origin)
+        rotation = tuple(
+            _query_number(value, "plane quaternion", bound=1.00000001) for value in quaternion
+        )
+    else:
+        # Preserve the legacy polygon adapter's accepted numeric inputs.
+        origin = tuple(_number(value, "plane origin") for value in origin)
+        rotation = tuple(_number(value, "plane quaternion") for value in quaternion)
+    norm = sum(value * value for value in rotation)
+    if not math.isclose(norm, 1.0, rel_tol=0.0, abs_tol=1e-9):
+        raise KernelError("Profile plane quaternion must have unit length")
+    w, x, y, z = (value / math.sqrt(norm) for value in rotation)
+    u = (1 - 2 * (y * y + z * z), 2 * (x * y + w * z), 2 * (x * z - w * y))
+    v = (2 * (x * y - w * z), 1 - 2 * (x * x + z * z), 2 * (y * z + w * x))
+    normal = (2 * (x * z + w * y), 2 * (y * z - w * x), 1 - 2 * (x * x + y * y))
+    return origin, u, v, normal
+
+
+def _subshapes(shape: TopoDS_Shape, kind: Any) -> list[TopoDS_Shape]:
+    result: list[TopoDS_Shape] = []
+    explorer = TopExp_Explorer(shape, kind)
+    while explorer.More():
+        item = explorer.Current()
+        if not any(item.IsSame(previous) for previous in result):
+            result.append(item)
+        explorer.Next()
+    return result
+
+
+def _query_number(value: Any, name: str, *, bound: float, positive: bool = False) -> float:
+    """Assembly adapter inputs are strict JSON numbers, never booleans/strings."""
+    if type(value) not in (int, float):
+        raise KernelError(f"{name} must be a finite number")
+    try:
+        result = float(value)
+    except (ValueError, OverflowError) as exc:
+        raise KernelError(f"{name} must be a finite number") from exc
+    if not math.isfinite(result) or abs(result) > bound or (positive and result <= 0):
+        raise KernelError(
+            f"{name} must be finite, within +/-{bound:g}, and {'positive' if positive else 'bounded'}"
+        )
+    return result
+
+
+def _shape_bounds(shape: TopoDS_Shape) -> tuple[float, ...]:
+    bounds = Bnd_Box()
+    BRepBndLib.AddOptimal_s(shape, bounds, False, False)
+    if bounds.IsVoid() or bounds.IsWhole() or bounds.IsOpen():
+        raise _AssemblyQueryError("invalid_bounds", "Solid has no finite geometric bounds")
+    # OCP 8.0's Get() returns an unregistered Bnd_Box::Limits binding type.
+    result = (*bounds.CornerMin().Coord(), *bounds.CornerMax().Coord())
+    if any(not math.isfinite(value) for value in result):
+        raise _AssemblyQueryError("invalid_bounds", "Solid has non-finite geometric bounds")
+    return result
+
+
+def _exact_volume(shape: TopoDS_Shape) -> float:
+    # A local reference also avoids large-origin inertia/volume cancellation.
+    bounds = _shape_bounds(shape)
+    center = tuple(bounds[i] / 2 + bounds[i + 3] / 2 for i in range(3))
+    properties = GProp_GProps(gp_Pnt(*center))
+    BRepGProp.VolumeProperties_s(shape, properties, True, False, False)
+    result = properties.Mass()
+    if not math.isfinite(result):
+        raise _AssemblyQueryError("invalid_volume", "Solid volume is not finite")
+    return result
+
+
+def _boundary(shape: TopoDS_Shape) -> TopoDS_Compound:
+    """No solid containers: extrema must measure surfaces even in containment."""
+    result, builder = TopoDS_Compound(), BRep_Builder()
+    builder.MakeCompound(result)
+    for face in _subshapes(shape, TopAbs_FACE):
+        builder.Add(result, face)
+    return result
+
+
+def _copy_transform(shape: TopoDS_Shape, transform: gp_Trsf) -> TopoDS_Shape:
+    builder = BRepBuilderAPI_Transform(shape, transform, True, False)
+    if not builder.IsDone():
+        raise _AssemblyQueryError("transform_failed", "OCCT rigid-copy transform failed")
+    return builder.Shape()
+
+
+def _diagnostic(exc: Exception, stage: str) -> dict[str, str]:
+    return {"code": getattr(exc, "code", f"{stage}_failed"), "message": str(exc)[:500]}
+
+
+def _surface_signature(shape: TopoDS_Shape) -> dict[str, Any]:
+    face = TopoDS.Face(shape)
+    props = GProp_GProps()
+    BRepGProp.SurfaceProperties_s(face, props)
+    surface = BRepAdaptor_Surface(face)
+    surface_type = surface.GetType()
+    signature: dict[str, Any] = {
+        "surface": str(surface_type).split("GeomAbs_")[-1].lower(),
+        "area": props.Mass(),
+        "centroid": list(props.CentreOfMass().Coord()),
+    }
+    if surface_type == GeomAbs_Plane:
+        normal = surface.Plane().Axis().Direction().Coord()
+        orientation = -1 if face.Orientation() == TopAbs_REVERSED else 1
+        signature["normal"] = [orientation * value for value in normal]
+    elif surface_type == GeomAbs_Cylinder:
+        cylinder = surface.Cylinder()
+        signature["radius"] = cylinder.Radius()
+        signature["axis"] = list(cylinder.Axis().Direction().Coord())
+    return signature
+
+
+def check_watertight_mesh(mesh: dict[str, Any], weld_tolerance: float = 1e-7) -> dict[str, Any]:
+    """Check an oriented closed triangle 2-manifold after numerical seam welding.
+
+    This is a topological export gate, not a self-intersection or engineering
+    certification. Welding only defines this check; it never changes the B-rep.
+    False negatives for very small features or near-coincident shells are safer
+    than quietly repairing geometry. Coordinates/tolerance are millimetres.
+    """
+    tolerance = _number(weld_tolerance, "weld_tolerance", positive=True)
+    vertices: list[tuple[float, float, float]] = []
+    buckets: dict[tuple[int, int, int], list[int]] = defaultdict(list)
+    remap: list[int] = []
+    for item in mesh["vertices"]:
+        if len(item) != 3:
+            raise KernelError("Mesh vertices must have three coordinates")
+        point = tuple(_number(value, "mesh coordinate") for value in item)
+        cell = tuple(math.floor(value / tolerance) for value in point)
+        matching = None
+        for offset in product((-1, 0, 1), repeat=3):
+            neighbor = tuple(cell[axis] + offset[axis] for axis in range(3))
+            for candidate in buckets.get(neighbor, ()):
+                if math.dist(point, vertices[candidate]) <= tolerance:
+                    matching = candidate
+                    break
+            if matching is not None:
+                break
+        if matching is None:
+            matching = len(vertices)
+            vertices.append(point)
+            buckets[cell].append(matching)
+        remap.append(matching)
+
+    edges: dict[tuple[int, int], list[tuple[int, int]]] = defaultdict(list)
+    links: dict[int, list[tuple[int, int]]] = defaultdict(list)
+    triangles: set[tuple[int, int, int]] = set()
+    signed_volume = 0.0
+    origin = vertices[0] if vertices else (0.0, 0.0, 0.0)
+    for item in mesh["triangles"]:
+        if len(item) != 3 or any(
+            type(index) is not int or not 0 <= index < len(remap) for index in item
+        ):
+            raise KernelError("Mesh contains an invalid triangle index")
+        a, b, c = (remap[index] for index in item)
+        if len({a, b, c}) != 3:
+            raise KernelError("Mesh has a collapsed triangle after numerical welding")
+        key = tuple(sorted((a, b, c)))
+        if key in triangles:
+            raise KernelError("Mesh has duplicate triangles")
+        triangles.add(key)
+        pa, pb, pc = vertices[a], vertices[b], vertices[c]
+        ab = tuple(pb[axis] - pa[axis] for axis in range(3))
+        ac = tuple(pc[axis] - pa[axis] for axis in range(3))
+        normal = (
+            ab[1] * ac[2] - ab[2] * ac[1],
+            ab[2] * ac[0] - ab[0] * ac[2],
+            ab[0] * ac[1] - ab[1] * ac[0],
+        )
+        if sum(value * value for value in normal) <= tolerance**4:
+            raise KernelError("Mesh has a zero-area or numerically collapsed triangle")
+        # Translation-invariant local coordinates prevent catastrophic volume
+        # cancellation for small parts placed far from the global origin.
+        la, lb, lc = (
+            tuple(point[axis] - origin[axis] for axis in range(3)) for point in (pa, pb, pc)
+        )
+        cross = (
+            lb[1] * lc[2] - lb[2] * lc[1],
+            lb[2] * lc[0] - lb[0] * lc[2],
+            lb[0] * lc[1] - lb[1] * lc[0],
+        )
+        signed_volume += sum(la[axis] * cross[axis] for axis in range(3)) / 6
+        for start, end in ((a, b), (b, c), (c, a)):
+            edges[tuple(sorted((start, end)))].append((start, end))
+        links[a].append((b, c))
+        links[b].append((c, a))
+        links[c].append((a, b))
+    if not triangles:
+        raise KernelError("Mesh contains no triangles")
+    for uses in edges.values():
+        if len(uses) != 2 or uses[0] != uses[1][::-1]:
+            raise KernelError("Mesh is not watertight with consistently oriented manifold edges")
+    # Edge multiplicity alone misses two surfaces pinched at one shared vertex.
+    for segments in links.values():
+        adjacency: dict[int, list[int]] = defaultdict(list)
+        for a, b in segments:
+            adjacency[a].append(b)
+            adjacency[b].append(a)
+        if any(len(neighbors) != 2 for neighbors in adjacency.values()):
+            raise KernelError("Mesh has a non-manifold vertex link")
+        pending, visited = [next(iter(adjacency))], set()
+        while pending:
+            vertex = pending.pop()
+            if vertex not in visited:
+                visited.add(vertex)
+                pending.extend(adjacency[vertex])
+        if len(visited) != len(adjacency):
+            raise KernelError("Mesh has a pinched non-manifold vertex")
+    if not math.isfinite(signed_volume) or signed_volume <= tolerance**3:
+        raise KernelError("Mesh has nonpositive oriented volume")
+    return {
+        "watertight": True,
+        "consistently_oriented": True,
+        "vertex_manifold": True,
+        "vertices": len(vertices),
+        "triangles": len(triangles),
+        "signed_volume": signed_volume,
+        "weld_tolerance": tolerance,
+    }
+
+
+class OCPKernel:
+    """A millimetre-based B-rep kernel with conservative operation provenance.
+
+    Positive rectangle dimensions extend from (x,y,z) in local +X/+Y. Profiles
+    lie in XY; signed extrusion length is along Z. This explicit initial scope
+    avoids pretending to support arbitrary sketch workplanes.
+    """
+
+    def __init__(self) -> None:
+        self._operations: dict[int, _Operation] = {}
+
+    def _remember(self, operation: _Operation) -> TopoDS_Shape:
+        # Each record strongly retains its shape: Python id cannot be recycled
+        # while this kernel/document evaluation is alive.
+        self._operations[id(operation.shape)] = operation
+        return operation.shape
+
+    @staticmethod
+    def _validate(shape: TopoDS_Shape, *, solid: bool = False) -> None:
+        if (
+            not isinstance(shape, TopoDS_Shape)
+            or shape.IsNull()
+            or not BRepCheck_Analyzer(shape, True, False, True).IsValid()
+        ):
+            raise KernelError("OCCT produced a null or invalid B-rep")
+        if solid and not _subshapes(shape, TopAbs_SOLID):
+            raise KernelError("The operation produced no solid")
+
+    def rectangle(
+        self, width: float, height: float, x: float = 0, y: float = 0, z: float = 0
+    ) -> TopoDS_Shape:
+        width, height = (
+            _number(width, "width", positive=True),
+            _number(height, "height", positive=True),
+        )
+        x, y, z = (_number(value, name) for value, name in ((x, "x"), (y, "y"), (z, "z")))
+        points = [
+            gp_Pnt(x, y, z),
+            gp_Pnt(x + width, y, z),
+            gp_Pnt(x + width, y + height, z),
+            gp_Pnt(x, y + height, z),
+        ]
+        wire = BRepBuilderAPI_MakeWire()
+        boundaries = {}
+        for index, role in enumerate(("y_min", "x_max", "y_max", "x_min")):
+            edge = BRepBuilderAPI_MakeEdge(points[index], points[(index + 1) % 4]).Edge()
+            wire.Add(edge)
+            # MakeWire may replace the added edge's vertices to share the
+            # existing wire's vertices. Retain the actual inserted edge.
+            boundaries[role] = wire.Edge()
+        builder = BRepBuilderAPI_MakeFace(wire.Wire())
+        shape = builder.Face()
+        self._validate(shape)
+        return self._remember(_Operation(shape, "rectangle", builder, boundaries=boundaries))
+
+    def circle(self, radius: float, x: float = 0, y: float = 0, z: float = 0) -> TopoDS_Shape:
+        radius = _number(radius, "radius", positive=True)
+        x, y, z = (_number(value, name) for value, name in ((x, "x"), (y, "y"), (z, "z")))
+        circle = gp_Circ(gp_Ax2(gp_Pnt(x, y, z), gp_Dir(0, 0, 1)), radius)
+        edge = BRepBuilderAPI_MakeEdge(circle).Edge()
+        builder = BRepBuilderAPI_MakeFace(BRepBuilderAPI_MakeWire(edge).Wire())
+        shape = builder.Face()
+        self._validate(shape)
+        return self._remember(_Operation(shape, "circle", builder, boundaries={"circle": edge}))
+
+    def circle_profile(
+        self,
+        center: tuple,
+        radius: float,
+        circle_id: str,
+        *,
+        origin: tuple = (0.0, 0.0, 0.0),
+        quaternion: tuple = (1.0, 0.0, 0.0, 0.0),
+    ) -> TopoDS_Shape:
+        """Exact solved disk, with explicit workplane +U as parameter zero.
+
+        The whole circular boundary retains the authored circle identity. Its
+        seam is a parameter convention, never a persistent authored edge role.
+        """
+        from .errors import CADException
+        from .profile_region import validate_circle
+
+        try:
+            region = validate_circle(center, radius, circle_id)
+        except CADException as exc:
+            raise KernelError(str(exc)) from exc
+        origin, u, v, normal = _profile_plane(origin, quaternion, strict=True)
+        center_world = tuple(
+            origin[axis] + region.center[0] * u[axis] + region.center[1] * v[axis]
+            for axis in range(3)
+        )
+        circle = gp_Circ(gp_Ax2(gp_Pnt(*center_world), gp_Dir(*normal), gp_Dir(*u)), region.radius)
+        edge_builder = BRepBuilderAPI_MakeEdge(circle)
+        if not edge_builder.IsDone():
+            raise KernelError("OCCT could not construct the circular sketch boundary")
+        wire = BRepBuilderAPI_MakeWire(edge_builder.Edge())
+        if not wire.IsDone():
+            raise KernelError("OCCT could not construct the circular sketch wire")
+        edge = wire.Edge()
+        plane = gp_Pln(gp_Pnt(*origin), gp_Dir(*normal))
+        builder = BRepBuilderAPI_MakeFace(plane, wire.Wire(), True)
+        if not builder.IsDone():
+            raise KernelError("OCCT could not construct the circular sketch face")
+        shape = builder.Face()
+        self._validate(shape)
+        return self._remember(
+            _Operation(
+                shape,
+                "circle_profile",
+                builder,
+                boundaries={f"circle.{circle_id}": edge},
+                normal=normal,
+            )
+        )
+
+    def polygon(
+        self,
+        points: list | tuple,
+        edge_ids: list | tuple,
+        *,
+        origin: tuple = (0.0, 0.0, 0.0),
+        quaternion: tuple = (1.0, 0.0, 0.0, 0.0),
+    ) -> TopoDS_Shape:
+        """Build one simple planar line region with explicit boundary provenance.
+
+        Input points are solved local-plane (u,v) coordinates. The unit quaternion
+        is (w,x,y,z); extrusion follows that plane's normal. No geometric edge
+        matching or automatic closing/repair is performed.
+        """
+        from .errors import CADException
+        from .profile_region import validate_polygon
+
+        try:
+            region = validate_polygon(points, edge_ids)
+        except CADException as exc:
+            raise KernelError(str(exc)) from exc
+        origin, u, v, normal = _profile_plane(origin, quaternion)
+        vertices = [
+            gp_Pnt(*(origin[axis] + a * u[axis] + b * v[axis] for axis in range(3)))
+            for a, b in region.points
+        ]
+        wire = BRepBuilderAPI_MakeWire()
+        boundaries = {}
+        for index, identifier in enumerate(region.edge_ids):
+            builder = BRepBuilderAPI_MakeEdge(
+                vertices[index], vertices[(index + 1) % len(vertices)]
+            )
+            if not builder.IsDone():
+                raise KernelError("OCCT could not construct a sketch boundary")
+            wire.Add(builder.Edge())
+            if not wire.IsDone():
+                raise KernelError("OCCT could not connect the explicit sketch boundaries")
+            boundaries[f"line.{identifier}"] = wire.Edge()
+        # The workplane is authoritative. Avoid refitting a plane from a long,
+        # thin wire, which can spuriously fail after harmless quaternion rounding.
+        plane = gp_Pln(gp_Pnt(*origin), gp_Dir(*normal))
+        builder = BRepBuilderAPI_MakeFace(plane, wire.Wire(), True)
+        if not builder.IsDone():
+            raise KernelError("OCCT could not construct the closed sketch face")
+        shape = builder.Face()
+        self._validate(shape)
+        return self._remember(
+            _Operation(shape, "polygon", builder, boundaries=boundaries, normal=normal)
+        )
+
+    def extrude(self, profile: TopoDS_Shape, length: float) -> TopoDS_Shape:
+        length = _number(length, "length")
+        if length == 0:
+            raise KernelError("Extrusion length must be nonzero")
+        self._validate(profile)
+        operation = self._operations.get(id(profile))
+        normal = operation.normal if operation else (0.0, 0.0, 1.0)
+        builder = BRepPrimAPI_MakePrism(profile, gp_Vec(*(value * length for value in normal)))
+        if not builder.IsDone():
+            raise KernelError("OCCT could not construct the extrusion")
+        shape = builder.Shape()
+        self._validate(shape, solid=True)
+        return self._remember(_Operation(shape, "extrude", builder, {"profile": profile}))
+
+    def cut(self, base: TopoDS_Shape, tool: TopoDS_Shape) -> TopoDS_Shape:
+        self._validate(base, solid=True)
+        self._validate(tool, solid=True)
+        builder = BRepAlgoAPI_Cut(base, tool)
+        builder.Build()
+        if not builder.IsDone():
+            raise KernelError("OCCT could not construct the boolean cut")
+        shape = builder.Shape()
+        self._validate(shape, solid=True)
+        before_volume, after_volume = GProp_GProps(), GProp_GProps()
+        BRepGProp.VolumeProperties_s(base, before_volume)
+        BRepGProp.VolumeProperties_s(shape, after_volume)
+        minimum_change = 1e-12 * max(abs(before_volume.Mass()), 1.0)
+        if before_volume.Mass() - after_volume.Mass() <= minimum_change:
+            raise KernelError("Cut tool does not remove measurable material from the base solid")
+        return self._remember(_Operation(shape, "cut", builder, {"base": base, "tool": tool}))
+
+    def inspect(self, shape: TopoDS_Shape) -> dict[str, Any]:
+        self._validate(shape)
+        volume, area = GProp_GProps(), GProp_GProps()
+        BRepGProp.VolumeProperties_s(shape, volume)
+        BRepGProp.SurfaceProperties_s(shape, area)
+        return {
+            "valid": True,
+            "volume": volume.Mass(),
+            "area": area.Mass(),
+            "solids": len(_subshapes(shape, TopAbs_SOLID)),
+            "faces": len(_subshapes(shape, TopAbs_FACE)),
+        }
+
+    @staticmethod
+    def runtime_versions() -> dict[str, str]:
+        """Actual binding/package/interpreter versions, not inferred OCCT versions."""
+        try:
+            distribution = version("cadquery-ocp-novtk")
+        except PackageNotFoundError:
+            distribution = "not_installed"
+        return {
+            "adapter": "assembly-brep-1",
+            "ocp": OCP.__version__,
+            "cadquery_ocp_novtk": distribution,
+            "python": platform.python_version(),
+            "occt_runtime": "not_exposed_by_binding",
+        }
+
+    def transformed(
+        self, shape: TopoDS_Shape, frame: Any, *, linear_tolerance_mm: float = 1e-6
+    ) -> TopoDS_Shape:
+        """Independent solid copy under a literal XYZ/WXYZ rigid frame.
+
+        Accepted near-unit quaternions are normalized only in this temporary
+        calculation. Neither authored data nor the source B-rep is modified. A
+        transformed copy has no remembered semantic topology/provenance.
+        """
+        tolerance = _query_number(
+            linear_tolerance_mm, "linear_tolerance_mm", bound=1.0, positive=True
+        )
+        if isinstance(frame, dict):
+            if set(frame) != {"xyz_mm", "wxyz"}:
+                raise KernelError("Frame requires exactly xyz_mm and wxyz")
+            xyz, quaternion = frame["xyz_mm"], frame["wxyz"]
+        else:
+            xyz, quaternion = getattr(frame, "xyz_mm", None), getattr(frame, "wxyz", None)
+        if (
+            type(xyz) not in (tuple, list)
+            or len(xyz) != 3
+            or type(quaternion) not in (tuple, list)
+            or len(quaternion) != 4
+        ):
+            raise KernelError("Frame requires three XYZ coordinates and a WXYZ quaternion")
+        xyz = tuple(_query_number(v, "Frame coordinate", bound=1e6) for v in xyz)
+        quaternion = tuple(
+            _query_number(v, "Frame quaternion", bound=1.00000001) for v in quaternion
+        )
+        norm_squared = sum(value * value for value in quaternion)
+        if abs(norm_squared - 1.0) > 1e-9:
+            raise KernelError("Frame quaternion must have unit length")
+        w, x, y, z = (value / math.sqrt(norm_squared) for value in quaternion)
+        transform = gp_Trsf()
+        transform.SetValues(
+            1 - 2 * (y * y + z * z),
+            2 * (x * y - w * z),
+            2 * (x * z + w * y),
+            xyz[0],
+            2 * (x * y + w * z),
+            1 - 2 * (x * x + z * z),
+            2 * (y * z - w * x),
+            xyz[1],
+            2 * (x * z - w * y),
+            2 * (y * z + w * x),
+            1 - 2 * (x * x + y * y),
+            xyz[2],
+        )
+        try:
+            self._require_single_solid(shape, linear_tolerance_mm=tolerance)
+            result = _copy_transform(shape, transform)
+            self._require_single_solid(result, linear_tolerance_mm=tolerance)
+            return result
+        except KernelError:
+            raise
+        except Exception as exc:
+            raise KernelError(f"OCCT rigid-copy transform failed: {exc}") from exc
+
+    def pair_check(
+        self,
+        a: TopoDS_Shape,
+        b: TopoDS_Shape,
+        *,
+        minimum_required_mm: float = 0.0,
+        linear_tolerance_mm: float = 1e-6,
+        volume_tolerance_mm3: float = 1e-9,
+    ) -> dict[str, Any]:
+        """Common volume and minimum boundary distance at one static pose.
+
+        Caller-parameter errors raise KernelError before native work. Geometry or
+        native failures become explicit incomplete results; a failed distance
+        query cannot erase already-proven interference. Distance is nonnegative
+        surface separation, never penetration depth or a continuous-motion test.
+        """
+        linear = _query_number(linear_tolerance_mm, "linear_tolerance_mm", bound=1, positive=True)
+        volume_tolerance = _query_number(
+            volume_tolerance_mm3, "volume_tolerance_mm3", bound=1, positive=True
+        )
+        required = _query_number(minimum_required_mm, "minimum_required_mm", bound=1e6)
+        if required < 0:
+            raise KernelError("minimum_required_mm must be nonnegative")
+        result: dict[str, Any] = {
+            "relation": "unknown",
+            "common_volume_mm3": None,
+            "minimum_distance_mm": None,
+            "minimum_required_mm": required,
+            "clearance_verdict": "indeterminate",
+            "witness_points_mm": None,
+            "complete": False,
+            "known_interference": False,
+            "known_clearance_violation": False,
+            "diagnostics": [],
+        }
+        try:
+            inputs = [self._require_single_solid(s, linear_tolerance_mm=linear) for s in (a, b)]
+            bounds = [_shape_bounds(s) for s in (a, b)]
+            origin = tuple(
+                min(box[i] for box in bounds) / 2 + max(box[i + 3] for box in bounds) / 2
+                for i in range(3)
+            )
+            # Recenter both temporary copies together. This never changes the
+            # canonical frame and returned witnesses are restored to world mm.
+            shift = gp_Trsf()
+            shift.SetTranslation(gp_Vec(*(-value for value in origin)))
+            local_a, local_b = (_copy_transform(s, shift) for s in (a, b))
+            for shape in (local_a, local_b):
+                self._require_single_solid(shape, linear_tolerance_mm=linear)
+        except Exception as exc:
+            result["diagnostics"].append(_diagnostic(exc, "input_geometry"))
+            return result
+
+        try:
+            common = BRepAlgoAPI_Common()
+            arguments, tools = List_TopoDS_Shape(), List_TopoDS_Shape()
+            arguments.Append(local_a)
+            tools.Append(local_b)
+            common.SetArguments(arguments)
+            common.SetTools(tools)
+            common.SetNonDestructive(True)
+            common.SetRunParallel(False)
+            # Never raise fuzzy tolerance to bridge a small real clearance.
+            common.Build()
+            if not common.IsDone():
+                raise _AssemblyQueryError("common_failed", "OCCT Boolean common did not complete")
+            overlap = common.Shape()
+            self._validate(overlap)
+            pieces = _subshapes(overlap, TopAbs_SOLID)
+            volumes = [
+                self._require_single_solid(s, linear_tolerance_mm=linear)["volume"] for s in pieces
+            ]
+            common_volume = math.fsum(volumes)
+            smaller = min(stats["volume"] for stats in inputs)
+            if not math.isfinite(common_volume) or common_volume > smaller + max(
+                volume_tolerance, smaller * 1e-9
+            ):
+                raise _AssemblyQueryError(
+                    "common_invalid", "Common volume exceeds the input solid volume"
+                )
+            result["common_volume_mm3"] = common_volume
+            if common_volume > volume_tolerance:
+                result["relation"] = "interference"
+                result["known_interference"] = True
+            elif pieces:
+                result["relation"] = "indeterminate_small_overlap"
+                result["diagnostics"].append(
+                    {
+                        "code": "small_positive_overlap",
+                        "message": "Positive common volume is at or below the volume threshold; it is not clear",
+                    }
+                )
+        except Exception as exc:
+            result["diagnostics"].append(_diagnostic(exc, "common"))
+
+        try:
+            distance = BRepExtrema_DistShapeShape(_boundary(local_a), _boundary(local_b), linear)
+            if not distance.IsDone() or distance.NbSolution() < 1:
+                raise _AssemblyQueryError(
+                    "distance_failed", "OCCT surface-distance query did not complete"
+                )
+            gap = distance.Value()
+            if not math.isfinite(gap) or gap < 0 or distance.InnerSolution():
+                raise _AssemblyQueryError(
+                    "distance_invalid", "OCCT returned an invalid surface distance"
+                )
+            points = [
+                list(distance.PointOnShape1(1).Coord()),
+                list(distance.PointOnShape2(1).Coord()),
+            ]
+            if any(not math.isfinite(v) for point in points for v in point):
+                raise _AssemblyQueryError(
+                    "distance_invalid", "OCCT returned a non-finite distance witness"
+                )
+            if abs(math.dist(*points) - gap) > linear:
+                raise _AssemblyQueryError(
+                    "distance_invalid", "Distance witnesses disagree with the measured distance"
+                )
+            world_points = [[v + origin[i] for i, v in enumerate(point)] for point in points]
+            for point, box in zip(world_points, bounds, strict=True):
+                if any(
+                    not math.isfinite(v) or not box[i] - linear <= v <= box[i + 3] + linear
+                    for i, v in enumerate(point)
+                ):
+                    raise _AssemblyQueryError(
+                        "distance_invalid", "Distance witness is outside its solid bounds"
+                    )
+            result["minimum_distance_mm"] = gap
+            result["witness_points_mm"] = world_points
+            result["known_clearance_violation"] = gap + linear < required
+            if result["common_volume_mm3"] == 0:
+                result["relation"] = "contact_or_near" if gap <= linear else "separated"
+            # With separated boundaries, whole-solid extrema independently
+            # distinguishes containment from separation. This is a consistency
+            # check only; its zero containment distance is never reported as the
+            # minimum surface distance. An empty Common must not conceal a solid
+            # that the distance algorithm classifies as contained.
+            if gap > linear and result["common_volume_mm3"] is not None:
+                solid_distance = BRepExtrema_DistShapeShape(local_a, local_b, linear)
+                if not solid_distance.IsDone() or solid_distance.NbSolution() < 1:
+                    raise _AssemblyQueryError(
+                        "distance_consistency_failed",
+                        "OCCT solid-distance cross-check did not complete",
+                    )
+                solid_gap = solid_distance.Value()
+                contained = solid_distance.InnerSolution()
+                has_overlap = result["common_volume_mm3"] > 0
+                if (
+                    not math.isfinite(solid_gap)
+                    or solid_gap < 0
+                    or (has_overlap and (not contained or solid_gap > linear))
+                    or (not has_overlap and (contained or abs(solid_gap - gap) > linear))
+                ):
+                    result["relation"] = "indeterminate_kernel_disagreement"
+                    result["known_interference"] = False
+                    raise _AssemblyQueryError(
+                        "kernel_disagreement", "Common volume and solid/surface distances disagree"
+                    )
+        except Exception as exc:
+            result["diagnostics"].append(_diagnostic(exc, "distance"))
+
+        result["complete"] = not result["diagnostics"]
+        if result["known_interference"]:
+            result["clearance_verdict"] = "fail_interference"
+        elif result["known_clearance_violation"]:
+            result["clearance_verdict"] = "fail_clearance"
+        elif result["complete"]:
+            result["clearance_verdict"] = (
+                "at_threshold"
+                if result["minimum_distance_mm"] <= required + linear
+                else "pass_at_pose"
+            )
+        return result
+
+    @staticmethod
+    def _candidate(
+        face: TopoDS_Shape,
+        feature_id: str,
+        role: str,
+        *,
+        status: str = "stable",
+        operation: str,
+        relation: str,
+        **provenance: Any,
+    ) -> dict[str, Any]:
+        # Unresolved IDs are replaced with explicitly snapshot-local IDs in
+        # topology(). Such IDs are selection handles, never persistent names.
+        identifier = (
+            f"{feature_id}/face/{role}" if status == "stable" else f"pending:{feature_id}:{role}"
+        )
+        return {
+            "id": identifier,
+            "feature_id": feature_id,
+            "role": role,
+            "kind": "face",
+            "signature": _surface_signature(face),
+            "provenance": {
+                "semantic_status": status,
+                "kernel": "OCCT",
+                "operation": operation,
+                "operation_id": feature_id,
+                "relation": relation,
+                "evolution": relation,
+                **provenance,
+            },
+        }
+
+    def topology(
+        self,
+        shape: TopoDS_Shape,
+        feature_id: str,
+        kind: str,
+        params: dict[str, Any],
+        inputs: dict[str, TopoDS_Shape] | None = None,
+    ) -> list[dict[str, Any]]:
+        """Describe face identity, with geometry only as a repair suggestion.
+
+        The descriptor kind/params never prove a role: only retained builders
+        and explicit construction do. Imported/arbitrary B-reps are unknown.
+        Inputs are accepted for engine compatibility but cannot manufacture
+        missing provenance.
+        """
+        del kind, params, inputs
+        operation = self._operations.get(id(shape))
+        faces = _subshapes(shape, TopAbs_FACE)
+        assignments: list[tuple[TopoDS_Shape, dict[str, Any]]] = []
+
+        def assign(face: TopoDS_Shape, role: str, relation: str, **provenance: Any) -> None:
+            matches = [output for output in faces if output.IsSame(face)]
+            for output in matches:
+                assignments.append(
+                    (
+                        output,
+                        self._candidate(
+                            output,
+                            feature_id,
+                            role,
+                            operation=operation.kind,
+                            relation=relation,
+                            **provenance,
+                        ),
+                    )
+                )
+
+        if operation and operation.kind in {"rectangle", "circle", "polygon", "circle_profile"}:
+            assign(shape, "profile", "constructed_profile")
+        elif operation and operation.kind == "extrude":
+            assign(operation.builder.FirstShape(), "cap.start", "first_shape")
+            assign(operation.builder.LastShape(), "cap.end", "last_shape")
+            profile = self._operations.get(id(operation.inputs["profile"]))
+            if profile:
+                for role, edge in profile.boundaries.items():
+                    generated = [
+                        face
+                        for face in operation.builder.Generated(edge)
+                        if face.ShapeType() == TopAbs_FACE
+                    ]
+                    for face in generated:
+                        assign(
+                            face,
+                            f"side.{role}",
+                            "generated_from_profile_edge",
+                            status="stable" if len(generated) == 1 else "split",
+                            source_boundary=role,
+                        )
+        elif operation and operation.kind == "cut":
+            assignments = self._cut_topology(operation, faces, feature_id)
+
+        resolved: list[tuple[TopoDS_Shape, dict[str, Any]]] = []
+        for face in faces:
+            matches = [item for assigned, item in assignments if face.IsSame(assigned)]
+            if len(matches) == 1:
+                resolved.append((face, matches[0]))
+            else:
+                resolved.append(
+                    (
+                        face,
+                        self._candidate(
+                            face,
+                            feature_id,
+                            "unresolved",
+                            status="merged" if matches else "unknown",
+                            operation=operation.kind if operation else "untracked",
+                            relation="multiple_sources" if matches else "no_history",
+                            sources=[item["id"] for item in matches],
+                        ),
+                    )
+                )
+        for snapshot_index, (_, candidate) in enumerate(resolved):
+            if candidate["provenance"]["semantic_status"] != "stable":
+                candidate["id"] = f"snapshot:{feature_id}:face:{snapshot_index}"
+                candidate["provenance"]["id_scope"] = "evaluation_snapshot_only"
+        if operation:
+            operation.faces = resolved
+        return [candidate for _, candidate in resolved]
+
+    def _cut_topology(
+        self,
+        operation: _Operation,
+        faces: list[TopoDS_Shape],
+        feature_id: str,
+    ) -> list[tuple[TopoDS_Shape, dict[str, Any]]]:
+        assignments: list[tuple[TopoDS_Shape, dict[str, Any]]] = []
+        base = self._operations.get(id(operation.inputs["base"]))
+        tool = self._operations.get(id(operation.inputs["tool"]))
+        for source in base.faces if base else []:
+            source_face, source_candidate = source
+            modified = list(operation.builder.Modified(source_face))
+            generated = list(operation.builder.Generated(source_face))
+            images: list[tuple[TopoDS_Shape, str]] = []
+            for face in faces:
+                relation = None
+                if any(face.IsSame(item) for item in modified):
+                    relation = "modified"
+                elif any(face.IsSame(item) for item in generated):
+                    relation = "generated"
+                elif face.IsSame(source_face) and not operation.builder.IsDeleted(source_face):
+                    relation = "unchanged"
+                if relation:
+                    images.append((face, relation))
+            for face, relation in images:
+                previous_status = source_candidate["provenance"]["semantic_status"]
+                status = "split" if len(images) > 1 else previous_status
+                if relation == "generated" and status == "stable":
+                    status = "generated"
+                candidate = self._candidate(
+                    face,
+                    source_candidate["feature_id"],
+                    source_candidate["role"],
+                    status=status,
+                    operation="cut",
+                    relation=relation,
+                    source_id=source_candidate["id"],
+                    modifying_feature_id=feature_id,
+                    operation_id=feature_id,
+                    source_count=1,
+                    image_count=len(images),
+                )
+                assignments.append((face, candidate))
+
+        # Tool surfaces can become walls of a cut, but this MVP does not claim
+        # their new semantic identity is equivalent to the tool's original face.
+        for face in faces:
+            tool_sources = []
+            for tool_face, candidate in tool.faces if tool else []:
+                images = list(operation.builder.Modified(tool_face))
+                images += list(operation.builder.Generated(tool_face))
+                if face.IsSame(tool_face) or any(face.IsSame(item) for item in images):
+                    tool_sources.append(candidate["id"])
+            if tool_sources:
+                assignments.append(
+                    (
+                        face,
+                        self._candidate(
+                            face,
+                            feature_id,
+                            "cut.wall",
+                            status="generated",
+                            operation="cut",
+                            relation="tool_surface",
+                            sources=tool_sources,
+                        ),
+                    )
+                )
+        return assignments
+
+    def tessellate(
+        self,
+        shape: TopoDS_Shape,
+        linear_deflection: float = 0.1,
+    ) -> dict[str, Any]:
+        """Produce a display mesh; per-face vertices may repeat at CAD seams."""
+        self._validate(shape)
+        deflection = _number(linear_deflection, "linear_deflection", positive=True)
+        # Conservative analytic-circle preflight for the currently supported
+        # profile/extrusion family. Never silently loosen the requested mesh.
+        estimated_points = 0
+        for edge in _subshapes(shape, TopAbs_EDGE):
+            curve = BRepAdaptor_Curve(TopoDS.Edge(edge))
+            if curve.GetType() == GeomAbs_Circle:
+                radius = curve.Circle().Radius()
+                half_angle = math.acos(max(-1.0, min(1.0, 1.0 - deflection / radius)))
+                if half_angle == 0:
+                    raise KernelError(
+                        "Requested tessellation exceeds the analytic-circle resource budget"
+                    )
+                estimated_points += 3 * math.ceil(math.pi / min(half_angle, 0.1))
+        if estimated_points > 100_000:
+            raise KernelError("Requested tessellation exceeds the analytic-circle resource budget")
+        mesher = BRepMesh_IncrementalMesh(shape, deflection, False, 0.2, True)
+        if not mesher.IsDone():
+            raise KernelError("OCCT could not tessellate the shape")
+        vertices: list[list[float]] = []
+        triangles: list[list[int]] = []
+        triangle_face_ids: list[str | None] = []
+        operation = self._operations.get(id(shape))
+        for item in _subshapes(shape, TopAbs_FACE):
+            face = TopoDS.Face(item)
+            location = TopLoc_Location()
+            mesh = BRep_Tool.Triangulation_s(face, location)
+            if mesh is None:
+                raise KernelError("A face has no triangulation")
+            if (
+                len(vertices) + mesh.NbNodes() > 100_000
+                or len(triangles) + mesh.NbTriangles() > 200_000
+            ):
+                raise KernelError(
+                    "Tessellation exceeds the 100000-vertex/200000-triangle output budget"
+                )
+            offset = len(vertices)
+            transform = location.Transformation()
+            vertices.extend(
+                list(mesh.Node(i).Transformed(transform).Coord())
+                for i in range(1, mesh.NbNodes() + 1)
+            )
+            source_id = (
+                next(
+                    (candidate["id"] for old, candidate in operation.faces if face.IsSame(old)),
+                    None,
+                )
+                if operation
+                else None
+            )
+            for index in range(1, mesh.NbTriangles() + 1):
+                a, b, c = mesh.Triangle(index).Get()
+                if face.Orientation() == TopAbs_REVERSED:
+                    b, c = c, b
+                triangles.append([offset + a - 1, offset + b - 1, offset + c - 1])
+                triangle_face_ids.append(source_id)
+        return {
+            "vertices": vertices,
+            "triangles": triangles,
+            "triangle_face_ids": triangle_face_ids,
+        }
+
+    def export_step(self, shape: TopoDS_Shape, path: str | Path) -> None:
+        self._require_single_solid(shape)
+        writer = STEPControl_Writer()
+        if writer.Transfer(shape, STEPControl_AsIs) != IFSelect_RetDone:
+            raise KernelError("STEP shape transfer failed")
+        if writer.Write(str(path)) != IFSelect_RetDone:
+            raise KernelError(f"Could not write STEP file: {path}")
+
+    def _require_single_solid(
+        self, shape: TopoDS_Shape, *, linear_tolerance_mm: float | None = None
+    ) -> dict[str, Any]:
+        """Shared part-export/assembly gate; wrappers must contain only one solid.
+
+        Assembly queries additionally require stored tolerances and coordinate
+        precision compatible with their requested linear resolution.
+        """
+        stats = self.inspect(shape)
+        if stats["solids"] != 1:
+            raise KernelError("Part export requires exactly one valid solid")
+        pending, solid_occurrences = [shape], 0
+        while pending:
+            item = pending.pop()
+            if item.ShapeType() == TopAbs_SOLID:
+                solid_occurrences += 1
+            elif item.ShapeType() in (TopAbs_COMPOUND, TopAbs_COMPSOLID):
+                children = TopoDS_Iterator(item)
+                while children.More():
+                    pending.append(children.Value())
+                    children.Next()
+            else:
+                raise KernelError(
+                    "Single-solid geometry must not contain loose faces, edges or vertices"
+                )
+        if solid_occurrences != 1:
+            raise KernelError("Part export requires exactly one valid solid occurrence")
+        shells = _subshapes(shape, TopAbs_SHELL)
+        if not shells or not all(BRep_Tool.IsClosed_s(shell) for shell in shells):
+            raise KernelError("Single-solid geometry requires every shell to be closed")
+        stats["volume"] = _exact_volume(shape)
+        if not math.isfinite(stats["volume"]) or stats["volume"] <= 0:
+            raise KernelError("Part export requires positive solid volume")
+        if not math.isfinite(stats["area"]) or stats["area"] <= 0:
+            raise KernelError("Single-solid geometry requires finite positive surface area")
+        if linear_tolerance_mm is not None:
+            tolerances = [
+                BRep_Tool.Tolerance_s(cast(item))
+                for kind, cast in (
+                    (TopAbs_VERTEX, TopoDS.Vertex),
+                    (TopAbs_EDGE, TopoDS.Edge),
+                    (TopAbs_FACE, TopoDS.Face),
+                )
+                for item in _subshapes(shape, kind)
+            ]
+            if not tolerances or any(not math.isfinite(v) or v < 0 for v in tolerances):
+                raise _AssemblyQueryError(
+                    "invalid_shape_tolerance", "Solid has invalid stored tolerances"
+                )
+            if max(tolerances) > linear_tolerance_mm * (1 + 1e-12):
+                raise _AssemblyQueryError(
+                    "excessive_shape_tolerance",
+                    "Stored B-rep tolerance exceeds the requested linear resolution",
+                )
+            coordinate_size = max(abs(v) for v in _shape_bounds(shape))
+            if 32 * math.ulp(coordinate_size) > linear_tolerance_mm:
+                raise _AssemblyQueryError(
+                    "coordinate_resolution",
+                    "World-coordinate precision cannot support the requested linear resolution",
+                )
+        return stats
+
+    def manufacturing_check(
+        self,
+        shape: TopoDS_Shape,
+        linear_deflection: float = 0.1,
+    ) -> dict[str, Any]:
+        """Single-solid/mesh checks only; not a manufacturability certification."""
+        stats = self._require_single_solid(shape)
+        mesh = self.tessellate(shape, linear_deflection)
+        return {
+            "brep": stats,
+            "mesh": check_watertight_mesh(mesh),
+            "linear_deflection_mm": linear_deflection,
+        }
+
+    def export_stl(
+        self,
+        shape: TopoDS_Shape,
+        path: str | Path,
+        linear_deflection: float = 0.1,
+    ) -> dict[str, Any]:
+        """Write OCCT binary STL only after checking both source and encoded mesh.
+
+        STL carries neither units nor CAD feature history. This application's
+        coordinates are millimetres; consumers must select that import unit.
+        """
+        checks = self.manufacturing_check(shape, linear_deflection)
+        source_mesh = self.tessellate(shape, linear_deflection)
+        # Independent strict export precision ceiling. This may reject large
+        # translated coordinates even when coarse tessellation was requested.
+        allowed_error = min(1e-5, float(linear_deflection) * 0.1)
+        packed_vertices = []
+        maximum_error = 0.0
+        for vertex in source_mesh["vertices"]:
+            try:
+                packed = struct.pack("<3f", *vertex)
+            except (OverflowError, struct.error) as exc:
+                raise KernelError("STL coordinates exceed finite binary32 range") from exc
+            encoded_vertex = struct.unpack("<3f", packed)
+            maximum_error = max(maximum_error, math.dist(vertex, encoded_vertex))
+            packed_vertices.append(packed)
+        if maximum_error > allowed_error:
+            raise KernelError(
+                f"STL binary32 coordinate error {maximum_error:.9g} mm exceeds "
+                f"allowed {allowed_error:.9g} mm; move the part near the origin or use STEP"
+            )
+        checks["encoding"] = {
+            "maximum_vertex_error_mm": maximum_error,
+            "allowed_vertex_error_mm": allowed_error,
+            "independent_precision_ceiling_mm": 1e-5,
+        }
+        writer = StlAPI_Writer()
+        writer.ASCIIMode = False
+        buffer = BytesIO()
+        if not writer.Write(shape, buffer):
+            raise KernelError("OCCT could not encode binary STL")
+        encoded = buffer.getvalue()
+        if len(encoded) < 84:
+            raise KernelError("OCCT produced an incomplete binary STL")
+        count = struct.unpack_from("<I", encoded, 80)[0]
+        if len(encoded) != 84 + 50 * count:
+            raise KernelError("OCCT produced an inconsistent binary STL size")
+        vertices = []
+        encoded_triangles = Counter()
+        for index in range(count):
+            values = struct.unpack_from("<9f", encoded, 84 + 50 * index + 12)
+            vertices.extend([list(values[offset : offset + 3]) for offset in (0, 3, 6)])
+            encoded_triangles[
+                tuple(
+                    sorted(struct.pack("<3f", *values[offset : offset + 3]) for offset in (0, 3, 6))
+                )
+            ] += 1
+        source_triangles = Counter(
+            tuple(sorted(packed_vertices[index] for index in triangle))
+            for triangle in source_mesh["triangles"]
+        )
+        if encoded_triangles != source_triangles:
+            raise KernelError("STL encoded triangles differ from the checked source tessellation")
+        checks["encoded_mesh"] = check_watertight_mesh(
+            {
+                "vertices": vertices,
+                "triangles": [[3 * i, 3 * i + 1, 3 * i + 2] for i in range(count)],
+            }
+        )
+        Path(path).write_bytes(encoded)
+        return checks
+
+    def import_step(self, path: str | Path) -> TopoDS_Shape:
+        reader = STEPControl_Reader()
+        if reader.ReadFile(str(path)) != IFSelect_RetDone:
+            raise KernelError(f"Could not read STEP file: {path}")
+        if not reader.TransferRoots():
+            raise KernelError("STEP file contains no transferable shape")
+        shape = reader.OneShape()
+        self._validate(shape)
+        # STEP transfers geometry, not this application's feature history.
+        return self._remember(_Operation(shape, "import_step"))

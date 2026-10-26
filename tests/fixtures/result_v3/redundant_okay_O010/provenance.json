@@ -1,0 +1,29 @@
+{
+  "capture_directory": "recovery_20261019/sector_service_preparation_001/execution_001/O010",
+  "files": {
+    "CASE_VALIDATION.json": {
+      "bytes": 243,
+      "sha256": "6046346b02ff782e587ba38000c79ce6304fcd24e7994b0394b6041807216f7a"
+    },
+    "CLIENT_VALIDATION.json": {
+      "bytes": 5746,
+      "sha256": "a3a26827adf3ee65139696db920a295f67215d7ba885fc4f02e24391df2b6c57"
+    },
+    "RESPONSE_OBSERVED.json": {
+      "bytes": 30790,
+      "sha256": "161b5a3c981d9a4b0fcc29f0288697eab75ffcf81983e0f9581a8e20ab447122"
+    },
+    "request.raw": {
+      "bytes": 1240,
+      "sha256": "0dde9a89c7000869289e0518f6c9a39c8ced91a322947ec4b1a301000a2688ac"
+    },
+    "stdout.raw": {
+      "bytes": 11670,
+      "sha256": "b03ffc77c3413540fd5421aedf69c0036b6ce10867fd861b8342b9e3cb7b9f69"
+    }
+  },
+  "original_gate_outcome": "FAIL",
+  "schema": "retained-redundant-okay-O010-v1",
+  "source_commit": "cc130e667cc30c76e0437f5994059220f1aca25e",
+  "use": "Offline client regression only; no new native execution or successful gate claim."
+}

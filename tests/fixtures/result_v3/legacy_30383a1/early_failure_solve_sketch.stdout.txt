@@ -1,0 +1,1 @@
+{"protocol_version":1,"action":"solve_sketch","result_version":2,"input_fingerprint":"4dadafb139fa5be493d16ab3bd178751fcf0ef83ffb9f39b8509a0d7de113811","ok":false,"result":null,"error":{"code":"invalid_document","message":"Document must be an object."}}

@@ -1,0 +1,26 @@
+[
+  {
+    "case": "intrinsic256",
+    "rows": 256,
+    "scalars": 6,
+    "seconds": 0.07452811200346332,
+    "status": "REDUNDANT_OKAY",
+    "success": true,
+    "dof": 5,
+    "residual": 0.0,
+    "failed": [],
+    "rss": 20664
+  },
+  {
+    "case": "rows1024",
+    "rows": 1024,
+    "scalars": 512,
+    "seconds": 0.03658019899739884,
+    "status": "REDUNDANT_OKAY",
+    "success": true,
+    "dof": 0,
+    "residual": 0.0,
+    "failed": [],
+    "rss": 21816
+  }
+]

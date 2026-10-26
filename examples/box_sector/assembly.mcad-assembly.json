@@ -1,0 +1,368 @@
+{
+  "active_verification_preset": "base_clearance",
+  "angle_unit": "rad",
+  "assembly_schema_version": 1,
+  "ground": {
+    "wxyz": [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "xyz_mm": [
+      0.0,
+      0.0,
+      0.0
+    ]
+  },
+  "grounded_instance": "base",
+  "id": "box_sector_project",
+  "instances": [
+    {
+      "id": "base",
+      "name": "Box base",
+      "part_id": "box"
+    },
+    {
+      "id": "sector_a",
+      "name": "Sector A",
+      "part_id": "sector"
+    },
+    {
+      "id": "sector_b",
+      "name": "Sector B",
+      "part_id": "sector"
+    }
+  ],
+  "joints": [
+    {
+      "child": "sector_a",
+      "child_frame": "origin",
+      "coordinate": 10.0,
+      "id": "slide_a",
+      "kind": "slider",
+      "limits": [
+        -10.0,
+        30.0
+      ],
+      "name": "Sector A slide",
+      "parent": "base",
+      "parent_frame": "seat_a"
+    },
+    {
+      "child": "sector_b",
+      "child_frame": "origin",
+      "coordinate": 10.0,
+      "id": "slide_b",
+      "kind": "slider",
+      "limits": [
+        -10.0,
+        30.0
+      ],
+      "name": "Sector B slide",
+      "parent": "base",
+      "parent_frame": "seat_b"
+    }
+  ],
+  "kind": "assembly",
+  "length_unit": "mm",
+  "name": "Box and two reusable sliding sectors",
+  "part_sources": [
+    {
+      "document": {
+        "active_feature": "pad",
+        "features": [
+          {
+            "id": "profile",
+            "inputs": {},
+            "kind": "sketch_rectangle",
+            "label": "Base rectangle",
+            "params": {
+              "height": "depth",
+              "width": "width",
+              "x": 0,
+              "y": 0,
+              "z": 0
+            }
+          },
+          {
+            "id": "pad",
+            "inputs": {
+              "profile": "profile"
+            },
+            "kind": "extrude",
+            "label": "Base extrusion",
+            "params": {
+              "length": "height"
+            }
+          }
+        ],
+        "id": "box_sector_base",
+        "name": "Box base 40 x 30 x 10 mm",
+        "parameters": {
+          "depth": 30.0,
+          "height": 10.0,
+          "width": 40.0
+        },
+        "schema_version": 1,
+        "units": "mm"
+      },
+      "source_digest": "8234e722c74aeae9be832d13122823b7478ea4956a6c19e8d39184893676853e",
+      "source_document_id": "box_sector_base"
+    },
+    {
+      "document": {
+        "active_feature": "pad",
+        "features": [
+          {
+            "id": "profile",
+            "inputs": {},
+            "kind": "sketch_constrained",
+            "label": "Radius-driven sector",
+            "params": {},
+            "sketch": {
+              "arcs": [
+                {
+                  "center": "center",
+                  "direction": "ccw",
+                  "end": "end",
+                  "id": "rim",
+                  "start": "start"
+                }
+              ],
+              "circles": [],
+              "constraints": [
+                {
+                  "id": "center_lock",
+                  "kind": "fixed",
+                  "refs": [
+                    "center"
+                  ],
+                  "target": [
+                    0.0,
+                    0.0
+                  ],
+                  "value": null
+                },
+                {
+                  "id": "end_axis",
+                  "kind": "vertical",
+                  "refs": [
+                    "radial_end"
+                  ],
+                  "target": null,
+                  "value": null
+                },
+                {
+                  "id": "sector_radius",
+                  "kind": "radius",
+                  "refs": [
+                    "rim"
+                  ],
+                  "target": null,
+                  "value": "radius"
+                },
+                {
+                  "id": "start_axis",
+                  "kind": "horizontal",
+                  "refs": [
+                    "radial_start"
+                  ],
+                  "target": null,
+                  "value": null
+                }
+              ],
+              "id": "sector_geometry",
+              "lines": [
+                {
+                  "end": "center",
+                  "id": "radial_end",
+                  "start": "end"
+                },
+                {
+                  "end": "start",
+                  "id": "radial_start",
+                  "start": "center"
+                }
+              ],
+              "plane": {
+                "id": "workplane",
+                "origin": [
+                  0.0,
+                  0.0,
+                  0.0
+                ],
+                "quaternion": [
+                  1.0,
+                  0.0,
+                  0.0,
+                  0.0
+                ]
+              },
+              "points": [
+                {
+                  "id": "center",
+                  "u": 0.0,
+                  "v": 0.0
+                },
+                {
+                  "id": "end",
+                  "u": 0.0,
+                  "v": 5.0
+                },
+                {
+                  "id": "start",
+                  "u": 5.0,
+                  "v": 0.0
+                }
+              ],
+              "schema_version": 3,
+              "units": "mm"
+            }
+          },
+          {
+            "id": "pad",
+            "inputs": {
+              "profile": "profile"
+            },
+            "kind": "extrude",
+            "label": "Sector extrusion",
+            "params": {
+              "length": "height"
+            }
+          }
+        ],
+        "id": "box_sector_quadrant",
+        "name": "Reusable quarter sector R5 H10 mm",
+        "parameters": {
+          "height": 10.0,
+          "radius": 5.0
+        },
+        "schema_version": 2,
+        "units": "mm"
+      },
+      "source_digest": "6276eef27e534da6ef6f03870a6260b7b0ea0bdb09624ad5a3b37676ad345988",
+      "source_document_id": "box_sector_quadrant"
+    }
+  ],
+  "parts": [
+    {
+      "id": "box",
+      "mate_frames": [
+        {
+          "id": "origin",
+          "name": "Origin",
+          "placement": {
+            "wxyz": [
+              1.0,
+              0.0,
+              0.0,
+              0.0
+            ],
+            "xyz_mm": [
+              0.0,
+              0.0,
+              0.0
+            ]
+          }
+        },
+        {
+          "id": "seat_a",
+          "name": "Seat A",
+          "placement": {
+            "wxyz": [
+              1.0,
+              0.0,
+              0.0,
+              0.0
+            ],
+            "xyz_mm": [
+              10.0,
+              10.0,
+              10.0
+            ]
+          }
+        },
+        {
+          "id": "seat_b",
+          "name": "Seat B",
+          "placement": {
+            "wxyz": [
+              1.0,
+              0.0,
+              0.0,
+              0.0
+            ],
+            "xyz_mm": [
+              25.0,
+              10.0,
+              10.0
+            ]
+          }
+        }
+      ],
+      "name": "Box base 40 x 30 x 10 mm",
+      "output_feature_id": "pad",
+      "source_digest": "8234e722c74aeae9be832d13122823b7478ea4956a6c19e8d39184893676853e",
+      "source_document_id": "box_sector_base"
+    },
+    {
+      "id": "sector",
+      "mate_frames": [
+        {
+          "id": "origin",
+          "name": "Origin",
+          "placement": {
+            "wxyz": [
+              1.0,
+              0.0,
+              0.0,
+              0.0
+            ],
+            "xyz_mm": [
+              0.0,
+              0.0,
+              0.0
+            ]
+          }
+        }
+      ],
+      "name": "Reusable quarter sector R5 H10 mm",
+      "output_feature_id": "pad",
+      "source_digest": "6276eef27e534da6ef6f03870a6260b7b0ea0bdb09624ad5a3b37676ad345988",
+      "source_document_id": "box_sector_quadrant"
+    }
+  ],
+  "verification_presets": [
+    {
+      "id": "base_clearance",
+      "kind": "clearance",
+      "name": "Both sectors clear the base by at least 2 mm",
+      "policy": {
+        "linear_deflection_mm": 0.1,
+        "linear_tolerance_mm": 1e-06,
+        "volume_tolerance_mm3": 1e-09
+      },
+      "requirements": [
+        {
+          "id": "base_gap_a",
+          "instances": [
+            "base",
+            "sector_a"
+          ],
+          "minimum_mm": 2.0,
+          "name": "Base to Sector A gap"
+        },
+        {
+          "id": "base_gap_b",
+          "instances": [
+            "base",
+            "sector_b"
+          ],
+          "minimum_mm": 2.0,
+          "name": "Base to Sector B gap"
+        }
+      ]
+    }
+  ]
+}

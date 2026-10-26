@@ -1,0 +1,18 @@
+Mechanical CAD native palette glyphs
+
+The four Google Material Symbols Outlined derivatives (check, close, fact_check,
+output) retain the Apache License, Version 2.0. The four original CAD-specific
+glyphs retain GPL-3.0-or-later. No assets are relicensed. See the exact per-asset
+source, upstream commit/blob/hash, license and conversion records in manifest.json.
+
+Source notices: ../icons/NOTICE.txt
+Google license: ../icons/licenses/Apache-2.0.txt
+Original CAD license: ../icons/licenses/GPL-3.0-or-later.txt
+
+These native derivatives expand strokes and dashes, union paths, flatten curves,
+flip Y, quantize to 8-bit coordinates, and tessellate holes into simple polygons.
+They are modified representations, not unchanged upstream SVG paths. The source
+SVGs, original CAD geometry and upstream Google SVGs remain in ../icons/.
+
+Google's trademarks and brand names are not licensed by the Apache license.
+No affiliation with or endorsement by Google is implied.

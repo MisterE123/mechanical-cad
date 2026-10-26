@@ -1,0 +1,98 @@
+{
+  "schema_version": 1,
+  "id": "ruled-duct-boolean-cleanup-repro",
+  "name": "Ruled duct cleanup failure",
+  "units": "mm",
+  "parameters": {},
+  "features": [
+    {
+      "id": "plate_profile",
+      "kind": "sketch_rectangle",
+      "params": {
+        "width": 100,
+        "height": 70
+      }
+    },
+    {
+      "id": "plate",
+      "kind": "extrude",
+      "params": {
+        "length": 3.6
+      },
+      "inputs": {
+        "profile": "plate_profile"
+      }
+    },
+    {
+      "id": "section0",
+      "kind": "sketch_circle",
+      "params": {
+        "radius": 24,
+        "x": 50,
+        "y": 35,
+        "z": -1
+      }
+    },
+    {
+      "id": "section1",
+      "kind": "sketch_circle",
+      "params": {
+        "radius": 24,
+        "x": 50,
+        "y": 35,
+        "z": 5
+      }
+    },
+    {
+      "id": "section2",
+      "kind": "sketch_circle",
+      "params": {
+        "radius": 20,
+        "x": 50,
+        "y": 35,
+        "z": 24
+      }
+    },
+    {
+      "id": "section3",
+      "kind": "sketch_circle",
+      "params": {
+        "radius": 16,
+        "x": 50,
+        "y": 35,
+        "z": 43
+      }
+    },
+    {
+      "id": "duct",
+      "kind": "loft",
+      "params": {
+        "ruled": 1
+      },
+      "inputs": {
+        "section_1": "section0",
+        "section_2": "section1",
+        "section_3": "section2",
+        "section_4": "section3"
+      },
+      "loft_sections": {
+        "version": 1,
+        "ports": [
+          "section_1",
+          "section_2",
+          "section_3",
+          "section_4"
+        ]
+      }
+    },
+    {
+      "id": "join",
+      "kind": "union",
+      "inputs": {
+        "base": "plate",
+        "tool": "duct"
+      }
+    }
+  ],
+  "active_feature": "join"
+}

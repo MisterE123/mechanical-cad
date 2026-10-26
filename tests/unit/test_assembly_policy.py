@@ -1,0 +1,118 @@
+"""Pure request bounds and evidence-status logic; no native geometry imports."""
+
+from types import SimpleNamespace
+
+import pytest
+
+from mechanical_cad.assembly_model import Joint
+from mechanical_cad.assembly_policy import (
+    CheckPolicy,
+    aggregate_evidence,
+    clearance_requirements,
+    fingerprint,
+    request_snapshot,
+    sample_request,
+)
+from mechanical_cad.errors import CADException
+
+
+@pytest.mark.parametrize(
+    "field", ["linear_tolerance_mm", "volume_tolerance_mm3", "linear_deflection_mm"]
+)
+@pytest.mark.parametrize("value", [True, "1", None, -1, 0, float("nan"), float("inf")])
+def test_policy_rejects_invalid_numeric_fields(field, value):
+    with pytest.raises(CADException):
+        CheckPolicy.from_dict({field: value})
+
+
+@pytest.mark.parametrize("value", [None, [], {"fuzzy": 1}])
+def test_policy_rejects_unknown_or_nonobject(value):
+    with pytest.raises(CADException):
+        CheckPolicy.from_dict(value)
+
+
+def model(instances=("a", "b", "c")):
+    return SimpleNamespace(
+        instances=[SimpleNamespace(id=i) for i in instances],
+        joints=[Joint("joint", "slider", "a", "b", "origin", "origin")],
+        gear_relations=(),
+    )
+
+
+@pytest.mark.parametrize(
+    "row",
+    [
+        {"instances": ["a", "a"], "minimum_mm": 1},
+        {"instances": ["a", "unknown"], "minimum_mm": 1},
+        {"instances": ["a", "b"], "minimum_mm": True},
+        {"instances": ["a", "b"], "minimum_mm": float("nan")},
+        {"instances": ["a", "b"], "minimum_mm": -1},
+        {"instances": ["a", "b"], "minimum_mm": 1, "extra": 0},
+        {"instances": "ab", "minimum_mm": 1},
+    ],
+)
+def test_bad_clearance_requirement_fails_closed(row):
+    with pytest.raises(CADException):
+        clearance_requirements(model(), [row])
+
+
+def test_requirements_normalize_pair_order_but_never_silently_drop_duplicate():
+    row = {"instances": ["b", "a"], "minimum_mm": 0.2}
+    assert clearance_requirements(model(), [row]) == {("a", "b"): 0.2}
+    with pytest.raises(CADException):
+        clearance_requirements(model(), [row, {**row, "instances": ["a", "b"]}])
+
+
+@pytest.mark.parametrize(
+    "sample",
+    [
+        {},
+        {"joint_id": "missing", "values": [1]},
+        {"joint_id": "joint", "values": []},
+        {"joint_id": "joint", "values": [True]},
+        {"joint_id": "joint", "values": [float("nan")]},
+        {"joint_id": "joint", "values": [1] * 33},
+    ],
+)
+def test_bad_sample_request_rejected(sample):
+    with pytest.raises(CADException):
+        sample_request(model(), sample, {"joint": 0})
+
+
+def test_mixed_unknown_and_known_violation_stays_violation():
+    result = aggregate_evidence(
+        [{"complete": False}, {"complete": True, "known_interference": True}]
+    )
+    assert result["status"] == "violations_found"
+    assert not result["complete"] and result["known_interference"] and not result["passed"]
+
+
+def test_threshold_contact_is_not_pass_or_proven_failure():
+    result = aggregate_evidence([{"complete": True, "clearance_verdict": "at_threshold"}])
+    assert result["complete"] and result["has_threshold_contacts"]
+    assert not result["known_interference"] and not result["passed"]
+
+
+def test_invalid_request_fingerprint_remains_json_safe_and_distinct():
+    values = [float("nan"), float("inf"), True, "1", 1, None]
+    assert len({fingerprint(request_snapshot(value)) for value in values}) == len(values)
+
+
+def test_unsupported_tuple_never_collides_with_list_request():
+    assert fingerprint(request_snapshot(())) != fingerprint(request_snapshot([]))
+
+
+def test_cyclic_and_shared_container_graph_does_not_expand_exponentially():
+    cyclic = []
+    cyclic.extend([cyclic, cyclic])
+    assert request_snapshot(cyclic) == [
+        {"python_container_reference": "$"},
+        {"python_container_reference": "$"},
+    ]
+    shared = []
+    for _ in range(18):
+        shared = [shared, shared]
+    snapshot = request_snapshot(shared)
+    import json
+
+    assert len(json.dumps(snapshot)) < 10000

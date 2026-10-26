@@ -1,0 +1,130 @@
+{
+  "active_feature": "pad",
+  "features": [
+    {
+      "id": "profile",
+      "inputs": {},
+      "kind": "sketch_constrained",
+      "label": "Radius-driven sector",
+      "params": {},
+      "sketch": {
+        "arcs": [
+          {
+            "center": "center",
+            "direction": "ccw",
+            "end": "end",
+            "id": "rim",
+            "start": "start"
+          }
+        ],
+        "circles": [],
+        "constraints": [
+          {
+            "id": "center_lock",
+            "kind": "fixed",
+            "refs": [
+              "center"
+            ],
+            "target": [
+              0.0,
+              0.0
+            ],
+            "value": null
+          },
+          {
+            "id": "end_axis",
+            "kind": "vertical",
+            "refs": [
+              "radial_end"
+            ],
+            "target": null,
+            "value": null
+          },
+          {
+            "id": "sector_radius",
+            "kind": "radius",
+            "refs": [
+              "rim"
+            ],
+            "target": null,
+            "value": "radius"
+          },
+          {
+            "id": "start_axis",
+            "kind": "horizontal",
+            "refs": [
+              "radial_start"
+            ],
+            "target": null,
+            "value": null
+          }
+        ],
+        "id": "sector_geometry",
+        "lines": [
+          {
+            "end": "center",
+            "id": "radial_end",
+            "start": "end"
+          },
+          {
+            "end": "start",
+            "id": "radial_start",
+            "start": "center"
+          }
+        ],
+        "plane": {
+          "id": "workplane",
+          "origin": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "quaternion": [
+            1.0,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        "points": [
+          {
+            "id": "center",
+            "u": 0.0,
+            "v": 0.0
+          },
+          {
+            "id": "end",
+            "u": 0.0,
+            "v": 5.0
+          },
+          {
+            "id": "start",
+            "u": 5.0,
+            "v": 0.0
+          }
+        ],
+        "schema_version": 3,
+        "units": "mm"
+      }
+    },
+    {
+      "id": "pad",
+      "inputs": {
+        "profile": "profile"
+      },
+      "kind": "extrude",
+      "label": "Sector extrusion",
+      "params": {
+        "length": "height"
+      }
+    }
+  ],
+  "id": "box_sector_quadrant",
+  "name": "Reusable quarter sector R5 H10 mm",
+  "parameters": {
+    "height": 10.0,
+    "radius": 5.0
+  },
+  "schema_version": 2,
+  "units": "mm"
+}

@@ -1,0 +1,157 @@
+{
+  "capture_completion_sha256": "673d2a5b23743b0cb300b7132d69574452638d766a7f1935b546c55de09cbd6d",
+  "capture_manifest_sha256": "6f17ef5fa9d001afa51b2c3b1aceaef61646b1f59c1dd59deb7d152f78961974",
+  "collected_native_processes": 6,
+  "helper_sha256": {
+    "_atomic_export": "3995ed7c1a3bd489efa996bf8fc66ec27acee6f29a00847e35f711ebcb5dbfe9",
+    "_destination": "90e71e51e4fd579099be47f5f49ed06dfa4cd18cfbbbb1e8956e67f284f187f7"
+  },
+  "lost_070_receipts_reused": false,
+  "qualification_scope": "fresh recovered immutable 0.6 baseline only",
+  "rows": [
+    {
+      "collected": true,
+      "exit_code": 0,
+      "export_file": null,
+      "id": "01_v1_check_geometry",
+      "original_process_id": 5,
+      "process_end": "2026-10-18T01:02:16.902564+00:00",
+      "process_start": "2026-10-18T01:02:15.663697+00:00",
+      "request": {
+        "bytes": 391,
+        "file": "01_v1_check_geometry.request.raw",
+        "sha256": "ca5ccbb6aa7d536a6309d437ee75cf2de5e8f2f542ebdcf8704568f0dd28896d"
+      },
+      "response": {
+        "bytes": 4624,
+        "file": "01_v1_check_geometry.response.raw",
+        "sha256": "973da48abf1f416a1b4fc7260f55ae27357da0312cef54d9c5bf4a723585a84c"
+      },
+      "wall_seconds": 1.238174799000035
+    },
+    {
+      "collected": true,
+      "exit_code": 0,
+      "export_file": {
+        "bytes": 15418,
+        "path_actual": "/workspace/scratch/e704d81da019/recovery_070/legacy_capture_preparation/execution_001/exports/legacy rectangle v1.step",
+        "path_raw": "exports/./legacy rectangle v1.step",
+        "sha256": "af4a62f2282209f066da7cffa67f5570e93b58e785164d17a89e37608bf0fa87"
+      },
+      "id": "02_v1_export_step",
+      "original_process_id": 14,
+      "process_end": "2026-10-18T01:02:18.951634+00:00",
+      "process_start": "2026-10-18T01:02:17.788887+00:00",
+      "request": {
+        "bytes": 439,
+        "file": "02_v1_export_step.request.raw",
+        "sha256": "2744e24bc6ce373d02ddb3304e4b061c6e4ce5e44ddc2bd039902d38b725b7cb"
+      },
+      "response": {
+        "bytes": 4866,
+        "file": "02_v1_export_step.response.raw",
+        "sha256": "58b97525eaea1492351f831cd09fa27c5922ac0d3fc3761b7ccd48530d843091"
+      },
+      "wall_seconds": 1.1619184670000777
+    },
+    {
+      "collected": true,
+      "exit_code": 0,
+      "export_file": {
+        "bytes": 684,
+        "path_actual": "/workspace/scratch/e704d81da019/recovery_070/legacy_capture_preparation/execution_001/exports/legacy rectangle v1.stl",
+        "path_raw": "exports/./legacy rectangle v1.stl",
+        "sha256": "0d0055aa04aab718e41dc2ffa3f5d1d56ee6f153d2a1d6ddab115e957f6777ee"
+      },
+      "id": "03_v1_export_stl",
+      "original_process_id": 23,
+      "process_end": "2026-10-18T01:02:21.098184+00:00",
+      "process_start": "2026-10-18T01:02:19.915531+00:00",
+      "request": {
+        "bytes": 437,
+        "file": "03_v1_export_stl.request.raw",
+        "sha256": "af868c1a044259b16d104bd76a0c2351e53e4e73dac8a00a92bb62d86c3a31e4"
+      },
+      "response": {
+        "bytes": 5150,
+        "file": "03_v1_export_stl.response.raw",
+        "sha256": "ca5327f4683e72098c625e697087d90e1d91feb5a7589a75714c472c2a2ad0b3"
+      },
+      "wall_seconds": 1.1816754310000306
+    },
+    {
+      "collected": true,
+      "exit_code": 0,
+      "export_file": null,
+      "id": "04_v2_check_geometry",
+      "original_process_id": 32,
+      "process_end": "2026-10-18T01:02:23.275264+00:00",
+      "process_start": "2026-10-18T01:02:22.051376+00:00",
+      "request": {
+        "bytes": 391,
+        "file": "04_v2_check_geometry.request.raw",
+        "sha256": "4028a08d4ee553ef5d85f032cd255a3a1fd740f06a179def0b8fc638e3264a63"
+      },
+      "response": {
+        "bytes": 4837,
+        "file": "04_v2_check_geometry.response.raw",
+        "sha256": "7a874d990ababf4f2a1cbfabdafdf4f3a976be28578095763a1a1025aa2c4b08"
+      },
+      "wall_seconds": 1.22300588600001
+    },
+    {
+      "collected": true,
+      "exit_code": 0,
+      "export_file": {
+        "bytes": 15418,
+        "path_actual": "/workspace/scratch/e704d81da019/recovery_070/legacy_capture_preparation/execution_001/exports/legacy rectangle v2.step",
+        "path_raw": "exports/./legacy rectangle v2.step",
+        "sha256": "66f16797d9501f888a92aaea0e8094d48356dd8aaeabf8febe1d39b493b160ac"
+      },
+      "id": "05_v2_export_step",
+      "original_process_id": 41,
+      "process_end": "2026-10-18T01:02:25.534552+00:00",
+      "process_start": "2026-10-18T01:02:24.227168+00:00",
+      "request": {
+        "bytes": 439,
+        "file": "05_v2_export_step.request.raw",
+        "sha256": "236dd51b215d5c604e793297ed76c8883adacca4c0cd3f96564ee263a45fcb32"
+      },
+      "response": {
+        "bytes": 5079,
+        "file": "05_v2_export_step.response.raw",
+        "sha256": "0ac63c75c9c367555e19983633cf9c074d6ea82ea355634da9ab133472854bd2"
+      },
+      "wall_seconds": 1.3065683300001183
+    },
+    {
+      "collected": true,
+      "exit_code": 0,
+      "export_file": {
+        "bytes": 684,
+        "path_actual": "/workspace/scratch/e704d81da019/recovery_070/legacy_capture_preparation/execution_001/exports/legacy rectangle v2.stl",
+        "path_raw": "exports/./legacy rectangle v2.stl",
+        "sha256": "0d0055aa04aab718e41dc2ffa3f5d1d56ee6f153d2a1d6ddab115e957f6777ee"
+      },
+      "id": "06_v2_export_stl",
+      "original_process_id": 50,
+      "process_end": "2026-10-18T01:02:27.732966+00:00",
+      "process_start": "2026-10-18T01:02:26.504989+00:00",
+      "request": {
+        "bytes": 437,
+        "file": "06_v2_export_stl.request.raw",
+        "sha256": "0d5c07b8f4b7fceb57fa1b9d427b9f4e0b9a16330b7a29fd4e1f3f779b4f1e6b"
+      },
+      "response": {
+        "bytes": 5363,
+        "file": "06_v2_export_stl.response.raw",
+        "sha256": "bcbadd95a112479e061ae360f9a110a9d30d27dc73cc83827c7cc743671fb11c"
+      },
+      "wall_seconds": 1.2245232289999421
+    }
+  ],
+  "runtime_manifest_sha256": "1c2a75c0500c0bbcec54710f562b97838a50f46f71b3d5752a470e2742354b81",
+  "schema": "recovered-legacy-geometry-wire-v1",
+  "source_commit": "69d0f8164e73bfbbcdf0c48d6546f97803d12f58",
+  "source_zip_sha256": "7030e8c4202af11f349d68577157ce2cc878b25539991d8891b3045725e280a9"
+}

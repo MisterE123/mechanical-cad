@@ -1,0 +1,16 @@
+coincident_tree true {'result': 0, 'dof': 2, 'nbad': 0}
+coincident_tree false {'result': 0, 'dof': 2, 'nbad': 0}
+coincident_cycle true {'result': 0, 'dof': 0, 'nbad': 0}
+coincident_cycle false {'result': 0, 'dof': 0, 'nbad': 0}
+horizontal_tree true {'result': 0, 'dof': 4, 'nbad': 0}
+horizontal_tree false {'result': 0, 'dof': 4, 'nbad': 0}
+horizontal_cycle true {'result': 0, 'dof': 3, 'nbad': 0}
+horizontal_cycle false {'result': 0, 'dof': 3, 'nbad': 0}
+vertical_tree true {'result': 0, 'dof': 4, 'nbad': 0}
+vertical_tree false {'result': 0, 'dof': 4, 'nbad': 0}
+vertical_cycle true {'result': 0, 'dof': 3, 'nbad': 0}
+vertical_cycle false {'result': 0, 'dof': 3, 'nbad': 0}
+horizontal_parallel_lines true {'result': 0, 'dof': 2, 'nbad': 0}
+horizontal_parallel_lines false {'result': 0, 'dof': 2, 'nbad': 0}
+fixed_same_target_control true {'result': 0, 'dof': 0, 'nbad': 0}
+fixed_same_target_control false {'result': 0, 'dof': 0, 'nbad': 0}

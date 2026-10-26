@@ -1,0 +1,41 @@
+{
+  "captured_utc_date": "2026-10-17",
+  "original_inputs": {
+    "EQUATION_BUDGET_FINDINGS.md": {
+      "bytes": 12532,
+      "sha256": "c62bb3e0b7d17e8259a113ee75c5d70707c444957454b44511fdd0ae2c969161"
+    },
+    "dof_regression_evidence.json": {
+      "bytes": 1026931,
+      "sha256": "bc6a619f7ef8b30aa5ff1e169b19b09126e77aec4f468215fdb9ef95d81468b2"
+    },
+    "equation_budget_evidence.json": {
+      "bytes": 1136346,
+      "sha256": "9e1301551b34783c43981581f021079f5d63cd9a3417293acf8443f864df6c33"
+    },
+    "minimal_coincidence_cycle.sketch.json": {
+      "bytes": 938,
+      "sha256": "284511bbd67003bed150057dd76ce58179b286adadcdd3db06e443b89c854c07"
+    },
+    "probe_dof_regression.py": {
+      "bytes": 14063,
+      "sha256": "c4db10158d1fab6016dd2bf80aa0597f7accb3dca65174a19d84d25d0f070ff7"
+    },
+    "probe_equation_budget.py": {
+      "bytes": 12706,
+      "sha256": "70bc2832e51a5b92cc3b4982bc290151d2f85e618e94724bac52db302bdcc92d"
+    },
+    "ui_witness_release.json": {
+      "bytes": 3325,
+      "sha256": "2a1841059215839bd90ae63b52f905088232ce838ae6c9595b3760521cb7018c"
+    }
+  },
+  "preservation": "Original scratch inputs, main checkout arc work, and 0.5 release artifacts were not modified.",
+  "transformations": [
+    "Adapter probe now takes explicit source paths and verifies the immutable released source against Git without modifying it.",
+    "Released and guarded matrices were freshly rerun, not copied from the old mixed-source evidence.",
+    "UI witness was rerun with exact loaded module hashes; original null resume field is superseded by a verified true boolean.",
+    "Equation probe retains all 15 native cases but removes unrelated arc-policy evidence dependency and duplicated embedded adapter matrices.",
+    "Standalone no-CAD native reproduction, deliberate new-add-on/old-core mismatch, and offline consistency verifier are new."
+  ]
+}

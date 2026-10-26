@@ -1,0 +1,311 @@
+{
+  "action": {
+    "refs": [
+      "l_d6"
+    ],
+    "state": "eligible"
+  },
+  "addon_source_path_at_capture": "/workspace/scratch/e704d81da019/constraint_release_1a27e74",
+  "after_cycle": {
+    "bridge_accepted": true,
+    "response": {
+      "action": "solve_sketch",
+      "error": null,
+      "input_fingerprint": "8c97af9fcdf47987d6c207cde8dc767481a010b6648492dc396b538e9642fb0a",
+      "ok": true,
+      "protocol_version": 1,
+      "result": {
+        "document_hash": "bfe9f586ebb0ed18c2ad98f21a5badb23848b78cd48f34d29f47d3080fcf1469",
+        "document_id": "ui_probe",
+        "feature_id": "sketch_1",
+        "profile_check": {
+          "error": {
+            "code": "self_intersecting_profile",
+            "message": "Adjacent boundaries overlap."
+          },
+          "ready": false
+        },
+        "sketch": {
+          "dimensions": {},
+          "failed_constraints": [],
+          "max_residual_mm": 0.0,
+          "redundant_constraints": [],
+          "remaining_dof": 3,
+          "solved": {
+            "circles": [],
+            "constraints": [
+              {
+                "id": "r_d7",
+                "kind": "horizontal",
+                "refs": [
+                  "l_d3"
+                ],
+                "target": null,
+                "value": null
+              },
+              {
+                "id": "r_d8",
+                "kind": "horizontal",
+                "refs": [
+                  "l_d5"
+                ],
+                "target": null,
+                "value": null
+              },
+              {
+                "id": "r_d9",
+                "kind": "horizontal",
+                "refs": [
+                  "l_d6"
+                ],
+                "target": null,
+                "value": null
+              }
+            ],
+            "id": "sketch_1_geometry",
+            "lines": [
+              {
+                "end": "p_d2",
+                "id": "l_d3",
+                "start": "p_d1"
+              },
+              {
+                "end": "p_d4",
+                "id": "l_d5",
+                "start": "p_d2"
+              },
+              {
+                "end": "p_d1",
+                "id": "l_d6",
+                "start": "p_d4"
+              }
+            ],
+            "plane": {
+              "id": "xy",
+              "origin": [
+                0.0,
+                0.0,
+                0.0
+              ],
+              "quaternion": [
+                1.0,
+                0.0,
+                0.0,
+                0.0
+              ]
+            },
+            "points": [
+              {
+                "id": "p_d1",
+                "u": 0.0,
+                "v": 5.0
+              },
+              {
+                "id": "p_d2",
+                "u": 40.0,
+                "v": 5.0
+              },
+              {
+                "id": "p_d4",
+                "u": 80.0,
+                "v": 5.0
+              }
+            ],
+            "schema_version": 2,
+            "units": "mm"
+          },
+          "solver": "libslvs",
+          "solver_version": "3.2",
+          "status": "okay"
+        }
+      },
+      "result_version": 2
+    }
+  },
+  "authored_constraint_count_after": 3,
+  "before_cycle": {
+    "bridge_accepted": true,
+    "response": {
+      "action": "solve_sketch",
+      "error": null,
+      "input_fingerprint": "2169e37ab71c2ae3ec208e165289eb61690235838db732ec972f3fe7ff397eaf",
+      "ok": true,
+      "protocol_version": 1,
+      "result": {
+        "document_hash": "84901169d78782c8d929aed33543513c45467852fa643b22b714d536ac6a1d21",
+        "document_id": "ui_probe",
+        "feature_id": "sketch_1",
+        "profile_check": {
+          "error": {
+            "code": "self_intersecting_profile",
+            "message": "Adjacent boundaries overlap."
+          },
+          "ready": false
+        },
+        "sketch": {
+          "dimensions": {},
+          "failed_constraints": [],
+          "max_residual_mm": 0.0,
+          "redundant_constraints": [],
+          "remaining_dof": 4,
+          "solved": {
+            "circles": [],
+            "constraints": [
+              {
+                "id": "r_d7",
+                "kind": "horizontal",
+                "refs": [
+                  "l_d3"
+                ],
+                "target": null,
+                "value": null
+              },
+              {
+                "id": "r_d8",
+                "kind": "horizontal",
+                "refs": [
+                  "l_d5"
+                ],
+                "target": null,
+                "value": null
+              }
+            ],
+            "id": "sketch_1_geometry",
+            "lines": [
+              {
+                "end": "p_d2",
+                "id": "l_d3",
+                "start": "p_d1"
+              },
+              {
+                "end": "p_d4",
+                "id": "l_d5",
+                "start": "p_d2"
+              },
+              {
+                "end": "p_d1",
+                "id": "l_d6",
+                "start": "p_d4"
+              }
+            ],
+            "plane": {
+              "id": "xy",
+              "origin": [
+                0.0,
+                0.0,
+                0.0
+              ],
+              "quaternion": [
+                1.0,
+                0.0,
+                0.0,
+                0.0
+              ]
+            },
+            "points": [
+              {
+                "id": "p_d1",
+                "u": 0.0,
+                "v": 5.0
+              },
+              {
+                "id": "p_d2",
+                "u": 40.0,
+                "v": 5.0
+              },
+              {
+                "id": "p_d4",
+                "u": 80.0,
+                "v": 5.0
+              }
+            ],
+            "schema_version": 2,
+            "units": "mm"
+          },
+          "solver": "libslvs",
+          "solver_version": "3.2",
+          "status": "okay"
+        }
+      },
+      "result_version": 2
+    }
+  },
+  "current_solution_after": true,
+  "expected_dof_before_and_after": 4,
+  "initial_authored_points": [
+    {
+      "id": "p_d1",
+      "u": 0,
+      "v": 0
+    },
+    {
+      "id": "p_d2",
+      "u": 40,
+      "v": 20
+    },
+    {
+      "id": "p_d4",
+      "u": 80,
+      "v": 5
+    }
+  ],
+  "loaded_modules_sha256": {
+    "dof_ui_witness.constraint_selection": "00e754a47e6f6750928c015150ad3237549c589648c38d62b44e1d0c9060af9e",
+    "dof_ui_witness.general_authoring": "d79f8f5e59b8d5d4913b40fcc049c8f4210b73ee4e4cda781e02cb20ac1ebf56",
+    "dof_ui_witness.general_authoring_store": "31cac50ad09a45e068f59437229c6f4694c3937b091c68db70257c04aa722a27",
+    "dof_ui_witness.general_draft_store": "4060157a9024f05c6f09dddad1e5edb536da498a9ec01404b205e9f89967fcaa",
+    "dof_ui_witness.general_sketch_commands": "58510b2141e0525e7601161f0ec2a64e49d40e82eeb7b6ebfc4bb093fda00a44",
+    "dof_ui_witness.general_sketch_draft": "b6d13a22a49b5a31f880c7727c7d6c3d84e22d2adb6a814f4c46a77ccd97c0a4",
+    "dof_ui_witness.general_sketch_journal": "d6058876b9d61442e66198cdd9e6c0b208b2b8252fb3fde563ca39702b142d15",
+    "dof_ui_witness.general_view_geometry": "1ffbc186f58a416fcdc63daa57c15bd55ac1e3b1742eeb5b4604b243be1b044e",
+    "dof_ui_witness.geometry_evidence": "7b9899f7df573a7e3e2380fdc5ff786abfd4da89679d5c6e4e0088f14453d5f9",
+    "dof_ui_witness.part_contracts": "f5d15902d89e27b4a4c6badf2cc48bd5a1b55372ea3bf157f70584eb67aa1846",
+    "dof_ui_witness.part_geometry_evidence": "ccc30750a87f6b428eef12d81aaa1313e7a5c5cd6b992a1ff925ad59bb705db5",
+    "dof_ui_witness.part_result_bridge": "ed2a69e70912e5d8809f1a46738884a49f9e622d9fb5236521ffb80be4a632dc",
+    "dof_ui_witness.request_contracts": "4da30e95c5d81631396d23cc52cd787d3811e8143f4da1272c1becd367d0d3e5",
+    "dof_ui_witness.sketch_action_bridge": "2530bfbb350bb37af949ca01a342584f13a4eb25907c5d04f5aa29d9700d8e5a",
+    "dof_ui_witness.sketch_bridge": "8a3cd726283617be294abb1e932d9f48f9a9e867621297f3de04b9ac7131b31f",
+    "dof_ui_witness.topology_evidence": "b5a0c6e861f5eac6d9a338eb6c628a85e7db6631694ef319bc9335af8f48b7eb",
+    "mechanical_cad.errors": "aeff0cc1cec8b87a7e1034945fa86f5163b58980c43fac0c360cb3f8e129bf65",
+    "mechanical_cad.expressions": "e47366ca43f0d1be18ade1cf90428af5789aff4e16583fdd95bd54193caffdff",
+    "mechanical_cad.model": "d85e6907b8ea35cf824aa4aec3daaa6969f15e2ea6ccde1ef254243e32fa273e",
+    "mechanical_cad.part_snapshot": "fa1751c5a05afa0a3cd32635392ff6d1b256327c09c6b2494f1044f1283c85e7",
+    "mechanical_cad.profile_region": "1481013540a22c17b24058814474d118a3df169de0057c4c6592a941f4b4fec7",
+    "mechanical_cad.sidecar": "026d6194c68cc6340482a624a84772d1ac514bd1217b81409631e2b3a0be0dfe",
+    "mechanical_cad.sketch_evaluation": "fab3fe96229567bca01eb3595728b72362bc5227252f621365c3b36a30267bf4",
+    "mechanical_cad.sketch_model": "d81b2f0b2a42c3abd727c6ae0215a05a710c903f0932c381c7bb326455080ab9",
+    "mechanical_cad.sketch_protocol": "4579a71af182277970a82612b71f726e34c630410c978a2eb0d56533304c44d7",
+    "mechanical_cad.sketch_service": "72c3cef7d010ad3697662c1cec5000ee54fa5702b63aa6417e518915c55caff3",
+    "mechanical_cad.sketch_solver": "24bda44934c7712e837dc7f9546e7e1deeff0da654d273dd7a7e8648b9dcbcfa"
+  },
+  "method": "actual authoring, persistence, picker, selection, sidecar and strict bridge seams; no native Blender GUI",
+  "pick": {
+    "line": "l_d6",
+    "status": "unique"
+  },
+  "restored_authored_points": [
+    [
+      "p_d1",
+      [
+        0.0,
+        0.0
+      ]
+    ],
+    [
+      "p_d2",
+      [
+        40.0,
+        20.0
+      ]
+    ],
+    [
+      "p_d4",
+      [
+        80.0,
+        5.0
+      ]
+    ]
+  ],
+  "resume_starts_without_current_solution": true,
+  "sidecar_source_path_at_capture": "/workspace/scratch/e704d81da019/constraint_release_1a27e74"
+}

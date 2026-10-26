@@ -1,0 +1,338 @@
+"""Bounded, transient constraint intents for the existing general-sketch owner.
+
+Preparation is read-only. Application rechecks the exact live owner and intent,
+then delegates to its existing execute/checkpoint/async path. These records are
+not a saved command codec, a selection controller, or geometry authority.
+"""
+
+from __future__ import annotations
+
+import hashlib
+from dataclasses import dataclass, field
+
+from . import (
+    constraint_selection,
+    document_state,
+    draft_dispatch,
+    execution_lease,
+    sketch_session,
+)
+from .general_sketch_commands import (
+    MAX_DOCUMENT_BYTES,
+    AddRelation,
+    DeleteBatch,
+    DeletePreview,
+    DraftError,
+    RecoverRemoveRelation,
+    _json,
+    _require,
+)
+
+_ACTIONS = frozenset(
+    {
+        "coincident",
+        "parallel",
+        "perpendicular",
+        "equal",
+        "tangent",
+        "point_on_line",
+        "midpoint",
+        "symmetry",
+        "concentric",
+        "circle_line_tangent",
+        "horizontal",
+        "vertical",
+        "fix_here",
+        "fix_origin",
+        "remove_relation",
+        "recover_remove_relation",
+    }
+)
+
+
+@dataclass(frozen=True, slots=True)
+class _Binding:
+    owner_identity: int
+    session_id: str
+    draft_identity: int
+    commands_identity: int
+    scene_uid: int
+    runtime: tuple[int, ...]
+    source_digest: str
+    draft_digest: str
+    saved_identity: int
+    # Retain this immutable bounded string so its Python identity cannot be
+    # recycled after an input Begin/Cancel checkpoint returns to identical bytes.
+    saved_text: str = field(repr=False)
+    command_revision: int
+    ui_revision: int
+    input_token: str
+    selection: tuple[constraint_selection.EntitySelection, ...]
+    solution_current: bool
+    evidence_digest: str
+    evidence_identity: tuple[int, int]
+    diagnostic_identity: int
+    backend_stamp: tuple[str, int]
+    guarded_identity: int
+    prepared_identity: int
+    chain_identity: tuple
+
+
+@dataclass(frozen=True, slots=True)
+class ConstraintActionIntent:
+    """Immutable one-owner disclosure. Keep this exact object across confirmation.
+
+    ``existing`` actions expose every exact existing relation ID for inspection;
+    they do not change selection or retarget a fixed relation. The private binding
+    is transient and must not be persisted or reconstructed by UI code.
+    """
+
+    action: str
+    state: str
+    refs: tuple[str, ...]
+    relation_ids: tuple[str, ...]
+    target: tuple[int | float, int | float] | None
+    requires_confirmation: bool
+    disclosure: str
+    _binding: _Binding = field(repr=False)
+    _preview: DeletePreview | None = field(default=None, repr=False)
+
+
+@dataclass(frozen=True, slots=True)
+class ConstraintActionResult:
+    changed: bool
+    revision: int
+    relation_ids: tuple[str, ...]
+
+    @property
+    def constraint_id(self):
+        return self.relation_ids[0] if self.relation_ids else None
+
+
+def _digest(text, limit):
+    _require(type(text) is str and len(text) <= limit, "Constraint source exceeds its byte limit.")
+    encoded = text.encode("utf-8")
+    _require(len(encoded) <= limit, "Constraint source exceeds its byte limit.")
+    return hashlib.sha256(encoded).hexdigest()
+
+
+def _ready(owner):
+    from .general_session import GeneralSession
+
+    _require(type(owner) is GeneralSession, "Choose the active general sketch owner.")
+    _require(sketch_session.active_session() is owner, "The sketch owner was replaced or retired.")
+    owner._require_idle()
+    _require(
+        not execution_lease.is_busy() and not document_state._REPLAY_RUNNING,
+        execution_lease.BUSY_MESSAGE,
+    )
+    _require(owner.publication is None, "A sketch publication is already pending.")
+    _require(
+        owner.draft.proposal is None and not owner.proposal_capture,
+        "Continue or Cancel the unfinished line/circle first.",
+    )
+    _require(
+        owner.commands.pending_edit is None,
+        "Accept or Cancel the retained dimension input first.",
+    )
+    _require(owner.annotation_drag is None, "Finish the annotation gesture first.")
+
+
+def _binding(owner):
+    _ready(owner)
+    backend_stamp = owner.backend_stamp()
+    draft = owner.draft
+    commands = owner.commands
+    snapshot = owner.stored_snapshot
+    _digest(snapshot, draft_dispatch.MAX_SNAPSHOT_BYTES)
+    return _Binding(
+        id(owner),
+        owner.session_id,
+        id(draft),
+        id(commands),
+        owner.scene_uid,
+        (
+            owner.window.as_pointer(),
+            owner.window.view_layer.as_pointer(),
+            owner.workspace.as_pointer(),
+            owner.area.as_pointer(),
+            owner.region.as_pointer(),
+        ),
+        _digest(owner.scene.mechanical_cad.document_json, MAX_DOCUMENT_BYTES),
+        _digest(draft_dispatch.dumps(draft), draft_dispatch.MAX_SNAPSHOT_BYTES),
+        id(snapshot),
+        snapshot,
+        commands.revision,
+        draft.ui_revision,
+        owner.input_token,
+        constraint_selection.normalize_selection(commands.sketch, draft.selection),
+        commands.has_current_solution,
+        _digest(_json((owner.evidence_request, owner.evidence_response)), 8 * 1024 * 1024),
+        (id(owner.evidence_request), id(owner.evidence_response)),
+        id(owner.current_diagnostics),
+        backend_stamp,
+        id(owner.guarded_evidence),
+        id(owner.expected_prepared),
+        tuple(
+            zip(
+                map(id, commands._solution_evidence or ()),
+                map(id, commands._solution_prepared or ()),
+                strict=True,
+            )
+        ),
+    )
+
+
+def _solved(owner):
+    """Read current strict native evidence, never a display/retained-outline cache."""
+    _require(owner.commands.has_current_solution, "Check the sketch successfully first.")
+    request = owner.commands.solve_request()
+    _require(
+        _json(owner.evidence_request) == _json(request),
+        "Current successful solve evidence does not match this exact sketch.",
+    )
+    try:
+        validated = owner.current_solution_response()
+        _require(validated is not None, "Current guarded solve evidence is required.")
+    except (ValueError, TypeError, KeyError, OverflowError, RecursionError) as exc:
+        raise DraftError(f"Current sketch evidence was rejected: {exc}") from exc
+    _require(validated["ok"], "Current successful solve evidence is required.")
+    return validated["result"]["sketch"]["solved"]
+
+
+def _relation_preview(owner, relation_id):
+    preview = owner.commands.preview_delete((("constraint", relation_id),))
+    _require(
+        type(preview) is DeletePreview
+        and preview.revision == owner.commands.revision
+        and preview.targets == (("constraint", relation_id),)
+        and not preview.points
+        and not preview.lines
+        and not preview.circles
+        and not preview.arcs
+        and preview.constraints == (relation_id,),
+        "Remove requires an exact single-relation preview with no geometry cascade.",
+    )
+    return preview
+
+
+def prepare(owner, action):
+    """Capture a read-only action, exact source, UI selection and input generation.
+
+    Fix at origin and authored-position recovery need a separate explicit
+    confirmation of the returned disclosure. Pair relations run the same native solve path.
+    """
+    try:
+        return _prepare(owner, action)
+    except (ValueError, TypeError, KeyError, OverflowError, RecursionError, ReferenceError) as exc:
+        if isinstance(exc, DraftError):
+            raise
+        raise DraftError(f"Cannot prepare this constraint action: {exc}") from exc
+
+
+def _prepare(owner, action):
+    _require(type(action) is str and action in _ACTIONS, "Unsupported constraint action.")
+    binding = _binding(owner)
+    selection_action = "remove_relation" if action == "recover_remove_relation" else action
+    spec = constraint_selection.selection_contract(
+        owner.commands.sketch, owner.draft.selection
+    ).action(selection_action)
+    _require(
+        spec.state in {"eligible", "existing"}, spec.reason or "Unavailable constraint action."
+    )
+    target = spec.target
+    disclosure = spec.reason
+    confirmation = False
+    preview = None
+    if spec.state != "existing":
+        if action == "fix_here":
+            point = next(item for item in _solved(owner)["points"] if item["id"] == spec.refs[0])
+            target = (point["u"], point["v"])
+        elif action == "fix_origin":
+            target = (0, 0)
+            confirmation = True
+            disclosure = (
+                f"Fix point {spec.refs[0]} at sketch-plane (0, 0) mm. "
+                "This can move the point and connected geometry."
+            )
+        elif action in {"remove_relation", "recover_remove_relation"}:
+            preview = _relation_preview(owner, spec.relation_ids[0])
+            if action == "remove_relation":
+                _solved(owner)
+            else:
+                _require(
+                    not owner.commands.has_current_solution,
+                    "A current solved placement exists; use Remove relation instead.",
+                )
+                _require(
+                    owner.evidence_request is None and owner.evidence_response is None,
+                    "Retained evidence must not authorize authored-position recovery.",
+                )
+                confirmation = True
+                disclosure = (
+                    f"Remove only relation {spec.relation_ids[0]} using authored positions. "
+                    "No current solved placement exists. Authored point positions and circle "
+                    "radii stay exact; geometry may move after Check. The result stays "
+                    "unverified until Check succeeds."
+                )
+    return ConstraintActionIntent(
+        action,
+        spec.state,
+        spec.refs,
+        spec.relation_ids,
+        target,
+        confirmation,
+        disclosure,
+        binding,
+        preview,
+    )
+
+
+def apply(owner, context, intent, confirmed=False):
+    """Recheck the original disclosure; delegate mutation solely to owner.execute.
+
+    Passing false for a confirmation-required action raises without mutation.
+    Cancelling a UI prompt means dropping its intent; this module owns no prompt.
+    """
+    _require(type(intent) is ConstraintActionIntent, "Prepare a constraint action first.")
+    _require(type(confirmed) is bool, "Confirmation must be an explicit boolean.")
+    _ready(owner)
+    _require(
+        sketch_session.active_session(context) is owner
+        and getattr(context, "area", None) == owner.area
+        and getattr(context, "workspace", None) == owner.workspace
+        and getattr(context, "view_layer", None) == owner.window.view_layer,
+        "Apply this action in its original sketch viewport.",
+    )
+    current = prepare(owner, intent.action)
+    _require(current == intent, "The constraint action changed. Review and prepare it again.")
+    if intent.state == "existing":
+        return ConstraintActionResult(False, owner.commands.revision, intent.relation_ids)
+    _require(
+        not intent.requires_confirmation or confirmed,
+        "Confirm this exact constraint action first: " + intent.disclosure,
+    )
+    if intent.action in {
+        "horizontal",
+        "vertical",
+        "coincident",
+        "parallel",
+        "perpendicular",
+        "equal",
+        "tangent",
+        "point_on_line",
+        "midpoint",
+        "symmetry",
+        "concentric",
+        "circle_line_tangent",
+    }:
+        command = AddRelation(intent.action, intent.refs)
+    elif intent.action in {"fix_here", "fix_origin"}:
+        command = AddRelation("fixed", intent.refs, target=intent.target)
+    elif intent.action == "remove_relation":
+        command = DeleteBatch(intent._preview)
+    else:
+        command = RecoverRemoveRelation(intent._preview)
+    outcome = owner.execute(context, command)
+    ids = (outcome.constraint_id,) if outcome.constraint_id is not None else intent.relation_ids
+    return ConstraintActionResult(outcome.changed, outcome.revision, ids)

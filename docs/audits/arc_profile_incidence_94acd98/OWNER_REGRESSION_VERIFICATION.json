@@ -1,0 +1,105 @@
+{
+  "verified_at": "2026-10-17T05:46:08.781562+00:00",
+  "source_commit": "94acd98f97e4fb9848bbf19eee5052fec232a83a",
+  "source_verified_after_owner_gates": {
+    "commit": "94acd98f97e4fb9848bbf19eee5052fec232a83a",
+    "source": "/workspace/scratch/e704d81da019/cad_arc_incidence/incidence-94acd98-source",
+    "archive": "/workspace/scratch/e704d81da019/cad_arc_incidence/incidence-94acd98-source.zip",
+    "manifest": "/workspace/scratch/e704d81da019/cad_arc_incidence/incidence-94acd98-source-manifest.json",
+    "archive_sha256": "5c97d93a029fc95f8adc0b50bf30687c9fe22ce91e7c18069196829925920da5",
+    "manifest_sha256": "c845ad1d196faf23463305e807745549aaaf8a1321f017726984adeb3c07b1d1",
+    "files_verified_git_zip_tree": 958,
+    "baseline_runtime_files_verified": 105,
+    "release_sha256": "d644fbce66b843047a6cb3e3cd775c1af8517a7ff82e3f22ce3888b710d1971f",
+    "allowed_added": [
+      "src/mechanical_cad/arc_profile_incidence.py",
+      "tests/unit/test_arc_profile_incidence.py"
+    ],
+    "allowed_modified": [
+      "tests/unit/test_arc_profile_arc_membership.py",
+      "tests/unit/test_arc_profile_primitives.py"
+    ],
+    "critical_sources": {
+      "src/mechanical_cad/arc_profile_incidence.py": "e9dd1ad7c2b74d72eec1be89d09f4a10e2e27f2fef3b5c783b510ce7469dbc76",
+      "src/mechanical_cad/arc_profile_primitives.py": "ebd60e4dd35c98459dd6d688e81322f88adcb1766c0864e16d10b9defea738bd",
+      "tests/unit/test_arc_profile_arc_membership.py": "f952a4bc60c4722f951b2281bd51ca22e501ccfa42daa5138974c29bb599fa4c",
+      "tests/unit/test_arc_profile_incidence.py": "88a7a740e9b084d345ae579fe822b2425f7b9ff5d28daad6f5b2cdb0d5266d11",
+      "tests/unit/test_arc_profile_primitives.py": "3bee499682fb54ba84e4c6c52a6beda8e6df6b7bfb0e1a6b24bc9dd2a40504a1"
+    }
+  },
+  "owner_gate_root": "/workspace/scratch/e704d81da019/cad_arc_incidence/incidence-94acd98-owner-gates",
+  "owner_gate_artifacts_sha256": {
+    "STARTED.json": "4f0853c56d66ba71007be5693f6dd331b413145fe0a374abd68d1e62dc642f4a",
+    "COMPLETION.json": "64701af8db4df8b540d72ec5553d77cef9d6c4a66c3ab6c52953d47b7c2843de",
+    "ruff.result.json": "1c8932b22c370101b4244e974e997b5f41b3e44c0753d8c534656ca75b5fecd6",
+    "ruff.log": "5881b12149331d7e5cb73c688d901b4e798f65706dfc34e07bb7e50bc9ca2530",
+    "ruff.started.json": "fe7a5652d2199d6d3838f44c0000322363b5be16221b61e9efc358730d444670",
+    "format.result.json": "5f6268a00156c72cd5e52aaf65ff339bf83dcfb4cec97355f478dec4472624ee",
+    "format.log": "48a3cba0e1283c11c4e8a5f707ed6d7b084430be7fc13a279f5bb387fe9a2c93",
+    "format.started.json": "4ce36e5b639997fe79eaedd1e427efc297fffa0326ad19a8857306dbf0dc363e",
+    "pytest.result.json": "1697f0926adad5dc6150b987d922b2d292d653bb3be8eebc70256eded6aa4148",
+    "pytest.log": "274fa4567c1f602678d89daa699adec226b7cb4e3148380c40ce00ecdc66e762",
+    "pytest.started.json": "e225d2a57c5d023fea14636bfd092c8d25d2ec4381b0866bb347a291163be74f"
+  },
+  "owner_gate_counts": {
+    "pytest_passed": 4541,
+    "subtests_passed": 19597,
+    "pytest_reported_seconds": 120.35,
+    "ruff_format_files": 376
+  },
+  "owner_gates": {
+    "ruff": {
+      "command": [
+        "/workspace/scratch/e704d81da019/mechanical_cad/.venv/bin/python",
+        "-m",
+        "ruff",
+        "check",
+        "."
+      ],
+      "elapsed_seconds": 0.0932002067565918,
+      "gate": "ruff",
+      "log_sha256": "5881b12149331d7e5cb73c688d901b4e798f65706dfc34e07bb7e50bc9ca2530",
+      "returncode": 0,
+      "source_commit": "94acd98f97e4fb9848bbf19eee5052fec232a83a",
+      "source_mismatches": [],
+      "timed_out": false
+    },
+    "format": {
+      "command": [
+        "/workspace/scratch/e704d81da019/mechanical_cad/.venv/bin/python",
+        "-m",
+        "ruff",
+        "format",
+        "--check",
+        "."
+      ],
+      "elapsed_seconds": 0.13971900939941406,
+      "gate": "format",
+      "log_sha256": "48a3cba0e1283c11c4e8a5f707ed6d7b084430be7fc13a279f5bb387fe9a2c93",
+      "returncode": 0,
+      "source_commit": "94acd98f97e4fb9848bbf19eee5052fec232a83a",
+      "source_mismatches": [],
+      "timed_out": false
+    },
+    "pytest": {
+      "command": [
+        "/workspace/scratch/e704d81da019/mechanical_cad/.venv/bin/python",
+        "-m",
+        "pytest",
+        "-q"
+      ],
+      "elapsed_seconds": 122.14198184013367,
+      "gate": "pytest",
+      "log_sha256": "274fa4567c1f602678d89daa699adec226b7cb4e3148380c40ce00ecdc66e762",
+      "returncode": 0,
+      "source_commit": "94acd98f97e4fb9848bbf19eee5052fec232a83a",
+      "source_mismatches": [],
+      "timed_out": false
+    }
+  },
+  "independent_review_still_exact": true,
+  "independent_review_sha256": "e9632c49f55db6f8ec04199b08b4b6d43ae8e085b84fcd2d801711deb2af7320",
+  "independent_receipt_sha256": "371144c223d9bee09420f2e4eb345e11bd666b4f2d3bf9e4e462351e4619356c",
+  "new_native_tests_launched_for_this_verification": 0,
+  "interpretation": "Completes the pending existing full-regression gate; does not establish curved-profile native or UI qualification."
+}

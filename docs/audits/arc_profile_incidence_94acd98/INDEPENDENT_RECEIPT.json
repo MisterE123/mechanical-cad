@@ -1,0 +1,81 @@
+{
+  "sealed_at": "2026-10-17T05:43:18.833452+00:00",
+  "decision": "accepted_as_unused_pure_incidence_prerequisite",
+  "scope_exclusions": [
+    "profile_admission",
+    "incidence_cells",
+    "clearance",
+    "reference_closure",
+    "angle_area",
+    "native_parameter_frame_conversion",
+    "native_postflight",
+    "classifier_service_ui_activation",
+    "release_changes"
+  ],
+  "frozen_source": {
+    "commit": "94acd98f97e4fb9848bbf19eee5052fec232a83a",
+    "source": "/workspace/scratch/e704d81da019/cad_arc_incidence/incidence-94acd98-source",
+    "archive": "/workspace/scratch/e704d81da019/cad_arc_incidence/incidence-94acd98-source.zip",
+    "manifest": "/workspace/scratch/e704d81da019/cad_arc_incidence/incidence-94acd98-source-manifest.json",
+    "archive_sha256": "5c97d93a029fc95f8adc0b50bf30687c9fe22ce91e7c18069196829925920da5",
+    "manifest_sha256": "c845ad1d196faf23463305e807745549aaaf8a1321f017726984adeb3c07b1d1",
+    "files_verified_git_zip_tree": 958,
+    "baseline_runtime_files_verified": 105,
+    "release_sha256": "d644fbce66b843047a6cb3e3cd775c1af8517a7ff82e3f22ce3888b710d1971f",
+    "allowed_added": [
+      "src/mechanical_cad/arc_profile_incidence.py",
+      "tests/unit/test_arc_profile_incidence.py"
+    ],
+    "allowed_modified": [
+      "tests/unit/test_arc_profile_arc_membership.py",
+      "tests/unit/test_arc_profile_primitives.py"
+    ],
+    "critical_sources": {
+      "src/mechanical_cad/arc_profile_incidence.py": "e9dd1ad7c2b74d72eec1be89d09f4a10e2e27f2fef3b5c783b510ce7469dbc76",
+      "src/mechanical_cad/arc_profile_primitives.py": "ebd60e4dd35c98459dd6d688e81322f88adcb1766c0864e16d10b9defea738bd",
+      "tests/unit/test_arc_profile_arc_membership.py": "f952a4bc60c4722f951b2281bd51ca22e501ccfa42daa5138974c29bb599fa4c",
+      "tests/unit/test_arc_profile_incidence.py": "88a7a740e9b084d345ae579fe822b2425f7b9ff5d28daad6f5b2cdb0d5266d11",
+      "tests/unit/test_arc_profile_primitives.py": "3bee499682fb54ba84e4c6c52a6beda8e6df6b7bfb0e1a6b24bc9dd2a40504a1"
+    }
+  },
+  "independent_gates": {
+    "oracle": 168,
+    "new_incidence": 194,
+    "prior_primitives_membership": 329,
+    "existing_pure": 379,
+    "dof": 18
+  },
+  "existing_test_preservation": {
+    "tests/unit/test_arc_profile_primitives.py": {
+      "only_modified_function": "test_original_arc_policy_bytes_unchanged_and_no_runtime_importers",
+      "other_byte_exact_function_class_spans": 35,
+      "surrounding_file_bytes_exact": true
+    },
+    "tests/unit/test_arc_profile_arc_membership.py": {
+      "only_modified_function": "test_no_production_consumer_or_duplicate_arithmetic_implementation",
+      "other_byte_exact_function_class_spans": 42,
+      "surrounding_file_bytes_exact": true
+    }
+  },
+  "native_processes_started": 0,
+  "native_import_attempts": 0,
+  "owner_full_regression_status": "separate_owner_gate_pending_at_seal",
+  "artifacts_sha256": {
+    "API_PREIMPLEMENTATION_REVIEW.md": "8c3cc422675fcb33af7e6e7f96491bc7881a967850df4b8c8f263d570a312e5f",
+    "INDEPENDENT_REVIEW.md": "e9632c49f55db6f8ec04199b08b4b6d43ae8e085b84fcd2d801711deb2af7320",
+    "BASELINE_SOURCE.json": "28b952949b994ac3873f26be79a640c63e618aa435201d4fb93eeeb0137f6d84",
+    "FROZEN_IDENTITY.json": "16e0df1354c2970ab988407efa05ec4eec0e28461151be659ac1e33ef6464292",
+    "FROZEN_GATE_RECEIPTS.json": "7380fbe2780ec307e856272d9d6468034c41f30c441b7ad588333ee6acf090b0",
+    "preserve_frozen.py": "de8fcf8c10de2673de200c4a6222ca6d794e4f12d442266223769a24c1beecd0",
+    "run_frozen_gates.py": "bdd48fd62cd5804b2000eece9c1926d598b07e5485768a839a361a6002a7e621",
+    "pure_test_launcher.py": "eb55837c0cdd9c36f902e24fde8f3f203f5a639e2700b25587c102e726e6af1f",
+    "rational_oracle.py": "a4981d6958f995dc08f95b7b2203df60defcb5a0e2d3b3913e39ab0054756f7b",
+    "test_incidence_independent.py": "a708945cc8d43150759281a76d1a50f9774c16490b12e0b19ff14cf8cdfdefe1",
+    "frozen_runner.log": "591e56dd5fc3089465941d6fc4f6077103b1120a287df6e2c4867683bfc60964",
+    "frozen_independent.log": "20c590d238ba0528245e2232aab2f5b6a33cecd99a1be4355f17132c07451424",
+    "frozen_incidence.log": "bfbd07cc914eb9a4ae259a2376d8ff5836ec43cc8a50db7ef9e05e8d2bfcc487",
+    "frozen_primitives_membership.log": "daac12a62df583f6ce1a563accce74c22088e772870e944b7f50cc1742f73314",
+    "frozen_existing_pure.log": "85ef960354c1cf633c551dc7830d582eb79b730eb8930d52c11bf3710338201e",
+    "frozen_dof_guard.log": "05a581d4b148eaf68a1c783afac9eb2fb21ef51f834ade4da640a43dc4fe7ba4"
+  }
+}

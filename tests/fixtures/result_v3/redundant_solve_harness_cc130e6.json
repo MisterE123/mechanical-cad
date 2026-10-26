@@ -1,0 +1,134 @@
+{
+  "base_commit": "cc130e667cc30c76e0437f5994059220f1aca25e",
+  "changed": {
+    "tests/unit/test_arc_profile_incidence.py": {
+      "hunks": [
+        {
+          "new_end": 31176,
+          "new_start": 30992,
+          "original": "",
+          "replacement": "            \"REDUNDANT_SOLVE_SOURCE_FIXTURE\",\n            \"REDUNDANT_SOLVE_SOURCE_SHA256\",\n            \"REDUNDANT_SOLVE_HARNESS_FIXTURE\",\n            \"REDUNDANT_SOLVE_HARNESS_SHA256\",\n"
+        },
+        {
+          "new_end": 32924,
+          "new_start": 32827,
+          "original": "",
+          "replacement": "            \"REDUNDANT_SOLVE_SOURCE_ORIGINALS\",\n            \"REDUNDANT_SOLVE_HARNESS_ORIGINALS\",\n"
+        },
+        {
+          "new_end": 33443,
+          "new_start": 33346,
+          "original": "",
+          "replacement": "            \"redundant_solve_source_originals\",\n            \"redundant_solve_harness_originals\",\n"
+        }
+      ],
+      "original_bytes": 48631,
+      "original_sha256": "01ac1a861767fda75808f7c75e8ba78ed6cd45ea4d3f02cd99c697fe061d6005",
+      "reviewed_bytes": 49009,
+      "reviewed_sha256": "788836778867f9a535c910f88e9ed213c5c3666220b0023b9598c359c0895823"
+    },
+    "tests/unit/test_arc_profile_native_end_cap.py": {
+      "hunks": [
+        {
+          "new_end": 46411,
+          "new_start": 42773,
+          "original": "",
+          "replacement": "REDUNDANT_SOLVE_SOURCE_FIXTURE = \"tests/fixtures/result_v3/redundant_solve_source_cc130e6.json\"\nREDUNDANT_SOLVE_SOURCE_SHA256 = \"c68438360877d722d94292cf416ede6ea32e7ab8bc26296228e66ba3f2c7a19b\"\nREDUNDANT_SOLVE_SOURCE_ORIGINALS = {\n    \"blender_addon/mechanical_cad_blender/sketch_contracts_v3.py\": (\n        20060,\n        \"ebfb14a9823bed370df89b55d2528522b83a16e42e5d357d414551ed347e6806\",\n    ),\n    \"tests/unit/test_result_v3_client.py\": (\n        27648,\n        \"f510c09ad8c0ca3a1e12c2f9c3fa3cf6fd61f0267535987fdf4ee85541b0daa8\",\n    ),\n}\n\nREDUNDANT_SOLVE_HARNESS_FIXTURE = \"tests/fixtures/result_v3/redundant_solve_harness_cc130e6.json\"\nREDUNDANT_SOLVE_HARNESS_SHA256 = \"0000000000000000000000000000000000000000000000000000000000000000\"\nREDUNDANT_SOLVE_HARNESS_ORIGINALS = {\n    \"tests/unit/test_arc_profile_native_end_cap.py\": (\n        117786,\n        \"98a68229f6de7b018ca1b0a2aae6efefd15f3f3c6566554f01a566ee76898de1\",\n    ),\n    \"tests/unit/test_arc_profile_incidence.py\": (\n        48631,\n        \"01ac1a861767fda75808f7c75e8ba78ed6cd45ea4d3f02cd99c697fe061d6005\",\n    ),\n    \"tests/unit/test_arc_sector_native_boundary_mutations.py\": (\n        39088,\n        \"fab922866fe908146fc87b488729adc8e6d2a27519b66a139e26b4ba569fbb9b\",\n    ),\n    \"tests/unit/test_standalone_runtime_boundary.py\": (\n        112931,\n        \"e56cc4373ac05c65161ad0f16af9a353a42579e04406e62decc5b809bc25aa11\",\n    ),\n}\n\n\ndef redundant_solve_source_originals(root):\n    \"\"\"Restore only the two approved source/test edits to exact cc130e6 bytes.\"\"\"\n    raw = (root / REDUNDANT_SOLVE_SOURCE_FIXTURE).read_bytes()\n    assert hashlib.sha256(raw).hexdigest() == REDUNDANT_SOLVE_SOURCE_SHA256\n    revision = json.loads(raw)\n    assert set(revision) == {\"schema\", \"base_commit\", \"changed\"}\n    assert revision[\"schema\"] == \"schema3-redundant-solve-source-v1\"\n    assert revision[\"base_commit\"] == \"cc130e667cc30c76e0437f5994059220f1aca25e\"\n    assert set(revision[\"changed\"]) == set(REDUNDANT_SOLVE_SOURCE_ORIGINALS)\n    return {\n        name: _integration_restore_entry(\n            (root / name).read_bytes(), entry, REDUNDANT_SOLVE_SOURCE_ORIGINALS[name]\n        )\n        for name, entry in revision[\"changed\"].items()\n    }\n\n\ndef redundant_solve_harness_originals(root):\n    \"\"\"Restore four exact cc130e6 guards before the unchanged older inverses.\n\n    Copied code is data, never the validator. Normalize only this outer layer's\n    single digest slot; all historical digest constants remain sealed bytes.\n    \"\"\"\n    raw = (root / REDUNDANT_SOLVE_HARNESS_FIXTURE).read_bytes()\n    assert hashlib.sha256(raw).hexdigest() == REDUNDANT_SOLVE_HARNESS_SHA256\n    revision = json.loads(raw)\n    assert set(revision) == {\"schema\", \"base_commit\", \"changed\"}\n    assert revision[\"schema\"] == \"schema3-redundant-solve-harness-v1\"\n    assert revision[\"base_commit\"] == \"cc130e667cc30c76e0437f5994059220f1aca25e\"\n    assert set(revision[\"changed\"]) == set(REDUNDANT_SOLVE_HARNESS_ORIGINALS)\n    restored = {}\n    for name, entry in revision[\"changed\"].items():\n        data = (root / name).read_bytes()\n        if name == \"tests/unit/test_arc_profile_native_end_cap.py\":\n            label = b\"REDUNDANT_SOLVE_HARNESS_\" + b'SHA256 = \"'\n            assert data.count(label) == 1\n            slot = label + REDUNDANT_SOLVE_HARNESS_SHA256.encode(\"ascii\") + b'\"'\n            assert data.count(slot) == 1, \"copied outer digest differs from trusted namespace\"\n            data = data.replace(slot, label + b\"0\" * 64 + b'\"')\n        restored[name] = _integration_restore_entry(\n            data, entry, REDUNDANT_SOLVE_HARNESS_ORIGINALS[name]\n        )\n    return restored\n\n\n"
+        },
+        {
+          "new_end": 52225,
+          "new_start": 52172,
+          "original": "",
+          "replacement": "    before = redundant_solve_harness_originals(root)\n"
+        },
+        {
+          "new_end": 52826,
+          "new_start": 52766,
+          "original": "        data = (root / name).read_bytes()\n",
+          "replacement": "        data = before.get(name, (root / name).read_bytes())\n"
+        },
+        {
+          "new_end": 93848,
+          "new_start": 93757,
+          "original": "",
+          "replacement": "    integration_originals = integration_originals | redundant_solve_source_originals(root)\n"
+        },
+        {
+          "new_end": 98102,
+          "new_start": 98028,
+          "original": "",
+          "replacement": "    before = authoring_originals | redundant_solve_source_originals(root)\n"
+        },
+        {
+          "new_end": 98200,
+          "new_start": 98140,
+          "original": "        data = authoring_originals.get(name, (root / name).read_bytes())\n",
+          "replacement": "        data = before.get(name, (root / name).read_bytes())\n"
+        },
+        {
+          "new_end": 104500,
+          "new_start": 104419,
+          "original": "",
+          "replacement": "        REDUNDANT_SOLVE_SOURCE_FIXTURE,\n        REDUNDANT_SOLVE_HARNESS_FIXTURE,\n"
+        },
+        {
+          "new_end": 119926,
+          "new_start": 119859,
+          "original": "",
+          "replacement": "        outer_before = redundant_solve_harness_originals(tmp_path)\n"
+        },
+        {
+          "new_end": 120712,
+          "new_start": 120399,
+          "original": "",
+          "replacement": "        path = \"tests/unit/test_arc_profile_native_end_cap.py\"\n        assert outer_before[path].count(before) == 1\n        outer_before[path] = outer_before[path].replace(before, after)\n        monkeypatch.setitem(\n            globals(), \"redundant_solve_harness_originals\", lambda _root: outer_before\n        )\n"
+        },
+        {
+          "new_end": 128798,
+          "new_start": 122108,
+          "original": "",
+          "replacement": "\n\ndef test_redundant_solve_restores_only_exact_cc130e6_paths_and_old_return_sets():\n    source = redundant_solve_source_originals(ROOT)\n    harness = redundant_solve_harness_originals(ROOT)\n    assert len(source) == 2 and len(harness) == 4\n    assert set(source) == set(REDUNDANT_SOLVE_SOURCE_ORIGINALS)\n    assert set(harness) == set(REDUNDANT_SOLVE_HARNESS_ORIGINALS)\n    for name, data in (source | harness).items():\n        expected = (REDUNDANT_SOLVE_SOURCE_ORIGINALS | REDUNDANT_SOLVE_HARNESS_ORIGINALS)[name]\n        assert (len(data), hashlib.sha256(data).hexdigest()) == expected\n    added, original = standalone_integration_source_originals(ROOT)\n    assert added == INTEGRATION_SOURCE_ADDED\n    assert set(original) == set(INTEGRATION_SOURCE_ORIGINALS)\n    assert set(standalone_integration_harness_originals(ROOT)) == set(INTEGRATION_HARNESS_ORIGINALS)\n    assert protected_python_digest(ROOT) == SNAPSHOT3_PYTHON_PROTECTED\n\n\n@pytest.mark.parametrize(\n    \"name\",\n    sorted(REDUNDANT_SOLVE_SOURCE_ORIGINALS.keys() | REDUNDANT_SOLVE_HARNESS_ORIGINALS.keys()),\n)\ndef test_redundant_solve_outer_layer_never_exempts_unreviewed_bytes(tmp_path, name):\n    copy_python_guard_tree(tmp_path)\n    path = tmp_path / name\n    path.write_bytes(path.read_bytes() + b\"\\n# unreviewed correction mutation\\n\")\n    with pytest.raises(AssertionError):\n        protected_python_digest(tmp_path)\n\n\n@pytest.mark.parametrize(\"kind\", [\"source\", \"harness\"])\n@pytest.mark.parametrize(\"mutation\", [\"fixture\", \"slot\", \"helper\", \"coordinated\"])\ndef test_redundant_solve_copied_fixture_and_guard_cannot_replace_trusted_code(\n    tmp_path, kind, mutation\n):\n    copy_python_guard_tree(tmp_path)\n    prefix = \"REDUNDANT_SOLVE_\" + kind.upper()\n    fixture = tmp_path / globals()[prefix + \"_FIXTURE\"]\n    guard = tmp_path / \"tests/unit/test_arc_profile_native_end_cap.py\"\n    if mutation in {\"fixture\", \"coordinated\"}:\n        fixture.write_bytes(fixture.read_bytes() + b\"\\n\")\n    if mutation in {\"slot\", \"coordinated\"}:\n        digest = (\n            hashlib.sha256(fixture.read_bytes()).hexdigest()\n            if mutation == \"coordinated\"\n            else \"f\" * 64\n        )\n        old = globals()[prefix + \"_SHA256\"].encode()\n        data = guard.read_bytes()\n        assert data.count(old) == 1\n        guard.write_bytes(data.replace(old, digest.encode()))\n    if mutation == \"helper\":\n        data = guard.read_bytes()\n        marker = (\"def redundant_solve_\" + kind + \"_originals(root):\").encode()\n        assert data.count(marker) == 1\n        guard.write_bytes(data.replace(marker, marker + b\" # poisoned copied validator\"))\n    with pytest.raises(AssertionError):\n        protected_python_digest(tmp_path)\n\n\n@pytest.mark.parametrize(\"kind\", [\"source\", \"harness\"])\n@pytest.mark.parametrize(\n    \"mutation\",\n    [\n        \"schema\",\n        \"base\",\n        \"extra_key\",\n        \"missing\",\n        \"extra\",\n        \"production\",\n        \"before_pin\",\n        \"hunk\",\n        \"equivalent\",\n    ],\n)\ndef test_redundant_solve_inner_controls_are_nonvacuous(tmp_path, monkeypatch, kind, mutation):\n    copy_python_guard_tree(tmp_path)\n    prefix = \"REDUNDANT_SOLVE_\" + kind.upper()\n    function = globals()[\"redundant_solve_\" + kind + \"_originals\"]\n    expected = function(tmp_path)\n    fixture = tmp_path / globals()[prefix + \"_FIXTURE\"]\n    revision = json.loads(fixture.read_bytes())\n    name = (\n        \"tests/unit/test_result_v3_client.py\"\n        if kind == \"source\"\n        else \"tests/unit/test_arc_profile_incidence.py\"\n    )\n    entry = revision[\"changed\"][name]\n    if mutation == \"schema\":\n        revision[\"schema\"] = \"other\"\n    elif mutation == \"base\":\n        revision[\"base_commit\"] = \"0\" * 40\n    elif mutation == \"extra_key\":\n        revision[\"exempt\"] = True\n    elif mutation == \"missing\":\n        revision[\"changed\"].pop(name)\n    elif mutation == \"extra\":\n        revision[\"changed\"][\"tests/unit/unreviewed.py\"] = entry\n    elif mutation == \"production\":\n        revision[\"changed\"][\"src/mechanical_cad/kernel_ocp.py\"] = revision[\"changed\"].pop(name)\n    elif mutation == \"before_pin\":\n        entry[\"original_sha256\"] = \"f\" * 64\n    elif mutation == \"hunk\":\n        entry[\"hunks\"][0][\"new_start\"] = True\n    else:\n        # Changed serialization must really reach and pass the complete inner\n        # inverse, rather than having every negative fail at an earlier seal.\n        current = (tmp_path / name).read_bytes()\n        entry[\"hunks\"] = [\n            {\n                \"new_start\": 0,\n                \"new_end\": len(current),\n                \"original\": expected[name].decode(),\n                \"replacement\": current.decode(),\n            }\n        ]\n    raw = (json.dumps(revision, sort_keys=True, indent=2) + \"\\n\").encode()\n    assert raw != fixture.read_bytes()\n    fixture.write_bytes(raw)\n    digest = hashlib.sha256(raw).hexdigest()\n    if kind == \"harness\":\n        guard = tmp_path / \"tests/unit/test_arc_profile_native_end_cap.py\"\n        old = REDUNDANT_SOLVE_HARNESS_SHA256.encode()\n        data = guard.read_bytes()\n        assert data.count(old) == 1\n        guard.write_bytes(data.replace(old, digest.encode()))\n    monkeypatch.setitem(globals(), prefix + \"_SHA256\", digest)\n    if mutation == \"equivalent\":\n        assert function(tmp_path) == expected\n    else:\n        with pytest.raises(AssertionError):\n            function(tmp_path)\n\n\ndef test_integration_harness_equivalent_inner_repin_passes_below_new_outer_layer(\n    tmp_path, monkeypatch\n):\n    copy_python_guard_tree(tmp_path)\n    expected = standalone_integration_harness_originals(tmp_path)\n    before = redundant_solve_harness_originals(tmp_path)\n    fixture = tmp_path / INTEGRATION_HARNESS_FIXTURE\n    revision = json.loads(fixture.read_bytes())\n    name = \"tests/unit/test_arc_profile_incidence.py\"\n    revision[\"changed\"][name][\"hunks\"] = [\n        {\n            \"new_start\": 0,\n            \"new_end\": len(before[name]),\n            \"original\": expected[name].decode(),\n            \"replacement\": before[name].decode(),\n        }\n    ]\n    raw = (json.dumps(revision, sort_keys=True, indent=2) + \"\\n\").encode()\n    assert raw != fixture.read_bytes()\n    fixture.write_bytes(raw)\n    digest = hashlib.sha256(raw).hexdigest()\n    path = \"tests/unit/test_arc_profile_native_end_cap.py\"\n    old = STANDALONE_INTEGRATION_HARNESS_SHA256.encode()\n    assert before[path].count(old) == 1\n    before[path] = before[path].replace(old, digest.encode())\n    monkeypatch.setitem(globals(), \"redundant_solve_harness_originals\", lambda _root: before)\n    monkeypatch.setitem(globals(), \"STANDALONE_INTEGRATION_HARNESS_SHA256\", digest)\n    assert standalone_integration_harness_originals(tmp_path) == expected\n"
+        }
+      ],
+      "original_bytes": 117786,
+      "original_sha256": "98a68229f6de7b018ca1b0a2aae6efefd15f3f3c6566554f01a566ee76898de1",
+      "reviewed_bytes": 128798,
+      "reviewed_sha256": "9f29fae0919e2eb8cf58e47cae9b1e1808c40d6bc3091df58a155cfc3929c945"
+    },
+    "tests/unit/test_arc_sector_native_boundary_mutations.py": {
+      "hunks": [
+        {
+          "new_end": 25953,
+          "new_start": 25808,
+          "original": "",
+          "replacement": "        \"tests/fixtures/result_v3/redundant_solve_source_cc130e6.json\",\n        \"tests/fixtures/result_v3/redundant_solve_harness_cc130e6.json\",\n"
+        }
+      ],
+      "original_bytes": 39088,
+      "original_sha256": "fab922866fe908146fc87b488729adc8e6d2a27519b66a139e26b4ba569fbb9b",
+      "reviewed_bytes": 39233,
+      "reviewed_sha256": "d45c50515d2bfe2c922230c5335b1f3148ccdba8b1734712f0996d5d6dc0fe41"
+    },
+    "tests/unit/test_standalone_runtime_boundary.py": {
+      "hunks": [
+        {
+          "new_end": 4279,
+          "new_start": 3933,
+          "original": "",
+          "replacement": "        \"REDUNDANT_SOLVE_SOURCE_FIXTURE\",\n        \"REDUNDANT_SOLVE_SOURCE_SHA256\",\n        \"REDUNDANT_SOLVE_SOURCE_ORIGINALS\",\n        \"REDUNDANT_SOLVE_HARNESS_FIXTURE\",\n        \"REDUNDANT_SOLVE_HARNESS_SHA256\",\n        \"REDUNDANT_SOLVE_HARNESS_ORIGINALS\",\n        \"redundant_solve_source_originals\",\n        \"redundant_solve_harness_originals\",\n"
+        },
+        {
+          "new_end": 18194,
+          "new_start": 18076,
+          "original": "",
+          "replacement": "    integration_originals = integration_originals | namespace[\"redundant_solve_source_originals\"](\n        ROOT\n    )\n"
+        }
+      ],
+      "original_bytes": 112931,
+      "original_sha256": "e56cc4373ac05c65161ad0f16af9a353a42579e04406e62decc5b809bc25aa11",
+      "reviewed_bytes": 113395,
+      "reviewed_sha256": "2691af5da2e969025ad0e15f21e68f40dd432c4c62398514c6534dfcf3d1f162"
+    }
+  },
+  "schema": "schema3-redundant-solve-harness-v1"
+}

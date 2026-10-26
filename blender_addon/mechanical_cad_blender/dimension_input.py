@@ -1,0 +1,441 @@
+"""Pure, bounded event routing for one transient general-sketch dimension field.
+
+This has no Blender, clipboard, evaluator, solver, registration or canonical-state
+access. An owner supplies normalized events and an explicit edit lease, validates
+that lease against its current scene/session, and interprets detached actions.
+``handled=False`` leaves routing to that owner; it is not a Blender PASS_THROUGH
+instruction. While editing, unrecognized keyboard/mouse events are consumed.
+
+Raw changes are staged on a shallow copy of TextBuffer: its strings and bounded
+history tuples are immutable. Before replacing the live buffer, ``approve_raw``
+receives a frozen ``raw_changed`` action. It must return exactly True, and must
+itself be atomic on failure if it updates a command draft. All local allocations
+are prepared first. False, an exception, or an allocation/revision failure leaves
+the complete live buffer unchanged. Callbacks must not reenter this controller.
+Without this optional callback the owner is explicitly choosing local-only edits.
+
+Clipboard callbacks are invoked only for Ctrl-V and Ctrl-C/X, respectively. A cut
+prepares its deletion first, writes the selected text, then asks the owner to
+approve the raw change. Failed approval preserves the field; an already completed
+clipboard copy cannot be rolled back. No clipboard callback is stored.
+
+Enter requests acceptance once and makes the field read-only until explicit
+``reject_accept`` or ``close``. It never accepts a command or queues evaluation.
+Escape cancels; outside/right clicks suspend with exact raw retained. Closing
+consumes only held termination-key tails, including one release per key. A fresh
+non-repeat press of a drained key is left to the owner, even if its old release
+was lost. ``retire`` explicitly relinquishes every tail. Resume constructs a new
+controller with a new lease/token; closed controllers never reopen themselves.
+
+Caret indices count Unicode scalars. The owner performs hit testing and supplies
+``caret_index`` on left press or owned selection-drag movement only. There is no
+IME, grapheme, bidi/shaping or native accessibility parity claim; the separate
+ordinary panel fallback remains necessary. Local text Undo is not sketch Undo.
+"""
+
+from __future__ import annotations
+
+import copy
+import re
+from collections.abc import Callable
+from dataclasses import dataclass
+
+from .dimension_text_buffer import MAX_COUNTER, MAX_RAW_TEXT_BYTES, TextBuffer
+
+_ID = re.compile(r"^[A-Za-z0-9_][A-Za-z0-9_.-]{0,127}$")
+_EVENT_NAME = re.compile(r"^[A-Z][A-Z0-9_]{0,63}$")
+_ENTER = frozenset({"RET", "NUMPAD_ENTER"})
+_MOVE = frozenset({"MOUSEMOVE", "INBETWEEN_MOUSEMOVE"})
+_TIMER = frozenset({"TIMER", "TIMER_REPORT", "TIMERREGION", "TIMER_JOBS"})
+_EMPTY_KEYS: frozenset[str] = frozenset()
+
+
+@dataclass(frozen=True, slots=True)
+class EditLease:
+    """Opaque owner/field stable IDs and bounded generation/token identity.
+
+    The owner chooses and verifies all four values; this record grants no access
+    and does not establish current scene, base-document or command ownership.
+    """
+
+    owner_id: str
+    field_id: str
+    generation: int
+    token: int
+
+    def __post_init__(self):
+        for name in ("owner_id", "field_id"):
+            value = getattr(self, name)
+            if type(value) is not str or _ID.fullmatch(value) is None:
+                raise ValueError(f"{name} must be a stable ASCII ID of 1 to 128 characters")
+        for name in ("generation", "token"):
+            value = getattr(self, name)
+            if type(value) is not int or not 0 <= value <= MAX_COUNTER:
+                raise ValueError(f"{name} must be an integer between 0 and MAX_COUNTER")
+
+
+@dataclass(frozen=True, slots=True)
+class InputEvent:
+    """Normalized event values, without references to native event/UI objects."""
+
+    type: str
+    value: str = "PRESS"
+    unicode: str = ""
+    ctrl: bool = False
+    shift: bool = False
+    alt: bool = False
+    is_repeat: bool = False
+
+    def __post_init__(self):
+        for name in ("type", "value"):
+            value = getattr(self, name)
+            if type(value) is not str or _EVENT_NAME.fullmatch(value) is None:
+                raise ValueError(f"{name} must be a normalized event name")
+        if type(self.unicode) is not str:
+            raise TypeError("unicode must be an exact string")
+        for name in ("ctrl", "shift", "alt", "is_repeat"):
+            if type(getattr(self, name)) is not bool:
+                raise TypeError(f"{name} must be a boolean")
+
+
+@dataclass(frozen=True, slots=True)
+class InputAction:
+    """Detached intent/effect notice bound to one lease and exact raw revision.
+
+    Kinds: raw_changed, accept, cancel, suspend, input_error, owner_rejected.
+    ``detail`` contains a suspension reason or a diagnostic, never an exception.
+    An accept action requests validation/acceptance; it is not proof of success.
+    ``revision`` belongs to local TextBuffer history, not the command draft.
+    """
+
+    kind: str
+    lease: EditLease
+    raw: str
+    revision: int
+    detail: str = ""
+
+
+@dataclass(frozen=True, slots=True)
+class InputResult:
+    handled: bool
+    actions: tuple[InputAction, ...] = ()
+    changed: bool = False
+
+
+_HANDLED = InputResult(True)
+_UNHANDLED = InputResult(False)
+
+
+def _clone_buffer(buffer: TextBuffer) -> TextBuffer:
+    # No mutable objects are shared: raw/history states are strings/ints/tuples.
+    return copy.copy(buffer)
+
+
+class DimensionInput:
+    """Single-threaded text lease; no mutable buffer escapes through the API."""
+
+    __slots__ = (
+        "_buffer",
+        "_lease",
+        "_closed",
+        "_accept_requested",
+        "_down",
+        "_tails",
+        "_handling",
+    )
+
+    def __init__(
+        self,
+        raw: str,
+        *,
+        lease: EditLease,
+        limit: int = MAX_RAW_TEXT_BYTES,
+        select_all: bool = False,
+    ):
+        if type(lease) is not EditLease:
+            raise TypeError("lease must be an EditLease")
+        self._buffer = TextBuffer(raw, limit=limit)
+        if select_all:
+            self._buffer.select_all()
+        self._lease = lease
+        self._closed = False
+        self._accept_requested = False
+        self._down = self._tails = _EMPTY_KEYS
+        self._handling = False
+
+    @property
+    def lease(self) -> EditLease:
+        return self._lease
+
+    @property
+    def raw(self) -> str:
+        return self._buffer.raw
+
+    @property
+    def caret(self) -> int:
+        return self._buffer.caret
+
+    @property
+    def anchor(self) -> int:
+        return self._buffer.anchor
+
+    @property
+    def closed(self) -> bool:
+        return self._closed
+
+    @property
+    def accept_requested(self) -> bool:
+        return self._accept_requested
+
+    @property
+    def retired(self) -> bool:
+        return self._closed and not self._tails
+
+    def snapshot(self) -> dict:
+        """Detached transient diagnostics, not a persistence representation."""
+        return {
+            "buffer": self._buffer.snapshot(),
+            "lease": {
+                "owner_id": self._lease.owner_id,
+                "field_id": self._lease.field_id,
+                "generation": self._lease.generation,
+                "token": self._lease.token,
+            },
+            "closed": self._closed,
+            "accept_requested": self._accept_requested,
+            "down_keys": sorted(self._down),
+            "tail_keys": sorted(self._tails),
+            "retired": self.retired,
+        }
+
+    def _idle(self):
+        if self._handling:
+            raise RuntimeError("Dimension input callbacks must not reenter the controller")
+
+    def _action(self, kind, *, buffer=None, detail=""):
+        buffer = self._buffer if buffer is None else buffer
+        return InputAction(kind, self._lease, buffer.raw, buffer.revision, detail)
+
+    def _terminal(self, kind, reason="", key=None, *, drain=True):
+        if self._closed:
+            return _UNHANDLED
+        tails = self._down | ({key} if key else _EMPTY_KEYS) if drain else _EMPTY_KEYS
+        result = InputResult(True, (self._action(kind, detail=reason),), changed=True)
+        self._tails = tails
+        self._down = _EMPTY_KEYS
+        self._accept_requested = False
+        self._closed = True
+        return result
+
+    def close(self) -> None:
+        """Owner completed/revoked this edit; retain held Enter release ownership."""
+        self._idle()
+        if not self._closed:
+            self._tails = self._down
+            self._down = _EMPTY_KEYS
+            self._accept_requested = False
+            self._closed = True
+
+    def retire(self) -> None:
+        """Owner removed this handler; abandon every remaining terminal tail."""
+        self._idle()
+        self._tails = self._down = _EMPTY_KEYS
+        self._accept_requested = False
+        self._closed = True
+
+    def reject_accept(self) -> bool:
+        """Owner explicitly rejected acceptance; no old Enter is replayed."""
+        self._idle()
+        if self._closed or not self._accept_requested:
+            return False
+        self._accept_requested = False
+        return True
+
+    def suspend(self, reason: str) -> InputResult:
+        """Owner lifecycle suspension. Raw survives; no event is synthesized."""
+        self._idle()
+        if type(reason) is not str or _ID.fullmatch(reason) is None:
+            raise ValueError("reason must be a bounded stable identifier")
+        return self._terminal("suspend", reason)
+
+    def _drain(self, event):
+        if not self._tails:
+            return _UNHANDLED
+        if event.type == "WINDOW_DEACTIVATE":
+            self._tails = _EMPTY_KEYS
+            return _HANDLED
+        if event.type not in self._tails:
+            return _UNHANDLED
+        if event.value == "RELEASE":
+            tails = self._tails - {event.type}
+            self._tails = tails
+            return _HANDLED
+        if event.value == "PRESS" and not event.is_repeat:
+            tails = self._tails - {event.type}
+            self._tails = tails
+            return _UNHANDLED
+        return _HANDLED
+
+    def _edit(self, operation, args, kwargs, approve_raw, *, write_clipboard=None):
+        if operation == "insert" and type(args[0]) is not str:
+            raise TypeError("clipboard/input text must be an exact string")
+        before = self._buffer
+        candidate = _clone_buffer(before)
+        identical_insert = operation == "insert" and candidate.selected_text == args[0]
+        getattr(candidate, operation)(*args, **kwargs)
+        raw_changed = candidate.raw != before.raw
+        failed_insert = operation == "insert" and not raw_changed and not identical_insert
+        if failed_insert:
+            result = InputResult(
+                True,
+                (self._action("input_error", buffer=candidate, detail=candidate.error or ""),),
+                changed=candidate.error != before.error,
+            )
+        elif raw_changed:
+            result = InputResult(
+                True, (self._action("raw_changed", buffer=candidate),), changed=True
+            )
+        else:
+            changed = (candidate.caret, candidate.anchor) != (before.caret, before.anchor)
+            result = InputResult(True, changed=changed)
+        # Prepare even the owner's rejection path before any external callback.
+        rejected = InputResult(
+            True, (self._action("owner_rejected", detail="Owner rejected the raw-text update."),)
+        )
+        if write_clipboard is not None:
+            setter, selected = write_clipboard
+            setter(selected)
+        if raw_changed and approve_raw is not None:
+            approved = approve_raw(result.actions[0])
+            if approved is not True:
+                return rejected
+        self._buffer = candidate
+        return result
+
+    def handle(
+        self,
+        event: InputEvent,
+        *,
+        approve_raw: Callable[[InputAction], bool] | None = None,
+        clipboard_get: Callable[[], str] | None = None,
+        clipboard_set: Callable[[str], None] | None = None,
+        caret_index: int | None = None,
+        outside: bool = False,
+    ) -> InputResult:
+        """Route one normalized event without reading any ambient state.
+
+        ``caret_index`` is a scalar hit-test result for left press or owned drag;
+        ``outside`` marks a left press outside the field. No pointer coordinates
+        or UI object is retained. Ctrl-Alt/Alt shortcuts are consumed, not treated
+        as clipboard commands or composed text; text services remain owner work.
+        Clipboard/owner exceptions propagate with the live field unchanged.
+        """
+        self._idle()
+        if type(event) is not InputEvent:
+            raise TypeError("event must be an InputEvent")
+        if type(outside) is not bool:
+            raise TypeError("outside must be a boolean")
+        if caret_index is not None and type(caret_index) is not int:
+            raise TypeError("caret_index must be a scalar integer")
+        if outside and (event.type != "LEFTMOUSE" or event.value != "PRESS"):
+            raise ValueError("outside is valid only for a left mouse press")
+        if outside and caret_index is not None:
+            raise ValueError("an outside press cannot also place the caret")
+        if self._closed:
+            return self._drain(event)
+        self._handling = True
+        try:
+            return self._handle(
+                event, approve_raw, clipboard_get, clipboard_set, caret_index, outside
+            )
+        finally:
+            self._handling = False
+
+    def _handle(self, event, approve_raw, clipboard_get, clipboard_set, index, outside):
+        kind, value = event.type, event.value
+        if kind == "WINDOW_DEACTIVATE":
+            return self._terminal("suspend", "deactivate", drain=False)
+        if kind in _TIMER:
+            return _UNHANDLED
+        if outside:
+            return self._terminal("suspend", "outside", "LEFTMOUSE")
+        if kind in {"RIGHTMOUSE", "APP"} and value == "PRESS":
+            return self._terminal("suspend", "right_click", kind)
+        if kind in _ENTER:
+            if value == "RELEASE":
+                self._down = self._down - {kind}
+                return _HANDLED
+            if value != "PRESS":
+                return _HANDLED
+            down = self._down | {kind}
+            if event.is_repeat or self._accept_requested or kind in self._down:
+                self._down = down
+                return _HANDLED
+            result = InputResult(True, (self._action("accept"),), changed=True)
+            self._down = down
+            self._accept_requested = True
+            return result
+        if kind == "ESC":
+            if value == "PRESS" and not event.is_repeat:
+                return self._terminal("cancel", key="ESC")
+            return _HANDLED
+        if self._accept_requested:
+            return _HANDLED
+        if kind == "LEFTMOUSE" and value == "PRESS" and index is not None:
+            return self._edit("place", (index,), {"select": event.shift}, None)
+        if kind in _MOVE and index is not None:
+            return self._edit("place", (index,), {"select": True}, None)
+        if value != "PRESS":
+            return _HANDLED
+        if event.alt:
+            return _HANDLED
+        if event.ctrl:
+            if kind == "A":
+                return self._edit("select_all", (), {}, None)
+            if kind == "Z":
+                return self._edit("redo" if event.shift else "undo", (), {}, approve_raw)
+            if kind == "V":
+                if clipboard_get is None:
+                    return InputResult(
+                        True,
+                        (
+                            self._action(
+                                "input_error", detail="Paste requires an explicit clipboard getter."
+                            ),
+                        ),
+                    )
+                text = clipboard_get()
+                return self._edit("insert", (text,), {}, approve_raw)
+            if kind in {"C", "X"}:
+                selected = self._buffer.selected_text
+                if not selected:
+                    return _HANDLED
+                if clipboard_set is None:
+                    return InputResult(
+                        True,
+                        (
+                            self._action(
+                                "input_error",
+                                detail="Copy/cut requires an explicit clipboard setter.",
+                            ),
+                        ),
+                    )
+                if kind == "X":
+                    return self._edit(
+                        "insert", ("",), {}, approve_raw, write_clipboard=(clipboard_set, selected)
+                    )
+                clipboard_set(selected)
+                return _HANDLED
+            return _HANDLED
+        if kind in {"LEFT_ARROW", "RIGHT_ARROW"}:
+            delta = -1 if kind == "LEFT_ARROW" else 1
+            return self._edit("move", (delta,), {"select": event.shift}, None)
+        if kind in {"HOME", "END"}:
+            return self._edit(kind.lower(), (), {"select": event.shift}, None)
+        if kind in {"BACK_SPACE", "DEL"}:
+            return self._edit(
+                "backspace" if kind == "BACK_SPACE" else "delete", (), {}, approve_raw
+            )
+        if event.unicode:
+            return self._edit("insert", (event.unicode,), {}, approve_raw)
+        return _HANDLED

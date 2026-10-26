@@ -1,0 +1,550 @@
+{
+  "added": {
+    "blender_addon/mechanical_cad_blender/assembly_export_bridge.py": {
+      "bytes": 8910,
+      "sha256": "872b8ade5f1d25aa0e498db8a0c55214a913b1badb22a8b1065a5c16164fc959"
+    },
+    "blender_addon/mechanical_cad_blender/assembly_export_owner.py": {
+      "bytes": 10824,
+      "sha256": "0ea670908b7746338cdb7f558f68e13b8f4cd08b095eaead96570f52d09d3ad1"
+    },
+    "src/mechanical_cad/assembly_export.py": {
+      "bytes": 5594,
+      "sha256": "f8c1464c383d67eb25592194189471d4c2a1499cae9721bd19d75af9439c59f1"
+    },
+    "tests/blender_assembly_step_export_smoke.py": {
+      "bytes": 7801,
+      "sha256": "ff37356f889c66b7f3f64c55cc054cad25b14accd0efda10b75f9f125a53e5ef"
+    },
+    "tests/integration/test_assembly_step_kernel.py": {
+      "bytes": 15125,
+      "sha256": "3e760b74642a7fe1f91c9e3b9ca6f3c80d12f175c42b2dd14385ac411811a539"
+    },
+    "tests/integration/test_assembly_step_workflow.py": {
+      "bytes": 5827,
+      "sha256": "ca066ce6dd8b93ebc0ae3ee5e854afc8def8ebbf89a1d688ccfd168e2ac11053"
+    },
+    "tests/unit/test_assembly_export_contracts.py": {
+      "bytes": 23013,
+      "sha256": "d34f62e545e3b1d05d4c36132438183cc32163aa733cd215f1d4bcf0dd5c03ce"
+    },
+    "tests/unit/test_assembly_export_owner.py": {
+      "bytes": 12288,
+      "sha256": "155ed85dee372874e9cfebe61bdc2d13354530c647489edaf1b6dd693d20dfb5"
+    },
+    "tests/unit/test_assembly_export_service.py": {
+      "bytes": 22590,
+      "sha256": "a7b7a3566d83a10ea69b60650b28d3a0a18ae090803417376da48dba5ac9c749"
+    }
+  },
+  "base_commit": "c40543535d5858455fa2b59941992efe3cb82afd",
+  "changed": {
+    "blender_addon/mechanical_cad_blender/assembly_operators.py": {
+      "hunks": [
+        {
+          "new_end": 127,
+          "new_start": 102,
+          "original": "",
+          "replacement": "from pathlib import Path\n"
+        },
+        {
+          "new_end": 280,
+          "new_start": 235,
+          "original": "",
+          "replacement": "from bpy_extras.io_utils import ExportHelper\n"
+        },
+        {
+          "new_end": 467,
+          "new_start": 317,
+          "original": "from . import assembly_files, bridge, display, document_state, operation_contracts, workspace\n",
+          "replacement": "from . import (\n    assembly_export_owner,\n    assembly_files,\n    bridge,\n    display,\n    document_state,\n    operation_contracts,\n    workspace,\n)\n"
+        },
+        {
+          "new_end": 24095,
+          "new_start": 21011,
+          "original": "",
+          "replacement": "class MCAD_OT_assembly_export_step(Operator, ExportHelper):\n    bl_idname = \"mcad.assembly_export_step\"\n    bl_label = \"Export Assembly STEP\"\n    bl_description = (\n        \"Freshly check the saved Assembly pose, then export named reusable Parts and placements\"\n    )\n    bl_options = {\"REGISTER\"}\n    filename_ext = \".step\"\n    filter_glob: StringProperty(default=\"*.step;*.stp\", options={\"HIDDEN\"})\n    check_existing: BoolProperty(default=True, options={\"HIDDEN\"})\n\n    @classmethod\n    def poll(cls, context):\n        reason = (\n            \"Switch to Object Mode before exporting the Assembly.\"\n            if context.mode != \"OBJECT\"\n            else assembly_export_owner.availability_reason(context)\n        )\n        if reason and callable(getattr(cls, \"poll_message_set\", None)):\n            cls.poll_message_set(reason)\n        return not reason\n\n    def invoke(self, context, event):\n        try:\n            self._export_snapshot = assembly_export_owner.capture(context)\n            if not self.filepath:\n                name = bpy.path.clean_name(self._export_snapshot[\"assembly\"][\"name\"]) or \"assembly\"\n                self.filepath = name + self.filename_ext\n            return ExportHelper.invoke(self, context, event)\n        except Exception as exc:\n            self.report({\"ERROR\"}, str(exc)[:1000])\n            return {\"CANCELLED\"}\n\n    def execute(self, context):\n        try:\n            if not self.filepath.strip():\n                raise bridge.BridgeError(\"Choose an explicit Assembly STEP file path.\")\n            path = Path(bpy.path.abspath(self.filepath)).expanduser().absolute()\n            if path.suffix.lower() not in (\".step\", \".stp\"):\n                path = path.with_name(path.name + self.filename_ext)\n            response = assembly_export_owner.run_export(\n                context, str(path), snapshot=getattr(self, \"_export_snapshot\", None)\n            )\n            self.report({\"INFO\"} if response[\"ok\"] else {\"WARNING\"}, state(context).export_message)\n            return {\"FINISHED\"} if response[\"ok\"] else {\"CANCELLED\"}\n        except Exception as exc:\n            # The owner already records honest file outcomes, including a write\n            # followed by stale settings or unavailable RNA. Never overwrite it\n            # with a generic claim that the destination was not written.\n            try:\n                state(context).last_action_error = str(exc)\n            except (AttributeError, ReferenceError, RuntimeError):\n                pass\n            self.report({\"ERROR\"}, str(exc)[:1000])\n            return {\"CANCELLED\"}\n\n    def cancel(self, context):\n        self._export_snapshot = None\n\n    def draw(self, context):\n        self.layout.label(text=\"Fresh saved-pose check; named Parts and placements in millimetres.\")\n        self.layout.label(text=\"Shared Parts remain reusable STEP definitions.\")\n        self.layout.label(text=\"No feature history or editable joints are stored in STEP.\")\n        self.layout.label(\n            text=\"Existing files require confirmation; Blender Undo does not undo files.\"\n        )\n\n\n"
+        },
+        {
+          "new_end": 24349,
+          "new_start": 24315,
+          "original": "",
+          "replacement": "    MCAD_OT_assembly_export_step,\n"
+        }
+      ],
+      "original_bytes": 21132,
+      "original_sha256": "00a76b5a110924329b600f01f58e2456e3cd44c87678d6cd6c59688dbddadb3b",
+      "reviewed_bytes": 24376,
+      "reviewed_sha256": "3bd5d31fcbb803ee9d49e50fe0d49d239cf84d495cc50a4777a44053b96d66ee"
+    },
+    "blender_addon/mechanical_cad_blender/assembly_properties.py": {
+      "hunks": [
+        {
+          "new_end": 1249,
+          "new_start": 1152,
+          "original": "",
+          "replacement": "    export_receipt_json: StringProperty(options={\"HIDDEN\"})\n    export_message: StringProperty()\n"
+        }
+      ],
+      "original_bytes": 1362,
+      "original_sha256": "5c3c7cd84eae0860d58e12dd075b61da94d8b9611d1209fb5a1db32234f612f2",
+      "reviewed_bytes": 1459,
+      "reviewed_sha256": "a0c4d8dab737ad823f48750907537de08193c0e92a43eb2b9ca65c798d1fab6c"
+    },
+    "blender_addon/mechanical_cad_blender/assembly_ui.py": {
+      "hunks": [
+        {
+          "new_end": 276,
+          "new_start": 175,
+          "original": "from . import assembly_display, assembly_operators, assembly_state, workspace\n",
+          "replacement": "from . import assembly_display, assembly_export_owner, assembly_operators, assembly_state, workspace\n"
+        },
+        {
+          "new_end": 12676,
+          "new_start": 12134,
+          "original": "",
+          "replacement": "    export = layout.box()\n    export.label(text=\"Assembly output\", icon=\"EXPORT\")\n    reason = assembly_export_owner.availability_reason(context)\n    row = export.row()\n    row.enabled = not reason\n    row.operator(\"mcad.assembly_export_step\", icon=\"EXPORT\")\n    if reason:\n        message(export, context, reason, icon=\"INFO\")\n    message(export, context, \"STEP keeps named Parts, shared definitions and the saved pose.\")\n    if current.export_message:\n        message(export, context, \"Last export (historical): \" + current.export_message)\n"
+        },
+        {
+          "new_end": 13968,
+          "new_start": 13904,
+          "original": "",
+          "replacement": "    layout.operator(\"mcad.assembly_export_step\", icon=\"EXPORT\")\n"
+        }
+      ],
+      "original_bytes": 13401,
+      "original_sha256": "88f9f75f52f6efe842e6e671f82f31181e40a664d057a8be74f0257bf1d2784a",
+      "reviewed_bytes": 14030,
+      "reviewed_sha256": "a523c608a3714a08a8366a751edd766e27db62bdd2a0c58748037c621cbf3df9"
+    },
+    "blender_addon/mechanical_cad_blender/backend_contracts.py": {
+      "hunks": [
+        {
+          "new_end": 812,
+          "new_start": 759,
+          "original": "",
+          "replacement": "ASSEMBLY_STEP_EXPORT = \"mcad.assembly-step-export/1\"\n"
+        },
+        {
+          "new_end": 1349,
+          "new_start": 1317,
+          "original": "",
+          "replacement": "        \"assembly_export_step\",\n"
+        },
+        {
+          "new_end": 6160,
+          "new_start": 6076,
+          "original": "",
+          "replacement": "    if action == \"assembly_export_step\":\n        required.add(ASSEMBLY_STEP_EXPORT)\n"
+        }
+      ],
+      "original_bytes": 18328,
+      "original_sha256": "aabc3245636bb4ae1e0f02419cf61c3fbad33a4658e6649b21e251d9e2ffc4f0",
+      "reviewed_bytes": 18497,
+      "reviewed_sha256": "8ce6eb4808061b88475b7be966f0a1aad2b22ef2d168176cb46fe2bda61825fb"
+    },
+    "blender_addon/mechanical_cad_blender/bridge.py": {
+      "hunks": [
+        {
+          "new_end": 3171,
+          "new_start": 3076,
+          "original": "    uncertain = request.get(\"action\") in {\"export_step\", \"export_stl\"}\n",
+          "replacement": "    uncertain = request.get(\"action\") in {\"export_step\", \"export_stl\", \"assembly_export_step\"}\n"
+        }
+      ],
+      "original_bytes": 22829,
+      "original_sha256": "58512fa61fdc5fc0ddd45c18e2dc8d40070a78c2965335ffa3f35d832bfa824d",
+      "reviewed_bytes": 22853,
+      "reviewed_sha256": "0ca486d8f5c8d4329e994efd07b84bc7753d137070f1ba320a03bfa636917414"
+    },
+    "blender_addon/mechanical_cad_blender/guarded_transport.py": {
+      "hunks": [
+        {
+          "new_end": 737,
+          "new_start": 654,
+          "original": "_EXPORT_ACTIONS = frozenset({\"export_step\", \"export_stl\"})\n",
+          "replacement": "_EXPORT_ACTIONS = frozenset({\"export_step\", \"export_stl\", \"assembly_export_step\"})\n"
+        }
+      ],
+      "original_bytes": 8711,
+      "original_sha256": "85aaf8fb4dd3e0e5a0987ba61bae9c851aa6c0623f39781452fae1958c05cded",
+      "reviewed_bytes": 8735,
+      "reviewed_sha256": "20629f67b89f30143958ba9df1aa2e6f2a4be4c93b467aec5d30e8c7cefd8324"
+    },
+    "blender_addon/mechanical_cad_blender/operation_contracts.py": {
+      "hunks": [
+        {
+          "new_end": 828,
+          "new_start": 765,
+          "original": "",
+          "replacement": "_ASSEMBLY_EXPORT_ACTIONS = frozenset({\"assembly_export_step\"})\n"
+        },
+        {
+          "new_end": 5904,
+          "new_start": 5792,
+          "original": "        type(action) is str and action in _PART_ACTIONS | _ASSEMBLY_ACTIONS,\n",
+          "replacement": "        type(action) is str\n        and action in _PART_ACTIONS | _ASSEMBLY_ACTIONS | _ASSEMBLY_EXPORT_ACTIONS,\n"
+        },
+        {
+          "new_end": 6554,
+          "new_start": 6361,
+          "original": "",
+          "replacement": "    if action in _ASSEMBLY_EXPORT_ACTIONS:\n        from .assembly_export_bridge import validate_response as validate_assembly_export\n\n        return validate_assembly_export(request, response)\n"
+        }
+      ],
+      "original_bytes": 7004,
+      "original_sha256": "a76434063e0162f4cae81160e5fb141d49a5b5723161c29ac95f5385481397e0",
+      "reviewed_bytes": 7295,
+      "reviewed_sha256": "dcbc3d063285ee82448c0a370f29b25145c25c8ab389ea3a44cb5784e6b729bd"
+    },
+    "src/mechanical_cad/assembly_protocol.py": {
+      "hunks": [
+        {
+          "new_end": 159,
+          "new_start": 83,
+          "original": "",
+          "replacement": "from .assembly_export import ASSEMBLY_STEP_ACTION, run_assembly_step_export\n"
+        },
+        {
+          "new_end": 469,
+          "new_start": 377,
+          "original": "BACKEND_CAPABILITIES = frozenset({\"mcad.assembly-result/3\"})\n",
+          "replacement": "BACKEND_CAPABILITIES = frozenset({\"mcad.assembly-result/3\", \"mcad.assembly-step-export/1\"})\n"
+        },
+        {
+          "new_end": 706,
+          "new_start": 510,
+          "original": "",
+          "replacement": "    if (\n        type(request) is dict\n        and type(request.get(\"action\")) is str\n        and request[\"action\"] == ASSEMBLY_STEP_ACTION\n    ):\n        return run_assembly_step_export(request)\n"
+        }
+      ],
+      "original_bytes": 2056,
+      "original_sha256": "c516e22a44d2b7002fdcbd4d485fb8a101cfedf0cb883cb69bb50ac64d2a30a3",
+      "reviewed_bytes": 2359,
+      "reviewed_sha256": "868b4206cfb8f2a7f77af3195ed392849799099275d61013c064a4461f0d264e"
+    },
+    "src/mechanical_cad/assembly_service.py": {
+      "hunks": [
+        {
+          "new_end": 405,
+          "new_start": 371,
+          "original": "",
+          "replacement": "from dataclasses import dataclass\n"
+        },
+        {
+          "new_end": 1446,
+          "new_start": 1152,
+          "original": "BACKEND_CAPABILITIES = frozenset({\"mcad.assembly-result/3\"})\n",
+          "replacement": "BACKEND_CAPABILITIES = frozenset({\"mcad.assembly-result/3\", \"mcad.assembly-step-export/1\"})\n\n\n@dataclass(frozen=True)\nclass _CheckedAssemblyNative:\n    \"\"\"Private, same-invocation native state; never serialized or accepted as input.\"\"\"\n\n    kernel: object\n    shapes: dict\n    transforms: dict\n"
+        },
+        {
+          "new_end": 11053,
+          "new_start": 10397,
+          "original": "",
+          "replacement": "    response, _ = _run_assembly_action_with_native(\n        assembly,\n        action,\n        coordinates=coordinates,\n        requirements=requirements,\n        policy=policy,\n        samples=samples,\n        preset_id=preset_id,\n        result_version=result_version,\n        kernel=kernel,\n    )\n    return response\n\n\ndef _run_assembly_action_with_native(\n    assembly: AssemblyDocument,\n    action=\"assembly_replay\",\n    *,\n    coordinates=None,\n    requirements=None,\n    policy=None,\n    samples=None,\n    preset_id=None,\n    result_version=1,\n    kernel=None,\n):\n    \"\"\"Run the unchanged service, retaining a fresh successful current check only.\"\"\"\n"
+        },
+        {
+          "new_end": 18199,
+          "new_start": 17208,
+          "original": "    return response\n",
+          "replacement": "    checked_native = None\n    if (\n        type(action) is str\n        and action == \"assembly_check\"\n        and response[\"ok\"] is True\n        and response[\"error\"] is None\n        and report[\"complete\"] is True\n        and report[\"passed\"] is True\n        and coordinates is None\n        and requirements is None\n        and policy is None\n        and samples is None\n        and assembly.active_verification_preset is not None\n        and preset_id in (None, assembly.active_verification_preset)\n        and report[\"verification_basis\"][\"configured\"] is True\n        and report[\"verification_basis\"][\"preset_id\"] == assembly.active_verification_preset\n        and len(report[\"poses\"]) == 1\n        and report[\"poses\"][0][\"pose\"][\"status\"] == \"evaluated\"\n        and report[\"poses\"][0][\"pose\"] == report[\"base_pose\"]\n    ):\n        checked_native = _CheckedAssemblyNative(\n            kernel, shapes, report[\"poses\"][0][\"pose\"][\"transforms\"]\n        )\n    return response, checked_native\n"
+        }
+      ],
+      "original_bytes": 17229,
+      "original_sha256": "bd6108ec2198f6af2fa232a4401400cf91f10066f6a4f051637e6507c55a54e9",
+      "reviewed_bytes": 19123,
+      "reviewed_sha256": "b3e50461d58e933c8a22079dbe887214756c319f98312cc77cb9923c92ae3fd4"
+    },
+    "src/mechanical_cad/backend_contract.py": {
+      "hunks": [
+        {
+          "new_end": 1286,
+          "new_start": 1254,
+          "original": "",
+          "replacement": "        \"assembly_export_step\",\n"
+        },
+        {
+          "new_end": 7599,
+          "new_start": 7507,
+          "original": "",
+          "replacement": "    if action == \"assembly_export_step\":\n        minimum.add(\"mcad.assembly-step-export/1\")\n"
+        },
+        {
+          "new_end": 17246,
+          "new_start": 17066,
+          "original": "        (\"assembly_service\", \"mcad.assembly-result/3\", (\"run_assembly_action\", \"_build_parts\")),\n",
+          "replacement": "        (\n            \"assembly_service\",\n            \"mcad.assembly-result/3\",\n            (\"run_assembly_action\", \"_run_assembly_action_with_native\", \"_build_parts\"),\n        ),\n"
+        },
+        {
+          "new_end": 19886,
+          "new_start": 18185,
+          "original": "",
+          "replacement": "\n\ndef _observe_assembly_step_export(core):\n    \"\"\"Observe pure export, protocol and same-run check owners, never native code.\"\"\"\n    capability = \"mcad.assembly-step-export/1\"\n    modules, mismatch = {}, False\n    owners = (\n        (\"engine\", None, (\"regenerate\",)),\n        (\"part_snapshot\", None, (\"validate_snapshot_source\",)),\n        (\n            \"assembly_service\",\n            capability,\n            (\"run_assembly_action\", \"_run_assembly_action_with_native\", \"_build_parts\"),\n        ),\n        (\"assembly_export\", capability, (\"run_assembly_step_export\",)),\n        (\"assembly_protocol\", capability, (\"process_assembly_request\",)),\n    )\n    for name, marker, entrypoints in owners:\n        module, foreign = _observe_owned_module(core, name, marker, entrypoints)\n        mismatch |= foreign\n        if module is not None:\n            modules[name] = module\n    if len(modules) != len(owners):\n        return frozenset(), mismatch\n    service, export, protocol = (\n        modules[\"assembly_service\"],\n        modules[\"assembly_export\"],\n        modules[\"assembly_protocol\"],\n    )\n    linked = (\n        getattr(protocol, \"run_assembly_step_export\", None) is export.run_assembly_step_export\n        and getattr(protocol, \"run_assembly_action\", None) is service.run_assembly_action\n        and getattr(export, \"_run_assembly_action_with_native\", None)\n        is service._run_assembly_action_with_native\n        and getattr(service, \"regenerate\", None) is modules[\"engine\"].regenerate\n        and getattr(service, \"validate_snapshot_source\", None)\n        is modules[\"part_snapshot\"].validate_snapshot_source\n    )\n    return (frozenset({capability}) if linked else frozenset()), mismatch\n"
+        },
+        {
+          "new_end": 23785,
+          "new_start": 23657,
+          "original": "        and operation.get(\"action\") in {\"assembly_replay\", \"assembly_check\", \"assembly_sample\"}\n",
+          "replacement": "        and operation.get(\"action\")\n        in {\"assembly_replay\", \"assembly_check\", \"assembly_sample\", \"assembly_export_step\"}\n"
+        },
+        {
+          "new_end": 24167,
+          "new_start": 23950,
+          "original": "",
+          "replacement": "    if operation.get(\"action\") == \"assembly_export_step\":\n        export_supported, export_mismatch = _observe_assembly_step_export(core)\n        supported.update(export_supported)\n        mismatch |= export_mismatch\n"
+        }
+      ],
+      "original_bytes": 25291,
+      "original_sha256": "0ccf19fd9565651787bb06d643731fcc43c335d4a41356bce350457be909f0d6",
+      "reviewed_bytes": 27448,
+      "reviewed_sha256": "56968399b089528e50fedc680bf91db1afa6d0ef9f88c5a7c3cec16b525cc8fb"
+    },
+    "src/mechanical_cad/kernel_ocp.py": {
+      "hunks": [
+        {
+          "new_end": 8116,
+          "new_start": 5636,
+          "original": "",
+          "replacement": "\n\ndef _assembly_step_inputs(assembly_name, parts, instances):\n    \"\"\"Validate detached assembly records before native allocation or file access.\"\"\"\n\n    def text(value, label, limit=256):\n        if type(value) is not str or not value or len(value) > limit or \"\\x00\" in value:\n            raise KernelError(f\"{label} requires nonempty text up to {limit} characters\")\n        try:\n            value.encode(\"utf-8\")\n        except UnicodeEncodeError as exc:\n            raise KernelError(f\"{label} contains invalid Unicode\") from exc\n\n    def records(values, keys, label):\n        if type(values) not in (list, tuple) or not 1 <= len(values) <= 16:\n            raise KernelError(f\"Assembly STEP requires 1-16 {label} records\")\n        seen = set()\n        for row in values:\n            if type(row) is not dict or set(row) != keys:\n                raise KernelError(f\"Assembly STEP {label} fields must be {sorted(keys)}\")\n            text(row[\"id\"], f\"{label} ID\", 128)\n            text(row[\"name\"], f\"{label} name\")\n            if row[\"id\"] in seen:\n                raise KernelError(f\"Duplicate Assembly STEP {label} ID: {row['id']}\")\n            seen.add(row[\"id\"])\n        return {row[\"id\"]: row for row in values}\n\n    text(assembly_name, \"Assembly name\")\n    definitions = records(parts, {\"id\", \"name\", \"shape\"}, \"Part\")\n    occurrences = records(instances, {\"id\", \"name\", \"part_id\", \"frame\"}, \"instance\")\n    placements = {}\n    for instance_id, instance in occurrences.items():\n        text(instance[\"part_id\"], \"Referenced Part ID\", 128)\n        if instance[\"part_id\"] not in definitions:\n            raise KernelError(f\"Missing Assembly STEP Part definition: {instance['part_id']}\")\n        frame = instance[\"frame\"]\n        if isinstance(frame, dict):\n            if set(frame) != {\"xyz_mm\", \"wxyz\"}:\n                raise KernelError(\"Frame requires exactly xyz_mm and wxyz\")\n            xyz, quaternion = frame[\"xyz_mm\"], frame[\"wxyz\"]\n        else:\n            xyz, quaternion = getattr(frame, \"xyz_mm\", None), getattr(frame, \"wxyz\", None)\n        # This shares the existing strict, normalized rigid-frame calculation;\n        # neither authored frames nor exact local shapes are transformed here.\n        origin, u, v, normal = _profile_plane(xyz, quaternion, strict=True)\n        placements[instance_id] = tuple(\n            coordinate for i in range(3) for coordinate in (u[i], v[i], normal[i], origin[i])\n        )\n    return definitions, occurrences, placements\n"
+        },
+        {
+          "new_end": 115512,
+          "new_start": 110910,
+          "original": "",
+          "replacement": "    def export_assembly_step(\n        self, assembly_name: str, parts: list | tuple, instances: list | tuple, path: str | Path\n    ) -> None:\n        \"\"\"Write one named XCAF assembly using exact local Part definitions.\n\n        Parts contain id/name/shape; instances contain id/name/part_id/frame.\n        Frames are already-evaluated rigid world placements, as in transformed().\n        References use stable Part IDs, never names or geometric similarity.\n        Only the assembly root is transferred: uninstantiated definitions are not\n        free solids in the STEP file. Names and reuse are exchange data; canonical\n        application IDs, feature history, mates and provenance are not exported.\n\n        The caller owns fresh canonical replay and atomic destination replacement.\n        All inputs and solids are checked before this temporary path is written.\n        \"\"\"\n        definitions, occurrences, placements = _assembly_step_inputs(\n            assembly_name, parts, instances\n        )\n        for part in definitions.values():\n            if not isinstance(part[\"shape\"], TopoDS_Shape):\n                raise KernelError(\"Assembly STEP Part requires an exact native shape\")\n            self._require_single_solid(part[\"shape\"])\n\n        from OCP.BRepBuilderAPI import BRepBuilderAPI_Copy\n        from OCP.STEPCAFControl import STEPCAFControl_Writer\n        from OCP.TCollection import TCollection_ExtendedString\n        from OCP.TDataStd import TDataStd_Name\n        from OCP.TDocStd import TDocStd_Document\n        from OCP.XCAFDoc import XCAFDoc_DocumentTool\n\n        try:\n            document = TDocStd_Document(TCollection_ExtendedString(\"BinXCAF\"))\n            XCAFDoc_DocumentTool.SetLengthUnit_s(document, 0.001)  # Internal mm, in metres.\n            shapes = XCAFDoc_DocumentTool.ShapeTool_s(document.Main())\n            root = shapes.NewShape()\n            TDataStd_Name.Set_s(root, TCollection_ExtendedString(assembly_name, True))\n            labels = {}\n            original_shapes = []\n            for part_id, part in definitions.items():\n                shape = part[\"shape\"]\n                if any(shape.IsPartner(previous) for previous in original_shapes):\n                    # STEP transfer keys by topology, even with explicit XCAF\n                    # labels. Distinct Part IDs sharing a replay handle need\n                    # distinct topology; retain their exact curves/surfaces.\n                    copied = BRepBuilderAPI_Copy(shape, False, False)\n                    if not copied.IsDone():\n                        raise KernelError(\"Assembly STEP definition topology copy failed\")\n                    shape = copied.Shape()\n                    if (\n                        shape.IsPartner(part[\"shape\"])\n                        or not shape.Location().IsEqual(part[\"shape\"].Location())\n                        or shape.Orientation() != part[\"shape\"].Orientation()\n                    ):\n                        raise KernelError(\"Assembly STEP definition identity copy is invalid\")\n                    self._require_single_solid(shape)\n                original_shapes.append(part[\"shape\"])\n                label = shapes.NewShape()\n                shapes.SetShape(label, shape)\n                TDataStd_Name.Set_s(label, TCollection_ExtendedString(part[\"name\"], True))\n                labels[part_id] = label\n            for instance_id, instance in occurrences.items():\n                transform = gp_Trsf()\n                transform.SetValues(*placements[instance_id])\n                component = shapes.AddComponent(\n                    root, labels[instance[\"part_id\"]], TopLoc_Location(transform)\n                )\n                if component.IsNull():\n                    raise KernelError(\"Could not create Assembly STEP component\")\n                TDataStd_Name.Set_s(component, TCollection_ExtendedString(instance[\"name\"], True))\n            shapes.UpdateAssemblies()\n            writer = STEPCAFControl_Writer()\n            writer.SetNameMode(True)\n            writer.SetColorMode(False)\n            writer.SetLayerMode(False)\n            writer.SetPropsMode(False)\n            writer.SetCleanDuplicates(False)\n            if not writer.Transfer(root, STEPControl_AsIs):\n                raise KernelError(\"Assembly STEP transfer failed\")\n            if writer.Write(str(path)) != IFSelect_RetDone:\n                raise KernelError(f\"Could not write Assembly STEP file: {path}\")\n        except KernelError:\n            raise\n        except Exception as exc:\n            raise KernelError(f\"OCCT Assembly STEP export failed: {exc}\") from exc\n\n"
+        }
+      ],
+      "original_bytes": 115844,
+      "original_sha256": "77f3f3033f95cbe72a97dbdab70769f1f0c3d34604f2d2ac036d6e10f78224ac",
+      "reviewed_bytes": 122926,
+      "reviewed_sha256": "9e95f73e6471430a1b71c9899ec0b3e2d35a433b54324b9e49bda00dd9c00e3a"
+    },
+    "tests/unit/test_arc_guarded_evidence.py": {
+      "hunks": [
+        {
+          "new_end": 16415,
+          "new_start": 15284,
+          "original": "",
+          "replacement": "    \"assembly_export_owner.py\": {\n        \"_checked_report\": (\n            {\n                \"assembly\": \"assembly_state.read_assembly(state)\",\n                \"version\": \"assembly_export_bridge.result_version_for(assembly)\",\n            },\n            \"evidence.revalidate(selection, owner_token=runtime.get('report_owner_token'), \"\n            \"expected_action='assembly_check', expected_result_version=version, require_success=True)\",\n        ),\n        \"_historical_projection\": (\n            {\"prepared\": \"snapshot.get('prepared')\"},\n            \"evidence.revalidate(snapshot['selection'], owner_token=snapshot['owner_token'], \"\n            \"expected_action=ACTION, expected_result_version=prepared.operation_request()['result_version'])\",\n        ),\n        \"run_export\": (\n            {\"request\": \"assembly_export_bridge.build_request(snapshot['assembly'], path)\"},\n            \"evidence.publication.consume(assembly_state._current_selection(context, snapshot), \"\n            \"owner_token=snapshot['owner_token'], expected_action=ACTION, \"\n            \"expected_result_version=request['result_version'])\",\n        ),\n    },\n"
+        },
+        {
+          "new_end": 18052,
+          "new_start": 17966,
+          "original": "    \"\"\"Allow only three exact sinks with a single source-policy-derived version.\"\"\"\n",
+          "replacement": "    \"\"\"Allow only the exact inventoried sinks with source-policy-derived versions.\"\"\"\n"
+        },
+        {
+          "new_end": 32604,
+          "new_start": 30723,
+          "original": "",
+          "replacement": "\n\n@pytest.mark.parametrize(\n    \"function_name\", [\"_checked_report\", \"_historical_projection\", \"run_export\"]\n)\n@pytest.mark.parametrize(\n    \"mutation\", [\"wrong_version\", \"wrong_action\", \"unbound_source\", \"extra_callsite\"]\n)\ndef test_assembly_export_allowance_rejects_unbound_versions_actions_or_extra_sinks(\n    function_name, mutation\n):\n    sources = {path.name: path.read_text() for path in ADDON.glob(\"*.py\")}\n    filename = \"assembly_export_owner.py\"\n    tree = ast.parse(sources[filename])\n    function = next(\n        node\n        for node in tree.body\n        if isinstance(node, ast.FunctionDef) and node.name == function_name\n    )\n    if mutation in {\"wrong_version\", \"wrong_action\"}:\n        field = \"expected_result_version\" if mutation == \"wrong_version\" else \"expected_action\"\n        keyword = next(\n            node\n            for node in ast.walk(function)\n            if isinstance(node, ast.keyword) and node.arg == field\n        )\n        keyword.value = ast.Constant(3 if mutation == \"wrong_version\" else \"assembly_replay\")\n    elif mutation == \"unbound_source\":\n        variable = next(iter(ASSEMBLY_VERSION_PROVENANCE[filename][function_name][0]))\n        assignment = next(\n            node\n            for node in ast.walk(function)\n            if isinstance(node, ast.Assign)\n            and any(\n                isinstance(target, ast.Name) and target.id == variable for target in node.targets\n            )\n        )\n        assignment.value = ast.parse(\"evidence.operation_request()\", mode=\"eval\").body\n    else:\n        function.body.extend(\n            ast.parse(\n                \"evidence.revalidate(selection, owner_token=owner, expected_result_version=3, expected_action='assembly_export_step')\"\n            ).body\n        )\n    sources[filename] = ast.unparse(tree)\n    with pytest.raises(AssertionError):\n        check_capable_calls(sources)\n"
+        }
+      ],
+      "original_bytes": 29590,
+      "original_sha256": "b133fcd30ed721b9e903685bb73174e5d500b840aef0d3d5ef9f2881db77c143",
+      "reviewed_bytes": 32604,
+      "reviewed_sha256": "984cba68f8de17f3ee3c9062938a04eab32808285130ce53dc045486a329db68"
+    },
+    "tests/unit/test_arc_live_owner_boundary.py": {
+      "hunks": [
+        {
+          "new_end": 4011,
+          "new_start": 3690,
+          "original": "",
+          "replacement": "    (\"assembly_export_owner\", \"_checked_report\", \"version\", \"'assembly_check'\"),\n    (\n        \"assembly_export_owner\",\n        \"_historical_projection\",\n        \"prepared.operation_request()['result_version']\",\n        \"ACTION\",\n    ),\n    (\"assembly_export_owner\", \"run_export\", \"request['result_version']\", \"ACTION\"),\n"
+        },
+        {
+          "new_end": 22788,
+          "new_start": 19511,
+          "original": "",
+          "replacement": "\n\ndef test_export_authority_uses_source_policy_and_preserves_display_action_trio():\n    for module, variable in (\n        (\"assembly_validation_common\", \"ACTIONS\"),\n        (\"operation_contracts\", \"_ASSEMBLY_ACTIONS\"),\n    ):\n        tree = ast.parse((ADDON / (module + \".py\")).read_text())\n        value = next(\n            node.value\n            for node in tree.body\n            if isinstance(node, ast.Assign)\n            and any(\n                isinstance(target, ast.Name) and target.id == variable for target in node.targets\n            )\n        )\n        assert (\n            ast.unparse(value)\n            == \"frozenset({'assembly_replay', 'assembly_check', 'assembly_sample'})\"\n        )\n    tree = ast.parse((ADDON / \"assembly_export_bridge.py\").read_text())\n    source_policy = next(\n        node\n        for node in tree.body\n        if isinstance(node, ast.FunctionDef) and node.name == \"result_version_for\"\n    )\n    expected_policy = ast.parse(\"\"\"\ncandidate = request_contracts.snapshot_request(assembly)\n_require(\n    candidate.get(\"kind\") == \"assembly\"\n    and type(candidate.get(\"assembly_schema_version\")) is int\n    and candidate[\"assembly_schema_version\"] == 1\n    and type(candidate.get(\"part_sources\")) is list,\n    \"unsupported Assembly source envelope\",\n)\nselected = 2\nfor source in candidate[\"part_sources\"]:\n    _require(type(source) is dict and \"document\" in source, \"missing Assembly Part source\")\n    document = source[\"document\"]\n    canonical = part_snapshot_bridge._expected_document(document)\n    result_v3._graph(canonical, replay=True)\n    if part_snapshot_bridge._uses_schema3(document):\n        selected = 3\nreturn selected\n\"\"\")\n    assert ast.dump(\n        ast.Module(body=source_policy.body[1:], type_ignores=[]), include_attributes=False\n    ) == ast.dump(expected_policy, include_attributes=False)\n    tree = ast.parse((ADDON / \"assembly_export_owner.py\").read_text())\n    action = [\n        node.value\n        for node in tree.body\n        if isinstance(node, ast.Assign)\n        and any(isinstance(target, ast.Name) and target.id == \"ACTION\" for target in node.targets)\n    ]\n    assert len(action) == 1 and ast.literal_eval(action[0]) == \"assembly_export_step\"\n    functions = {node.name: node for node in tree.body if isinstance(node, ast.FunctionDef)}\n    for function, variable, expression in (\n        (\"_checked_report\", \"assembly\", \"assembly_state.read_assembly(state)\"),\n        (\"_checked_report\", \"version\", \"assembly_export_bridge.result_version_for(assembly)\"),\n        (\"_historical_projection\", \"prepared\", \"snapshot.get('prepared')\"),\n        (\n            \"run_export\",\n            \"request\",\n            \"assembly_export_bridge.build_request(snapshot['assembly'], path)\",\n        ),\n    ):\n        stores = [\n            node\n            for node in ast.walk(functions[function])\n            if isinstance(node, ast.Name)\n            and isinstance(node.ctx, ast.Store)\n            and node.id == variable\n        ]\n        assert len(stores) == 1\n        assignments = [\n            node\n            for node in ast.walk(functions[function])\n            if isinstance(node, ast.Assign) and node.targets == stores\n        ]\n        assert len(assignments) == 1 and ast.unparse(assignments[0].value) == expression\n"
+        }
+      ],
+      "original_bytes": 19190,
+      "original_sha256": "b60eee440fc414946eb3d358983dcd3b66d5eb3f7902ae0d0ba25560f4ba0d5b",
+      "reviewed_bytes": 22788,
+      "reviewed_sha256": "f3e72d8de1385b8909239aca81202715f63dd3ec4f332776c61c5773e073c9a3"
+    },
+    "tests/unit/test_arc_profile_incidence.py": {
+      "hunks": [
+        {
+          "new_end": 31065,
+          "new_start": 30992,
+          "original": "",
+          "replacement": "            \"ASSEMBLY_STEP_FIXTURE\",\n            \"ASSEMBLY_STEP_SHA256\",\n"
+        },
+        {
+          "new_end": 32984,
+          "new_start": 32949,
+          "original": "",
+          "replacement": "            \"ASSEMBLY_STEP_ADDED\",\n"
+        },
+        {
+          "new_end": 33542,
+          "new_start": 33503,
+          "original": "",
+          "replacement": "            \"ASSEMBLY_STEP_ORIGINALS\",\n"
+        },
+        {
+          "new_end": 34435,
+          "new_start": 34321,
+          "original": "",
+          "replacement": "            \"_assembly_step_revision\",\n            \"_assembly_step_bytes\",\n            \"assembly_step_originals\",\n"
+        },
+        {
+          "new_end": 49404,
+          "new_start": 49264,
+          "original": "    assert_kernel_additive_boundary(original_kernel, (ROOT / kernel_path).read_bytes())\n",
+          "replacement": "    assert_kernel_additive_boundary(\n        original_kernel, authoring_originals.get(kernel_path, (ROOT / kernel_path).read_bytes())\n    )\n"
+        }
+      ],
+      "original_bytes": 50094,
+      "original_sha256": "f6ca211a3e2be29682f2ffaf2251d30b3e2f143b1f66c6897a6c149001bbf375",
+      "reviewed_bytes": 50407,
+      "reviewed_sha256": "a0d9f5ae6e09fcc53876a8d5758963db4582b9ea043309d88190450cddea5295"
+    },
+    "tests/unit/test_arc_profile_native_end_cap.py": {
+      "hunks": [
+        {
+          "new_end": 38731,
+          "new_start": 38651,
+          "original": "",
+          "replacement": "    data = _assembly_step_bytes(ROOT, \"src/mechanical_cad/kernel_ocp.py\", data)\n"
+        },
+        {
+          "new_end": 48663,
+          "new_start": 42851,
+          "original": "",
+          "replacement": "\n\nASSEMBLY_STEP_FIXTURE = \"tests/fixtures/assembly_step_export/source_c405435.json\"\nASSEMBLY_STEP_SHA256 = \"0000000000000000000000000000000000000000000000000000000000000000\"\nASSEMBLY_STEP_ADDED = frozenset(\n    {\n        \"blender_addon/mechanical_cad_blender/assembly_export_bridge.py\",\n        \"blender_addon/mechanical_cad_blender/assembly_export_owner.py\",\n        \"src/mechanical_cad/assembly_export.py\",\n        \"tests/blender_assembly_step_export_smoke.py\",\n        \"tests/integration/test_assembly_step_kernel.py\",\n        \"tests/integration/test_assembly_step_workflow.py\",\n        \"tests/unit/test_assembly_export_contracts.py\",\n        \"tests/unit/test_assembly_export_owner.py\",\n        \"tests/unit/test_assembly_export_service.py\",\n    }\n)\nASSEMBLY_STEP_ORIGINALS = {\n    \"blender_addon/mechanical_cad_blender/assembly_operators.py\": (\n        21132,\n        \"00a76b5a110924329b600f01f58e2456e3cd44c87678d6cd6c59688dbddadb3b\",\n    ),\n    \"blender_addon/mechanical_cad_blender/assembly_properties.py\": (\n        1362,\n        \"5c3c7cd84eae0860d58e12dd075b61da94d8b9611d1209fb5a1db32234f612f2\",\n    ),\n    \"blender_addon/mechanical_cad_blender/assembly_ui.py\": (\n        13401,\n        \"88f9f75f52f6efe842e6e671f82f31181e40a664d057a8be74f0257bf1d2784a\",\n    ),\n    \"blender_addon/mechanical_cad_blender/backend_contracts.py\": (\n        18328,\n        \"aabc3245636bb4ae1e0f02419cf61c3fbad33a4658e6649b21e251d9e2ffc4f0\",\n    ),\n    \"blender_addon/mechanical_cad_blender/bridge.py\": (\n        22829,\n        \"58512fa61fdc5fc0ddd45c18e2dc8d40070a78c2965335ffa3f35d832bfa824d\",\n    ),\n    \"blender_addon/mechanical_cad_blender/guarded_transport.py\": (\n        8711,\n        \"85aaf8fb4dd3e0e5a0987ba61bae9c851aa6c0623f39781452fae1958c05cded\",\n    ),\n    \"blender_addon/mechanical_cad_blender/operation_contracts.py\": (\n        7004,\n        \"a76434063e0162f4cae81160e5fb141d49a5b5723161c29ac95f5385481397e0\",\n    ),\n    \"src/mechanical_cad/assembly_protocol.py\": (\n        2056,\n        \"c516e22a44d2b7002fdcbd4d485fb8a101cfedf0cb883cb69bb50ac64d2a30a3\",\n    ),\n    \"src/mechanical_cad/assembly_service.py\": (\n        17229,\n        \"bd6108ec2198f6af2fa232a4401400cf91f10066f6a4f051637e6507c55a54e9\",\n    ),\n    \"src/mechanical_cad/backend_contract.py\": (\n        25291,\n        \"0ccf19fd9565651787bb06d643731fcc43c335d4a41356bce350457be909f0d6\",\n    ),\n    \"src/mechanical_cad/kernel_ocp.py\": (\n        115844,\n        \"77f3f3033f95cbe72a97dbdab70769f1f0c3d34604f2d2ac036d6e10f78224ac\",\n    ),\n    \"tests/unit/test_arc_guarded_evidence.py\": (\n        29590,\n        \"b133fcd30ed721b9e903685bb73174e5d500b840aef0d3d5ef9f2881db77c143\",\n    ),\n    \"tests/unit/test_arc_live_owner_boundary.py\": (\n        19190,\n        \"b60eee440fc414946eb3d358983dcd3b66d5eb3f7902ae0d0ba25560f4ba0d5b\",\n    ),\n    \"tests/unit/test_arc_profile_incidence.py\": (\n        50094,\n        \"f6ca211a3e2be29682f2ffaf2251d30b3e2f143b1f66c6897a6c149001bbf375\",\n    ),\n    \"tests/unit/test_arc_profile_native_end_cap.py\": (\n        183038,\n        \"b35ceb9c57e31be17cf4a8217cf256ec6e6e657e0c85160aae1dbfb1c9afa1e9\",\n    ),\n    \"tests/unit/test_arc_sector_native_boundary_mutations.py\": (\n        39627,\n        \"0aa50e1e4fe9f5b4fdb541f4ab2a6cdf18af4c4ce0f5bcb43edc971e18c47568\",\n    ),\n    \"tests/unit/test_backend_contract_client.py\": (\n        16282,\n        \"030e45f7fc888ee641f5662d08fdc30dd1450a4d767a9352c90ef05a5594fa60\",\n    ),\n    \"tests/unit/test_result_v3_dependency_boundary.py\": (\n        19133,\n        \"42d8be8c72092c2b4ae471a3416597ff4872935e7241ee645ea085f818a99d56\",\n    ),\n    \"tests/unit/test_standalone_runtime_boundary.py\": (\n        114742,\n        \"1fc13f40ccc5524e1eff39cd09f80b0f4f1519ed7851354ae0da0c0913368feb\",\n    ),\n}\n\n\ndef _assembly_step_revision(root):\n    assert (root / ASSEMBLY_STEP_FIXTURE).is_file()\n    raw = (root / ASSEMBLY_STEP_FIXTURE).read_bytes()\n    assert hashlib.sha256(raw).hexdigest() == ASSEMBLY_STEP_SHA256\n    revision = json.loads(raw)\n    assert set(revision) == {\"schema\", \"base_commit\", \"added\", \"changed\"}\n    assert revision[\"schema\"] == \"assembly-step-export-boundary-v1\"\n    assert revision[\"base_commit\"] == \"c40543535d5858455fa2b59941992efe3cb82afd\"\n    assert set(revision[\"changed\"]) == set(ASSEMBLY_STEP_ORIGINALS)\n    assert set(revision[\"added\"]) == ASSEMBLY_STEP_ADDED\n    assert not ASSEMBLY_STEP_ADDED & ASSEMBLY_STEP_ORIGINALS.keys()\n    return revision\n\n\ndef _assembly_step_bytes(root, name, data=None):\n    \"\"\"Undo only the finite reviewed export delta before every older byte seal.\"\"\"\n    data = (root / name).read_bytes() if data is None else data\n    if name not in ASSEMBLY_STEP_ORIGINALS:\n        return data\n    expected = ASSEMBLY_STEP_ORIGINALS[name]\n    if (len(data), hashlib.sha256(data).hexdigest()) == expected:\n        return data\n    revision = _assembly_step_revision(root)\n    if name == \"tests/unit/test_arc_profile_native_end_cap.py\":\n        label = b\"ASSEMBLY_STEP_\" + b'SHA256 = \"'\n        slot = label + ASSEMBLY_STEP_SHA256.encode(\"ascii\") + b'\"'\n        assert data.count(label) == data.count(slot) == 1\n        data = data.replace(slot, label + b\"0\" * 64 + b'\"')\n    return _integration_restore_entry(data, revision[\"changed\"][name], expected)\n\n\ndef assembly_step_originals(root):\n    \"\"\"Seal the explicit additions and recover the exact c405435 source/guards.\"\"\"\n    revision = _assembly_step_revision(root)\n    for name, entry in revision[\"added\"].items():\n        assert set(entry) == {\"bytes\", \"sha256\"}\n        assert type(entry[\"bytes\"]) is int and entry[\"bytes\"] > 0\n        data = (root / name).read_bytes()\n        assert (len(data), hashlib.sha256(data).hexdigest()) == (entry[\"bytes\"], entry[\"sha256\"])\n    return ASSEMBLY_STEP_ADDED, {\n        name: _assembly_step_bytes(root, name) for name in ASSEMBLY_STEP_ORIGINALS\n    }\n"
+        },
+        {
+          "new_end": 52495,
+          "new_start": 52451,
+          "original": "    data = (root / name).read_bytes()\n",
+          "replacement": "    data = _assembly_step_bytes(root, name)\n"
+        },
+        {
+          "new_end": 124883,
+          "new_start": 124708,
+          "original": "    restored = assembly_originals | geometry_originals | harness_originals | live_originals\n",
+          "replacement": "    restored = (\n        assembly_step_originals(root)[1]\n        | assembly_originals\n        | geometry_originals\n        | harness_originals\n        | live_originals\n    )\n"
+        },
+        {
+          "new_end": 130712,
+          "new_start": 130660,
+          "original": "",
+          "replacement": "    export_added, _ = assembly_step_originals(root)\n"
+        },
+        {
+          "new_end": 132658,
+          "new_start": 132512,
+          "original": "        not in excluded | service_added | standalone_added | gate_c_added | assembly_added\n",
+          "replacement": "        not in excluded\n        | service_added\n        | standalone_added\n        | gate_c_added\n        | assembly_added\n        | export_added\n"
+        },
+        {
+          "new_end": 134419,
+          "new_start": 134388,
+          "original": "",
+          "replacement": "        ASSEMBLY_STEP_FIXTURE,\n"
+        },
+        {
+          "new_end": 193432,
+          "new_start": 189157,
+          "original": "",
+          "replacement": "\n\ndef test_assembly_step_inverse_preserves_exact_parent_and_every_older_guard():\n    added, originals = assembly_step_originals(ROOT)\n    assert added == ASSEMBLY_STEP_ADDED and len(added) == 9\n    assert set(originals) == set(ASSEMBLY_STEP_ORIGINALS)\n    for name, data in originals.items():\n        assert (len(data), hashlib.sha256(data).hexdigest()) == ASSEMBLY_STEP_ORIGINALS[name]\n    test_snapshot3_source_and_all_old_kernel_evidence_spans_are_protected()\n    test_assembly_integration_restores_exact_parent_and_all_historical_guards()\n\n\ndef test_assembly_step_inverse_rejects_every_changed_added_or_fixture_byte(monkeypatch):\n    read = Path.read_bytes\n    for name in sorted(\n        ASSEMBLY_STEP_ADDED | ASSEMBLY_STEP_ORIGINALS.keys() | {ASSEMBLY_STEP_FIXTURE}\n    ):\n        target = ROOT / name\n        with monkeypatch.context() as patch:\n            patch.setattr(\n                Path,\n                \"read_bytes\",\n                lambda path, target=target: (\n                    read(path) + (b\"\\n# unreviewed\\n\" if path == target else b\"\")\n                ),\n            )\n            with pytest.raises(AssertionError):\n                assembly_step_originals(ROOT)\n\n\n@pytest.mark.parametrize(\"mutation\", [\"fixture\", \"slot\", \"helper\", \"coordinated\"])\ndef test_assembly_step_copied_fixture_or_validator_cannot_replace_trusted_inverse(\n    monkeypatch, mutation\n):\n    read = Path.read_bytes\n    fixture = ROOT / ASSEMBLY_STEP_FIXTURE\n    guard = ROOT / \"tests/unit/test_arc_profile_native_end_cap.py\"\n    raw = read(fixture) + (b\"\\n\" if mutation in {\"fixture\", \"coordinated\"} else b\"\")\n    data = read(guard)\n    if mutation in {\"slot\", \"coordinated\"}:\n        digest = hashlib.sha256(raw).hexdigest() if mutation == \"coordinated\" else \"f\" * 64\n        assert data.count(ASSEMBLY_STEP_SHA256.encode()) == 1\n        data = data.replace(ASSEMBLY_STEP_SHA256.encode(), digest.encode())\n    if mutation == \"helper\":\n        marker = b\"def _assembly_step_revision(root):\\n\"\n        assert data.count(marker) == 1\n        data = data.replace(marker, marker + b\"    # untrusted copied validator\\n\")\n    monkeypatch.setattr(\n        Path,\n        \"read_bytes\",\n        lambda path: raw if path == fixture else data if path == guard else read(path),\n    )\n    with pytest.raises(AssertionError):\n        assembly_step_originals(ROOT)\n\n\n@pytest.mark.parametrize(\n    \"mutation\",\n    [\"equivalent\", \"schema\", \"base\", \"path\", \"added_path\", \"original\", \"hunk\", \"added_hash\"],\n)\ndef test_assembly_step_inner_controls_keep_pinned_parent_and_finite_paths(monkeypatch, mutation):\n    expected = assembly_step_originals(ROOT)\n    fixture = ROOT / ASSEMBLY_STEP_FIXTURE\n    guard = ROOT / \"tests/unit/test_arc_profile_native_end_cap.py\"\n    read = Path.read_bytes\n    revision = json.loads(read(fixture))\n    name = next(iter(revision[\"changed\"]))\n    if mutation == \"schema\":\n        revision[\"schema\"] = \"unreviewed\"\n    elif mutation == \"base\":\n        revision[\"base_commit\"] = \"f\" * 40\n    elif mutation == \"path\":\n        revision[\"changed\"][\"src/mechanical_cad/unreviewed.py\"] = revision[\"changed\"].pop(name)\n    elif mutation == \"added_path\":\n        revision[\"added\"][\"tests/unit/unreviewed.py\"] = revision[\"added\"].pop(\n            next(iter(revision[\"added\"]))\n        )\n    elif mutation == \"original\":\n        revision[\"changed\"][name][\"original_sha256\"] = \"f\" * 64\n    elif mutation == \"hunk\":\n        revision[\"changed\"][name][\"hunks\"][0][\"new_start\"] = True\n    elif mutation == \"added_hash\":\n        revision[\"added\"][next(iter(revision[\"added\"]))][\"sha256\"] = \"f\" * 64\n    raw = (json.dumps(revision, sort_keys=True) + \"\\n\").encode()\n    assert raw != read(fixture)\n    digest, old = hashlib.sha256(raw).hexdigest(), ASSEMBLY_STEP_SHA256.encode()\n    data = read(guard)\n    assert data.count(old) == 1\n    data = data.replace(old, digest.encode())\n    monkeypatch.setattr(\n        Path,\n        \"read_bytes\",\n        lambda path: raw if path == fixture else data if path == guard else read(path),\n    )\n    monkeypatch.setitem(globals(), \"ASSEMBLY_STEP_SHA256\", digest)\n    if mutation == \"equivalent\":\n        assert assembly_step_originals(ROOT) == expected\n    else:\n        with pytest.raises(AssertionError):\n            assembly_step_originals(ROOT)\n"
+        }
+      ],
+      "original_bytes": 183038,
+      "original_sha256": "b35ceb9c57e31be17cf4a8217cf256ec6e6e657e0c85160aae1dbfb1c9afa1e9",
+      "reviewed_bytes": 193432,
+      "reviewed_sha256": "656b6a02ba48402ae16e27afce9050495236a0a5df294f3c7d9d6ca0d995738f"
+    },
+    "tests/unit/test_arc_sector_native_boundary_mutations.py": {
+      "hunks": [
+        {
+          "new_end": 25875,
+          "new_start": 25808,
+          "original": "",
+          "replacement": "        \"tests/fixtures/assembly_step_export/source_c405435.json\",\n"
+        }
+      ],
+      "original_bytes": 39627,
+      "original_sha256": "0aa50e1e4fe9f5b4fdb541f4ab2a6cdf18af4c4ce0f5bcb43edc971e18c47568",
+      "reviewed_bytes": 39694,
+      "reviewed_sha256": "361a64fc4225b241b418b54706afa98d285fe2b398870e170313200b2115d74c"
+    },
+    "tests/unit/test_backend_contract_client.py": {
+      "hunks": [
+        {
+          "new_end": 3010,
+          "new_start": 2993,
+          "original": "    assert required == (\n",
+          "replacement": "    expected = (\n"
+        },
+        {
+          "new_end": 3420,
+          "new_start": 3136,
+          "original": "",
+          "replacement": "    if action == \"assembly_export_step\":\n        with pytest.raises(client.BackendContractError):\n            client.prepare_request(operation(action), required_capabilities=expected)\n        expected = sorted([*expected, client.ASSEMBLY_STEP_EXPORT])\n    assert required == expected\n"
+        }
+      ],
+      "original_bytes": 16282,
+      "original_sha256": "030e45f7fc888ee641f5662d08fdc30dd1450a4d767a9352c90ef05a5594fa60",
+      "reviewed_bytes": 16558,
+      "reviewed_sha256": "502e937de4ec3ae3b805a6e35e7787edf903060baa3e39705153979fb0a44652"
+    },
+    "tests/unit/test_result_v3_dependency_boundary.py": {
+      "hunks": [
+        {
+          "new_end": 268,
+          "new_start": 243,
+          "original": "",
+          "replacement": "    ASSEMBLY_STEP_ADDED,\n"
+        },
+        {
+          "new_end": 426,
+          "new_start": 397,
+          "original": "",
+          "replacement": "    assembly_step_originals,\n"
+        },
+        {
+          "new_end": 7434,
+          "new_start": 7280,
+          "original": "def _assert_new_paths(root, original, *, standalone_new=frozenset(), geometry_new=frozenset()):\n",
+          "replacement": "def _assert_new_paths(\n    root,\n    original,\n    *,\n    standalone_new=frozenset(),\n    geometry_new=frozenset(),\n    assembly_step_new=frozenset(),\n):\n"
+        },
+        {
+          "new_end": 8641,
+          "new_start": 8272,
+          "original": "    historical_observed = observed - standalone_new - geometry_new\n",
+          "replacement": "    expected_export = frozenset(\n        name for name in ASSEMBLY_STEP_ADDED if name.startswith((\"src/\", \"blender_addon/\"))\n    )\n    assert assembly_step_new in (frozenset(), expected_export)\n    assert assembly_step_new <= observed, \"missing sealed Assembly export runtime path\"\n    historical_observed = observed - standalone_new - geometry_new - assembly_step_new\n"
+        },
+        {
+          "new_end": 10595,
+          "new_start": 10414,
+          "original": "",
+          "replacement": "        assembly_step_new=frozenset(\n            name\n            for name in assembly_step_originals(ROOT)[0]\n            if name.startswith((\"src/\", \"blender_addon/\"))\n        ),\n"
+        }
+      ],
+      "original_bytes": 19133,
+      "original_sha256": "42d8be8c72092c2b4ae471a3416597ff4872935e7241ee645ea085f818a99d56",
+      "reviewed_bytes": 19728,
+      "reviewed_sha256": "391d992c1cb7d117d8269a186e1f0520962af4a78bbfa5509457b7438f90b570"
+    },
+    "tests/unit/test_standalone_runtime_boundary.py": {
+      "hunks": [
+        {
+          "new_end": 4166,
+          "new_start": 3933,
+          "original": "",
+          "replacement": "        \"ASSEMBLY_STEP_FIXTURE\",\n        \"ASSEMBLY_STEP_SHA256\",\n        \"ASSEMBLY_STEP_ADDED\",\n        \"ASSEMBLY_STEP_ORIGINALS\",\n        \"_assembly_step_revision\",\n        \"_assembly_step_bytes\",\n        \"assembly_step_originals\",\n"
+        }
+      ],
+      "original_bytes": 114742,
+      "original_sha256": "1fc13f40ccc5524e1eff39cd09f80b0f4f1519ed7851354ae0da0c0913368feb",
+      "reviewed_bytes": 114975,
+      "reviewed_sha256": "77fa5cc74708814dc001c525f3d022a2c8cc66e113d55c6185ac63030138373e"
+    }
+  },
+  "schema": "assembly-step-export-boundary-v1"
+}

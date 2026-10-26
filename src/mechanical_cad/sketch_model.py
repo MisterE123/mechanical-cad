@@ -1,0 +1,817 @@
+"""Bounded, versioned sketch records, independent of any geometry backend.
+
+SPDX-License-Identifier: GPL-3.0-or-later
+"""
+
+from __future__ import annotations
+
+import json
+import math
+import re
+from collections.abc import Mapping
+from dataclasses import dataclass, field, replace
+from typing import Any, ClassVar, Self, TypeVar
+
+from .arc_geometry import ArcGeometryError, arc_geometry
+from .errors import CADException
+from .expressions import Scalar, dependencies, evaluate
+from .fillet_intent import CornerFilletIntent, FilletIntentError
+from .fillet_intent import validate_structure as validate_fillet_structure
+from .sketch_relations import PAIR_RELATIONS, auxiliary_scalar_count, equation_count, valid_pair
+
+SKETCH_SCHEMA_VERSION = 1  # Unchanged legacy default; new capabilities require explicit opt-in.
+LATEST_SKETCH_SCHEMA_VERSION = 3
+SUPPORTED_SKETCH_SCHEMA_VERSIONS = frozenset({1, 2, 3})
+MAX_SKETCH_BYTES = 256 * 1024
+MAX_JSON_DEPTH = 8
+MAX_NUMBER_CHARACTERS = 128
+MAX_POINTS = 256
+MAX_LINES = 256
+MAX_CIRCLES = 256
+MAX_ARCS = 256
+MAX_CURVES = 256
+MAX_ACTIVE_SCALARS = 512
+MAX_CONSTRAINTS = 512
+MAX_NATIVE_EQUATIONS = 1024
+MAX_MAGNITUDE = 1e12
+MAX_COORDINATE_MM = 1e6
+MIN_LENGTH_MM = 1e-6
+MAX_LENGTH_MM = 1e6
+IDENTIFIER = re.compile(r"^[A-Za-z0-9_][A-Za-z0-9_.-]{0,127}$")
+
+
+class SketchError(CADException):
+    """Stable expected validation error; maps to CADException at integration."""
+
+    def __init__(self, code: str, message: str):
+        super().__init__(code, message)
+
+
+def _error(message: str, code: str = "invalid_sketch") -> None:
+    raise SketchError(code, message)
+
+
+@dataclass(frozen=True)
+class SketchCapabilities:
+    """Explicit embedded-schema capabilities, including required output version."""
+
+    circles: bool
+    arcs: bool
+    bounded_payload: bool
+    required_result_version: int
+
+
+_SKETCH_CAPABILITIES = {
+    1: SketchCapabilities(False, False, False, 1),
+    2: SketchCapabilities(True, False, True, 2),
+    3: SketchCapabilities(True, True, True, 3),
+}
+
+
+def sketch_capabilities(version: int) -> SketchCapabilities:
+    """Reject unknown/noninteger variants instead of guessing future behavior."""
+    if type(version) is not int or version not in _SKETCH_CAPABILITIES:
+        _error("Unsupported sketch schema version", "unsupported_schema")
+    return _SKETCH_CAPABILITIES[version]
+
+
+def _keys(data: Any, allowed: set[str], required: set[str], label: str) -> None:
+    if type(data) is not dict:
+        _error(f"{label} must be an object")
+    extra, missing = set(data) - allowed, required - set(data)
+    if extra or missing:
+        # repr avoids sorting mixed key types supplied through from_dict.
+        _error(f"{label} has unknown keys {list(extra)!r} or missing keys {list(missing)!r}")
+
+
+def _id(value: Any, label: str) -> None:
+    if type(value) is not str or not IDENTIFIER.fullmatch(value):
+        _error(f"{label} requires a 1-128 character stable ASCII ID")
+
+
+def _number(value: Any) -> float:
+    if type(value) not in (int, float):
+        _error("Expected a finite numeric double, not a boolean or expression", "invalid_number")
+    try:
+        result = float(value)
+    except (OverflowError, ValueError) as exc:
+        raise SketchError("invalid_number", "Number is outside double range") from exc
+    if not math.isfinite(result) or abs(result) > MAX_MAGNITUDE:
+        _error(f"Number must be finite and within ±{MAX_MAGNITUDE:g}", "invalid_number")
+    return result
+
+
+def _coordinate(value: Any) -> float:
+    number = _number(value)
+    if abs(number) > MAX_COORDINATE_MM:
+        _error("Coordinate is outside the ±1e6 mm domain", "invalid_number")
+    return number
+
+
+def finite_vector(values: Any, count: int) -> bool:
+    """Small defensive predicate used by the native adapter's drag boundary."""
+    if type(values) not in (tuple, list) or len(values) != count:
+        return False
+    try:
+        for value in values:
+            _number(value)
+    except SketchError:
+        return False
+    return True
+
+
+def _vector(value: Any, count: int, label: str, *, json_array: bool = False) -> tuple:
+    expected = list if json_array else tuple
+    if type(value) is not expected or len(value) != count:
+        _error(f"{label} must have exactly {count} numeric values")
+    return tuple(_number(v) for v in value)
+
+
+def _records(value: Any, limit: int, label: str, expected: type = list) -> None:
+    if type(value) is not expected:
+        _error(f"{label} must be a {'list' if expected is list else 'tuple'}")
+    if len(value) > limit:
+        _error(f"{label} exceeds the {limit} record limit", "resource_limit")
+
+
+def _duplicate_keys(pairs: list[tuple[str, Any]]) -> dict:
+    result = {}
+    for key, value in pairs:
+        if key in result:
+            _error(f"Duplicate JSON key {key!r}", "invalid_json")
+        result[key] = value
+    return result
+
+
+def _parse_number(token: str, *, integer: bool = False) -> float | int:
+    if len(token) > MAX_NUMBER_CHARACTERS:
+        _error("JSON number token exceeds length limit", "resource_limit")
+    value = int(token) if integer else float(token)
+    _number(value)
+    return value
+
+
+def _reject_constant(token: str) -> None:
+    _error(f"Non-finite JSON constant {token}", "invalid_json")
+
+
+def _check_json_budget(text: Any) -> None:
+    if type(text) is not str:
+        _error("Sketch JSON must be text", "invalid_json")
+    # Avoid allocating an arbitrarily large UTF-8 encoding for already huge text.
+    if len(text) > MAX_SKETCH_BYTES:
+        _error("Sketch exceeds the 256 KiB limit", "sketch_too_large")
+    try:
+        size = len(text.encode("utf-8"))
+    except UnicodeEncodeError as exc:
+        raise SketchError("invalid_json", "Sketch contains invalid Unicode") from exc
+    if size > MAX_SKETCH_BYTES:
+        _error("Sketch exceeds the 256 KiB limit", "sketch_too_large")
+    # A lexical depth guard precedes json.loads; it is not a substitute parser.
+    # Brackets within quoted/escaped strings do not increase structural depth.
+    depth, in_string, escaped = 0, False, False
+    for character in text:
+        if in_string:
+            if escaped:
+                escaped = False
+            elif character == "\\":
+                escaped = True
+            elif character == '"':
+                in_string = False
+        elif character == '"':
+            in_string = True
+        elif character in "[{":
+            depth += 1
+            if depth > MAX_JSON_DEPTH:
+                _error("Sketch JSON nesting exceeds limit", "resource_limit")
+        elif character in "]}":
+            depth -= 1
+
+
+def _check_object_budget(
+    data: Any,
+    *,
+    max_bytes: int = MAX_SKETCH_BYTES,
+    max_depth: int = MAX_JSON_DEPTH,
+    label: str = "Sketch",
+    size_code: str = "sketch_too_large",
+) -> None:
+    """Bound already-parsed v2 trees, including cyclic and shared-container input.
+
+    Count expanded compact JSON bytes while memoizing each container once. No
+    unbounded JSON string is allocated. Numeric values obey the same policy as
+    the v2 wire parser, although original float spelling is lost after parsing.
+    Legacy v1 direct-dict acceptance does not call this boundary.
+    """
+    memo: dict[int, tuple[int, int]] = {}
+    active: set[int] = set()
+
+    def check_size(size: int) -> None:
+        if size > max_bytes:
+            _error(f"{label} exceeds the {max_bytes // 1024} KiB limit", size_code)
+
+    def visit(value: Any, depth: int) -> tuple[int, int]:
+        # Height counts containers only; scalar depth does not increase lexical
+        # JSON nesting. Memoized heights prevent deeper aliases bypassing it.
+        kind = type(value)
+        if kind in (dict, list):
+            if depth > max_depth:
+                _error(f"{label} JSON nesting exceeds limit", "resource_limit")
+            identity = id(value)
+            if identity in active:
+                _error(f"{label} contains cyclic JSON", "resource_limit")
+            if identity in memo:
+                size, height = memo[identity]
+                if depth + height > max_depth:
+                    _error(f"{label} JSON nesting exceeds limit", "resource_limit")
+                return size, height
+            # Every entry costs at least one byte. Reject huge collections
+            # before inspecting or copying their contents.
+            check_size(2 + max(0, len(value) - 1))
+            active.add(identity)
+            size, height = 2, 0
+            try:
+                entries = value.items() if kind is dict else enumerate(value)
+                for index, (key, item) in enumerate(entries):
+                    size += int(index > 0)
+                    if kind is dict:
+                        if type(key) is not str:
+                            _error(f"{label} object keys must be text")
+                        size += visit(key, depth + 1)[0] + 1
+                    child_size, child_height = visit(item, depth + 1)
+                    size += child_size
+                    height = max(height, child_height + 1)
+                    check_size(size)
+            finally:
+                active.remove(identity)
+            memo[identity] = size, height
+            return size, height
+        if kind is str:
+            check_size(len(value) + 2)
+            size = 2
+            for character in value:
+                code = ord(character)
+                if 0xD800 <= code <= 0xDFFF:
+                    _error(f"{label} contains invalid Unicode", "invalid_json")
+                if character in '\\"\b\f\n\r\t':
+                    size += 2
+                elif 0x20 <= code <= 0x7E:
+                    size += 1
+                else:
+                    size += 6 if code <= 0xFFFF else 12
+                check_size(size)
+        elif value is None:
+            size = 4
+        elif kind is bool:
+            size = 4 if value else 5
+        elif kind in (int, float):
+            if kind is int and value.bit_length() > MAX_NUMBER_CHARACTERS * 4:
+                _error("JSON number token exceeds length limit", "resource_limit")
+            token = str(value)
+            _parse_number(token, integer=kind is int)
+            size = len(token)
+        else:
+            _error(f"{label} must contain only JSON objects, arrays and scalar values")
+        return size, -1
+
+    visit(data, 1)
+
+
+@dataclass(frozen=True)
+class Plane:
+    origin: tuple[float, float, float] = (0.0, 0.0, 0.0)
+    # Unit quaternion w, x, y, z; sketch coordinates use plane-local u/v axes.
+    quaternion: tuple[float, float, float, float] = (1.0, 0.0, 0.0, 0.0)
+    id: str = "workplane"
+
+
+@dataclass(frozen=True)
+class Point:
+    id: str
+    u: float
+    v: float
+
+
+@dataclass(frozen=True)
+class Line:
+    id: str
+    start: str
+    end: str
+    construction: bool = False
+
+
+@dataclass(frozen=True)
+class Circle:
+    """Authored analytic circle; radius is a numeric seed, never a formula."""
+
+    id: str
+    center: str
+    radius: float
+    construction: bool = False
+
+
+@dataclass(frozen=True)
+class Arc:
+    """Directed circular arc with three distinct stable point references."""
+
+    id: str
+    center: str
+    start: str
+    end: str
+    direction: str
+    construction: bool = False
+    fillet_intent: CornerFilletIntent | None = field(default=None, kw_only=True)
+
+
+@dataclass(frozen=True)
+class Constraint:
+    id: str
+    kind: str
+    refs: tuple[str, ...]
+    value: Scalar | None = None
+    target: tuple[float, float] | None = None
+
+
+@dataclass(frozen=True)
+class Sketch:
+    """Resolved numeric solver input; formulas are forbidden by validate()."""
+
+    _allow_expressions: ClassVar[bool] = False
+    id: str
+    points: tuple[Point, ...]
+    lines: tuple[Line, ...]
+    constraints: tuple[Constraint, ...]
+    plane: Plane = Plane()
+    units: str = "mm"
+
+    # Keyword-only metadata preserves all existing positional constructors.
+    schema_version: int = field(default=SKETCH_SCHEMA_VERSION, kw_only=True)
+    circles: tuple[Circle, ...] = field(default=(), kw_only=True)
+    arcs: tuple[Arc, ...] = field(default=(), kw_only=True)
+
+    def to_dict(self) -> dict:
+        """Canonical, detached object; never contains native numeric handles."""
+        _validate(self, allow_expressions=self._allow_expressions)
+        return _serialize(self)
+
+    def migrate_to_v2(self) -> Self:
+        """Explicitly opt in without changing identities, source intent or seeds."""
+        _validate(self, allow_expressions=self._allow_expressions)
+        if self.schema_version >= 2:
+            return self
+        migrated = replace(self, schema_version=2)
+        _validate(migrated, allow_expressions=self._allow_expressions)
+        return migrated
+
+    def migrate_to_v3(self) -> Self:
+        """Explicit arc opt-in; preserve all authored identities, seeds and formulas."""
+        _validate(self, allow_expressions=self._allow_expressions)
+        if self.schema_version == 3:
+            return self
+        migrated = replace(self, schema_version=3)
+        _validate(migrated, allow_expressions=self._allow_expressions)
+        return migrated
+
+    def to_json(self) -> str:
+        text = json.dumps(self.to_dict(), sort_keys=True, separators=(",", ":"), allow_nan=False)
+        _check_json_budget(text)
+        return text
+
+    @classmethod
+    def from_json(cls, text: str) -> Self:
+        _check_json_budget(text)
+        try:
+            data = json.loads(
+                text,
+                object_pairs_hook=_duplicate_keys,
+                parse_constant=_reject_constant,
+                parse_int=lambda token: _parse_number(token, integer=True),
+                parse_float=_parse_number,
+            )
+        except SketchError:
+            raise
+        except (ValueError, RecursionError) as exc:
+            raise SketchError("invalid_json", "Cannot read sketch JSON") from exc
+        return cls.from_dict(data)
+
+    @classmethod
+    def from_dict(cls, data: dict) -> Self:
+        fields = {"schema_version", "id", "units", "plane", "points", "lines", "constraints"}
+        if type(data) is not dict:
+            _error("Sketch must be an object")
+        if "schema_version" not in data:
+            _keys(data, fields, fields, "Sketch")
+        schema_version = data["schema_version"]
+        capabilities = sketch_capabilities(schema_version)
+        if capabilities.bounded_payload:
+            _check_object_budget(data)
+        if capabilities.circles:
+            fields = fields | {"circles"}
+        if capabilities.arcs:
+            fields = fields | {"arcs"}
+        _keys(data, fields, fields, "Sketch")
+        plane = data["plane"]
+        _keys(plane, {"id", "origin", "quaternion"}, {"id", "origin", "quaternion"}, "Plane")
+        origin = _vector(plane["origin"], 3, "Plane origin", json_array=True)
+        quaternion = _vector(plane["quaternion"], 4, "Plane quaternion", json_array=True)
+        _records(data["points"], MAX_POINTS, "Points")
+        _records(data["lines"], MAX_LINES, "Lines")
+        _records(data["constraints"], MAX_CONSTRAINTS, "Constraints")
+        circles_data = data["circles"] if capabilities.circles else []
+        _records(circles_data, MAX_CIRCLES, "Circles")
+        arcs_data = data["arcs"] if capabilities.arcs else []
+        _records(arcs_data, MAX_ARCS, "Arcs")
+        if capabilities.bounded_payload:
+            _check_entity_budget(
+                len(data["points"]), len(data["lines"]), len(circles_data), len(arcs_data)
+            )
+        points, lines, circles, arcs, constraints = [], [], [], [], []
+        for point in data["points"]:
+            _keys(point, {"id", "u", "v"}, {"id", "u", "v"}, "Point")
+            points.append(Point(point["id"], _number(point["u"]), _number(point["v"])))
+        for line in data["lines"]:
+            _keys(line, {"id", "start", "end", "construction"}, {"id", "start", "end"}, "Line")
+            lines.append(
+                Line(line["id"], line["start"], line["end"], line.get("construction", False))
+            )
+        for circle in circles_data:
+            _keys(
+                circle,
+                {"id", "center", "radius", "construction"},
+                {"id", "center", "radius"},
+                "Circle",
+            )
+            circles.append(
+                Circle(
+                    circle["id"],
+                    circle["center"],
+                    _number(circle["radius"]),
+                    circle.get("construction", False),
+                )
+            )
+        for arc in arcs_data:
+            arc_fields = {"id", "center", "start", "end", "direction"}
+            _keys(arc, arc_fields | {"construction", "fillet_intent"}, arc_fields, "Arc")
+            try:
+                intent = CornerFilletIntent.from_dict(arc["fillet_intent"]) if "fillet_intent" in arc else None
+            except FilletIntentError as exc:
+                raise SketchError("invalid_fillet_intent", str(exc)) from exc
+            arcs.append(
+                Arc(
+                    arc["id"],
+                    arc["center"],
+                    arc["start"],
+                    arc["end"],
+                    arc["direction"],
+                    arc.get("construction", False),
+                    fillet_intent=intent,
+                )
+            )
+        for constraint in data["constraints"]:
+            _keys(
+                constraint,
+                {"id", "kind", "refs", "value", "target"},
+                {"id", "kind", "refs"},
+                "Constraint",
+            )
+            _records(constraint["refs"], 3, "Constraint references")
+            target = constraint.get("target")
+            if target is not None:
+                target = _vector(target, 2, "Fixed target", json_array=True)
+            value = constraint.get("value")
+            if value is not None and not (cls._allow_expressions and type(value) is str):
+                value = _number(value)
+            constraints.append(
+                Constraint(
+                    constraint["id"], constraint["kind"], tuple(constraint["refs"]), value, target
+                )
+            )
+        sketch = cls(
+            data["id"],
+            tuple(points),
+            tuple(lines),
+            tuple(constraints),
+            Plane(origin, quaternion, plane["id"]),
+            data["units"],
+            schema_version=schema_version,
+            circles=tuple(circles),
+            arcs=tuple(arcs),
+        )
+        _validate(sketch, allow_expressions=cls._allow_expressions)
+        return sketch
+
+
+def _serialize(sketch: Sketch) -> dict:
+    """Capability dispatch keeps v1/v2 canonical bytes frozen."""
+    capabilities = sketch_capabilities(sketch.schema_version)
+    data = {
+        "id": sketch.id,
+        "points": [
+            {"id": p.id, "u": float(p.u), "v": float(p.v)}
+            for p in sorted(sketch.points, key=lambda item: item.id)
+        ],
+        "lines": [
+            {
+                "id": line.id,
+                "start": line.start,
+                "end": line.end,
+                **({"construction": True} if line.construction else {}),
+            }
+            for line in sorted(sketch.lines, key=lambda item: item.id)
+        ],
+        "constraints": [
+            {
+                "id": c.id,
+                "kind": c.kind,
+                "refs": list(c.refs),
+                "value": c.value if c.value is None or isinstance(c.value, str) else float(c.value),
+                "target": None if c.target is None else [float(v) for v in c.target],
+            }
+            for c in sorted(sketch.constraints, key=lambda item: item.id)
+        ],
+        "plane": {
+            "id": sketch.plane.id,
+            "origin": [float(v) for v in sketch.plane.origin],
+            "quaternion": [float(v) for v in sketch.plane.quaternion],
+        },
+        "units": sketch.units,
+        "schema_version": sketch.schema_version,
+    }
+    if capabilities.circles:
+        data["circles"] = [
+            {
+                "id": c.id,
+                "center": c.center,
+                "radius": float(c.radius),
+                **({"construction": True} if c.construction else {}),
+            }
+            for c in sorted(sketch.circles, key=lambda item: item.id)
+        ]
+    if capabilities.arcs:
+        data["arcs"] = [
+            {
+                "id": arc.id,
+                "center": arc.center,
+                "start": arc.start,
+                "end": arc.end,
+                "direction": arc.direction,
+                **({"construction": True} if arc.construction else {}),
+                **({"fillet_intent": arc.fillet_intent.to_dict()} if arc.fillet_intent is not None else {}),
+            }
+            for arc in sorted(sketch.arcs, key=lambda item: item.id)
+        ]
+    return data
+
+
+def active_scalar_count(sketch: Sketch) -> int:
+    """Candidate-specific upper bound on active native scalar unknowns."""
+    return 2 * len(sketch.points) + len(sketch.circles)
+
+
+def native_equation_count(sketch: Sketch) -> int:
+    """Conservative native row budget, before authored relation deduplication."""
+    return len(sketch.arcs) + sum(
+        equation_count(constraint.kind) for constraint in sketch.constraints
+    )
+
+
+def _check_entity_budget(points: int, lines: int, circles: int, arcs: int = 0) -> None:
+    if lines + circles + arcs > MAX_CURVES:
+        entities = "Lines, circles and arcs" if arcs else "Lines and circles"
+        _error(f"{entities} exceed the {MAX_CURVES} curve limit", "resource_limit")
+    if 2 * points + circles > MAX_ACTIVE_SCALARS:
+        _error(f"Sketch exceeds the {MAX_ACTIVE_SCALARS} active scalar limit", "resource_limit")
+
+
+def _validate(sketch: Sketch, *, allow_expressions: bool = False) -> None:
+    """Validate even direct dataclass inputs before touching native solver state."""
+    if type(sketch) is not (SketchDefinition if allow_expressions else Sketch):
+        _error("Expected a Sketch record")
+    capabilities = sketch_capabilities(sketch.schema_version)
+    _id(sketch.id, "Sketch ID")
+    if type(sketch.units) is not str or sketch.units != "mm":
+        _error("Constrained sketches require explicit millimetres", "unsupported_units")
+    if type(sketch.plane) is not Plane:
+        _error("Expected a Plane record")
+    _id(sketch.plane.id, "Workplane ID")
+    for value in _vector(sketch.plane.origin, 3, "Plane origin"):
+        _coordinate(value)
+    q = _vector(sketch.plane.quaternion, 4, "Plane quaternion")
+    if not math.isclose(sum(x * x for x in q), 1.0, rel_tol=0.0, abs_tol=1e-9):
+        _error("Plane quaternion must be unit length")
+    for values, limit, record_type, label in (
+        (sketch.points, MAX_POINTS, Point, "Points"),
+        (sketch.lines, MAX_LINES, Line, "Lines"),
+        (sketch.circles, MAX_CIRCLES, Circle, "Circles"),
+        (sketch.arcs, MAX_ARCS, Arc, "Arcs"),
+        (sketch.constraints, MAX_CONSTRAINTS, Constraint, "Constraints"),
+    ):
+        _records(values, limit, label, tuple)
+        if any(type(value) is not record_type for value in values):
+            _error(f"{label} contains the wrong record type")
+    if not capabilities.circles and sketch.circles:
+        _error("Circle records require explicit sketch schema 2", "migration_required")
+    if not capabilities.arcs and sketch.arcs:
+        _error("Arc records require explicit sketch schema 3", "migration_required")
+    if capabilities.bounded_payload:
+        _check_entity_budget(
+            len(sketch.points), len(sketch.lines), len(sketch.circles), len(sketch.arcs)
+        )
+    records = (*sketch.points, *sketch.lines, *sketch.circles, *sketch.arcs, *sketch.constraints)
+    for record in records:
+        _id(record.id, "Entity/constraint ID")
+    if len({sketch.plane.id, *(r.id for r in records)}) != len(records) + 1:
+        _error("Duplicate entity/constraint IDs", "duplicate_id")
+    points = {p.id: p for p in sketch.points}
+    lines = {line.id: line for line in sketch.lines}
+    circles = {circle.id: circle for circle in sketch.circles}
+    arcs = {arc.id: arc for arc in sketch.arcs}
+    for curve in (*sketch.lines, *sketch.circles, *sketch.arcs):
+        if type(curve.construction) is not bool:
+            _error("Construction flags must be explicit booleans")
+    for point in sketch.points:
+        _coordinate(point.u)
+        _coordinate(point.v)
+    for line in sketch.lines:
+        _id(line.start, "Line start reference")
+        _id(line.end, "Line end reference")
+        if line.start not in points or line.end not in points or line.start == line.end:
+            _error(
+                f"Line {line.id} requires two distinct existing point references",
+                "missing_reference",
+            )
+    for circle in sketch.circles:
+        _id(circle.center, "Circle center reference")
+        if circle.center not in points:
+            _error(f"Circle {circle.id} requires an existing point center", "missing_reference")
+        if not MIN_LENGTH_MM <= _number(circle.radius) <= MAX_LENGTH_MM:
+            _error(f"Circle {circle.id} radius must be within 1e-6 to 1e6 mm", "invalid_number")
+    for arc in sketch.arcs:
+        references = (arc.center, arc.start, arc.end)
+        for reference in references:
+            _id(reference, "Arc point reference")
+        if len(set(references)) != 3 or any(reference not in points for reference in references):
+            _error(
+                f"Arc {arc.id} requires three distinct existing point references",
+                "missing_reference",
+            )
+        try:
+            arc_geometry(
+                (points[arc.center].u, points[arc.center].v),
+                (points[arc.start].u, points[arc.start].v),
+                (points[arc.end].u, points[arc.end].v),
+                arc.direction,
+            )
+        except ArcGeometryError as exc:
+            raise SketchError(exc.code, f"Arc '{arc.id}': {exc}") from exc
+    for constraint in sketch.constraints:
+        if type(constraint.kind) is not str:
+            _error("Constraint kind must be text")
+        _records(constraint.refs, 3, "Constraint references", tuple)
+        for reference in constraint.refs:
+            _id(reference, "Constraint reference")
+        if constraint.kind in ("horizontal", "vertical"):
+            valid = len(constraint.refs) == 1 and constraint.refs[0] in lines
+        elif constraint.kind in ("coincident", "distance"):
+            valid = (
+                len(constraint.refs) == 2
+                and all(r in points for r in constraint.refs)
+                and constraint.refs[0] != constraint.refs[1]
+            )
+        elif constraint.kind in PAIR_RELATIONS or constraint.kind == "angle":
+            valid = valid_pair(
+                constraint.kind,
+                constraint.refs,
+                {key: {"start": item.start, "end": item.end} for key, item in lines.items()},
+                {key: {"center": item.center} for key, item in circles.items()},
+                {key: {"start": item.start, "end": item.end} for key, item in arcs.items()},
+                points,
+            )
+        elif constraint.kind == "fixed":
+            valid = len(constraint.refs) == 1 and constraint.refs[0] in points
+        elif constraint.kind == "radius":
+            if not capabilities.circles:
+                _error("Radius constraints require explicit sketch schema 2", "migration_required")
+            valid = len(constraint.refs) == 1 and (
+                constraint.refs[0] in circles or constraint.refs[0] in arcs
+            )
+        else:
+            _error(f"Unsupported constraint kind: {constraint.kind}")
+        if not valid:
+            _error(f"Invalid references for constraint {constraint.id}", "missing_reference")
+        if constraint.kind in ("distance", "radius", "angle"):
+            try:
+                if allow_expressions and type(constraint.value) is str:
+                    dependencies(constraint.value)  # Existing bounded expression syntax parser.
+                elif (
+                    not MIN_LENGTH_MM
+                    <= _number(constraint.value)
+                    <= (180 if constraint.kind == "angle" else MAX_LENGTH_MM)
+                ):
+                    _error("Driving length must be within 1e-6 to 1e6 mm", "invalid_number")
+            except CADException as exc:
+                raise SketchError(exc.code, f"Constraint '{constraint.id}': {exc}") from exc
+        elif constraint.value is not None:
+            _error(f"Unexpected dimension value for {constraint.kind}")
+        if constraint.kind == "fixed":
+            for value in _vector(constraint.target, 2, "Fixed target"):
+                _coordinate(value)
+        elif constraint.target is not None:
+            _error(f"Unexpected target for {constraint.kind}")
+    for arc in sketch.arcs:
+        if arc.fillet_intent is not None:
+            if type(arc.fillet_intent) is not CornerFilletIntent:
+                _error("Invalid persistent fillet intent record")
+            try:
+                validate_fillet_structure(
+                    {"id": arc.id, "center": arc.center, "start": arc.start, "end": arc.end,
+                     "direction": arc.direction, "construction": arc.construction,
+                     "fillet_intent": arc.fillet_intent.to_dict()}, points,
+                    {i: {"start": line.start, "end": line.end, "construction": line.construction} for i, line in lines.items()},
+                    [{"kind": c.kind, "refs": c.refs} for c in sketch.constraints],
+                    {a.id: {"id": a.id, "center": a.center, "start": a.start, "end": a.end,
+                            **({"fillet_intent": a.fillet_intent.to_dict()}
+                               if a.fillet_intent is not None else {})} for a in sketch.arcs},
+                )
+            except FilletIntentError as exc:
+                raise SketchError("invalid_fillet_intent", str(exc)) from exc
+    if (
+        active_scalar_count(sketch)
+        + sum(auxiliary_scalar_count(c.kind) for c in sketch.constraints)
+        > MAX_ACTIVE_SCALARS
+    ):
+        _error(
+            "Sketch including tangent contact points exceeds the active scalar limit",
+            "resource_limit",
+        )
+    if native_equation_count(sketch) > MAX_NATIVE_EQUATIONS:
+        _error(f"Sketch exceeds the {MAX_NATIVE_EQUATIONS} native equation limit", "resource_limit")
+    if capabilities.bounded_payload:
+        _check_object_budget(_serialize(sketch))
+
+
+@dataclass(frozen=True)
+class SketchDefinition(Sketch):
+    """Authoritative sketch definition retaining number/formula driving values."""
+
+    _allow_expressions: ClassVar[bool] = True
+
+
+SketchT = TypeVar("SketchT", bound=Sketch)
+
+
+def migrate_to_v2(sketch: SketchT) -> SketchT:
+    """Explicit migration retaining the authored/numeric type and all records."""
+    if type(sketch) not in (Sketch, SketchDefinition):
+        _error("Expected a Sketch or SketchDefinition record")
+    return sketch.migrate_to_v2()
+
+
+def migrate_to_v3(sketch: SketchT) -> SketchT:
+    """Explicit arc migration retaining the authored/numeric type and all records."""
+    if type(sketch) not in (Sketch, SketchDefinition):
+        _error("Expected a Sketch or SketchDefinition record")
+    return sketch.migrate_to_v3()
+
+
+def validate(sketch: Sketch) -> None:
+    """Validate strictly numeric input before any native solver interaction."""
+    _validate(sketch)
+
+
+def validate_definition(definition: SketchDefinition) -> None:
+    """Validate descriptive records without evaluating unknown project names."""
+    _validate(definition, allow_expressions=True)
+
+
+def resolve_sketch(definition: SketchDefinition, project_values: Mapping[str, float]) -> Sketch:
+    """Resolve driving formulas into a detached numeric sketch; never mutate source."""
+    validate_definition(definition)
+    if not isinstance(project_values, Mapping):
+        _error("Resolved project parameters must be a mapping")
+    constraints = []
+    for constraint in definition.constraints:
+        value = constraint.value
+        if constraint.kind in ("distance", "radius", "angle"):
+            try:
+                value = evaluate(value, project_values)
+                if not MIN_LENGTH_MM <= value <= MAX_LENGTH_MM:
+                    _error("Resolved length must be within 1e-6 to 1e6 mm", "invalid_number")
+            except CADException as exc:
+                raise SketchError(exc.code, f"Constraint '{constraint.id}': {exc}") from exc
+        constraints.append(
+            Constraint(constraint.id, constraint.kind, constraint.refs, value, constraint.target)
+        )
+    result = Sketch(
+        definition.id,
+        definition.points,
+        definition.lines,
+        tuple(constraints),
+        definition.plane,
+        definition.units,
+        schema_version=definition.schema_version,
+        circles=definition.circles,
+        arcs=definition.arcs,
+    )
+    validate(result)
+    return result

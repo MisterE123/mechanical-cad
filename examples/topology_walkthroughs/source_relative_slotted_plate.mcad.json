@@ -1,0 +1,195 @@
+{
+  "active_feature": "finished_plate",
+  "features": [
+    {
+      "id": "outline",
+      "inputs": {},
+      "kind": "sketch_rectangle",
+      "label": "Plate footprint",
+      "params": {
+        "height": "plate_depth",
+        "width": "plate_width"
+      }
+    },
+    {
+      "id": "plate",
+      "inputs": {
+        "profile": "outline"
+      },
+      "kind": "extrude",
+      "label": "Plate height",
+      "params": {
+        "length": "plate_height"
+      }
+    },
+    {
+      "id": "slot_outline",
+      "inputs": {},
+      "kind": "sketch_rectangle",
+      "label": "Slot across the top",
+      "params": {
+        "height": "slot_length",
+        "width": "slot_width",
+        "x": "slot_x",
+        "y": -1,
+        "z": "slot_floor"
+      }
+    },
+    {
+      "id": "slot_tool",
+      "inputs": {
+        "profile": "slot_outline"
+      },
+      "kind": "extrude",
+      "label": "Slot cutter",
+      "params": {
+        "length": "plate_height - slot_floor + 1"
+      }
+    },
+    {
+      "id": "slotted_plate",
+      "inputs": {
+        "base": "plate",
+        "tool": "slot_tool"
+      },
+      "kind": "cut",
+      "label": "Remove slot; top face splits",
+      "params": {}
+    },
+    {
+      "id": "pad_sketch",
+      "inputs": {
+        "support": "slotted_plate"
+      },
+      "kind": "sketch_constrained",
+      "label": "Pad: source plane, 5 mm right of center",
+      "params": {},
+      "sketch": {
+        "circles": [
+          {
+            "center": "center",
+            "id": "pad_circle",
+            "radius": 2.0
+          }
+        ],
+        "constraints": [
+          {
+            "id": "center_location",
+            "kind": "fixed",
+            "refs": [
+              "center"
+            ],
+            "target": [
+              5.0,
+              0.0
+            ],
+            "value": null
+          },
+          {
+            "id": "pad_size",
+            "kind": "radius",
+            "refs": [
+              "pad_circle"
+            ],
+            "target": null,
+            "value": "pad_radius"
+          }
+        ],
+        "id": "pad_profile",
+        "lines": [],
+        "plane": {
+          "id": "workplane",
+          "origin": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "quaternion": [
+            1.0,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        "points": [
+          {
+            "id": "center",
+            "u": 5.0,
+            "v": 0.0
+          }
+        ],
+        "schema_version": 2,
+        "units": "mm"
+      },
+      "support_face": "plate/face/cap.end",
+      "support_intent": {
+        "policy": "preserve_plane",
+        "signature": {
+          "area": 400,
+          "centroid": [
+            10,
+            10,
+            10
+          ],
+          "normal": [
+            0,
+            0,
+            1
+          ],
+          "surface": "plane"
+        },
+        "source_signature": {
+          "area": 400,
+          "centroid": [
+            10,
+            10,
+            10
+          ],
+          "normal": [
+            0,
+            0,
+            1
+          ],
+          "surface": "plane"
+        },
+        "version": 1
+      }
+    },
+    {
+      "id": "pad",
+      "inputs": {
+        "profile": "pad_sketch"
+      },
+      "kind": "extrude",
+      "label": "Pad above source plane",
+      "params": {
+        "length": "pad_height"
+      }
+    },
+    {
+      "id": "finished_plate",
+      "inputs": {
+        "base": "slotted_plate",
+        "tool": "pad"
+      },
+      "kind": "union",
+      "label": "Finished slotted plate",
+      "params": {}
+    }
+  ],
+  "id": "slotted_plate_demo",
+  "name": "Slotted plate: preserve the source-relative pad plane",
+  "parameters": {
+    "pad_height": 2,
+    "pad_radius": 2,
+    "plate_depth": 20,
+    "plate_height": 10,
+    "plate_width": 20,
+    "slot_floor": 7,
+    "slot_length": 22,
+    "slot_width": 2,
+    "slot_x": 9
+  },
+  "schema_version": 2,
+  "units": "mm"
+}

@@ -1,0 +1,532 @@
+{
+  "added": {
+    "tests/unit/test_windows_runtime_cache.py": {
+      "bytes": 19544,
+      "sha256": "f18a5f9a747a856cae3caa7bf745416ff92ad6d080c84dd5c5e368f4b8208dc1"
+    }
+  },
+  "base_commit": "b48ffcd14d3f79c8c02057316684a60f58c83bfc",
+  "changed": {
+    "blender_addon/mechanical_cad_blender/backend_selection.py": {
+      "hunks": [
+        {
+          "new_end": 489,
+          "new_start": 439,
+          "original": "from dataclasses import dataclass, field\n",
+          "replacement": "from dataclasses import dataclass, field, replace\n"
+        },
+        {
+          "new_end": 10421,
+          "new_start": 10161,
+          "original": "        if type(policy) is not BundledLaunchPolicy or policy.constants.PLATFORM != \"windows-x64\":\n",
+          "replacement": "        if cls is not BackendSelection or type(policy) is not BundledLaunchPolicy:\n            raise SelectionError(\"Windows transport requires its exact bundled policy.\")\n        policy = replace(policy)\n        if policy.constants.PLATFORM != \"windows-x64\":\n"
+        }
+      ],
+      "original_bytes": 11851,
+      "original_sha256": "90d984ad7d1c6c64507403d390b58880a0ff319a7228529510c62ebd07e0445a",
+      "reviewed_bytes": 12022,
+      "reviewed_sha256": "0d824958a727785ebb083eae1098516e18670e0f7e6fc24c6f7fa09e5280662e"
+    },
+    "blender_addon/mechanical_cad_blender/runtime_bundle_launch.py": {
+      "hunks": [
+        {
+          "new_end": 708,
+          "new_start": 650,
+          "original": "from dataclasses import asdict, dataclass, field\n",
+          "replacement": "from dataclasses import asdict, dataclass, field, replace\n"
+        },
+        {
+          "new_end": 1024,
+          "new_start": 976,
+          "original": "",
+          "replacement": "from .windows_cache import WindowsCacheLocation\n"
+        },
+        {
+          "new_end": 6780,
+          "new_start": 6699,
+          "original": "",
+          "replacement": "    windows_cache: WindowsCacheLocation | None = field(default=None, repr=False)\n"
+        },
+        {
+          "new_end": 7225,
+          "new_start": 7102,
+          "original": "",
+          "replacement": "        if type(c.PLATFORM) is not str:\n            raise BundleLaunchError(\"Unsupported trusted bundled launch profile.\")\n"
+        },
+        {
+          "new_end": 9332,
+          "new_start": 7291,
+          "original": "",
+          "replacement": "            for name in LAUNCH_CONSTANT_FIELDS:\n                value = getattr(c, name)\n                if name in {\"PYTHON_VERSION\", \"PYTHON_FLAGS\"}:\n                    types = (int, int, int, str, int) if name == \"PYTHON_VERSION\" else (str,) * 6\n                    if (\n                        type(value) is not tuple\n                        or len(value) != len(types)\n                        or any(\n                            type(item) is not kind for item, kind in zip(value, types, strict=True)\n                        )\n                    ):\n                        raise BundleLaunchError(\"Invalid trusted Windows constant shape.\")\n                else:\n                    kind = (\n                        int\n                        if name in {\"SCHEMA_VERSION\", \"PYTHON_BITS\"}\n                        else bytes\n                        if name == \"RELEASE_IDENTITY_BYTES\"\n                        else str\n                    )\n                    if type(value) is not kind:\n                        raise BundleLaunchError(\"Invalid trusted Windows constant shape.\")\n            if (\n                any(\n                    type(getattr(d, name)) is not str\n                    for name in BundleDescriptor.__dataclass_fields__\n                )\n                or type(self.windows_cache) is not WindowsCacheLocation\n                or type(self.windows_cache.known_folder) is not str\n                or type(self.windows_cache.cache_root) is not str\n                or type(self.package_root) is not str\n                or type(self.cache_root) is not str\n                or type(self.release_data) is not bytes\n            ):\n                raise BundleLaunchError(\n                    \"Windows selection requires an exact automatic cache recipe.\"\n                )\n            c, d, location = replace(c), replace(d), replace(self.windows_cache)\n            object.__setattr__(self, \"constants\", c)\n            object.__setattr__(self, \"descriptor\", d)\n            object.__setattr__(self, \"windows_cache\", location)\n"
+        },
+        {
+          "new_end": 10099,
+          "new_start": 9910,
+          "original": "",
+          "replacement": "            if self.windows_cache is not None:\n                raise BundleLaunchError(\n                    \"Linux bundled selection cannot carry a Windows cache recipe.\"\n                )\n"
+        },
+        {
+          "new_end": 10760,
+          "new_start": 10594,
+          "original": "",
+          "replacement": "        if windows and self.cache_root != self.windows_cache.cache_root:\n            raise BundleLaunchError(\"Windows automatic cache recipe differs from its root.\")\n"
+        },
+        {
+          "new_end": 13385,
+          "new_start": 13265,
+          "original": "def capture_bundled_policy(descriptor, *, package_root, cache_root, release_data, constants):\n",
+          "replacement": "def capture_bundled_policy(\n    descriptor, *, package_root, cache_root, release_data, constants, windows_cache=None\n):\n"
+        },
+        {
+          "new_end": 15767,
+          "new_start": 13701,
+          "original": "",
+          "replacement": "    if windows_cache is not None:\n        if (\n            type(constants) is not dict\n            or any(type(key) is not str for key in constants)\n            or set(constants) != set(LAUNCH_CONSTANT_FIELDS)\n            or type(constants[\"PLATFORM\"]) is not str\n            or constants[\"PLATFORM\"] != \"windows-x64\"\n        ):\n            raise BundleLaunchError(\"Windows capture requires exact trusted constant fields.\")\n        for name in LAUNCH_CONSTANT_FIELDS:\n            value = constants[name]\n            if name in {\"PYTHON_VERSION\", \"PYTHON_FLAGS\"}:\n                types = (int, int, int, str, int) if name == \"PYTHON_VERSION\" else (str,) * 6\n                if (\n                    type(value) is not tuple\n                    or len(value) != len(types)\n                    or any(type(item) is not kind for item, kind in zip(value, types, strict=True))\n                ):\n                    raise BundleLaunchError(\"Invalid trusted Windows constant shape.\")\n            else:\n                kind = (\n                    int\n                    if name in {\"SCHEMA_VERSION\", \"PYTHON_BITS\"}\n                    else bytes\n                    if name == \"RELEASE_IDENTITY_BYTES\"\n                    else str\n                )\n                if type(value) is not kind:\n                    raise BundleLaunchError(\"Invalid trusted Windows constant shape.\")\n        if (\n            type(descriptor) is not BundleDescriptor\n            or any(\n                type(getattr(descriptor, name)) is not str\n                for name in BundleDescriptor.__dataclass_fields__\n            )\n            or type(windows_cache) is not WindowsCacheLocation\n            or type(windows_cache.known_folder) is not str\n            or type(windows_cache.cache_root) is not str\n            or type(package_root) is not str\n            or type(cache_root) is not str\n            or type(release_data) is not bytes\n        ):\n            raise BundleLaunchError(\"Windows capture requires exact automatic cache records.\")\n        windows_cache = replace(windows_cache)\n"
+        },
+        {
+          "new_end": 16182,
+          "new_start": 15948,
+          "original": "",
+          "replacement": "    if (\n        windows_cache is None\n        and type(constants[\"PLATFORM\"]) is str\n        and constants[\"PLATFORM\"] == \"windows-x64\"\n    ):\n        raise BundleLaunchError(\"Windows selection requires its automatic cache recipe.\")\n"
+        },
+        {
+          "new_end": 16542,
+          "new_start": 16519,
+          "original": "",
+          "replacement": "        windows_cache,\n"
+        }
+      ],
+      "original_bytes": 16560,
+      "original_sha256": "c7e828980ceb73ad339388e08ac78704ebe59fab9c2bdbfb9189dafcaf74eca6",
+      "reviewed_bytes": 21566,
+      "reviewed_sha256": "575450a0899f4d01ed2f5b2258fef4cbb135c254c4af5600753b2c6379873869"
+    },
+    "blender_addon/mechanical_cad_blender/windows_cache.py": {
+      "hunks": [
+        {
+          "new_end": 18152,
+          "new_start": 18091,
+          "original": "    def _finish(self, resource):\n        if resource.closed:\n            return\n        if resource.attempted:\n            self._state = \"uncertain\"\n            raise WindowsCacheError(\"cleanup_blocked\", owner=self)\n        resource.attempted = True\n",
+          "replacement": "    def _finish(self, resource, *, cleanup_checkpoint=None):\n"
+        },
+        {
+          "new_end": 18741,
+          "new_start": 18165,
+          "original": "",
+          "replacement": "            if cleanup_checkpoint is not None:\n                if not callable(cleanup_checkpoint):\n                    raise TypeError(\"cleanup checkpoint must be callable\")\n                if self.cleanup_uncertain:\n                    raise WindowsCacheError(\"cleanup_blocked\", owner=self)\n            if resource.closed:\n                return\n            if resource.attempted:\n                raise WindowsCacheError(\"cleanup_blocked\", owner=self)\n            if cleanup_checkpoint is not None:\n                cleanup_checkpoint()\n            resource.attempted = True\n"
+        },
+        {
+          "new_end": 19243,
+          "new_start": 19161,
+          "original": "",
+          "replacement": "            # A late return cannot undo a confirmed release or authorize a retry.\n"
+        },
+        {
+          "new_end": 19362,
+          "new_start": 19278,
+          "original": "",
+          "replacement": "            if cleanup_checkpoint is not None:\n                cleanup_checkpoint()\n"
+        },
+        {
+          "new_end": 34185,
+          "new_start": 34136,
+          "original": "    def close(self):\n",
+          "replacement": "    def close(self, *, cleanup_checkpoint=None):\n"
+        },
+        {
+          "new_end": 35225,
+          "new_start": 34336,
+          "original": "",
+          "replacement": "        if cleanup_checkpoint is not None:\n            try:\n                if not callable(cleanup_checkpoint):\n                    raise TypeError(\"cleanup checkpoint must be callable\")\n                if self.cleanup_uncertain:\n                    raise WindowsCacheError(\"cleanup_blocked\", owner=self)\n                cleanup_checkpoint()\n                if self._state != \"closed\":\n                    self._state = \"closing\"\n                    for resource in reversed(self._resources):\n                        if not resource.attempted:\n                            self._finish(resource, cleanup_checkpoint=cleanup_checkpoint)\n                cleanup_checkpoint()\n            except BaseException as exc:\n                self._state = \"uncertain\"\n                raise WindowsCacheError(\"cleanup_blocked\", owner=self) from exc\n            self._state = \"closed\"\n            return\n"
+        }
+      ],
+      "original_bytes": 49746,
+      "original_sha256": "c6a1ba162b155262ef8a3df02a5fe89e04c41086d1321dc12f9d852ecf9b0424",
+      "reviewed_bytes": 51216,
+      "reviewed_sha256": "308623e3691f150d2ef1dc039b02ef71cede7f7f43efe45e76dc10174abed985"
+    },
+    "blender_addon/mechanical_cad_blender/windows_runtime.py": {
+      "hunks": [
+        {
+          "new_end": 570,
+          "new_start": 527,
+          "original": "from dataclasses import dataclass\n",
+          "replacement": "from dataclasses import dataclass, replace\n"
+        },
+        {
+          "new_end": 1082,
+          "new_start": 1037,
+          "original": "",
+          "replacement": "from .windows_cache import WindowsCacheOwner\n"
+        },
+        {
+          "new_end": 1393,
+          "new_start": 1324,
+          "original": "def _verify_cached_tree(policy, pin, cancelled):\n",
+          "replacement": "def _verify_cached_tree(policy, pin, cancelled, *, windows_storage):\n"
+        },
+        {
+          "new_end": 1766,
+          "new_start": 1725,
+          "original": "",
+          "replacement": "        windows_storage=windows_storage,\n"
+        },
+        {
+          "new_end": 5400,
+          "new_start": 5347,
+          "original": "            0x80 if directory else 0x80000000,\n",
+          "replacement": "            0x00020080 if directory else 0x80000000,\n"
+        },
+        {
+          "new_end": 7304,
+          "new_start": 7212,
+          "original": "",
+          "replacement": "    def stream_handle(self, file):\n        return self.msvcrt.get_osfhandle(file.fileno())\n\n"
+        },
+        {
+          "new_end": 7388,
+          "new_start": 7337,
+          "original": "        return self.info(self.msvcrt.get_osfhandle(file.fileno()))\n",
+          "replacement": "        return self.info(self.stream_handle(file))\n"
+        },
+        {
+          "new_end": 9181,
+          "new_start": 9137,
+          "original": "",
+          "replacement": "        self._validation.before_write(file)\n"
+        },
+        {
+          "new_end": 9445,
+          "new_start": 9351,
+          "original": "    def __init__(self, policy, pin, api, checkpoint, cleanup_checkpoint):\n",
+          "replacement": "    def __init__(self, policy, pin, api, checkpoint, cleanup_checkpoint, *, windows_storage):\n"
+        },
+        {
+          "new_end": 9580,
+          "new_start": 9533,
+          "original": "",
+          "replacement": "        self.windows_storage = windows_storage\n"
+        },
+        {
+          "new_end": 9724,
+          "new_start": 9685,
+          "original": "",
+          "replacement": "        self._stream_observations = []\n"
+        },
+        {
+          "new_end": 11395,
+          "new_start": 9887,
+          "original": "",
+          "replacement": "        self._assert_cache_binding()\n\n    def _assert_cache_binding(self):\n        if type(self.policy) is not BundledLaunchPolicy:\n            raise ProcessError(\"windows_bundled_policy_required\")\n        p = replace(self.policy)\n        if p.constants.PLATFORM != \"windows-x64\":\n            raise ProcessError(\"windows_bundled_policy_required\")\n        expected = parse_release_manifest(\n            p.release_data, expected_platform=\"windows-x64\", limits=BundleLimits()\n        )\n        owner = self.windows_storage\n        if (\n            type(owner) is not WindowsCacheOwner\n            or type(owner.location) is not type(p.windows_cache)\n            or type(owner.location.known_folder) is not str\n            or type(owner.location.cache_root) is not str\n            or type(owner.package_root) is not str\n            or type(owner.expected_platform) is not str\n            or type(owner.release) is not type(expected)\n            or any(\n                type(getattr(owner.release, name)) is not type(value)\n                for name, value in vars(expected).items()\n            )\n        ):\n            raise ProcessError(\"windows_cache_binding_mismatch\")\n        if (\n            replace(owner.location) != p.windows_cache\n            or owner.cache_root != p.cache_root\n            or owner.package_root != p.package_root\n            or owner.expected_platform != \"windows-x64\"\n            or owner.release != expected\n        ):\n            raise ProcessError(\"windows_cache_binding_mismatch\")\n"
+        },
+        {
+          "new_end": 14329,
+          "new_start": 14223,
+          "original": "",
+          "replacement": "        self._assert_cache_binding()\n        self.windows_storage.assert_held()\n        self.checkpoint()\n"
+        },
+        {
+          "new_end": 16596,
+          "new_start": 16436,
+          "original": "",
+          "replacement": "        self.windows_storage.check_private_handle(\n            self._by_path[job_parent].handle, job_parent, directory=True\n        )\n        self.checkpoint()\n"
+        },
+        {
+          "new_end": 17056,
+          "new_start": 16880,
+          "original": "",
+          "replacement": "        self.windows_storage.check_private_handle(\n            self._by_path[self.job_directory].handle, self.job_directory, directory=True\n        )\n        self.checkpoint()\n"
+        },
+        {
+          "new_end": 17640,
+          "new_start": 17560,
+          "original": "",
+          "replacement": "        self._assert_cache_binding()\n        self.windows_storage.assert_held()\n"
+        },
+        {
+          "new_end": 18242,
+          "new_start": 17937,
+          "original": "",
+          "replacement": "        if self.job_directory is not None:\n            for path in (ntpath.dirname(self.job_directory), self.job_directory):\n                self.checkpoint()\n                self.windows_storage.check_private_handle(\n                    self._by_path[path].handle, path, directory=True\n                )\n"
+        },
+        {
+          "new_end": 19742,
+          "new_start": 18269,
+          "original": "",
+          "replacement": "    def before_write(self, file):\n        self._recheck()\n        if (\n            len(self._stream_observations) >= 4\n            or len(self.streams) != len(self._stream_observations) + 1\n            or self.streams[-1] is not file\n        ):\n            raise ProcessError(\"private_stream_set_invalid\")\n        handle = self.api.stream_handle(file)\n        self.checkpoint()\n        if type(handle) is not int or handle <= 0:\n            raise ProcessError(\"private_stream_identity_invalid\")\n        info = self.api.info(handle)\n        self.checkpoint()\n        if type(info) is not AnchorInfo or type(info.final_path) is not str:\n            raise ProcessError(\"private_stream_identity_invalid\")\n        _windows_path(info.final_path)\n        self._valid_info(info, info.final_path, False)\n        if ntpath.dirname(info.final_path) != self.job_directory or info.size != 0:\n            raise ProcessError(\"private_stream_path_or_size_invalid\")\n        if any(\n            file is original\n            or handle == borrowed\n            or info.identity == identity\n            or info.final_path == path\n            for original, borrowed, identity, path in self._stream_observations\n        ):\n            raise ProcessError(\"private_stream_identity_invalid\")\n        self.windows_storage.check_private_handle(handle, info.final_path, directory=False)\n        self.checkpoint()\n        self._stream_observations.append((file, handle, info.identity, info.final_path))\n\n"
+        },
+        {
+          "new_end": 20155,
+          "new_start": 19777,
+          "original": "",
+          "replacement": "        self._assert_cache_binding()\n        if (\n            type(spec) is not LaunchSpec\n            or type(spec.bundle) is not BundleDescriptor\n            or any(\n                type(getattr(spec.bundle, name)) is not str\n                for name in BundleDescriptor.__dataclass_fields__\n            )\n        ):\n            raise ProcessError(\"captured_runtime_changed\")\n"
+        },
+        {
+          "new_end": 20499,
+          "new_start": 20328,
+          "original": "        if len(self.streams) != 4 or len({id(file) for file in self.streams}) != 4:\n",
+          "replacement": "        if (\n            len(self.streams) != 4\n            or len(self._stream_observations) != 4\n            or len({id(file) for file in self.streams}) != 4\n        ):\n"
+        },
+        {
+          "new_end": 20813,
+          "new_start": 20671,
+          "original": "        for file, expected_size in zip(self.streams, expected_sizes, strict=True):\n",
+          "replacement": "        for file, expected_size, original in zip(\n            self.streams, expected_sizes, self._stream_observations, strict=True\n        ):\n"
+        },
+        {
+          "new_end": 20948,
+          "new_start": 20843,
+          "original": "            info = self.api.stream_info(file)\n            if type(info) is not AnchorInfo:\n",
+          "replacement": "            handle = self.api.stream_handle(file)\n            if type(handle) is not int or handle <= 0:\n"
+        },
+        {
+          "new_end": 21283,
+          "new_start": 21018,
+          "original": "",
+          "replacement": "            info = self.api.info(handle)\n            self.checkpoint()\n            if type(info) is not AnchorInfo or type(info.final_path) is not str:\n                raise ProcessError(\"private_stream_identity_invalid\")\n            _windows_path(info.final_path)\n"
+        },
+        {
+          "new_end": 21623,
+          "new_start": 21342,
+          "original": "",
+          "replacement": "            if (\n                file is not original[0]\n                or handle != original[1]\n                or info.identity != original[2]\n                or info.final_path != original[3]\n            ):\n                raise ProcessError(\"private_stream_identity_changed\")\n"
+        },
+        {
+          "new_end": 21994,
+          "new_start": 21868,
+          "original": "",
+          "replacement": "            self.windows_storage.check_private_handle(handle, info.final_path, directory=False)\n            self.checkpoint()\n"
+        },
+        {
+          "new_end": 24876,
+          "new_start": 24797,
+          "original": "",
+          "replacement": "        self.windows_storage.close(cleanup_checkpoint=self.cleanup_checkpoint)\n"
+        },
+        {
+          "new_end": 25301,
+          "new_start": 25095,
+          "original": "        if type(policy) is not BundledLaunchPolicy or policy.constants.PLATFORM != \"windows-x64\":\n",
+          "replacement": "        if type(policy) is not BundledLaunchPolicy:\n            raise ProcessError(\"windows_bundled_policy_required\")\n        policy = replace(policy)\n        if policy.constants.PLATFORM != \"windows-x64\":\n"
+        },
+        {
+          "new_end": 25520,
+          "new_start": 25488,
+          "original": "",
+          "replacement": "        self.cache_owner = None\n"
+        },
+        {
+          "new_end": 26058,
+          "new_start": 26014,
+          "original": "",
+          "replacement": "            self.failure_code = \"cancelled\"\n"
+        },
+        {
+          "new_end": 26217,
+          "new_start": 26175,
+          "original": "",
+          "replacement": "            self.failure_code = \"timeout\"\n"
+        },
+        {
+          "new_end": 26409,
+          "new_start": 26361,
+          "original": "",
+          "replacement": "                self.failure_code = \"cancelled\"\n"
+        },
+        {
+          "new_end": 26580,
+          "new_start": 26534,
+          "original": "",
+          "replacement": "                self.failure_code = \"timeout\"\n"
+        },
+        {
+          "new_end": 27521,
+          "new_start": 27090,
+          "original": "        p = self.policy\n",
+          "replacement": "        if type(self.policy) is not BundledLaunchPolicy:\n            raise ProcessError(\"windows_bundled_policy_required\")\n        p = replace(self.policy)\n        if p.constants.PLATFORM != \"windows-x64\":\n            raise ProcessError(\"windows_bundled_policy_required\")\n        self.policy = p\n        release = parse_release_manifest(\n            p.release_data, expected_platform=\"windows-x64\", limits=BundleLimits()\n        )\n"
+        },
+        {
+          "new_end": 29152,
+          "new_start": 27778,
+          "original": "",
+          "replacement": "        self.cache_owner = WindowsCacheOwner(\n            p.windows_cache,\n            package_root=p.package_root,\n            expected_platform=\"windows-x64\",\n            release=release,\n        )\n        acquired = self.cache_owner.acquire_existing(cancelled=self._verification_cancelled)\n        owner = self.cache_owner\n        if (\n            acquired is not owner\n            or type(owner) is not WindowsCacheOwner\n            or type(owner.location) is not type(p.windows_cache)\n            or type(owner.location.known_folder) is not str\n            or type(owner.location.cache_root) is not str\n            or type(owner.package_root) is not str\n            or type(owner.expected_platform) is not str\n            or type(owner.release) is not type(release)\n            or any(\n                type(getattr(owner.release, name)) is not type(value)\n                for name, value in vars(release).items()\n            )\n        ):\n            raise ProcessError(\"windows_cache_binding_mismatch\")\n        if (\n            replace(owner.location) != p.windows_cache\n            or owner.cache_root != p.cache_root\n            or owner.package_root != p.package_root\n            or owner.expected_platform != \"windows-x64\"\n            or owner.release != release\n        ):\n            raise ProcessError(\"windows_cache_binding_mismatch\")\n        self.checkpoint()\n"
+        },
+        {
+          "new_end": 30114,
+          "new_start": 29622,
+          "original": "        descriptor = _verify_cached_tree(p, self.pin, self._verification_cancelled)\n",
+          "replacement": "        self.cache_owner.check_private_entry(\n            ntpath.join(p.cache_root, \".bundle-pins\"), directory=True\n        )\n        self.checkpoint()\n        self.cache_owner.check_private_entry(\n            ntpath.join(p.cache_root, \".bundle-pins\", p.descriptor.bundle_id + \".lock\"),\n            directory=False,\n        )\n        self.checkpoint()\n        descriptor = _verify_cached_tree(\n            p, self.pin, self._verification_cancelled, windows_storage=self.cache_owner\n        )\n"
+        },
+        {
+          "new_end": 31613,
+          "new_start": 31447,
+          "original": "            p, self.pin, api, self.checkpoint, self.cleanup_checkpoint\n",
+          "replacement": "            p,\n            self.pin,\n            api,\n            self.checkpoint,\n            self.cleanup_checkpoint,\n            windows_storage=self.cache_owner,\n"
+        },
+        {
+          "new_end": 31758,
+          "new_start": 31723,
+          "original": "            p.descriptor,\n",
+          "replacement": "            replace(p.descriptor),\n"
+        },
+        {
+          "new_end": 36560,
+          "new_start": 36376,
+          "original": "",
+          "replacement": "                elif self.cache_owner is not None:\n                    self.cache_owner.close(cleanup_checkpoint=self.cleanup_checkpoint)\n                    self.cleanup_checkpoint()\n"
+        }
+      ],
+      "original_bytes": 28626,
+      "original_sha256": "ac4d070a8172c6f717dbffcf0064807467bc42cf459d237dc7ca2f663d672267",
+      "reviewed_bytes": 36867,
+      "reviewed_sha256": "8d199c04f683a68deb0b878aadf34c24138bdcaf31565c59fdeb9bfe1162a42f"
+    },
+    "tests/unit/test_runtime_bundle_launch.py": {
+      "hunks": [
+        {
+          "new_end": 1588,
+          "new_start": 1045,
+          "original": "",
+          "replacement": "\n\ndef test_linux_policy_accepts_only_none_without_new_behavior(bundle):\n    policy = bundle.policy()\n    assert policy.windows_cache is None\n    assert replace(policy).descriptor is policy.descriptor\n    assert replace(policy).constants is policy.constants\n    assert policy.descriptor_bytes() == bundle.policy(windows_cache=None).descriptor_bytes()\n    assert policy.launch_environment() == bundle.policy(windows_cache=None).launch_environment()\n    with pytest.raises(launch.BundleLaunchError):\n        bundle.policy(windows_cache=object())\n"
+        }
+      ],
+      "original_bytes": 28730,
+      "original_sha256": "1ce5f259c45d4f01f1852bd0bf3d5b0bd2e83dbaa375d777d453310a78bcc050",
+      "reviewed_bytes": 29273,
+      "reviewed_sha256": "001c2f06c5da67ad1390e4c0bd5551df53012cadb969c025476c435f1c2b6260"
+    },
+    "tests/unit/test_windows_cache.py": {
+      "hunks": [
+        {
+          "new_end": 34303,
+          "new_start": 23256,
+          "original": "",
+          "replacement": "\n\ndef cleanup_resources(value, api, first_kind):\n    \"\"\"Retain real owner resources with fake raw leaves, including a pending allocation.\"\"\"\n    value.acquire()\n    if first_kind == \"local\":\n        value._allocation(api.security_descriptor, value._anchors[-1].resource.value)\n    return [resource for resource in reversed(value._resources) if not resource.attempted]\n\n\n@pytest.mark.parametrize(\"first_kind\", [\"handle\", \"local\"])\ndef test_checkpointed_close_brackets_each_original_release_and_final_completion(first_kind):\n    value, api = owner()\n\n    def execute():\n        pending = cleanup_resources(value, api, first_kind)\n        previously_closed = [resource for resource in value._resources if resource.closed]\n        before_close, before_free = list(api.close_calls), list(api.free_calls)\n        trace = []\n\n        def checkpoint():\n            assert value._state != \"closed\"\n            trace.append((\"checkpoint\", sum(resource.closed for resource in pending)))\n\n        def native(event):\n            resource = next(resource for resource in pending if resource.value == event[-1])\n            assert resource.attempted and not resource.closed\n            trace.append((\"release\", resource.value))\n\n        api.hook = native\n        value.close(cleanup_checkpoint=checkpoint)\n        expected = [(\"checkpoint\", 0)]\n        for index, resource in enumerate(pending):\n            expected.extend(\n                [(\"checkpoint\", index), (\"release\", resource.value), (\"checkpoint\", index + 1)]\n            )\n        expected.append((\"checkpoint\", len(pending)))\n        assert trace == expected\n        assert value._state == \"closed\"\n        assert all(resource.attempted and resource.closed for resource in value._resources)\n        assert all(resource.attempted and resource.closed for resource in previously_closed)\n        assert api.close_calls == [\n            *before_close,\n            *(resource.value for resource in pending if resource.kind == \"handle\"),\n        ]\n        assert api.free_calls == [\n            *before_free,\n            *(resource.value for resource in pending if resource.kind == \"local\"),\n        ]\n        assert not api.handles\n        before = list(api.events)\n        value.close()\n        assert api.events == before\n\n    worker(execute)\n\n\n@pytest.mark.parametrize(\"first_kind\", [\"handle\", \"local\"])\n@pytest.mark.parametrize(\n    \"phase\", [\"entry\", \"pre_first\", \"post_first\", \"pre_next\", \"post_next\", \"final\"]\n)\n@pytest.mark.parametrize(\"failure\", [TimeoutError, w.WindowsCacheCancelled, KeyboardInterrupt])\ndef test_checkpointed_close_rejection_stops_successors_and_is_absorbing(first_kind, phase, failure):\n    value, api = owner()\n\n    def execute():\n        pending = cleanup_resources(value, api, first_kind)\n        previously_closed = [resource for resource in value._resources if resource.closed]\n        calls = []\n        reject_at, released = {\n            \"entry\": (1, 0),\n            \"pre_first\": (2, 0),\n            \"post_first\": (3, 1),\n            \"pre_next\": (4, 1),\n            \"post_next\": (5, 2),\n            \"final\": (2 + 2 * len(pending), len(pending)),\n        }[phase]\n\n        def checkpoint():\n            assert value._state != \"closed\"\n            calls.append(len(calls) + 1)\n            if len(calls) == reject_at:\n                raise failure()\n\n        with pytest.raises(w.WindowsCacheError) as error:\n            value.close(cleanup_checkpoint=checkpoint)\n        assert error.value.code == \"cleanup_blocked\" and error.value.owner is value\n        assert value.cleanup_uncertain and len(calls) == reject_at\n        assert all(resource.attempted and resource.closed for resource in pending[:released])\n        assert all(\n            not resource.attempted and not resource.closed for resource in pending[released:]\n        )\n        assert all(resource.attempted and resource.closed for resource in previously_closed)\n        before = list(api.events)\n        for callback in (None, checkpoint):\n            with pytest.raises(w.WindowsCacheError):\n                value.close(cleanup_checkpoint=callback)\n        if released < len(pending):\n            with pytest.raises(w.WindowsCacheError):\n                value._finish(pending[released], cleanup_checkpoint=checkpoint)\n        assert api.events == before and len(calls) == reject_at\n\n    worker(execute)\n\n\n@pytest.mark.parametrize(\"first_kind\", [\"handle\", \"local\"])\ndef test_checkpointed_close_late_return_records_success_without_renewing_deadline(first_kind):\n    value, api = owner()\n\n    def execute():\n        pending = cleanup_resources(value, api, first_kind)\n        clock, deadline, checks = [0.0], 5.0, []\n\n        def checkpoint():\n            checks.append(clock[0])\n            if clock[0] >= deadline:\n                raise TimeoutError(\"original cleanup deadline expired\")\n\n        def late_return(event):\n            assert event[-1] == pending[0].value\n            assert pending[0].attempted and not pending[0].closed\n            clock[0] = 6.0\n\n        api.hook = late_return\n        with pytest.raises(w.WindowsCacheError):\n            value.close(cleanup_checkpoint=checkpoint)\n        assert checks == [0.0, 0.0, 6.0]\n        assert pending[0].attempted and pending[0].closed\n        assert all(not resource.attempted and not resource.closed for resource in pending[1:])\n        assert value.cleanup_uncertain\n        before = list(api.events)\n        clock[0] = 0.0  # A later caller cannot reset an uncertain owner into a retry.\n        with pytest.raises(w.WindowsCacheError):\n            value.close(cleanup_checkpoint=checkpoint)\n        assert api.events == before and checks == [0.0, 0.0, 6.0]\n\n    worker(execute)\n\n\n@pytest.mark.parametrize(\"first_kind\", [\"handle\", \"local\"])\n@pytest.mark.parametrize(\"failure\", [OSError, KeyboardInterrupt, SystemExit])\n@pytest.mark.parametrize(\"checkpointed\", [False, True])\n@pytest.mark.parametrize(\"release_index\", [0, 1])\ndef test_close_native_failure_keeps_default_drain_but_checkpointed_stops(\n    first_kind, failure, checkpointed, release_index\n):\n    value, api = owner()\n\n    def execute():\n        pending = cleanup_resources(value, api, first_kind)\n        checks = []\n\n        def fail(event):\n            if event[-1] == pending[release_index].value:\n                assert pending[release_index].attempted and not pending[release_index].closed\n                raise failure(\"inert uncertain release\")\n\n        api.hook = fail\n        callback = (lambda: checks.append(\"check\")) if checkpointed else None\n        with pytest.raises(w.WindowsCacheError):\n            value.close(cleanup_checkpoint=callback)\n        assert value.cleanup_uncertain\n        assert pending[release_index].attempted and not pending[release_index].closed\n        assert all(resource.attempted and resource.closed for resource in pending[:release_index])\n        if checkpointed:\n            assert checks == [\"check\"] * (2 + 2 * release_index)\n            assert all(\n                not resource.attempted and not resource.closed\n                for resource in pending[release_index + 1 :]\n            )\n        else:\n            assert not checks\n            assert all(\n                resource.attempted and resource.closed for resource in pending[release_index + 1 :]\n            )\n        before = list(api.events)\n        with pytest.raises(w.WindowsCacheError):\n            value.close(cleanup_checkpoint=callback)\n        assert api.events == before\n\n    worker(execute)\n\n\n@pytest.mark.parametrize(\"result\", [42, True, \"unconfirmed\"])\ndef test_checkpointed_localfree_unconfirmed_return_stops_before_postcheck(result):\n    value, api = owner()\n\n    def execute():\n        pending = cleanup_resources(value, api, \"local\")\n        checks = []\n        api.local_result = result\n        with pytest.raises(w.WindowsCacheError):\n            value.close(cleanup_checkpoint=lambda: checks.append(\"check\"))\n        assert checks == [\"check\", \"check\"]\n        assert pending[0].attempted and not pending[0].closed\n        assert all(not resource.attempted and not resource.closed for resource in pending[1:])\n        assert value.cleanup_uncertain\n\n    worker(execute)\n\n\n@pytest.mark.parametrize(\"method\", [\"close\", \"_finish\"])\n@pytest.mark.parametrize(\"invalid\", [False, 0, 1, \"not a callback\", object()])\ndef test_cleanup_callback_validation_rejects_without_resource_operations(method, invalid):\n    value, api = owner()\n\n    def execute():\n        pending = cleanup_resources(value, api, \"local\")\n        before = list(api.events)\n        with pytest.raises(w.WindowsCacheError) as error:\n            if method == \"close\":\n                value.close(cleanup_checkpoint=invalid)\n            else:\n                value._finish(pending[0], cleanup_checkpoint=invalid)\n        assert error.value.code == \"cleanup_blocked\" and error.value.owner is value\n        assert value.cleanup_uncertain and api.events == before\n        assert all(not resource.attempted and not resource.closed for resource in pending)\n        with pytest.raises(w.WindowsCacheError):\n            value.close()\n        assert api.events == before\n\n    worker(execute)\n\n\n@pytest.mark.parametrize(\"first_kind\", [\"handle\", \"local\"])\n@pytest.mark.parametrize(\"reject_at\", [1, 2])\ndef test_direct_finish_checks_before_and_after_native_release(first_kind, reject_at):\n    value, api = owner()\n\n    def execute():\n        pending = cleanup_resources(value, api, first_kind)\n        checks = []\n\n        def checkpoint():\n            checks.append((pending[0].attempted, pending[0].closed))\n            if len(checks) == reject_at:\n                raise KeyboardInterrupt(\"inert cancelled cleanup\")\n\n        with pytest.raises(w.WindowsCacheError):\n            value._finish(pending[0], cleanup_checkpoint=checkpoint)\n        assert checks == ([(False, False)] if reject_at == 1 else [(False, False), (True, True)])\n        assert pending[0].attempted is (reject_at == 2)\n        assert pending[0].closed is (reject_at == 2)\n        assert all(not resource.attempted and not resource.closed for resource in pending[1:])\n        assert value.cleanup_uncertain\n        before = list(api.events)\n        with pytest.raises(w.WindowsCacheError):\n            value.close()\n        assert api.events == before\n\n    worker(execute)\n\n\n@pytest.mark.parametrize(\"reject_at\", [None, 1, 2])\ndef test_checkpointed_empty_owner_checks_entry_and_completion_without_native_api(reject_at):\n    value, api = owner()\n    checks = []\n\n    def checkpoint():\n        assert value._state != \"closed\"\n        checks.append(value._state)\n        if len(checks) == reject_at:\n            raise w.WindowsCacheCancelled(owner=value)\n\n    if reject_at is None:\n        value.close(cleanup_checkpoint=checkpoint)\n        assert checks == [\"new\", \"closing\"] and value._state == \"closed\"\n    else:\n        with pytest.raises(w.WindowsCacheError):\n            value.close(cleanup_checkpoint=checkpoint)\n        assert len(checks) == reject_at and value.cleanup_uncertain\n    assert not api.events and not value._resources\n"
+        }
+      ],
+      "original_bytes": 55294,
+      "original_sha256": "30890c8b031f0e6b7e7ee238ae59272813d1c689ababaf71f1c41f81e3093e6b",
+      "reviewed_bytes": 66341,
+      "reviewed_sha256": "6069c267844406f8fb3f24159a7683d10e0bcd180d052b20f5dec8c1036e6827"
+    },
+    "tests/unit/test_windows_runtime.py": {
+      "hunks": [
+        {
+          "new_end": 288,
+          "new_start": 247,
+          "original": "",
+          "replacement": "import test_windows_cache as cache_tests\n"
+        },
+        {
+          "new_end": 1052,
+          "new_start": 940,
+          "original": "",
+          "replacement": "cache = importlib.import_module(PACKAGE + \".windows_cache\")\nCACHE_OWNER_INIT = cache.WindowsCacheOwner.__init__\n"
+        },
+        {
+          "new_end": 1553,
+          "new_start": 1275,
+          "original": "        self.package, self.cache = \"C:\\\\Installed \u00e9\", \"C:\\\\MCAD\u6e2c\u5b9a\\\\r\"\n",
+          "replacement": "        self.package, self.known_folder = \"C:\\\\Installed \u00e9\", \"C:\\\\User\u6e2c\u5b9a\\\\Local\"\n        self.location = cache.WindowsCacheLocation(\n            self.known_folder, ntpath.join(self.known_folder, \"MechanicalCAD\", \"r\")\n        )\n        self.cache = self.location.cache_root\n"
+        },
+        {
+          "new_end": 4913,
+          "new_start": 4872,
+          "original": "",
+          "replacement": "            windows_cache=self.location,\n"
+        },
+        {
+          "new_end": 7541,
+          "new_start": 6781,
+          "original": "",
+          "replacement": "        if handle >= 1000000:\n            self.hit(\"stream_info\")\n            process = self.process_api\n            index = handle - 1000000\n            file = process.files[index]\n            assert file in process.files and file not in process.closed\n            path = ntpath.join(process.temporary_directory, \"tmp\" + str(index))\n            return self.stream_change(\n                w.AnchorInfo(\n                    (1, 1, index + 1),\n                    path,\n                    False,\n                    True,\n                    False,\n                    False,\n                    1,\n                    len(process.contents[file]),\n                    \"NTFS\",\n                    True,\n                    False,\n                )\n            )\n"
+        },
+        {
+          "new_end": 11197,
+          "new_start": 9462,
+          "original": "        self.hit(\"stream_info\")\n        process = self.process_api\n        assert file in process.files and file not in process.closed\n        index = process.files.index(file)\n        path = ntpath.join(process.temporary_directory, \"tmp\" + str(index))\n        return self.stream_change(\n            w.AnchorInfo(\n                (1, 1, index + 1),\n                path,\n                False,\n                True,\n                False,\n                False,\n                1,\n                len(process.contents[file]),\n                \"NTFS\",\n                True,\n                False,\n",
+          "replacement": "        return self.info(self.stream_handle(file))\n\n    def stream_handle(self, file):\n        self.hit(\"stream_handle\")\n        assert file in self.process_api.files and file not in self.process_api.closed\n        return 1000000 + self.process_api.files.index(file)\n\n\nclass CacheAPI(cache_tests.FakeAPI):\n    \"\"\"Real concrete cache owner; only its raw OS leaf observes inert records.\"\"\"\n\n    def __init__(self, fixture, runtime, events):\n        super().__init__(fixture.location)\n        self.runtime, self.runtime_events = runtime, events\n        self.add(ntpath.dirname(fixture.cache))\n        self.add(fixture.cache)\n        self.add(ntpath.join(fixture.cache, \".bundle-pins\"))\n        self.add(\n            ntpath.join(fixture.cache, \".bundle-pins\", fixture.bundle_id + \".lock\"), directory=False\n        )\n\n    def hit(self, *event):\n        super().hit(*event)\n        if hasattr(self, \"runtime_events\"):\n            self.runtime_events.append(\"cache_\" + event[0])\n\n    def add(self, path, **kwargs):\n        super().add(path, **kwargs)\n        info, security = self.paths[path]\n        self.paths[path] = (replace(info, identity=(1, info.identity[1])), security)\n\n    def info(self, handle):\n        if handle in self.runtime.handles or handle >= 1000000:\n            self.hit(\"borrowed_info\", handle)\n            info = self.runtime.info(handle)\n            value = cache._Info(\n                (info.identity[0], (info.identity[1] << 32) | info.identity[2]),\n                info.final_path,\n                (16 if info.directory else 0)\n                | (0x400 if info.reparse else 0)\n                | (0x1000 if info.offline else 0),\n                info.disk,\n                info.directory,\n                info.links,\n"
+        },
+        {
+          "new_end": 12007,
+          "new_start": 11211,
+          "original": "",
+          "replacement": "            return self.info_change(value)\n        return cache._Info(**vars(super().info(handle)))\n\n    def volume(self, handle, path):\n        return cache._Volume(**vars(super().volume(handle, path)))\n\n    def security_descriptor(self, handle, output):\n        if handle in self.runtime.handles or handle >= 1000000:\n            info = self.info(handle)\n            self.allocate(\"observed\", cache_tests.secure(directory=info.directory), output)\n            return 0\n        return super().security_descriptor(handle, output)\n\n    def parse_security(self, pointer):\n        value = super().parse_security(pointer)\n        return cache._Security(\n            value.owner,\n            value.present,\n            value.protected,\n            tuple(cache._Ace(**vars(ace)) for ace in value.aces),\n"
+        },
+        {
+          "new_end": 13943,
+          "new_start": 13748,
+          "original": "",
+          "replacement": "    cache_api = CacheAPI(fixture, runtime, events)\n\n    def initialize_cache(self, *args, **kwargs):\n        CACHE_OWNER_INIT(self, *args, **kwargs, api=cache_api)\n        cache_api.owner = self\n"
+        },
+        {
+          "new_end": 14291,
+          "new_start": 14224,
+          "original": "    def verify(policy, actual_pin, cancelled):\n",
+          "replacement": "    def verify(policy, actual_pin, cancelled, *, windows_storage):\n"
+        },
+        {
+          "new_end": 14524,
+          "new_start": 14436,
+          "original": "",
+          "replacement": "        assert windows_storage is cache_api.owner\n        windows_storage.assert_held()\n"
+        },
+        {
+          "new_end": 15016,
+          "new_start": 14937,
+          "original": "",
+          "replacement": "    monkeypatch.setattr(cache.WindowsCacheOwner, \"__init__\", initialize_cache)\n"
+        },
+        {
+          "new_end": 15719,
+          "new_start": 15558,
+          "original": "        fixture=fixture, events=events, pin=pin, runtime=runtime, process=process, clock=clock\n",
+          "replacement": "        fixture=fixture,\n        events=events,\n        pin=pin,\n        runtime=runtime,\n        process=process,\n        clock=clock,\n        cache=cache_api,\n"
+        },
+        {
+          "new_end": 18189,
+          "new_start": 18104,
+          "original": "        monkeypatch.setattr(w, \"_verify_cached_tree\", lambda *args: value)\n",
+          "replacement": "        monkeypatch.setattr(w, \"_verify_cached_tree\", lambda *args, **kwargs: value)\n"
+        },
+        {
+          "new_end": 22032,
+          "new_start": 21910,
+          "original": "",
+          "replacement": "            if len(env.process.files) != 4 or not env.process.contents[env.process.files[3]]:\n                return info\n"
+        },
+        {
+          "new_end": 25898,
+          "new_start": 25854,
+          "original": "",
+          "replacement": "            windows_cache=fixture.location,\n"
+        }
+      ],
+      "original_bytes": 25833,
+      "original_sha256": "3d2e23c85e66229cedfea20bb014b0aa290ca5242150f5a3df48000a3d41f6e2",
+      "reviewed_bytes": 29550,
+      "reviewed_sha256": "36b0bb4753aaf7484269acec983732263749173ca43985bbeb8ea1c37809937f"
+    },
+    "tests/unit/test_windows_transport.py": {
+      "hunks": [
+        {
+          "new_end": 1981,
+          "new_start": 1897,
+          "original": "        def delayed(*args):\n            value = original(*args)\n",
+          "replacement": "        def delayed(*args, **kwargs):\n            value = original(*args, **kwargs)\n"
+        },
+        {
+          "new_end": 3295,
+          "new_start": 3212,
+          "original": "        def cancel(*args):\n            value = original(*args)\n",
+          "replacement": "        def cancel(*args, **kwargs):\n            value = original(*args, **kwargs)\n"
+        }
+      ],
+      "original_bytes": 19644,
+      "original_sha256": "82bfd7b84e94f54f8d128d5e34843fe90718dafccf430fea1a18503cb625777e",
+      "reviewed_bytes": 19684,
+      "reviewed_sha256": "abe5775c0756dce7b6ff2b20769c7bf976a33f27d3e6e77ffb6c649b91a607c7"
+    }
+  },
+  "schema": "windows-runtime-cache-python-boundary-v1"
+}

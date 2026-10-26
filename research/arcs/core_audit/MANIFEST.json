@@ -1,0 +1,78 @@
+{
+  "capture_utc": "2026-10-17T01:32:00Z",
+  "preserved_snapshot_sha256": "ce95ffb43152965620118fd7eff9e8e1f2681136786cbfdb91e36d52f55a847f",
+  "integration_base_commit": "d6f13afbda1dbae5516e5fe53cda533902c595b2",
+  "reviewed_source_sha256": {
+    "src/mechanical_cad/arc_geometry.py": "b2017ca26300712cdaece7325fcd12fd1330d650896a5494dea56967fa1a82aa",
+    "src/mechanical_cad/engine.py": "319cd0f39d0b8571ae762b96627c4189beffe6e21d65198cd59833bd5e300dcf",
+    "src/mechanical_cad/model.py": "cb5fd6663ab2456f181c9417544411a4a8bc39c781a845c4a358b03cb3dd3365",
+    "src/mechanical_cad/part_snapshot.py": "767845d5b05659a25af27f96f5670c1292211eb56d3b4f144bbaf0d8b8ecabcd",
+    "src/mechanical_cad/profile_region.py": "a9a21fe7d9c229727ef88841d4de21ab254a0dc100ca4bf7fa26bb2d88af9fc0",
+    "src/mechanical_cad/result_policy.py": "682097c415ae7308b5b09d496d7439c92f777bd4de55b9ef467711c22da3f820",
+    "src/mechanical_cad/sketch_model.py": "aecf113a3f3f1611adfbe4150a0798f892eb1af90d1c897bdb94efe6c5378234",
+    "src/mechanical_cad/sketch_protocol.py": "57f0fcef5ae5e271cf45731000d713b52e13027d370e91097efbcde2fbefdc33",
+    "src/mechanical_cad/sketch_service.py": "4e4e2ba471cad089322be6d1d910b65f79a128215bc08e3adf6123f3008080cb",
+    "src/mechanical_cad/sketch_solver.py": "35577e8ac6f8c7517d34bce981987bec9167f6e5ebe688ffa4ab31630a3a12da",
+    "tests/integration/test_arc_native_ceiling.py": "4e9247f484552071072a3116cece7ea05ac161438d410b1ae7438a04c5e76282",
+    "tests/unit/test_profile_region.py": "8eb755e4d7024c599e4db939691f6bb7c00656524b35d9e71171f629e8e8980f",
+    "docs/adr/0007-directed-arc-core.md": "372ebbb854e24631967d8f15a252859f53ebfb18d1103169cb32492fa0724b66",
+    "docs/NEXT_SKETCH_ARCS.md": "afff3f136c2465dad59cf4001400671f8b1d42413dc05ec90118b1f2ae407346"
+  },
+  "immutable_guard_function_sha256": {
+    "solve": "ccdb0cabfe89c0d192a52f54e6717c02bf358a7088aa4518e0c5a95b7064fbc6",
+    "_unique_relations": "7d488fe43c99944314eba20e122c80dc2371edf741b66f31b626fcfb6d7bdb16",
+    "_require_acyclic_coordinate_equalities": "ae1260661a06c46e2d5519c854af7f0e896733d5116afde3f2da1cf0ed741e42"
+  },
+  "files": {
+    "README.md": {
+      "bytes": 2061,
+      "sha256": "440ef46a4e67141946c34918c047736902e96c26053326c9c674dacd9271e775"
+    },
+    "REVIEW.md": {
+      "bytes": 6246,
+      "sha256": "fd4ab073fc74b3f2fedb9c10c8ba9dec5b05098a05cfa3e6243a661a60ffa47f"
+    },
+    "probes/probe_arc_branches.py": {
+      "bytes": 1839,
+      "sha256": "f8e738f4413c13a9b8f3aa29823da2130a25a38ba51e47d5ce6ec17a6d1684a7"
+    },
+    "probes/probe_arc_domains.py": {
+      "bytes": 2175,
+      "sha256": "a299ef5bcd5b56fffaea45c0f445e47a2e86a6bc2bd1cbaa869a5cbb57f3f631"
+    },
+    "probes/probe_false_success.py": {
+      "bytes": 2436,
+      "sha256": "4c30666f672efc964635c70caaf845d97ae746207b2df782b55bfa48587f62e1"
+    },
+    "probes/probe_legacy_compat.py": {
+      "bytes": 3199,
+      "sha256": "1a5829cd57df7ba2126e612e17df1f22246cbf2482dbc36472fcc4c7a6d1d4f1"
+    },
+    "probes/probe_native_ceiling.py": {
+      "bytes": 1691,
+      "sha256": "8b92cfebfdcb48c25dc3c29309c6478d3f28b341479eec94be546c03c98203e8"
+    },
+    "results/arc_branches.json": {
+      "bytes": 8847,
+      "sha256": "498d250faa39b68d44cae71f3e54c5f87a1943e65020c786caf220680d6ccd49"
+    },
+    "results/arc_domains.json": {
+      "bytes": 8219,
+      "sha256": "424f6910677ed7f3b5445ce5d1fedd56f1a5489558e52ebb1a6f4b6db38ffcb9"
+    },
+    "results/compatibility_receipt.json": {
+      "bytes": 1070,
+      "sha256": "8f537dae3242030e4bfddb870451382649673cf237e5b3ce15ea75c0ecd0c34a"
+    },
+    "results/false_success.json": {
+      "bytes": 1105,
+      "sha256": "7e40280b53a29bbe3894ee00d45b1c8be657a1fff6c04c5eada697cc3fa5a2af"
+    },
+    "results/native_ceiling.json": {
+      "bytes": 464,
+      "sha256": "b8a7cc7bd0d6596d798748498e6289a52479a00d01e579517019f21b58370440"
+    }
+  },
+  "revision": 3,
+  "prior_archive_sha256": "ec8bdad0362468d429e672b4a8cf2e810498e1d258c3b1128b9e3fe885d8127b"
+}

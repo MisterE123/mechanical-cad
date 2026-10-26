@@ -1,0 +1,140 @@
+{
+  "active_feature": "finished_enclosure",
+  "features": [
+    {
+      "id": "outline",
+      "inputs": {},
+      "kind": "sketch_rectangle",
+      "label": "Enclosure footprint",
+      "params": {
+        "height": "box_depth",
+        "width": "box_width"
+      }
+    },
+    {
+      "id": "blank",
+      "inputs": {
+        "profile": "outline"
+      },
+      "kind": "extrude",
+      "label": "Enclosure blank",
+      "params": {
+        "length": "box_height"
+      }
+    },
+    {
+      "id": "enclosure",
+      "inputs": {
+        "base": "blank"
+      },
+      "kind": "shell",
+      "label": "Open top enclosure",
+      "opening_faces": [
+        "blank/face/cap.end"
+      ],
+      "params": {
+        "thickness": "wall_thickness"
+      }
+    },
+    {
+      "id": "inner_pad_sketch",
+      "inputs": {
+        "support": "enclosure"
+      },
+      "kind": "sketch_constrained",
+      "label": "Pad on inner left wall",
+      "params": {},
+      "sketch": {
+        "circles": [
+          {
+            "center": "center",
+            "id": "pad_circle",
+            "radius": 2.0
+          }
+        ],
+        "constraints": [
+          {
+            "id": "center_location",
+            "kind": "fixed",
+            "refs": [
+              "center"
+            ],
+            "target": [
+              0.0,
+              0.0
+            ],
+            "value": null
+          },
+          {
+            "id": "pad_size",
+            "kind": "radius",
+            "refs": [
+              "pad_circle"
+            ],
+            "target": null,
+            "value": "pad_radius"
+          }
+        ],
+        "id": "inner_pad_profile",
+        "lines": [],
+        "plane": {
+          "id": "workplane",
+          "origin": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "quaternion": [
+            1.0,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        "points": [
+          {
+            "id": "center",
+            "u": 0.0,
+            "v": 0.0
+          }
+        ],
+        "schema_version": 2,
+        "units": "mm"
+      },
+      "support_face": "enclosure/face/shell.inner.6c54a61d7e60c96eec3f97d558964392cad68d3189236e04d76fa8c1c71acbf8"
+    },
+    {
+      "id": "inner_pad",
+      "inputs": {
+        "profile": "inner_pad_sketch"
+      },
+      "kind": "extrude",
+      "label": "Pad projects into cavity",
+      "params": {
+        "length": "pad_length"
+      }
+    },
+    {
+      "id": "finished_enclosure",
+      "inputs": {
+        "base": "enclosure",
+        "tool": "inner_pad"
+      },
+      "kind": "union",
+      "label": "Enclosure with inner pad",
+      "params": {}
+    }
+  ],
+  "id": "inner_wall_pad_demo",
+  "name": "Enclosure: pad on the generated inner wall",
+  "parameters": {
+    "box_depth": 15,
+    "box_height": 10,
+    "box_width": 20,
+    "pad_length": 3,
+    "pad_radius": 2,
+    "wall_thickness": 1
+  },
+  "schema_version": 2,
+  "units": "mm"
+}

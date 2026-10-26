@@ -1,0 +1,22 @@
+{
+  "format_version": 1,
+  "capture_method": "Exact stdout bytes from git show <source_commit>:<source_path>; no source changes or newline normalization.",
+  "fixtures": [
+    {
+      "fixture": "sidecar-b965df1.py.txt",
+      "source_commit": "b965df10be89efb9041edc28a9e366e07a33d7d2",
+      "source_path": "src/mechanical_cad/sidecar.py",
+      "git_blob_sha1": "83228dd681b452c7538c4d6d9431781674db932b",
+      "sha256": "026d6194c68cc6340482a624a84772d1ac514bd1217b81409631e2b3a0be0dfe",
+      "size_bytes": 7971
+    },
+    {
+      "fixture": "sketch_solver-51ed72d.py.txt",
+      "source_commit": "51ed72d307de26a84c07e620fbb1f452f1e1937a",
+      "source_path": "src/mechanical_cad/sketch_solver.py",
+      "git_blob_sha1": "9765c772f2612884415cacc6c409d95d6542b72d",
+      "sha256": "35577e8ac6f8c7517d34bce981987bec9167f6e5ebe688ffa4ab31630a3a12da",
+      "size_bytes": 15033
+    }
+  ]
+}

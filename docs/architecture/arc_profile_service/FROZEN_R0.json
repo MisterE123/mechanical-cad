@@ -1,0 +1,33 @@
+{
+  "schema": 1,
+  "frozen_utc": "2026-10-17T04:32:16Z",
+  "source_commit": "e3d83544510aa07b99dc638665c91b91b1e6bce7",
+  "status": "predeclared empirical qualification envelope; not a certified OCCT error bound; not production admission",
+  "unit": "mm",
+  "u": "2^-53",
+  "n": "number of authored boundary curves",
+  "W": "max(1 mm, absolute coordinate of all transformed requested endpoints and centers)",
+  "L": "max(1 mm, local boundary endpoint bounding-box diagonal, all canonical radii)",
+  "P": "analytic perimeter of the ideal line/circle boundary",
+  "A": "midpoint of independent analytic area enclosure",
+  "H": "positive perpendicular extrusion height",
+  "E_A": "128*u*n*L^2 + 16*u*W*P",
+  "E_V": "H*E_A + 128*u*n*L^2*H + 16*u*W*A",
+  "comparison": "distance(native local-reference mass, independent analytic interval) <= corresponding E; numerical interval/endpoint-gap/parameter-conversion allowances belong to the independent analytic interval",
+  "rules": [
+    "Apply the identical formula to every case and retain every failure.",
+    "Do not fit constants to outcomes, silently remove difficult supported fixtures, or widen a case allowance.",
+    "Reference calculations that are merely high-precision approximations must be labeled approximate and cannot substitute for later certified production intervals.",
+    "Passing this formula does not certify identity, contacts, trim, stored tolerance, native validity, or arbitrary kernels/platforms. Those remain independent gates.",
+    "Boundary cases may be honest unsupported-domain/native-postflight rejections, never reported as successful geometry."
+  ],
+  "rationale": "Predeclared roundoff-scaled engineering comparison criterion: an operation-count factor on local squared scale, a world-coordinate times perimeter sensitivity term, and height/area propagation for volume. The coefficients are conservative proposed qualification constants, not an analytical bound on proprietary/native mass integration implementation.",
+  "potential_first_domain_not_enabled": {
+    "fixtures": ["quarter sector", "major 270-degree sector", "quarter arc/chord", "major 270-degree arc/chord"],
+    "radii_mm": "1 through 1000",
+    "positive_heights_mm": "1 through 1000",
+    "coordinate_and_origin_limits": "unchanged frozen core and workplane limits",
+    "contacts": "only after independently resolved endpoint-incidence semantics and certified global pair checks",
+    "qualification_scope": "observed finite fixture matrix only; no untested continuous parameter coverage claim"
+  }
+}

@@ -1,0 +1,259 @@
+[
+  {
+    "action_id": "doc.new",
+    "label": "New document",
+    "hover_description": "New document: Start an empty CAD document. Save any work you want to keep first.",
+    "google_symbol": "note_add",
+    "operator_hint": "mcad.new_document"
+  },
+  {
+    "action_id": "doc.load",
+    "label": "Open document",
+    "hover_description": "Open document: Choose a CAD document to validate and load.",
+    "google_symbol": "folder_open",
+    "operator_hint": "mcad.load_document"
+  },
+  {
+    "action_id": "doc.save",
+    "label": "Save document",
+    "hover_description": "Save document: Save the CAD parameters and feature history to a file.",
+    "google_symbol": "save",
+    "operator_hint": "mcad.save_document"
+  },
+  {
+    "action_id": "session.undo",
+    "label": "Undo",
+    "hover_description": "Undo: Reverse the last editing action in this session.",
+    "google_symbol": "undo"
+  },
+  {
+    "action_id": "session.redo",
+    "label": "Redo",
+    "hover_description": "Redo: Restore the last action undone in this session.",
+    "google_symbol": "redo"
+  },
+  {
+    "action_id": "history.regenerate",
+    "label": "Rebuild model",
+    "hover_description": "Rebuild model: Recalculate the CAD result from its saved parameters and feature history.",
+    "google_symbol": "refresh",
+    "operator_hint": "mcad.regenerate"
+  },
+  {
+    "action_id": "history.inspect",
+    "label": "Feature history",
+    "hover_description": "Feature history: Show the operations that define this CAD model.",
+    "google_symbol": "history"
+  },
+  {
+    "action_id": "view.focus",
+    "label": "Frame CAD result",
+    "hover_description": "Frame CAD result: Isolate and fit the CAD result in the viewport.",
+    "google_symbol": "center_focus_strong",
+    "operator_hint": "mcad.focus_result"
+  },
+  {
+    "action_id": "view.whole_scene",
+    "label": "Show whole scene",
+    "hover_description": "Show whole scene: Leave the isolated CAD view and frame all scene objects.",
+    "google_symbol": "select_all",
+    "operator_hint": "mcad.show_scene"
+  },
+  {
+    "action_id": "verify.model",
+    "label": "Check model",
+    "hover_description": "Check model: Run the available geometry checks and show their results.",
+    "google_symbol": "fact_check"
+  },
+  {
+    "action_id": "file.export",
+    "label": "Export CAD result",
+    "hover_description": "Export CAD result: Choose a file format and export the current checked result.",
+    "google_symbol": "output"
+  },
+  {
+    "action_id": "edit.apply",
+    "label": "Apply",
+    "hover_description": "Apply: Commit the values in this operation and update the model.",
+    "google_symbol": "check"
+  },
+  {
+    "action_id": "edit.cancel",
+    "label": "Cancel",
+    "hover_description": "Cancel: Close this operation without applying its changes.",
+    "google_symbol": "close"
+  },
+  {
+    "action_id": "help.open",
+    "label": "Help",
+    "hover_description": "Help: Show instructions, required inputs, and current limitations for this tool.",
+    "google_symbol": "help",
+    "operator_hint": "mcad.help"
+  },
+  {
+    "action_id": "setup.settings",
+    "label": "CAD settings",
+    "hover_description": "CAD settings: Review the setup used by the Mechanical CAD add-on.",
+    "google_symbol": "settings"
+  },
+  {
+    "action_id": "status.warning",
+    "label": "Warning",
+    "hover_description": "Warning: Read the accompanying explanation before continuing.",
+    "google_symbol": "warning",
+    "usage": "Status only; always accompany with specific visible text."
+  },
+  {
+    "action_id": "status.failure",
+    "label": "Failed",
+    "hover_description": "Failed: The operation did not complete. Read the error and check its inputs.",
+    "google_symbol": "error",
+    "usage": "Status only; always accompany with specific visible text."
+  },
+  {
+    "action_id": "status.success",
+    "label": "Passed",
+    "hover_description": "Passed: The displayed check completed successfully. Read the check details for its scope.",
+    "google_symbol": "check_circle",
+    "usage": "Status only; must identify which check actually passed."
+  },
+  {
+    "action_id": "sketch.rectangle",
+    "label": "Rectangle sketch",
+    "hover_description": "Rectangle sketch: Create a closed XY profile from its width, height, and lower-left corner, in millimetres.",
+    "operator_hint": "mcad.add_rectangle"
+  },
+  {
+    "action_id": "sketch.circle",
+    "label": "Circle sketch",
+    "hover_description": "Circle sketch: Create a closed XY profile from its center and a positive radius, in millimetres.",
+    "operator_hint": "mcad.add_circle"
+  },
+  {
+    "action_id": "sketch.line",
+    "label": "Sketch line",
+    "hover_description": "Sketch line: Draw a line between two endpoints on the active sketch plane."
+  },
+  {
+    "action_id": "sketch.dimension",
+    "label": "Sketch dimension",
+    "hover_description": "Sketch dimension: Set a distance between the selected sketch points or edges."
+  },
+  {
+    "action_id": "constraint.coincident",
+    "label": "Coincident constraint",
+    "hover_description": "Coincident constraint: Make two selected sketch points occupy the same position."
+  },
+  {
+    "action_id": "constraint.horizontal",
+    "label": "Horizontal constraint",
+    "hover_description": "Horizontal constraint: Keep the selected sketch line horizontal in its sketch plane."
+  },
+  {
+    "action_id": "constraint.vertical",
+    "label": "Vertical constraint",
+    "hover_description": "Vertical constraint: Keep the selected sketch line vertical in its sketch plane."
+  },
+  {
+    "action_id": "constraint.parallel",
+    "label": "Parallel constraint",
+    "hover_description": "Parallel constraint: Keep two selected sketch lines parallel."
+  },
+  {
+    "action_id": "constraint.perpendicular",
+    "label": "Perpendicular constraint",
+    "hover_description": "Perpendicular constraint: Keep two selected sketch lines at a right angle."
+  },
+  {
+    "action_id": "constraint.equal",
+    "label": "Equal constraint",
+    "hover_description": "Equal constraint: Give the selected compatible sketch entities equal lengths or radii."
+  },
+  {
+    "action_id": "constraint.tangent",
+    "label": "Tangent constraint",
+    "hover_description": "Tangent constraint: Make the selected supported sketch entities touch with a common direction."
+  },
+  {
+    "action_id": "constraint.fixed",
+    "label": "Fix sketch point",
+    "hover_description": "Fix sketch point: Hold the selected point at its current sketch coordinates."
+  },
+  {
+    "action_id": "feature.extrude",
+    "label": "Extrude profile",
+    "hover_description": "Extrude profile: Select a saved closed sketch and create a solid along +Z using a positive length, in millimetres.",
+    "operator_hint": "mcad.add_extrude"
+  },
+  {
+    "action_id": "feature.cut",
+    "label": "Cut solid",
+    "hover_description": "Cut solid: Choose target and tool solids. Subtract the tool from the target; operand order matters.",
+    "operator_hint": "mcad.add_cut"
+  },
+  {
+    "action_id": "assembly.component",
+    "label": "New component",
+    "hover_description": "New component: Define a reusable part for the assembly."
+  },
+  {
+    "action_id": "assembly.instance",
+    "label": "Place component",
+    "hover_description": "Place component: Add another placement of a reusable part to the assembly."
+  },
+  {
+    "action_id": "mate.fixed",
+    "label": "Fixed mate",
+    "hover_description": "Fixed mate: Lock the relative position and orientation of the selected components."
+  },
+  {
+    "action_id": "mate.revolute",
+    "label": "Revolute mate",
+    "hover_description": "Revolute mate: Align two selected axes and allow rotation around their shared axis."
+  },
+  {
+    "action_id": "mate.slider",
+    "label": "Slider mate",
+    "hover_description": "Slider mate: Align selected components and allow translation along one shared axis."
+  },
+  {
+    "action_id": "verify.interference",
+    "label": "Check interference",
+    "hover_description": "Check interference: Find overlapping solid volumes in the selected components."
+  },
+  {
+    "action_id": "verify.clearance",
+    "label": "Measure clearance",
+    "hover_description": "Measure clearance: Measure the shortest gap between the selected supported faces or components."
+  },
+  {
+    "action_id": "doc.demo",
+    "label": "New drilled-plate demo",
+    "hover_description": "New drilled-plate demo: Replace the current CAD document with the editable example. Save work you want to keep first.",
+    "operator_hint": "mcad.new_demo"
+  },
+  {
+    "action_id": "history.previous",
+    "label": "Previous feature",
+    "hover_description": "Previous feature: Move to the preceding operation in the CAD feature history.",
+    "google_symbol": "chevron_left"
+  },
+  {
+    "action_id": "history.next",
+    "label": "Next feature",
+    "hover_description": "Next feature: Move to the next operation in the CAD feature history.",
+    "google_symbol": "chevron_right"
+  },
+  {
+    "action_id": "file.export_step",
+    "label": "Export STEP",
+    "hover_description": "Export STEP: Write the checked CAD result as exact solid geometry in a STEP file.",
+    "usage": "Use a visible STEP caption; a shape alone cannot reliably communicate a file format."
+  },
+  {
+    "action_id": "file.export_stl",
+    "label": "Export STL",
+    "hover_description": "Export STL: Write a triangulated copy of the checked CAD result in an STL file.",
+    "usage": "Use a visible STL caption; a shape alone cannot reliably communicate a file format."
+  }
+]

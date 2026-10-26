@@ -1,0 +1,1 @@
+{"protocol_version":1,"ok":false,"result":null,"error":{"code":"invalid_request","message":"Only linear_deflection is a supported option."},"result_version":2}

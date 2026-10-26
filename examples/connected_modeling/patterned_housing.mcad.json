@@ -1,0 +1,99 @@
+{
+  "active_feature": "opening",
+  "features": [
+    {
+      "id": "profile",
+      "inputs": {},
+      "kind": "sketch_rectangle",
+      "label": "Housing footprint",
+      "params": {
+        "height": "height",
+        "width": "width",
+        "x": 0,
+        "y": 0,
+        "z": 0
+      }
+    },
+    {
+      "id": "block",
+      "inputs": {
+        "profile": "profile"
+      },
+      "kind": "extrude",
+      "label": "Housing block",
+      "params": {
+        "length": "depth"
+      }
+    },
+    {
+      "id": "pattern",
+      "inputs": {
+        "base": "block"
+      },
+      "kind": "linear_pattern",
+      "label": "Joined housing copies",
+      "params": {
+        "count": 2,
+        "dx": "spacing",
+        "dy": 0,
+        "dz": 0
+      }
+    },
+    {
+      "id": "walls",
+      "inputs": {
+        "base": "pattern"
+      },
+      "kind": "shell",
+      "label": "Closed wall thickness",
+      "params": {
+        "thickness": "wall"
+      }
+    },
+    {
+      "id": "opening_profile",
+      "inputs": {},
+      "kind": "sketch_circle",
+      "label": "Access opening",
+      "params": {
+        "radius": "hole_radius",
+        "x": "(width+spacing)/2",
+        "y": "height/2",
+        "z": "depth-wall-1"
+      }
+    },
+    {
+      "id": "opening_tool",
+      "inputs": {
+        "profile": "opening_profile"
+      },
+      "kind": "extrude",
+      "label": "Opening tool",
+      "params": {
+        "length": "wall+2"
+      }
+    },
+    {
+      "id": "opening",
+      "inputs": {
+        "base": "walls",
+        "tool": "opening_tool"
+      },
+      "kind": "cut",
+      "label": "Open housing",
+      "params": {}
+    }
+  ],
+  "id": "patterned_housing",
+  "name": "Patterned hollow housing",
+  "parameters": {
+    "depth": 20,
+    "height": 30,
+    "hole_radius": 5,
+    "spacing": 30,
+    "wall": 2,
+    "width": 40
+  },
+  "schema_version": 1,
+  "units": "mm"
+}

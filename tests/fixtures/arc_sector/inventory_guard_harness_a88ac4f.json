@@ -1,0 +1,148 @@
+{
+  "base_commit": "a88ac4fa6a5de7b4bc65caff642176ac5b80df32",
+  "changed": {
+    "tests/unit/test_arc_profile_incidence.py": {
+      "hunks": [
+        {
+          "new_end": 31085,
+          "new_start": 30992,
+          "original": "",
+          "replacement": "            \"INVENTORY_GUARD_HARNESS_FIXTURE\",\n            \"INVENTORY_GUARD_HARNESS_SHA256\",\n"
+        },
+        {
+          "new_end": 32969,
+          "new_start": 32920,
+          "original": "",
+          "replacement": "            \"INVENTORY_GUARD_HARNESS_ORIGINALS\",\n"
+        },
+        {
+          "new_end": 33537,
+          "new_start": 33488,
+          "original": "",
+          "replacement": "            \"inventory_guard_harness_originals\",\n"
+        }
+      ],
+      "original_bytes": 49009,
+      "original_sha256": "788836778867f9a535c910f88e9ed213c5c3666220b0023b9598c359c0895823",
+      "reviewed_bytes": 49200,
+      "reviewed_sha256": "ac5b575ddf4f5b143408289a3e7cc87ff54a7a07d7f5a0aa0b8c27b16d8999b7"
+    },
+    "tests/unit/test_arc_profile_native_end_cap.py": {
+      "hunks": [
+        {
+          "new_end": 45222,
+          "new_start": 42773,
+          "original": "",
+          "replacement": "INVENTORY_GUARD_HARNESS_FIXTURE = \"tests/fixtures/arc_sector/inventory_guard_harness_a88ac4f.json\"\nINVENTORY_GUARD_HARNESS_SHA256 = \"0000000000000000000000000000000000000000000000000000000000000000\"\nINVENTORY_GUARD_HARNESS_ORIGINALS = {\n    \"tests/unit/test_arc_profile_native_inventory.py\": (\n        38971,\n        \"58b55f6440605b286a9740e8c9bcbf7ea669ab248a6b01f00c844962c2debbb4\",\n    ),\n    \"tests/unit/test_arc_profile_native_end_cap.py\": (\n        128798,\n        \"576e7bc170b4f21237f82a0cc0c4dd3626f0e6f4cbaeb2078067bf9e0c7be0d0\",\n    ),\n    \"tests/unit/test_arc_profile_incidence.py\": (\n        49009,\n        \"788836778867f9a535c910f88e9ed213c5c3666220b0023b9598c359c0895823\",\n    ),\n    \"tests/unit/test_standalone_runtime_boundary.py\": (\n        113395,\n        \"2691af5da2e969025ad0e15f21e68f40dd432c4c62398514c6534dfcf3d1f162\",\n    ),\n    \"tests/unit/test_arc_sector_native_boundary_mutations.py\": (\n        39233,\n        \"d45c50515d2bfe2c922230c5335b1f3148ccdba8b1734712f0996d5d6dc0fe41\",\n    ),\n}\n\n\ndef inventory_guard_harness_originals(root):\n    \"\"\"Restore exactly five a88ac4f test files before every older inverse.\n\n    Copied files are data only. Normalize this layer's one digest slot while\n    preserving every old fixture seal, original pin, and historical assertion.\n    \"\"\"\n    raw = (root / INVENTORY_GUARD_HARNESS_FIXTURE).read_bytes()\n    assert hashlib.sha256(raw).hexdigest() == INVENTORY_GUARD_HARNESS_SHA256\n    revision = json.loads(raw)\n    assert set(revision) == {\"schema\", \"base_commit\", \"changed\"}\n    assert revision[\"schema\"] == \"inventory-guard-test-harness-boundary-v1\"\n    assert revision[\"base_commit\"] == \"a88ac4fa6a5de7b4bc65caff642176ac5b80df32\"\n    assert set(revision[\"changed\"]) == set(INVENTORY_GUARD_HARNESS_ORIGINALS)\n    restored = {}\n    for name, entry in revision[\"changed\"].items():\n        data = (root / name).read_bytes()\n        if name == \"tests/unit/test_arc_profile_native_end_cap.py\":\n            label = b\"INVENTORY_GUARD_HARNESS_\" + b'SHA256 = \"'\n            assert data.count(label) == 1\n            slot = label + INVENTORY_GUARD_HARNESS_SHA256.encode(\"ascii\") + b'\"'\n            assert data.count(slot) == 1, \"copied outer digest differs from trusted namespace\"\n            data = data.replace(slot, label + b\"0\" * 64 + b'\"')\n        restored[name] = _integration_restore_entry(\n            data, entry, INVENTORY_GUARD_HARNESS_ORIGINALS[name]\n        )\n    return restored\n\n\n"
+        },
+        {
+          "new_end": 47771,
+          "new_start": 47718,
+          "original": "",
+          "replacement": "    before = inventory_guard_harness_originals(root)\n"
+        },
+        {
+          "new_end": 48335,
+          "new_start": 48307,
+          "original": "        data = (root / name).read_bytes()\n",
+          "replacement": "        data = before[name]\n"
+        },
+        {
+          "new_end": 104105,
+          "new_start": 103907,
+          "original": "",
+          "replacement": "    inventory = \"tests/unit/test_arc_profile_native_inventory.py\"\n    service_originals = {\n        inventory: inventory_guard_harness_originals(root)[inventory],\n        **service_originals,\n    }\n"
+        },
+        {
+          "new_end": 107146,
+          "new_start": 107105,
+          "original": "",
+          "replacement": "        INVENTORY_GUARD_HARNESS_FIXTURE,\n"
+        },
+        {
+          "new_end": 128044,
+          "new_start": 127950,
+          "original": "",
+          "replacement": "    outer_before = inventory_guard_harness_originals(tmp_path) if kind == \"harness\" else None\n"
+        },
+        {
+          "new_end": 129398,
+          "new_start": 129304,
+          "original": "        current = (tmp_path / name).read_bytes()\n",
+          "replacement": "        current = outer_before[name] if kind == \"harness\" else (tmp_path / name).read_bytes()\n"
+        },
+        {
+          "new_end": 129916,
+          "new_start": 129852,
+          "original": "        guard = tmp_path / \"tests/unit/test_arc_profile_native_end_cap.py\"\n",
+          "replacement": "        guard = \"tests/unit/test_arc_profile_native_end_cap.py\"\n"
+        },
+        {
+          "new_end": 130005,
+          "new_start": 129970,
+          "original": "        data = guard.read_bytes()\n",
+          "replacement": "        data = outer_before[guard]\n"
+        },
+        {
+          "new_end": 130232,
+          "new_start": 130041,
+          "original": "        guard.write_bytes(data.replace(old, digest.encode()))\n",
+          "replacement": "        outer_before[guard] = data.replace(old, digest.encode())\n        monkeypatch.setitem(\n            globals(), \"inventory_guard_harness_originals\", lambda _root: outer_before\n        )\n"
+        },
+        {
+          "new_end": 142598,
+          "new_start": 131783,
+          "original": "",
+          "replacement": "\n\ndef test_inventory_guard_harness_restores_exact_a88ac4f_and_old_boundaries():\n    originals = inventory_guard_harness_originals(ROOT)\n    assert len(originals) == 5 and set(originals) == set(INVENTORY_GUARD_HARNESS_ORIGINALS)\n    for name, data in originals.items():\n        assert (len(data), hashlib.sha256(data).hexdigest()) == INVENTORY_GUARD_HARNESS_ORIGINALS[\n            name\n        ]\n    assert len(redundant_solve_source_originals(ROOT)) == 2\n    assert len(redundant_solve_harness_originals(ROOT)) == 4\n    for function, expected in (\n        (redundant_solve_harness_originals, REDUNDANT_SOLVE_HARNESS_ORIGINALS),\n        (standalone_integration_harness_originals, INTEGRATION_HARNESS_ORIGINALS),\n        (windows_runtime_cache_harness_originals, WINDOWS_RUNTIME_CACHE_HARNESS_ORIGINALS),\n        (windows_cache_harness_originals, WINDOWS_CACHE_HARNESS_ORIGINALS),\n        (windows_transport_harness_originals, WINDOWS_TRANSPORT_HARNESS_ORIGINALS),\n        (standalone_harness_originals, STANDALONE_HARNESS_ORIGINALS),\n    ):\n        restored = function(ROOT)\n        assert set(restored) == set(expected)\n        assert \"tests/unit/test_arc_profile_native_inventory.py\" not in restored\n        for name, data in restored.items():\n            assert (len(data), hashlib.sha256(data).hexdigest()) == expected[name]\n    added, source = standalone_integration_source_originals(ROOT)\n    assert len(added) == 7 and added == INTEGRATION_SOURCE_ADDED\n    assert len(source) == 5 and set(source) == set(INTEGRATION_SOURCE_ORIGINALS)\n    geometry_added, geometry = geometry_revision_originals(ROOT)\n    assert geometry_added == added and len(geometry) == 8\n    assert protected_python_digest(ROOT) == SNAPSHOT3_PYTHON_PROTECTED\n\n\n@pytest.mark.parametrize(\"name\", sorted(INVENTORY_GUARD_HARNESS_ORIGINALS))\ndef test_inventory_guard_outer_rejects_each_unreviewed_test_path(tmp_path, name):\n    copy_python_guard_tree(tmp_path)\n    path = tmp_path / name\n    path.write_bytes(path.read_bytes() + b\"\\n# Unreviewed inventory guard mutation.\\n\")\n    with pytest.raises(AssertionError):\n        inventory_guard_harness_originals(tmp_path)\n    with pytest.raises(AssertionError):\n        protected_python_digest(tmp_path)\n\n\n@pytest.mark.parametrize(\"mutation\", [\"remove\", \"redirect\"])\ndef test_inventory_guard_binding_changes_cannot_escape_seal(tmp_path, mutation):\n    copy_python_guard_tree(tmp_path)\n    path = tmp_path / \"tests/unit/test_arc_profile_native_inventory.py\"\n    binding = b'        \"TRUSTED_GUARD_ROOT\": ROOT,\\n'\n    data = path.read_bytes()\n    assert data.count(binding) == 1\n    replacement = b\"\" if mutation == \"remove\" else binding.replace(b\"ROOT,\", b\"ROOT.parent,\")\n    path.write_bytes(data.replace(binding, replacement))\n    with pytest.raises(AssertionError):\n        inventory_guard_harness_originals(tmp_path)\n    with pytest.raises(AssertionError):\n        protected_python_digest(tmp_path)\n\n\n@pytest.mark.parametrize(\"mutation\", [\"fixture\", \"slot\", \"helper\", \"coordinated\"])\ndef test_inventory_guard_copied_fixture_and_code_are_only_data(tmp_path, mutation):\n    copy_python_guard_tree(tmp_path)\n    fixture = tmp_path / INVENTORY_GUARD_HARNESS_FIXTURE\n    guard = tmp_path / \"tests/unit/test_arc_profile_native_end_cap.py\"\n    if mutation in {\"fixture\", \"coordinated\"}:\n        fixture.write_bytes(fixture.read_bytes() + b\"\\n\")\n    if mutation in {\"slot\", \"coordinated\"}:\n        digest = (\n            hashlib.sha256(fixture.read_bytes()).hexdigest()\n            if mutation == \"coordinated\"\n            else \"f\" * 64\n        )\n        old = INVENTORY_GUARD_HARNESS_SHA256.encode()\n        data = guard.read_bytes()\n        assert data.count(old) == 1\n        guard.write_bytes(data.replace(old, digest.encode()))\n    if mutation in {\"helper\", \"coordinated\"}:\n        data = guard.read_bytes()\n        marker = b\"def inventory_guard_harness_originals(root):\\n\"\n        assert data.count(marker) == 1\n        guard.write_bytes(\n            data.replace(marker, marker + b'    raise RuntimeError(\"copied code executed\")\\n')\n        )\n    with pytest.raises(AssertionError):\n        inventory_guard_harness_originals(tmp_path)\n    with pytest.raises(AssertionError):\n        protected_python_digest(tmp_path)\n\n\n@pytest.mark.parametrize(\n    \"name\",\n    [\n        \"REDUNDANT_SOLVE_SOURCE_SHA256\",\n        \"REDUNDANT_SOLVE_HARNESS_SHA256\",\n        \"INTEGRATION_SOURCE_SHA256\",\n        \"STANDALONE_INTEGRATION_HARNESS_SHA256\",\n        \"GEOMETRY_REVISION_SHA256\",\n        \"WINDOWS_RUNTIME_CACHE_REVISION_SHA256\",\n        \"WINDOWS_RUNTIME_CACHE_HARNESS_SHA256\",\n        \"WINDOWS_CACHE_REVISION_SHA256\",\n        \"WINDOWS_CACHE_HARNESS_SHA256\",\n        \"WINDOWS_TRANSPORT_REVISION_SHA256\",\n        \"WINDOWS_TRANSPORT_HARNESS_SHA256\",\n        \"STANDALONE_HARNESS_SHA256\",\n        \"STANDALONE_LIVE_SHA256\",\n        \"STANDALONE_REVISION_SHA256\",\n        \"AUTHORING_REVISION_SHA256\",\n        \"SERVICE_REVISION_SHA256\",\n    ],\n)\ndef test_inventory_guard_normalizes_only_its_own_slot(tmp_path, name):\n    copy_python_guard_tree(tmp_path)\n    path = tmp_path / \"tests/unit/test_arc_profile_native_end_cap.py\"\n    data, old = path.read_bytes(), globals()[name].encode()\n    assert data.count(old) == 1\n    path.write_bytes(data.replace(old, b\"f\" * 64))\n    with pytest.raises(AssertionError):\n        inventory_guard_harness_originals(tmp_path)\n\n\n@pytest.mark.parametrize(\n    \"fixture\",\n    [\n        REDUNDANT_SOLVE_SOURCE_FIXTURE,\n        REDUNDANT_SOLVE_HARNESS_FIXTURE,\n        INTEGRATION_SOURCE_FIXTURE,\n        INTEGRATION_HARNESS_FIXTURE,\n        GEOMETRY_REVISION_FIXTURE,\n        WINDOWS_RUNTIME_CACHE_REVISION_FIXTURE,\n        WINDOWS_RUNTIME_CACHE_HARNESS_FIXTURE,\n        WINDOWS_CACHE_REVISION_FIXTURE,\n        WINDOWS_CACHE_HARNESS_FIXTURE,\n        WINDOWS_TRANSPORT_REVISION_FIXTURE,\n        WINDOWS_TRANSPORT_HARNESS_FIXTURE,\n        STANDALONE_HARNESS_FIXTURE,\n        STANDALONE_LIVE_FIXTURE,\n        STANDALONE_REVISION_FIXTURE,\n        AUTHORING_REVISION_FIXTURE,\n        SERVICE_REVISION_FIXTURE,\n    ],\n)\ndef test_inventory_guard_preserves_every_older_fixture_seal(tmp_path, fixture):\n    copy_python_guard_tree(tmp_path)\n    path = tmp_path / fixture\n    path.write_bytes(path.read_bytes() + b\"\\n\")\n    with pytest.raises(AssertionError):\n        protected_python_digest(tmp_path)\n\n\n@pytest.mark.parametrize(\n    \"mutation\",\n    [\n        \"schema\",\n        \"base\",\n        \"extra_key\",\n        \"missing_path\",\n        \"extra_path\",\n        \"production_path\",\n        \"original_hash\",\n        \"original_length\",\n        \"original_length_bool\",\n        \"reviewed_hash\",\n        \"reviewed_length\",\n        \"reviewed_length_bool\",\n        \"reviewed_length_negative\",\n        \"entry_key\",\n        \"hunk_key\",\n        \"empty_hunks\",\n        \"start_negative\",\n        \"start_bool\",\n        \"start_overflow\",\n        \"end_bool\",\n        \"end_negative\",\n        \"end_before_start\",\n        \"end_overflow\",\n        \"replacement\",\n        \"original\",\n        \"duplicate_hunk\",\n        \"overlapping_hunks\",\n        \"reversed_hunks\",\n        \"equivalent\",\n    ],\n)\ndef test_inventory_guard_inner_controls_are_nonvacuous(tmp_path, monkeypatch, mutation):\n    copy_python_guard_tree(tmp_path)\n    expected = inventory_guard_harness_originals(tmp_path)\n    fixture = tmp_path / INVENTORY_GUARD_HARNESS_FIXTURE\n    revision = json.loads(fixture.read_bytes())\n    name = \"tests/unit/test_arc_profile_native_end_cap.py\"\n    entry = revision[\"changed\"][name]\n    assert len(entry[\"hunks\"]) > 1\n    hunk = entry[\"hunks\"][0]\n    if mutation == \"schema\":\n        revision[\"schema\"] = \"other\"\n    elif mutation == \"base\":\n        revision[\"base_commit\"] = \"0\" * 40\n    elif mutation == \"extra_key\":\n        revision[\"exempt\"] = True\n    elif mutation == \"missing_path\":\n        revision[\"changed\"].pop(name)\n    elif mutation == \"extra_path\":\n        revision[\"changed\"][\"tests/unit/unreviewed.py\"] = dict(entry)\n    elif mutation == \"production_path\":\n        revision[\"changed\"][\"src/mechanical_cad/kernel_ocp.py\"] = revision[\"changed\"].pop(name)\n    elif mutation in {\"original_hash\", \"reviewed_hash\"}:\n        entry[mutation.replace(\"_hash\", \"_sha256\")] = \"f\" * 64\n    elif mutation in {\"original_length\", \"reviewed_length\"}:\n        entry[mutation.replace(\"_length\", \"_bytes\")] += 1\n    elif mutation in {\"original_length_bool\", \"reviewed_length_bool\"}:\n        entry[mutation.replace(\"_length_bool\", \"_bytes\")] = True\n    elif mutation == \"reviewed_length_negative\":\n        entry[\"reviewed_bytes\"] = -1\n    elif mutation == \"entry_key\":\n        entry[\"skip\"] = True\n    elif mutation == \"hunk_key\":\n        hunk[\"skip\"] = True\n    elif mutation == \"empty_hunks\":\n        entry[\"hunks\"] = []\n    elif mutation == \"start_negative\":\n        hunk[\"new_start\"] = -1\n    elif mutation == \"start_bool\":\n        hunk[\"new_start\"] = False\n    elif mutation == \"start_overflow\":\n        hunk[\"new_start\"] = entry[\"reviewed_bytes\"] + 1\n    elif mutation == \"end_bool\":\n        hunk[\"new_end\"] = True\n    elif mutation == \"end_negative\":\n        hunk[\"new_end\"] = -1\n    elif mutation == \"end_before_start\":\n        hunk[\"new_end\"] = hunk[\"new_start\"] - 1\n    elif mutation == \"end_overflow\":\n        hunk[\"new_end\"] = entry[\"reviewed_bytes\"] + 1\n    elif mutation in {\"replacement\", \"original\"}:\n        hunk[mutation] += \"# unreviewed\\n\"\n    elif mutation == \"duplicate_hunk\":\n        entry[\"hunks\"].insert(1, dict(hunk))\n    elif mutation == \"overlapping_hunks\":\n        entry[\"hunks\"][1][\"new_start\"] = hunk[\"new_end\"] - 1\n    elif mutation == \"reversed_hunks\":\n        entry[\"hunks\"].reverse()\n    else:\n        current = (tmp_path / name).read_bytes()\n        label = b\"INVENTORY_GUARD_HARNESS_\" + b'SHA256 = \"'\n        slot = label + INVENTORY_GUARD_HARNESS_SHA256.encode() + b'\"'\n        assert current.count(slot) == 1\n        current = current.replace(slot, label + b\"0\" * 64 + b'\"')\n        entry[\"hunks\"] = [\n            {\n                \"new_start\": 0,\n                \"new_end\": len(current),\n                \"original\": expected[name].decode(),\n                \"replacement\": current.decode(),\n            }\n        ]\n    raw = (json.dumps(revision, sort_keys=True, indent=2) + \"\\n\").encode()\n    assert raw != fixture.read_bytes()\n    fixture.write_bytes(raw)\n    digest = hashlib.sha256(raw).hexdigest()\n    guard = tmp_path / name\n    data, old = guard.read_bytes(), INVENTORY_GUARD_HARNESS_SHA256.encode()\n    assert data.count(old) == 1\n    guard.write_bytes(data.replace(old, digest.encode()))\n    monkeypatch.setitem(globals(), \"INVENTORY_GUARD_HARNESS_SHA256\", digest)\n    if mutation == \"equivalent\":\n        assert inventory_guard_harness_originals(tmp_path) == expected\n    else:\n        with pytest.raises(AssertionError):\n            inventory_guard_harness_originals(tmp_path)\n"
+        }
+      ],
+      "original_bytes": 128798,
+      "original_sha256": "576e7bc170b4f21237f82a0cc0c4dd3626f0e6f4cbaeb2078067bf9e0c7be0d0",
+      "reviewed_bytes": 142598,
+      "reviewed_sha256": "4a58d203319be1b831f59bca7805ac2cc3afd8b1c11ea44e3889c2e8f53221c1"
+    },
+    "tests/unit/test_arc_profile_native_inventory.py": {
+      "hunks": [
+        {
+          "new_end": 29821,
+          "new_start": 29669,
+          "original": "    namespace = {\"ROOT\": ROOT, \"ast\": ast, \"hashlib\": hashlib, \"json\": json}\n",
+          "replacement": "    namespace = {\n        \"ROOT\": ROOT,\n        \"TRUSTED_GUARD_ROOT\": ROOT,\n        \"ast\": ast,\n        \"hashlib\": hashlib,\n        \"json\": json,\n    }\n"
+        }
+      ],
+      "original_bytes": 38971,
+      "original_sha256": "58b55f6440605b286a9740e8c9bcbf7ea669ab248a6b01f00c844962c2debbb4",
+      "reviewed_bytes": 39046,
+      "reviewed_sha256": "466975949995303f9bd0efa2f61c8851b4cf9b2ff3b073fbb01b0ab06ba039d5"
+    },
+    "tests/unit/test_arc_sector_native_boundary_mutations.py": {
+      "hunks": [
+        {
+          "new_end": 25882,
+          "new_start": 25808,
+          "original": "",
+          "replacement": "        \"tests/fixtures/arc_sector/inventory_guard_harness_a88ac4f.json\",\n"
+        }
+      ],
+      "original_bytes": 39233,
+      "original_sha256": "d45c50515d2bfe2c922230c5335b1f3148ccdba8b1734712f0996d5d6dc0fe41",
+      "reviewed_bytes": 39307,
+      "reviewed_sha256": "917619b440f3dc32b340a9c1a1c858b70a7f8405eaa28f12a8771b317dcf3c0d"
+    },
+    "tests/unit/test_standalone_runtime_boundary.py": {
+      "hunks": [
+        {
+          "new_end": 4108,
+          "new_start": 3933,
+          "original": "",
+          "replacement": "        \"INVENTORY_GUARD_HARNESS_FIXTURE\",\n        \"INVENTORY_GUARD_HARNESS_SHA256\",\n        \"INVENTORY_GUARD_HARNESS_ORIGINALS\",\n        \"inventory_guard_harness_originals\",\n"
+        }
+      ],
+      "original_bytes": 113395,
+      "original_sha256": "2691af5da2e969025ad0e15f21e68f40dd432c4c62398514c6534dfcf3d1f162",
+      "reviewed_bytes": 113570,
+      "reviewed_sha256": "978501183c4f1983be92ac2aae933f2037ae45b70fd5f1ebfa77f356f39887b8"
+    }
+  },
+  "schema": "inventory-guard-test-harness-boundary-v1"
+}

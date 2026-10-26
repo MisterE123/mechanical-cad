@@ -1,0 +1,86 @@
+{
+  "baseline": "ce5b50bb011b3949a6599c7cbc28d31024805e0a",
+  "source": "cad_arc_service/final_deliverables/radius-edit-example",
+  "source_manifest_sha256": "4827389102f596c0d09c2e29bcca162ecffbdc02efcb49db6b3edb2f41ab5028",
+  "source_packet_manifest_sha256": "413a1e50a3014381a9aa7cec6682ec8b3bb8118b0645e54307c97ce20dc9309c",
+  "files": {
+    "radius_edit_5_0_replay.operation.json": {
+      "bytes": 2984,
+      "sha256": "be55a6652cbbd5bb45a28f8da6be46b453b6e597c7097281674449b5101a5f00"
+    },
+    "radius_edit_5_0_replay.response": {
+      "bytes": 12284,
+      "sha256": "a3815f2725f26f42f7ea8b4d59d4ab72b0fac4257f5ac5fe3e3ac8a746b08bbf"
+    },
+    "radius_edit_5_0_solve_sketch.operation.json": {
+      "bytes": 3017,
+      "sha256": "a9add7b9892e8f9db2719759d286facffab2d14b7470c5f50ecfd1b224fe0554"
+    },
+    "radius_edit_5_0_solve_sketch.response": {
+      "bytes": 2638,
+      "sha256": "017457bdc9cb41c14a407c86af6e185791e39f2039a5e80f28a9cb9f41428726"
+    },
+    "radius_edit_7_0_replay.operation.json": {
+      "bytes": 2984,
+      "sha256": "43a12e1c9c4ba66ba4c83c7ade15b552f29bf8d6e1488c804610dfe016137635"
+    },
+    "radius_edit_7_0_replay.response": {
+      "bytes": 12277,
+      "sha256": "cf5b0a49fb0db414146634a6b6fb60c9745dee0c6272e17256dd3a4099d09f19"
+    },
+    "radius_edit_7_0_solve_sketch.operation.json": {
+      "bytes": 3017,
+      "sha256": "544dad6e14f0fca38767bf6a87e74b52fe6cbb53a9eee0dab8b1880b5f8c5960"
+    },
+    "radius_edit_7_0_solve_sketch.response": {
+      "bytes": 2638,
+      "sha256": "18e17e93ab6d9548b4b7d34b08ecd9ab961313d42b562b558ba99a99f7c30abb"
+    },
+    "rectangle_replay3.request.raw": {
+      "bytes": 1962,
+      "sha256": "6aad69160e21181dfdd01829559ebd60adaf69aa9904758e323423d480000022",
+      "source": "rectangle_replay_31c7ea74a42c46b2a97332147e3fc4f3/request.raw"
+    },
+    "rectangle_replay3.response.raw": {
+      "bytes": 7305,
+      "sha256": "a84a87eb749cba9dffcebe29f814e1bb9ff94c4351b9a5c627a84b2cee21e359",
+      "source": "rectangle_replay_31c7ea74a42c46b2a97332147e3fc4f3/stdout.raw"
+    },
+    "rectangle_replay3.terminal.json": {
+      "bytes": 1387,
+      "sha256": "b06b4a6947c13d859abd402b611ee838fd6b256a234460674a1916e08329968a",
+      "source": "rectangle_replay_31c7ea74a42c46b2a97332147e3fc4f3/terminal.json"
+    },
+    "rectangle_solve3.request.raw": {
+      "bytes": 1956,
+      "sha256": "a69e0c320f84bbfbfcff2348895f78044b99f5297cd0d9149c3cc23e7d6744e4",
+      "source": "rectangle_solve_sketch_deebad22685a4b5c81a3e5c3b2107271/request.raw"
+    },
+    "rectangle_solve3.response.raw": {
+      "bytes": 2804,
+      "sha256": "4084d9aa82547adb162d36a5bb3e1fd30e1bb8799934099630a175368c7043c6",
+      "source": "rectangle_solve_sketch_deebad22685a4b5c81a3e5c3b2107271/stdout.raw"
+    },
+    "rectangle_solve3.terminal.json": {
+      "bytes": 1387,
+      "sha256": "4d28a9d6e8fb9fadd7ca861c6436dd8ff417c00bd1dc3941dac7c63d2ec128fb",
+      "source": "rectangle_solve_sketch_deebad22685a4b5c81a3e5c3b2107271/terminal.json"
+    },
+    "rectangle_replay2.request.raw": {
+      "bytes": 1918,
+      "sha256": "a574e5ac1227dd738580a9abca3fc20f385d6bfda2dc0e8396037d98a1103e83",
+      "source": "rectangle_replay_v2_control_8da46025edb941e697d8637039658b2d/request.raw"
+    },
+    "rectangle_replay2.response.raw": {
+      "bytes": 7221,
+      "sha256": "ec8dcc15e7f61635e0be8a69c979e84618a874064f0ed68e3a7ed68c65dbae22",
+      "source": "rectangle_replay_v2_control_8da46025edb941e697d8637039658b2d/stdout.raw"
+    },
+    "rectangle_replay2.terminal.json": {
+      "bytes": 1387,
+      "sha256": "7ffec51e74a985041f161814ce9f80826fa18f1ffd2d9cd61db369893c252d32",
+      "source": "rectangle_replay_v2_control_8da46025edb941e697d8637039658b2d/terminal.json"
+    }
+  },
+  "additional_wire_source": "cad_arc_service/owner_integration4_20261017T1506/execution/wire"
+}

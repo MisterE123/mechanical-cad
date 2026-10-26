@@ -1,0 +1,239 @@
+{
+  "added": {
+    "blender_addon/mechanical_cad_blender/geometry_result_v3.py": {
+      "bytes": 9062,
+      "sha256": "eaa59c6be82fce7561792e412160306852f9de8e882d661f2d21b567c10760fd"
+    },
+    "src/mechanical_cad/geometry_policy_v3.py": {
+      "bytes": 3258,
+      "sha256": "10bce0e09731da9987479e7d8a9ef9770618600e32dd3889a6eae6acbde53c51"
+    },
+    "src/mechanical_cad/geometry_protocol_v3.py": {
+      "bytes": 3246,
+      "sha256": "cbec5f30417c52ae704533da7bb290c434e57897866bbc3fb4b57b2a66b419e0"
+    },
+    "tests/unit/test_geometry3_core_contracts.py": {
+      "bytes": 23768,
+      "sha256": "eddb8be5b3fb235ed4eb72c3b18eb0eb0bd14580768a4027dfa449d1f27d160b"
+    },
+    "tests/unit/test_geometry3_dispatch.py": {
+      "bytes": 15160,
+      "sha256": "9beceb6679717073385404530ddbf5b73861699891bfd817414dad98dd3fd77e"
+    },
+    "tests/unit/test_geometry3_legacy_bytes.py": {
+      "bytes": 4651,
+      "sha256": "84bfcebe7f3cf597b34dc84441e528f8823319480b26ea4a35c72f322d1db575"
+    },
+    "tests/unit/test_geometry_result_v3.py": {
+      "bytes": 24023,
+      "sha256": "2f8112617b278366753f48022ff3ce5b1ecb4b3fecb67ebe0d89ca94a720f6d6"
+    }
+  },
+  "base_commit": "69d0f8164e73bfbbcdf0c48d6546f97803d12f58",
+  "changed": {
+    "blender_addon/mechanical_cad_blender/result_v3.py": {
+      "hunks": [
+        {
+          "new_end": 8419,
+          "new_start": 8141,
+          "original": "def validate_response(operation, response):\n    \"\"\"Dispatch exact result-3 solve/replay and return detached data-only evidence.\"\"\"\n    request = validate_request(operation)\n    if request.get(\"action\", \"replay\") == \"solve_sketch\":\n        return validate_solve_response(response, request)\n    if not _envelope(request, response, solve=False):\n        return copy.deepcopy(response)\n    canonical = snapshots._expected_document(request[\"document\"])\n    result = response[\"result\"]\n",
+          "replacement": "def _validate_replay_body(canonical, result):\n    \"\"\"Validate genuine v3 replay data independently of its action envelope.\n\n    Callers own bounded JSON, canonical source admission and exact request\n    binding. This shared body never coerces replay or sketch versions.\n    \"\"\"\n"
+        },
+        {
+          "new_end": 11083,
+          "new_start": 10475,
+          "original": "",
+          "replacement": "    _require(result[\"status\"] == expected, \"replay status contradicts features\")\n\n\ndef validate_response(operation, response):\n    \"\"\"Dispatch exact result-3 solve/replay and return detached data-only evidence.\"\"\"\n    request = validate_request(operation)\n    if request.get(\"action\", \"replay\") == \"solve_sketch\":\n        return validate_solve_response(response, request)\n    if not _envelope(request, response, solve=False):\n        return copy.deepcopy(response)\n    canonical = snapshots._expected_document(request[\"document\"])\n    result = response[\"result\"]\n    _validate_replay_body(canonical, result)\n"
+        },
+        {
+          "new_end": 11181,
+          "new_start": 11097,
+          "original": "        result[\"status\"] == expected\n        and response[\"ok\"] == (expected == \"ok\")\n        and response[\"error\"] is None,\n",
+          "replacement": "        response[\"ok\"] == (result[\"status\"] == \"ok\") and response[\"error\"] is None,\n"
+        }
+      ],
+      "original_bytes": 10912,
+      "original_sha256": "cf07a1c445e6b414ca8db5cb170dce62f5ebaf8e27c751289299920c5ccec59a",
+      "reviewed_bytes": 11277,
+      "reviewed_sha256": "ee2fc66acb3d93a267d1cd4e89f3c5059855689ee371aeb4b9094ecdbc18f509"
+    },
+    "src/mechanical_cad/actions.py": {
+      "hunks": [
+        {
+          "new_end": 894,
+          "new_start": 785,
+          "original": "",
+          "replacement": "# Advertise only with the coordinated service/owner activation milestone.\nBACKEND_CAPABILITIES = frozenset()\n"
+        },
+        {
+          "new_end": 4638,
+          "new_start": 4298,
+          "original": "",
+          "replacement": "        if (\n            type(result_version) is int\n            and result_version == 3\n            and action in EXPORT_ACTIONS\n            and isinstance(destination, str)\n            and destination.endswith((\"/\", \"/.\", \"/..\"))\n        ):\n            raise CADException(\"invalid_destination\", \"Choose an export file, not a directory.\")\n"
+        },
+        {
+          "new_end": 5572,
+          "new_start": 5021,
+          "original": "        validate_result_version(document, result_version)\n",
+          "replacement": "        if type(result_version) is int and result_version == 3:\n            from .geometry_policy_v3 import validate_geometry_v3\n\n            validate_geometry_v3(document, result_version)\n            if type(linear_deflection) not in (int, float) or not 0.001 <= linear_deflection <= 10:\n                raise CADException(\n                    \"invalid_tolerance\", \"Mesh linear deflection must be 0.001\u201310 mm.\"\n                )\n            response[\"result_version\"] = 3\n        else:\n            validate_result_version(document, result_version)\n"
+        },
+        {
+          "new_end": 8397,
+          "new_start": 8310,
+          "original": "                \"destination\": str(path),\n",
+          "replacement": "                \"destination\": str(destination) if result_version == 3 else str(path),\n"
+        }
+      ],
+      "original_bytes": 8172,
+      "original_sha256": "e85b03a54aefb171100252a8a6aa57f00cf0705b84d7e2005918a2dcef2c1649",
+      "reviewed_bytes": 9159,
+      "reviewed_sha256": "23f7bb6c3de3c09b6bcc513a55c4b40659bdd8bbcd3e73a35473cb571acb8420"
+    },
+    "src/mechanical_cad/backend_contract.py": {
+      "hunks": [
+        {
+          "new_end": 616,
+          "new_start": 585,
+          "original": "",
+          "replacement": "from types import FunctionType\n"
+        },
+        {
+          "new_end": 15135,
+          "new_start": 12788,
+          "original": "",
+          "replacement": "def _observe_geometry_v3(core):\n    \"\"\"Observe actual geometry implementations and companions without admission.\n\n    This helper is deliberately not called by observe_backend until the guarded\n    owner activation milestone. A marker on an importing/re-exporting module cannot\n    relabel an older implementation, and geometry is never confirmed in isolation.\n    \"\"\"\n    supported, modules, mismatch = set(), {}, False\n    companions = (\n        (\"sketch_solver\", SOLVER_CAPABILITY),\n        (\"profile_adapter_v3\", \"mcad.sketch-arcs/1\"),\n        (\"sketch_protocol_v3\", \"mcad.part-result/3\"),\n    )\n    geometry = \"mcad.geometry-result/3\"\n    for name, capability in (\n        *companions,\n        (\"actions\", geometry),\n        (\"geometry_protocol_v3\", geometry),\n    ):\n        try:\n            module = importlib.import_module(f\".{name}\", __package__)\n            origin = Path(_path(getattr(module, \"__file__\", None)))\n        except Exception:\n            continue\n        if origin != core / f\"{name}.py\":\n            mismatch = True\n            continue\n        marker = getattr(module, \"BACKEND_CAPABILITIES\", None)\n        if type(marker) is frozenset and capability in marker:\n            modules[name] = module\n            if capability != geometry:\n                supported.add(capability)\n    if len(modules) != len(companions) + 2:\n        return frozenset(supported), mismatch\n    actions, protocol = modules[\"actions\"], modules[\"geometry_protocol_v3\"]\n    entrypoints = (\n        (actions, \"run_geometry_action\"),\n        (protocol, \"process_geometry_request_v3\"),\n    )\n    for module, name in entrypoints:\n        function = getattr(module, name, None)\n        if (\n            type(function) is not FunctionType\n            or function.__module__ != module.__name__\n            or function.__globals__ is not vars(module)\n        ):\n            return frozenset(supported), mismatch\n        try:\n            origin = Path(_path(function.__code__.co_filename))\n        except Exception:\n            return frozenset(supported), mismatch\n        if origin != Path(module.__file__).resolve():\n            return frozenset(supported), True\n    if protocol.run_geometry_action is not actions.run_geometry_action:\n        return frozenset(supported), mismatch\n    supported.add(geometry)\n    return frozenset(supported), mismatch\n\n\n"
+        }
+      ],
+      "original_bytes": 19017,
+      "original_sha256": "d24a47c78d8e78b6ead6961d99bdba48719f48163c812066d9e2b4a19aa503ad",
+      "reviewed_bytes": 21395,
+      "reviewed_sha256": "904ce69d50d80d07093496b717e78a37789b46d17baaa5cd081cecbe8f5ce52b"
+    },
+    "src/mechanical_cad/sidecar.py": {
+      "hunks": [
+        {
+          "new_end": 2091,
+          "new_start": 1866,
+          "original": "",
+          "replacement": "        if type(action) is str and action in {\"check_geometry\", \"export_step\", \"export_stl\"}:\n            from .geometry_protocol_v3 import process_geometry_request_v3\n\n            return process_geometry_request_v3(request)\n"
+        }
+      ],
+      "original_bytes": 10301,
+      "original_sha256": "ae6180f7ff15efe54cb8a50db1e80349a58f940f7a00d3aa51dcd0c1e12d91e3",
+      "reviewed_bytes": 10526,
+      "reviewed_sha256": "f127e0b1afbeac17a75785d5e563046ed8d0804829562434b143b563351de5c4"
+    },
+    "tests/unit/test_arc_profile_incidence.py": {
+      "hunks": [
+        {
+          "new_end": 31383,
+          "new_start": 31286,
+          "original": "",
+          "replacement": "                    \"GEOMETRY_REVISION_FIXTURE\",\n                    \"GEOMETRY_REVISION_SHA256\",\n"
+        },
+        {
+          "new_end": 31803,
+          "new_start": 31623,
+          "original": "            elif isinstance(node, ast.FunctionDef) and node.name == \"authoring_revision_originals\":\n",
+          "replacement": "            elif isinstance(node, ast.FunctionDef) and node.name in {\n                \"authoring_revision_originals\",\n                \"geometry_revision_originals\",\n            }:\n"
+        },
+        {
+          "new_end": 32180,
+          "new_start": 32056,
+          "original": "",
+          "replacement": "            \"GEOMETRY_REVISION_FIXTURE\",\n            \"GEOMETRY_REVISION_SHA256\",\n            \"geometry_revision_originals\",\n"
+        }
+      ],
+      "original_bytes": 45374,
+      "original_sha256": "b780cbcd1b2fd6f79d2109e85e987e4d3b9a71f812bf67739a0503d55ae5dbc5",
+      "reviewed_bytes": 45675,
+      "reviewed_sha256": "3164abbf6d01dc94c2520aa020939d38e99820e5b46fabae7f35e5e25f68f09c"
+    },
+    "tests/unit/test_arc_sector_native_boundary_mutations.py": {
+      "hunks": [
+        {
+          "new_end": 23428,
+          "new_start": 23357,
+          "original": "",
+          "replacement": "            \"tests/fixtures/geometry_v3/python_revision_69d0f81.json\",\n"
+        },
+        {
+          "new_end": 24846,
+          "new_start": 24762,
+          "original": "            assert hashlib.sha256(data).hexdigest() == entry[\"reviewed_sha256\"]\n",
+          "replacement": "            assert hashlib.sha256(original).hexdigest() == entry[\"reviewed_sha256\"]\n"
+        }
+      ],
+      "original_bytes": 32717,
+      "original_sha256": "4c068f2d865a98be4d2cadafb82c280822408547966cea90736d7b5e3def169a",
+      "reviewed_bytes": 32792,
+      "reviewed_sha256": "aeb79ecff20ee97c1d54b08d6b0c477306eeef7a283a888a6d7ec59a0050502a"
+    },
+    "tests/unit/test_result_v3_dependency_boundary.py": {
+      "hunks": [
+        {
+          "new_end": 312,
+          "new_start": 197,
+          "original": "from test_arc_profile_native_end_cap import authoring_revision_originals\n",
+          "replacement": "from test_arc_profile_native_end_cap import (\n    authoring_revision_originals,\n    geometry_revision_originals,\n)\n"
+        },
+        {
+          "new_end": 1092,
+          "new_start": 868,
+          "original": "",
+          "replacement": "    }\n)\nGEOMETRY_RUNTIME_NEW = frozenset(\n    {\n        \"src/mechanical_cad/geometry_policy_v3.py\",\n        \"src/mechanical_cad/geometry_protocol_v3.py\",\n        \"blender_addon/mechanical_cad_blender/geometry_result_v3.py\",\n"
+        },
+        {
+          "new_end": 6213,
+          "new_start": 6071,
+          "original": "    assert observed - set(original) <= ALLOWED_NEW | AUTHORING_RUNTIME_NEW, sorted(\n        observed - set(original)\n",
+          "replacement": "    assert observed - set(original) <= ALLOWED_NEW | AUTHORING_RUNTIME_NEW | GEOMETRY_RUNTIME_NEW, (\n        sorted(observed - set(original))\n"
+        },
+        {
+          "new_end": 6855,
+          "new_start": 6538,
+          "original": "    assert {name for name in added if name.startswith(\"blender_addon/\")} == AUTHORING_RUNTIME_NEW\n",
+          "replacement": "    geometry_added, _ = geometry_revision_originals(ROOT)\n    assert {\n        name for name in added - geometry_added if name.startswith(\"blender_addon/\")\n    } == AUTHORING_RUNTIME_NEW\n    assert {\n        name for name in geometry_added if name.startswith((\"src/\", \"blender_addon/\"))\n    } == GEOMETRY_RUNTIME_NEW\n"
+        },
+        {
+          "new_end": 7212,
+          "new_start": 7113,
+          "original": "        _restore_dispatch_original((ROOT / relative).read_bytes(), entry)\n",
+          "replacement": "        _restore_dispatch_original(originals.get(relative, (ROOT / relative).read_bytes()), entry)\n"
+        }
+      ],
+      "original_bytes": 12804,
+      "original_sha256": "2b048f5d5f04d43b2d8cf9e62d9e14796e9460a05391da0439fbe3cd8b51f10d",
+      "reviewed_bytes": 13339,
+      "reviewed_sha256": "450752136b8b050bc1f62873724527024e4bb8aa09b3381aac2ea9a04710c42e"
+    },
+    "tests/unit/test_sector_dispatch_v3.py": {
+      "hunks": [
+        {
+          "new_end": 308,
+          "new_start": 249,
+          "original": "",
+          "replacement": "from test_geometry3_dispatch import recovered_69d0_sidecar\n"
+        },
+        {
+          "new_end": 5460,
+          "new_start": 5309,
+          "original": "def test_unsupported_three_actions_reject_before_operation_import(action, monkeypatch):\n",
+          "replacement": "def test_recovered_69d0_unsupported_three_actions_reject_before_operation_import(\n    action, monkeypatch\n):\n    historical = recovered_69d0_sidecar()\n"
+        },
+        {
+          "new_end": 5804,
+          "new_start": 5734,
+          "original": "        sidecar.process_request({**operation(), \"action\": action})\n",
+          "replacement": "        historical.process_request({**operation(), \"action\": action})\n"
+        }
+      ],
+      "original_bytes": 25278,
+      "original_sha256": "8d1b88c5e268167032856b61c481534aaf909a05c2f3d584a89b49a14fb8caf3",
+      "reviewed_bytes": 25403,
+      "reviewed_sha256": "4d3f5dea45d048644269bd4493a2dcaa4d3a26e90c792552f8169a041352ecb7"
+    }
+  },
+  "provenance": "New reconstruction after2026-10-18 host loss; exact inverse against recovered delivered0.6 bytes. No lost0.7 qualification is reused.",
+  "schema": "geometry-v3-python-boundary-v1"
+}

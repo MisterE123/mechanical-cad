@@ -1,0 +1,7 @@
+{
+  "source_commit": "1c8f03026c814cd69bfb25c35449810b5b858fb2",
+  "source_path": "tests/unit/test_arc_profile_native_end_cap.py",
+  "bytes": 64854,
+  "sha256": "bcb23beeae4c1796ba63964b40d56301e449279151808d815f17ee4bc121c8f9",
+  "purpose": "Exact historical data input for unchanged guard source mutation assertions; never executed and never substituted for current runtime contract tests"
+}

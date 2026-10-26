@@ -1,0 +1,712 @@
+{
+  "cases": {
+    "below_cap_1023": {
+      "compile_seconds": 0.002458538998325821,
+      "compiled_authored_constraints": 384,
+      "compiled_equation_upper_bound": 1023,
+      "counts": {
+        "active_scalars": 512,
+        "authored_constraints": 384,
+        "authored_equations_upper_bound": 768,
+        "equation_upper_bound": 1023,
+        "intrinsic_equations": 255,
+        "points": 256,
+        "total_curves": 255
+      },
+      "diagnose": false,
+      "elapsed_seconds": 0.00707686700479826,
+      "failed_constraints": [],
+      "first_three_points": [
+        [
+          0.0,
+          0.0
+        ],
+        [
+          5.0,
+          0.0
+        ],
+        [
+          0.0,
+          5.0
+        ]
+      ],
+      "input": {
+        "arcs": 255,
+        "fixed": 384,
+        "points": 256
+      },
+      "max_rss_native_units": 20360,
+      "maximum_fixed_error": 0.0,
+      "native": {
+        "dof": 0,
+        "nbad": 0,
+        "result": 4
+      },
+      "native_called": true,
+      "process_wall_seconds": 0.08126708800409688,
+      "solve_seconds": 0.004618328006472439,
+      "stage": "native_completed"
+    },
+    "cap_arc_dedup_diagnostics": {
+      "compile_seconds": 0.0039184310007840395,
+      "compiled_authored_constraints": 256,
+      "compiled_equation_upper_bound": 768,
+      "counts": {
+        "active_scalars": 512,
+        "authored_constraints": 384,
+        "authored_equations_upper_bound": 768,
+        "equation_upper_bound": 1024,
+        "intrinsic_equations": 256,
+        "points": 256,
+        "total_curves": 256
+      },
+      "diagnose": true,
+      "elapsed_seconds": 0.012402699998347089,
+      "failed_constraints": [],
+      "first_three_points": [
+        [
+          0.0,
+          0.0
+        ],
+        [
+          5.0,
+          0.0
+        ],
+        [
+          0.0,
+          5.0
+        ]
+      ],
+      "input": {
+        "arcs": 256,
+        "dedup": true,
+        "diagnose": true,
+        "fixed": 384,
+        "points": 256
+      },
+      "max_rss_native_units": 22712,
+      "maximum_fixed_error": 0.0,
+      "native": {
+        "dof": 0,
+        "nbad": 0,
+        "result": 4
+      },
+      "native_called": true,
+      "process_wall_seconds": 0.10089565999805927,
+      "solve_seconds": 0.00848426899756305,
+      "stage": "native_completed"
+    },
+    "cap_arc_few_scalars_1024": {
+      "compile_seconds": 0.0013015439981245436,
+      "compiled_authored_constraints": 384,
+      "compiled_equation_upper_bound": 1024,
+      "counts": {
+        "active_scalars": 6,
+        "authored_constraints": 384,
+        "authored_equations_upper_bound": 768,
+        "equation_upper_bound": 1024,
+        "intrinsic_equations": 256,
+        "points": 3,
+        "total_curves": 256
+      },
+      "diagnose": false,
+      "elapsed_seconds": 0.009503927998594008,
+      "failed_constraints": [],
+      "first_three_points": [
+        [
+          0.0,
+          0.0
+        ],
+        [
+          5.0,
+          0.0
+        ],
+        [
+          0.0,
+          5.0
+        ]
+      ],
+      "input": {
+        "arcs": 256,
+        "fixed": 384,
+        "points": 3
+      },
+      "max_rss_native_units": 20188,
+      "maximum_fixed_error": 0.0,
+      "native": {
+        "dof": 0,
+        "nbad": 0,
+        "result": 4
+      },
+      "native_called": true,
+      "process_wall_seconds": 0.08792353000171715,
+      "solve_seconds": 0.008202384000469465,
+      "stage": "native_completed"
+    },
+    "cap_arc_max_scalars_1024": {
+      "compile_seconds": 0.0029714019983657636,
+      "compiled_authored_constraints": 384,
+      "compiled_equation_upper_bound": 1024,
+      "counts": {
+        "active_scalars": 512,
+        "authored_constraints": 384,
+        "authored_equations_upper_bound": 768,
+        "equation_upper_bound": 1024,
+        "intrinsic_equations": 256,
+        "points": 256,
+        "total_curves": 256
+      },
+      "diagnose": false,
+      "elapsed_seconds": 0.007269487003213726,
+      "failed_constraints": [],
+      "first_three_points": [
+        [
+          0.0,
+          0.0
+        ],
+        [
+          5.0,
+          0.0
+        ],
+        [
+          0.0,
+          5.0
+        ]
+      ],
+      "input": {
+        "arcs": 256,
+        "fixed": 384,
+        "points": 256
+      },
+      "max_rss_native_units": 20416,
+      "maximum_fixed_error": 0.0,
+      "native": {
+        "dof": 0,
+        "nbad": 0,
+        "result": 4
+      },
+      "native_called": true,
+      "process_wall_seconds": 0.07774898200295866,
+      "solve_seconds": 0.004298085004847962,
+      "stage": "native_completed"
+    },
+    "cap_arc_max_scalars_unsolved_1024": {
+      "compile_seconds": 0.0024231260031228885,
+      "compiled_authored_constraints": 384,
+      "compiled_equation_upper_bound": 1024,
+      "counts": {
+        "active_scalars": 512,
+        "authored_constraints": 384,
+        "authored_equations_upper_bound": 768,
+        "equation_upper_bound": 1024,
+        "intrinsic_equations": 256,
+        "points": 256,
+        "total_curves": 256
+      },
+      "diagnose": false,
+      "elapsed_seconds": 0.006695670999761205,
+      "failed_constraints": [],
+      "first_three_points": [
+        [
+          0.0,
+          0.0
+        ],
+        [
+          5.0,
+          0.0
+        ],
+        [
+          0.0,
+          5.0
+        ]
+      ],
+      "input": {
+        "arcs": 256,
+        "fixed": 384,
+        "points": 256,
+        "unsolved": true
+      },
+      "max_rss_native_units": 20424,
+      "maximum_fixed_error": 0.0,
+      "native": {
+        "dof": 0,
+        "nbad": 0,
+        "result": 4
+      },
+      "native_called": true,
+      "process_wall_seconds": 0.07223108699690783,
+      "solve_seconds": 0.004272544996638317,
+      "stage": "native_completed"
+    },
+    "cap_arc_with_authored_dedup_1024": {
+      "compile_seconds": 0.0019253649952588603,
+      "compiled_authored_constraints": 256,
+      "compiled_equation_upper_bound": 768,
+      "counts": {
+        "active_scalars": 512,
+        "authored_constraints": 384,
+        "authored_equations_upper_bound": 768,
+        "equation_upper_bound": 1024,
+        "intrinsic_equations": 256,
+        "points": 256,
+        "total_curves": 256
+      },
+      "diagnose": false,
+      "elapsed_seconds": 0.0048174580006161705,
+      "failed_constraints": [],
+      "first_three_points": [
+        [
+          0.0,
+          0.0
+        ],
+        [
+          5.0,
+          0.0
+        ],
+        [
+          0.0,
+          5.0
+        ]
+      ],
+      "input": {
+        "arcs": 256,
+        "dedup": true,
+        "fixed": 384,
+        "points": 256,
+        "unsolved": true
+      },
+      "max_rss_native_units": 20284,
+      "maximum_fixed_error": 0.0,
+      "native": {
+        "dof": 0,
+        "nbad": 0,
+        "result": 4
+      },
+      "native_called": true,
+      "process_wall_seconds": 0.07358517000102438,
+      "solve_seconds": 0.00289209300535731,
+      "stage": "native_completed"
+    },
+    "cap_authored_1024": {
+      "compile_seconds": 0.00139204000151949,
+      "compiled_authored_constraints": 512,
+      "compiled_equation_upper_bound": 1024,
+      "counts": {
+        "active_scalars": 512,
+        "authored_constraints": 512,
+        "authored_equations_upper_bound": 1024,
+        "equation_upper_bound": 1024,
+        "intrinsic_equations": 0,
+        "points": 256,
+        "total_curves": 0
+      },
+      "diagnose": false,
+      "elapsed_seconds": 0.005077621004602406,
+      "failed_constraints": [],
+      "first_three_points": [
+        [
+          0.0,
+          0.0
+        ],
+        [
+          5.0,
+          0.0
+        ],
+        [
+          0.0,
+          5.0
+        ]
+      ],
+      "input": {
+        "arcs": 0,
+        "fixed": 512,
+        "points": 256
+      },
+      "max_rss_native_units": 20308,
+      "maximum_fixed_error": 0.0,
+      "native": {
+        "dof": 0,
+        "nbad": 0,
+        "result": 4
+      },
+      "native_called": true,
+      "process_wall_seconds": 0.08973426200100221,
+      "solve_seconds": 0.003685581003082916,
+      "stage": "native_completed"
+    },
+    "cap_distinct_coincidence_cycles_1024": {
+      "compile_seconds": 0.0020233719988027588,
+      "compiled_authored_constraints": 384,
+      "compiled_equation_upper_bound": 1024,
+      "counts": {
+        "active_scalars": 512,
+        "authored_constraints": 384,
+        "authored_equations_upper_bound": 768,
+        "equation_upper_bound": 1024,
+        "intrinsic_equations": 256,
+        "points": 256,
+        "total_curves": 256
+      },
+      "diagnose": true,
+      "elapsed_seconds": 0.004653379997762386,
+      "failed_constraints": [],
+      "first_three_points": [
+        [
+          0.0,
+          0.0
+        ],
+        [
+          5.0,
+          0.0
+        ],
+        [
+          0.0,
+          5.0
+        ]
+      ],
+      "input": {
+        "arcs": 256,
+        "coincident": 384,
+        "cycles": true,
+        "diagnose": true,
+        "fixed": 0,
+        "points": 256
+      },
+      "max_rss_native_units": 20364,
+      "maximum_fixed_error": 0.0,
+      "native": {
+        "dof": 0,
+        "nbad": 0,
+        "result": 4
+      },
+      "native_called": true,
+      "process_wall_seconds": 0.06913258300482994,
+      "solve_seconds": 0.002630007998959627,
+      "stage": "native_completed"
+    },
+    "cap_plus_256_1280": {
+      "counts": {
+        "active_scalars": 512,
+        "authored_constraints": 512,
+        "authored_equations_upper_bound": 1024,
+        "equation_upper_bound": 1280,
+        "intrinsic_equations": 256,
+        "points": 256,
+        "total_curves": 256
+      },
+      "exceeded": [
+        "equation_upper_bound"
+      ],
+      "input": {
+        "arcs": 256,
+        "fixed": 512,
+        "points": 256
+      },
+      "native_called": false,
+      "process_wall_seconds": 0.07100720099697355,
+      "stage": "rejected_before_native"
+    },
+    "cap_plus_one_1025": {
+      "counts": {
+        "active_scalars": 512,
+        "authored_constraints": 385,
+        "authored_equations_upper_bound": 769,
+        "equation_upper_bound": 1025,
+        "intrinsic_equations": 256,
+        "points": 256,
+        "total_curves": 256
+      },
+      "exceeded": [
+        "equation_upper_bound"
+      ],
+      "input": {
+        "arcs": 256,
+        "fixed": 384,
+        "points": 256,
+        "radius": 5
+      },
+      "native_called": false,
+      "process_wall_seconds": 0.0630438869993668,
+      "stage": "rejected_before_native"
+    },
+    "cap_underconstrained_coincidence_1024": {
+      "compile_seconds": 0.002157924995117355,
+      "compiled_authored_constraints": 384,
+      "compiled_equation_upper_bound": 1024,
+      "counts": {
+        "active_scalars": 512,
+        "authored_constraints": 384,
+        "authored_equations_upper_bound": 768,
+        "equation_upper_bound": 1024,
+        "intrinsic_equations": 256,
+        "points": 256,
+        "total_curves": 256
+      },
+      "diagnose": false,
+      "elapsed_seconds": 0.0034789979981724173,
+      "failed_constraints": [],
+      "first_three_points": [
+        [
+          0.0,
+          0.0
+        ],
+        [
+          5.0,
+          0.0
+        ],
+        [
+          0.0,
+          5.0
+        ]
+      ],
+      "input": {
+        "arcs": 256,
+        "coincident": 384,
+        "fixed": 0,
+        "points": 256
+      },
+      "max_rss_native_units": 20352,
+      "maximum_fixed_error": 0.0,
+      "native": {
+        "dof": 0,
+        "nbad": 0,
+        "result": 4
+      },
+      "native_called": true,
+      "process_wall_seconds": 0.08062767400406301,
+      "solve_seconds": 0.0013210730030550621,
+      "stage": "native_completed"
+    },
+    "cap_underconstrained_dedup_1024": {
+      "compile_seconds": 0.0020752400014316663,
+      "compiled_authored_constraints": 128,
+      "compiled_equation_upper_bound": 512,
+      "counts": {
+        "active_scalars": 512,
+        "authored_constraints": 384,
+        "authored_equations_upper_bound": 768,
+        "equation_upper_bound": 1024,
+        "intrinsic_equations": 256,
+        "points": 256,
+        "total_curves": 256
+      },
+      "diagnose": false,
+      "elapsed_seconds": 0.04759982800169382,
+      "failed_constraints": [],
+      "first_three_points": [
+        [
+          0.0,
+          0.0
+        ],
+        [
+          5.0,
+          0.0
+        ],
+        [
+          0.0,
+          5.0
+        ]
+      ],
+      "input": {
+        "arcs": 256,
+        "coincident": 384,
+        "dedup": true,
+        "fixed": 0,
+        "points": 256
+      },
+      "max_rss_native_units": 22548,
+      "maximum_fixed_error": 0.0,
+      "native": {
+        "dof": 255,
+        "nbad": 0,
+        "result": 4
+      },
+      "native_called": true,
+      "process_wall_seconds": 0.121802210000169,
+      "solve_seconds": 0.045524588000262156,
+      "stage": "native_completed"
+    },
+    "complement_authored_conflict": {
+      "compile_seconds": 5.267900269245729e-05,
+      "compiled_authored_constraints": 4,
+      "compiled_equation_upper_bound": 9,
+      "counts": {
+        "active_scalars": 6,
+        "authored_constraints": 4,
+        "authored_equations_upper_bound": 7,
+        "equation_upper_bound": 9,
+        "intrinsic_equations": 2,
+        "points": 3,
+        "total_curves": 2
+      },
+      "diagnose": true,
+      "elapsed_seconds": 0.00046220700460253283,
+      "failed_constraints": [
+        "radius"
+      ],
+      "first_three_points": [
+        [
+          0.0,
+          0.0
+        ],
+        [
+          5.0,
+          0.0
+        ],
+        [
+          0.0,
+          5.0
+        ]
+      ],
+      "input": {
+        "arcs": 2,
+        "diagnose": true,
+        "fixed": 3,
+        "points": 3,
+        "radius": 7
+      },
+      "max_rss_native_units": 19672,
+      "maximum_fixed_error": 0.0,
+      "native": {
+        "dof": 0,
+        "nbad": 1,
+        "result": 1
+      },
+      "native_called": true,
+      "process_wall_seconds": 0.09533070599718485,
+      "solve_seconds": 0.00040952800191007555,
+      "stage": "native_completed"
+    },
+    "complement_center_radius": {
+      "compile_seconds": 3.967899829149246e-05,
+      "compiled_authored_constraints": 2,
+      "compiled_equation_upper_bound": 5,
+      "counts": {
+        "active_scalars": 6,
+        "authored_constraints": 2,
+        "authored_equations_upper_bound": 3,
+        "equation_upper_bound": 5,
+        "intrinsic_equations": 2,
+        "points": 3,
+        "total_curves": 2
+      },
+      "diagnose": true,
+      "elapsed_seconds": 0.0006072050018701702,
+      "failed_constraints": [],
+      "first_three_points": [
+        [
+          0.0,
+          0.0
+        ],
+        [
+          7.0,
+          0.0
+        ],
+        [
+          0.0,
+          6.999999999999999
+        ]
+      ],
+      "input": {
+        "arcs": 2,
+        "diagnose": true,
+        "fixed": 1,
+        "points": 3,
+        "radius": 7
+      },
+      "max_rss_native_units": 19664,
+      "maximum_fixed_error": 0.0,
+      "native": {
+        "dof": 2,
+        "nbad": 0,
+        "result": 4
+      },
+      "native_called": true,
+      "process_wall_seconds": 0.09331875900534214,
+      "solve_seconds": 0.0005675260035786778,
+      "stage": "native_completed"
+    },
+    "complement_intrinsic_only": {
+      "compile_seconds": 2.2072999854572117e-05,
+      "compiled_authored_constraints": 0,
+      "compiled_equation_upper_bound": 2,
+      "counts": {
+        "active_scalars": 6,
+        "authored_constraints": 0,
+        "authored_equations_upper_bound": 0,
+        "equation_upper_bound": 2,
+        "intrinsic_equations": 2,
+        "points": 3,
+        "total_curves": 2
+      },
+      "diagnose": true,
+      "elapsed_seconds": 0.0003133729987894185,
+      "failed_constraints": [],
+      "first_three_points": [
+        [
+          0.0,
+          0.0
+        ],
+        [
+          5.0,
+          0.0
+        ],
+        [
+          0.0,
+          5.0
+        ]
+      ],
+      "input": {
+        "arcs": 2,
+        "diagnose": true,
+        "fixed": 0,
+        "points": 3
+      },
+      "max_rss_native_units": 19692,
+      "maximum_fixed_error": 0.0,
+      "native": {
+        "dof": 5,
+        "nbad": 0,
+        "result": 4
+      },
+      "native_called": true,
+      "process_wall_seconds": 0.07595505499921273,
+      "solve_seconds": 0.00029129999893484637,
+      "stage": "native_completed"
+    }
+  },
+  "checks": {
+    "below_cap_1023": true,
+    "cap_arc_dedup_diagnostics": true,
+    "cap_arc_few_scalars_1024": true,
+    "cap_arc_max_scalars_1024": true,
+    "cap_arc_max_scalars_unsolved_1024": true,
+    "cap_arc_with_authored_dedup_1024": true,
+    "cap_authored_1024": true,
+    "cap_distinct_coincidence_cycles_1024": true,
+    "cap_plus_256_1280": true,
+    "cap_plus_one_1025": true,
+    "cap_underconstrained_coincidence_1024": true,
+    "cap_underconstrained_dedup_1024": true,
+    "complement_authored_conflict": true,
+    "complement_center_radius": true,
+    "complement_intrinsic_only": true,
+    "dedup_preserves_underconstrained_dof": true,
+    "intrinsic_no_authored_failure": true,
+    "known_coincidence_cycle_dof_defect_reproduced": true
+  },
+  "checks_passed": true,
+  "known_defects": {
+    "distinct_coincidence_cycles": {
+      "case": "cap_distinct_coincidence_cycles_1024",
+      "explanation": "64 free coincident point groups contribute 128 scalars; all arcs share one independent radial equality. Exact authored-equation dedup does not eliminate the distinct cycles.",
+      "mathematical_dof": 127,
+      "native_dof": 0
+    }
+  },
+  "platform": "Linux-6.18.44-x86_64-with-glibc2.41",
+  "python": "3.12.14 (main, Aug 25 2026, 14:00:49) [Clang 22.1.3 ]",
+  "scope": "Historical raw-native arc/resource probes; not a 0.5.1 capability or correctness guarantee",
+  "script_sha256": "7067b153d1aa29ec667adaf4e54c2e498c8f62468de2b29a3635ba24dec7cd25",
+  "slvs_version": "3.2"
+}

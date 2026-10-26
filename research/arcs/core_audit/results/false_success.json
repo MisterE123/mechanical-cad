@@ -1,0 +1,50 @@
+[
+  {
+    "case": "angular_only",
+    "status": "DIDNT_CONVERGE",
+    "max_residual": null,
+    "original_identity_preserved": true
+  },
+  {
+    "case": "full_turn_only",
+    "status": "DIDNT_CONVERGE",
+    "max_residual": null,
+    "original_identity_preserved": true
+  },
+  {
+    "case": "chord_only",
+    "status": "DIDNT_CONVERGE",
+    "max_residual": null,
+    "original_identity_preserved": true
+  },
+  {
+    "case": "small_radius_residual",
+    "status": "DIDNT_CONVERGE",
+    "max_residual": null,
+    "original_identity_preserved": true
+  },
+  {
+    "case": "driver_residual",
+    "status": "DIDNT_CONVERGE",
+    "max_residual": 2.0,
+    "original_identity_preserved": true
+  },
+  {
+    "case": "coordinate_domain",
+    "status": "DIDNT_CONVERGE",
+    "max_residual": null,
+    "original_identity_preserved": true
+  },
+  {
+    "case": "derived_radius_domain",
+    "status": "DIDNT_CONVERGE",
+    "max_residual": null,
+    "original_identity_preserved": true
+  },
+  {
+    "case": "collapsed",
+    "status": "DIDNT_CONVERGE",
+    "max_residual": null,
+    "original_identity_preserved": true
+  }
+]

@@ -1,0 +1,2405 @@
+{
+  "directed_arcs": {
+    "major_ccw": {
+      "curve": "GeomAbs_CurveType.GeomAbs_Circle",
+      "end": [
+        10.0,
+        -2.4492935982947065e-15,
+        0.0
+      ],
+      "length": 47.12388980384689,
+      "orientation": "TopAbs_Orientation.TopAbs_FORWARD",
+      "parameters": [
+        1.5707963267948966,
+        6.283185307179586
+      ],
+      "start": [
+        6.123233995736766e-16,
+        10.0,
+        0.0
+      ],
+      "valid": true,
+      "vertices_same": false
+    },
+    "major_cw": {
+      "curve": "GeomAbs_CurveType.GeomAbs_Circle",
+      "end": [
+        6.123233995736766e-16,
+        10.0,
+        0.0
+      ],
+      "length": 47.12388980384689,
+      "orientation": "TopAbs_Orientation.TopAbs_REVERSED",
+      "parameters": [
+        1.5707963267948966,
+        6.283185307179586
+      ],
+      "start": [
+        10.0,
+        -2.4492935982947065e-15,
+        0.0
+      ],
+      "valid": true,
+      "vertices_same": false
+    },
+    "quarter_ccw": {
+      "curve": "GeomAbs_CurveType.GeomAbs_Circle",
+      "end": [
+        6.123233995736766e-16,
+        10.0,
+        0.0
+      ],
+      "length": 15.707963267948966,
+      "orientation": "TopAbs_Orientation.TopAbs_FORWARD",
+      "parameters": [
+        0.0,
+        1.5707963267948966
+      ],
+      "start": [
+        10.0,
+        0.0,
+        0.0
+      ],
+      "valid": true,
+      "vertices_same": false
+    },
+    "quarter_cw": {
+      "curve": "GeomAbs_CurveType.GeomAbs_Circle",
+      "end": [
+        10.0,
+        0.0,
+        0.0
+      ],
+      "length": 15.707963267948966,
+      "orientation": "TopAbs_Orientation.TopAbs_REVERSED",
+      "parameters": [
+        0.0,
+        1.5707963267948966
+      ],
+      "start": [
+        6.123233995736766e-16,
+        10.0,
+        0.0
+      ],
+      "valid": true,
+      "vertices_same": false
+    },
+    "seam_ccw": {
+      "curve": "GeomAbs_CurveType.GeomAbs_Circle",
+      "end": [
+        9.84807753012208,
+        1.7364817766692988,
+        0.0
+      ],
+      "length": 3.4906585039886546,
+      "orientation": "TopAbs_Orientation.TopAbs_FORWARD",
+      "parameters": [
+        6.1086523819801535,
+        6.457718232379019
+      ],
+      "start": [
+        9.848077530122078,
+        -1.7364817766693035,
+        0.0
+      ],
+      "valid": true,
+      "vertices_same": false
+    },
+    "semicircle_ccw": {
+      "curve": "GeomAbs_CurveType.GeomAbs_Circle",
+      "end": [
+        -10.0,
+        1.2246467991473533e-15,
+        0.0
+      ],
+      "length": 31.41592653589793,
+      "orientation": "TopAbs_Orientation.TopAbs_FORWARD",
+      "parameters": [
+        0.0,
+        3.141592653589793
+      ],
+      "start": [
+        10.0,
+        0.0,
+        0.0
+      ],
+      "valid": true,
+      "vertices_same": false
+    },
+    "semicircle_cw": {
+      "curve": "GeomAbs_CurveType.GeomAbs_Circle",
+      "end": [
+        -10.0,
+        1.2246467991473533e-15,
+        0.0
+      ],
+      "length": 31.41592653589793,
+      "orientation": "TopAbs_Orientation.TopAbs_REVERSED",
+      "parameters": [
+        3.141592653589793,
+        6.283185307179586
+      ],
+      "start": [
+        10.0,
+        -2.4492935982947065e-15,
+        0.0
+      ],
+      "valid": true,
+      "vertices_same": false
+    }
+  },
+  "ocp_angular": 1e-12,
+  "ocp_confusion": 1e-07,
+  "profiles": {
+    "major_segment": {
+      "analytic_area": 285.6194490192345,
+      "analytic_volume": 1999.3361431346414,
+      "generated_counts": {
+        "arc.round": 1,
+        "line.chord": 1
+      },
+      "inserted_same_as_raw": {
+        "arc.round": true,
+        "line.chord": true
+      },
+      "mesh": {
+        "check": {
+          "consistently_oriented": true,
+          "signed_volume": 1998.2511376444795,
+          "triangles": 300,
+          "vertex_manifold": true,
+          "vertices": 152,
+          "watertight": true,
+          "weld_tolerance": 1e-07
+        },
+        "face_ids": [
+          "ext/face/cap.end",
+          "ext/face/cap.start",
+          "ext/face/side.arc.round",
+          "ext/face/side.line.chord"
+        ],
+        "triangles": 300,
+        "vertices": 308
+      },
+      "raw_generated_counts": {
+        "arc.round": 1,
+        "line.chord": 1
+      },
+      "stats": {
+        "area": 1000.1010760315139,
+        "faces": 4,
+        "solids": 1,
+        "valid": true,
+        "volume": 1999.3361431346414
+      },
+      "topology": [
+        {
+          "feature_id": "ext",
+          "id": "ext/face/side.arc.round",
+          "kind": "face",
+          "provenance": {
+            "evolution": "generated_from_profile_edge",
+            "kernel": "OCCT",
+            "operation": "extrude",
+            "operation_id": "ext",
+            "relation": "generated_from_profile_edge",
+            "semantic_status": "stable",
+            "source_boundary": "arc.round"
+          },
+          "role": "side.arc.round",
+          "signature": {
+            "area": 329.86722862692835,
+            "axis": [
+              -0.0,
+              -0.0,
+              -1.0
+            ],
+            "centroid": [
+              -2.1220659078919386,
+              -2.122065907891936,
+              3.5
+            ],
+            "radius": 10.0,
+            "surface": "cylinder"
+          }
+        },
+        {
+          "feature_id": "ext",
+          "id": "ext/face/side.line.chord",
+          "kind": "face",
+          "provenance": {
+            "evolution": "generated_from_profile_edge",
+            "kernel": "OCCT",
+            "operation": "extrude",
+            "operation_id": "ext",
+            "relation": "generated_from_profile_edge",
+            "semantic_status": "stable",
+            "source_boundary": "line.chord"
+          },
+          "role": "side.line.chord",
+          "signature": {
+            "area": 98.99494936611666,
+            "centroid": [
+              4.999999999999999,
+              5.000000000000001,
+              3.5000000000000004
+            ],
+            "normal": [
+              0.7071067811865476,
+              0.7071067811865476,
+              -0.0
+            ],
+            "surface": "plane"
+          }
+        },
+        {
+          "feature_id": "ext",
+          "id": "ext/face/cap.start",
+          "kind": "face",
+          "provenance": {
+            "evolution": "first_shape",
+            "kernel": "OCCT",
+            "operation": "extrude",
+            "operation_id": "ext",
+            "relation": "first_shape",
+            "semantic_status": "stable"
+          },
+          "role": "cap.start",
+          "signature": {
+            "area": 285.6194490192344,
+            "centroid": [
+              -0.5835270225433522,
+              -0.583527022543354,
+              0.0
+            ],
+            "normal": [
+              -0.0,
+              -0.0,
+              -1.0
+            ],
+            "surface": "plane"
+          }
+        },
+        {
+          "feature_id": "ext",
+          "id": "ext/face/cap.end",
+          "kind": "face",
+          "provenance": {
+            "evolution": "last_shape",
+            "kernel": "OCCT",
+            "operation": "extrude",
+            "operation_id": "ext",
+            "relation": "last_shape",
+            "semantic_status": "stable"
+          },
+          "role": "cap.end",
+          "signature": {
+            "area": 285.6194490192344,
+            "centroid": [
+              -0.5835270225433522,
+              -0.583527022543354,
+              7.0
+            ],
+            "normal": [
+              0.0,
+              0.0,
+              1.0
+            ],
+            "surface": "plane"
+          }
+        }
+      ],
+      "valid": true,
+      "wire_unique_edges": 2,
+      "wire_unique_vertices": 2
+    },
+    "quarter_segment": {
+      "analytic_area": 28.539816339744828,
+      "analytic_volume": 199.7787143782138,
+      "generated_counts": {
+        "arc.round": 1,
+        "line.chord": 1
+      },
+      "inserted_same_as_raw": {
+        "arc.round": true,
+        "line.chord": true
+      },
+      "mesh": {
+        "check": {
+          "consistently_oriented": true,
+          "signed_volume": 199.4170458814921,
+          "triangles": 100,
+          "vertex_manifold": true,
+          "vertices": 52,
+          "watertight": true,
+          "weld_tolerance": 1e-07
+        },
+        "face_ids": [
+          "ext/face/cap.end",
+          "ext/face/cap.start",
+          "ext/face/side.arc.round",
+          "ext/face/side.line.chord"
+        ],
+        "triangles": 100,
+        "vertices": 108
+      },
+      "raw_generated_counts": {
+        "arc.round": 1,
+        "line.chord": 1
+      },
+      "stats": {
+        "area": 266.0303249212491,
+        "faces": 4,
+        "solids": 1,
+        "valid": true,
+        "volume": 199.77871437821383
+      },
+      "topology": [
+        {
+          "feature_id": "ext",
+          "id": "ext/face/side.arc.round",
+          "kind": "face",
+          "provenance": {
+            "evolution": "generated_from_profile_edge",
+            "kernel": "OCCT",
+            "operation": "extrude",
+            "operation_id": "ext",
+            "relation": "generated_from_profile_edge",
+            "semantic_status": "stable",
+            "source_boundary": "arc.round"
+          },
+          "role": "side.arc.round",
+          "signature": {
+            "area": 109.95574287564277,
+            "axis": [
+              -0.0,
+              -0.0,
+              -1.0
+            ],
+            "centroid": [
+              6.366197723675814,
+              6.366197723675813,
+              3.5
+            ],
+            "radius": 10.0,
+            "surface": "cylinder"
+          }
+        },
+        {
+          "feature_id": "ext",
+          "id": "ext/face/side.line.chord",
+          "kind": "face",
+          "provenance": {
+            "evolution": "generated_from_profile_edge",
+            "kernel": "OCCT",
+            "operation": "extrude",
+            "operation_id": "ext",
+            "relation": "generated_from_profile_edge",
+            "semantic_status": "stable",
+            "source_boundary": "line.chord"
+          },
+          "role": "side.line.chord",
+          "signature": {
+            "area": 98.99494936611666,
+            "centroid": [
+              5.000000000000001,
+              4.999999999999999,
+              3.5000000000000004
+            ],
+            "normal": [
+              -0.7071067811865476,
+              -0.7071067811865476,
+              0.0
+            ],
+            "surface": "plane"
+          }
+        },
+        {
+          "feature_id": "ext",
+          "id": "ext/face/cap.start",
+          "kind": "face",
+          "provenance": {
+            "evolution": "first_shape",
+            "kernel": "OCCT",
+            "operation": "extrude",
+            "operation_id": "ext",
+            "relation": "first_shape",
+            "semantic_status": "stable"
+          },
+          "role": "cap.start",
+          "signature": {
+            "area": 28.539816339744817,
+            "centroid": [
+              5.839794646280364,
+              5.839794646280366,
+              0.0
+            ],
+            "normal": [
+              -0.0,
+              -0.0,
+              -1.0
+            ],
+            "surface": "plane"
+          }
+        },
+        {
+          "feature_id": "ext",
+          "id": "ext/face/cap.end",
+          "kind": "face",
+          "provenance": {
+            "evolution": "last_shape",
+            "kernel": "OCCT",
+            "operation": "extrude",
+            "operation_id": "ext",
+            "relation": "last_shape",
+            "semantic_status": "stable"
+          },
+          "role": "cap.end",
+          "signature": {
+            "area": 28.539816339744817,
+            "centroid": [
+              5.839794646280364,
+              5.839794646280366,
+              7.0
+            ],
+            "normal": [
+              0.0,
+              0.0,
+              1.0
+            ],
+            "surface": "plane"
+          }
+        }
+      ],
+      "valid": true,
+      "wire_unique_edges": 2,
+      "wire_unique_vertices": 2
+    },
+    "rounded_rect": {
+      "analytic_area": 357.0796326794897,
+      "analytic_volume": 2499.5574287564277,
+      "generated_counts": {
+        "arc.round": 1,
+        "line.bottom": 1,
+        "line.left": 1,
+        "line.top": 1
+      },
+      "inserted_same_as_raw": {
+        "arc.round": true,
+        "line.bottom": true,
+        "line.left": true,
+        "line.top": true
+      },
+      "mesh": {
+        "check": {
+          "consistently_oriented": true,
+          "signed_volume": 2498.8340917629835,
+          "triangles": 208,
+          "vertex_manifold": true,
+          "vertices": 106,
+          "watertight": true,
+          "weld_tolerance": 1e-07
+        },
+        "face_ids": [
+          "ext/face/cap.end",
+          "ext/face/cap.start",
+          "ext/face/side.arc.round",
+          "ext/face/side.line.bottom",
+          "ext/face/side.line.left",
+          "ext/face/side.line.top"
+        ],
+        "triangles": 208,
+        "vertices": 220
+      },
+      "raw_generated_counts": {
+        "arc.round": 1,
+        "line.bottom": 1,
+        "line.left": 1,
+        "line.top": 1
+      },
+      "stats": {
+        "area": 1214.0707511102646,
+        "faces": 6,
+        "solids": 1,
+        "valid": true,
+        "volume": 2499.5574287564277
+      },
+      "topology": [
+        {
+          "feature_id": "ext",
+          "id": "ext/face/side.line.bottom",
+          "kind": "face",
+          "provenance": {
+            "evolution": "generated_from_profile_edge",
+            "kernel": "OCCT",
+            "operation": "extrude",
+            "operation_id": "ext",
+            "relation": "generated_from_profile_edge",
+            "semantic_status": "stable",
+            "source_boundary": "line.bottom"
+          },
+          "role": "side.line.bottom",
+          "signature": {
+            "area": 69.99999999999999,
+            "centroid": [
+              5.0,
+              -10.0,
+              3.5
+            ],
+            "normal": [
+              -0.0,
+              -1.0,
+              -0.0
+            ],
+            "surface": "plane"
+          }
+        },
+        {
+          "feature_id": "ext",
+          "id": "ext/face/side.arc.round",
+          "kind": "face",
+          "provenance": {
+            "evolution": "generated_from_profile_edge",
+            "kernel": "OCCT",
+            "operation": "extrude",
+            "operation_id": "ext",
+            "relation": "generated_from_profile_edge",
+            "semantic_status": "stable",
+            "source_boundary": "arc.round"
+          },
+          "role": "side.arc.round",
+          "signature": {
+            "area": 219.91148575128554,
+            "axis": [
+              -0.0,
+              -0.0,
+              -1.0
+            ],
+            "centroid": [
+              16.36619772367581,
+              -1.5848433676524108e-15,
+              3.5
+            ],
+            "radius": 10.0,
+            "surface": "cylinder"
+          }
+        },
+        {
+          "feature_id": "ext",
+          "id": "ext/face/side.line.top",
+          "kind": "face",
+          "provenance": {
+            "evolution": "generated_from_profile_edge",
+            "kernel": "OCCT",
+            "operation": "extrude",
+            "operation_id": "ext",
+            "relation": "generated_from_profile_edge",
+            "semantic_status": "stable",
+            "source_boundary": "line.top"
+          },
+          "role": "side.line.top",
+          "signature": {
+            "area": 69.99999999999999,
+            "centroid": [
+              5.0,
+              10.0,
+              3.5
+            ],
+            "normal": [
+              -0.0,
+              1.0,
+              -0.0
+            ],
+            "surface": "plane"
+          }
+        },
+        {
+          "feature_id": "ext",
+          "id": "ext/face/side.line.left",
+          "kind": "face",
+          "provenance": {
+            "evolution": "generated_from_profile_edge",
+            "kernel": "OCCT",
+            "operation": "extrude",
+            "operation_id": "ext",
+            "relation": "generated_from_profile_edge",
+            "semantic_status": "stable",
+            "source_boundary": "line.left"
+          },
+          "role": "side.line.left",
+          "signature": {
+            "area": 139.99999999999997,
+            "centroid": [
+              0.0,
+              1.387778780781446e-17,
+              3.5
+            ],
+            "normal": [
+              -1.0,
+              -0.0,
+              0.0
+            ],
+            "surface": "plane"
+          }
+        },
+        {
+          "feature_id": "ext",
+          "id": "ext/face/cap.start",
+          "kind": "face",
+          "provenance": {
+            "evolution": "first_shape",
+            "kernel": "OCCT",
+            "operation": "extrude",
+            "operation_id": "ext",
+            "relation": "first_shape",
+            "semantic_status": "stable"
+          },
+          "role": "cap.start",
+          "signature": {
+            "area": 357.0796326794896,
+            "centroid": [
+              9.06650141081407,
+              5.001093614833311e-16,
+              0.0
+            ],
+            "normal": [
+              -0.0,
+              -0.0,
+              -1.0
+            ],
+            "surface": "plane"
+          }
+        },
+        {
+          "feature_id": "ext",
+          "id": "ext/face/cap.end",
+          "kind": "face",
+          "provenance": {
+            "evolution": "last_shape",
+            "kernel": "OCCT",
+            "operation": "extrude",
+            "operation_id": "ext",
+            "relation": "last_shape",
+            "semantic_status": "stable"
+          },
+          "role": "cap.end",
+          "signature": {
+            "area": 357.0796326794896,
+            "centroid": [
+              9.06650141081407,
+              5.001093614833311e-16,
+              7.0
+            ],
+            "normal": [
+              0.0,
+              0.0,
+              1.0
+            ],
+            "surface": "plane"
+          }
+        }
+      ],
+      "valid": true,
+      "wire_unique_edges": 4,
+      "wire_unique_vertices": 4
+    },
+    "rounded_rect_large_origin": {
+      "analytic_volume": 2499.5574287564277,
+      "generated_counts": {
+        "arc.round": 1,
+        "line.bottom": 1,
+        "line.left": 1,
+        "line.top": 1
+      },
+      "inserted_same_as_raw": {
+        "arc.round": true,
+        "line.bottom": true,
+        "line.left": true,
+        "line.top": true
+      },
+      "mesh": {
+        "check": {
+          "consistently_oriented": true,
+          "signed_volume": 2498.8340917673977,
+          "triangles": 208,
+          "vertex_manifold": true,
+          "vertices": 106,
+          "watertight": true,
+          "weld_tolerance": 1e-07
+        },
+        "face_ids": [
+          "ext/face/cap.end",
+          "ext/face/cap.start",
+          "ext/face/side.arc.round",
+          "ext/face/side.line.bottom",
+          "ext/face/side.line.left",
+          "ext/face/side.line.top"
+        ],
+        "triangles": 208,
+        "vertices": 220
+      },
+      "raw_generated_counts": {
+        "arc.round": 1,
+        "line.bottom": 1,
+        "line.left": 1,
+        "line.top": 1
+      },
+      "stats": {
+        "area": 1214.0707511102646,
+        "faces": 6,
+        "solids": 1,
+        "valid": true,
+        "volume": 2499.5574287576765
+      },
+      "topology": [
+        {
+          "feature_id": "ext",
+          "id": "ext/face/side.line.bottom",
+          "kind": "face",
+          "provenance": {
+            "evolution": "generated_from_profile_edge",
+            "kernel": "OCCT",
+            "operation": "extrude",
+            "operation_id": "ext",
+            "relation": "generated_from_profile_edge",
+            "semantic_status": "stable",
+            "source_boundary": "line.bottom"
+          },
+          "role": "side.line.bottom",
+          "signature": {
+            "area": 69.99999999999999,
+            "centroid": [
+              1000005.0,
+              -1000010.0,
+              1000003.5
+            ],
+            "normal": [
+              -0.0,
+              -1.0,
+              -0.0
+            ],
+            "surface": "plane"
+          }
+        },
+        {
+          "feature_id": "ext",
+          "id": "ext/face/side.arc.round",
+          "kind": "face",
+          "provenance": {
+            "evolution": "generated_from_profile_edge",
+            "kernel": "OCCT",
+            "operation": "extrude",
+            "operation_id": "ext",
+            "relation": "generated_from_profile_edge",
+            "semantic_status": "stable",
+            "source_boundary": "arc.round"
+          },
+          "role": "side.arc.round",
+          "signature": {
+            "area": 219.91148575128554,
+            "axis": [
+              -0.0,
+              -0.0,
+              -1.0
+            ],
+            "centroid": [
+              1000016.3661977237,
+              -1000000.0000000001,
+              1000003.5
+            ],
+            "radius": 10.0,
+            "surface": "cylinder"
+          }
+        },
+        {
+          "feature_id": "ext",
+          "id": "ext/face/side.line.top",
+          "kind": "face",
+          "provenance": {
+            "evolution": "generated_from_profile_edge",
+            "kernel": "OCCT",
+            "operation": "extrude",
+            "operation_id": "ext",
+            "relation": "generated_from_profile_edge",
+            "semantic_status": "stable",
+            "source_boundary": "line.top"
+          },
+          "role": "side.line.top",
+          "signature": {
+            "area": 69.99999999999999,
+            "centroid": [
+              1000005.0,
+              -999990.0,
+              1000003.5
+            ],
+            "normal": [
+              -0.0,
+              1.0,
+              -0.0
+            ],
+            "surface": "plane"
+          }
+        },
+        {
+          "feature_id": "ext",
+          "id": "ext/face/side.line.left",
+          "kind": "face",
+          "provenance": {
+            "evolution": "generated_from_profile_edge",
+            "kernel": "OCCT",
+            "operation": "extrude",
+            "operation_id": "ext",
+            "relation": "generated_from_profile_edge",
+            "semantic_status": "stable",
+            "source_boundary": "line.left"
+          },
+          "role": "side.line.left",
+          "signature": {
+            "area": 139.99999999999997,
+            "centroid": [
+              1000000.0,
+              -1000000.0,
+              1000003.5
+            ],
+            "normal": [
+              -1.0,
+              -0.0,
+              0.0
+            ],
+            "surface": "plane"
+          }
+        },
+        {
+          "feature_id": "ext",
+          "id": "ext/face/cap.start",
+          "kind": "face",
+          "provenance": {
+            "evolution": "first_shape",
+            "kernel": "OCCT",
+            "operation": "extrude",
+            "operation_id": "ext",
+            "relation": "first_shape",
+            "semantic_status": "stable"
+          },
+          "role": "cap.start",
+          "signature": {
+            "area": 357.0796326794896,
+            "centroid": [
+              1000009.0665014109,
+              -999999.9999999999,
+              999999.9999999999
+            ],
+            "normal": [
+              -0.0,
+              -0.0,
+              -1.0
+            ],
+            "surface": "plane"
+          }
+        },
+        {
+          "feature_id": "ext",
+          "id": "ext/face/cap.end",
+          "kind": "face",
+          "provenance": {
+            "evolution": "last_shape",
+            "kernel": "OCCT",
+            "operation": "extrude",
+            "operation_id": "ext",
+            "relation": "last_shape",
+            "semantic_status": "stable"
+          },
+          "role": "cap.end",
+          "signature": {
+            "area": 357.0796326794896,
+            "centroid": [
+              1000009.0665014109,
+              -999999.9999999999,
+              1000006.9999999999
+            ],
+            "normal": [
+              0.0,
+              0.0,
+              1.0
+            ],
+            "surface": "plane"
+          }
+        }
+      ],
+      "valid": true,
+      "wire_unique_edges": 4,
+      "wire_unique_vertices": 4
+    },
+    "rounded_rect_negative_height": {
+      "analytic_volume": 2499.5574287564277,
+      "generated_counts": {
+        "arc.round": 1,
+        "line.bottom": 1,
+        "line.left": 1,
+        "line.top": 1
+      },
+      "inserted_same_as_raw": {
+        "arc.round": true,
+        "line.bottom": true,
+        "line.left": true,
+        "line.top": true
+      },
+      "mesh": {
+        "check": {
+          "consistently_oriented": true,
+          "signed_volume": 2498.8340917629835,
+          "triangles": 208,
+          "vertex_manifold": true,
+          "vertices": 106,
+          "watertight": true,
+          "weld_tolerance": 1e-07
+        },
+        "face_ids": [
+          "ext/face/cap.end",
+          "ext/face/cap.start",
+          "ext/face/side.arc.round",
+          "ext/face/side.line.bottom",
+          "ext/face/side.line.left",
+          "ext/face/side.line.top"
+        ],
+        "triangles": 208,
+        "vertices": 220
+      },
+      "raw_generated_counts": {
+        "arc.round": 1,
+        "line.bottom": 1,
+        "line.left": 1,
+        "line.top": 1
+      },
+      "stats": {
+        "area": 1214.0707511102646,
+        "faces": 6,
+        "solids": 1,
+        "valid": true,
+        "volume": 2499.5574287564277
+      },
+      "topology": [
+        {
+          "feature_id": "ext",
+          "id": "ext/face/side.line.bottom",
+          "kind": "face",
+          "provenance": {
+            "evolution": "generated_from_profile_edge",
+            "kernel": "OCCT",
+            "operation": "extrude",
+            "operation_id": "ext",
+            "relation": "generated_from_profile_edge",
+            "semantic_status": "stable",
+            "source_boundary": "line.bottom"
+          },
+          "role": "side.line.bottom",
+          "signature": {
+            "area": 69.99999999999999,
+            "centroid": [
+              5.0,
+              -10.0,
+              -3.5
+            ],
+            "normal": [
+              0.0,
+              -1.0,
+              0.0
+            ],
+            "surface": "plane"
+          }
+        },
+        {
+          "feature_id": "ext",
+          "id": "ext/face/side.arc.round",
+          "kind": "face",
+          "provenance": {
+            "evolution": "generated_from_profile_edge",
+            "kernel": "OCCT",
+            "operation": "extrude",
+            "operation_id": "ext",
+            "relation": "generated_from_profile_edge",
+            "semantic_status": "stable",
+            "source_boundary": "arc.round"
+          },
+          "role": "side.arc.round",
+          "signature": {
+            "area": 219.91148575128554,
+            "axis": [
+              0.0,
+              0.0,
+              1.0
+            ],
+            "centroid": [
+              16.36619772367581,
+              -1.5848433676524108e-15,
+              -3.5
+            ],
+            "radius": 10.0,
+            "surface": "cylinder"
+          }
+        },
+        {
+          "feature_id": "ext",
+          "id": "ext/face/side.line.top",
+          "kind": "face",
+          "provenance": {
+            "evolution": "generated_from_profile_edge",
+            "kernel": "OCCT",
+            "operation": "extrude",
+            "operation_id": "ext",
+            "relation": "generated_from_profile_edge",
+            "semantic_status": "stable",
+            "source_boundary": "line.top"
+          },
+          "role": "side.line.top",
+          "signature": {
+            "area": 69.99999999999999,
+            "centroid": [
+              5.0,
+              10.0,
+              -3.5
+            ],
+            "normal": [
+              0.0,
+              1.0,
+              -0.0
+            ],
+            "surface": "plane"
+          }
+        },
+        {
+          "feature_id": "ext",
+          "id": "ext/face/side.line.left",
+          "kind": "face",
+          "provenance": {
+            "evolution": "generated_from_profile_edge",
+            "kernel": "OCCT",
+            "operation": "extrude",
+            "operation_id": "ext",
+            "relation": "generated_from_profile_edge",
+            "semantic_status": "stable",
+            "source_boundary": "line.left"
+          },
+          "role": "side.line.left",
+          "signature": {
+            "area": 139.99999999999997,
+            "centroid": [
+              0.0,
+              1.387778780781446e-17,
+              -3.5
+            ],
+            "normal": [
+              -1.0,
+              0.0,
+              0.0
+            ],
+            "surface": "plane"
+          }
+        },
+        {
+          "feature_id": "ext",
+          "id": "ext/face/cap.start",
+          "kind": "face",
+          "provenance": {
+            "evolution": "first_shape",
+            "kernel": "OCCT",
+            "operation": "extrude",
+            "operation_id": "ext",
+            "relation": "first_shape",
+            "semantic_status": "stable"
+          },
+          "role": "cap.start",
+          "signature": {
+            "area": 357.0796326794896,
+            "centroid": [
+              9.06650141081407,
+              5.001093614833311e-16,
+              0.0
+            ],
+            "normal": [
+              0.0,
+              0.0,
+              1.0
+            ],
+            "surface": "plane"
+          }
+        },
+        {
+          "feature_id": "ext",
+          "id": "ext/face/cap.end",
+          "kind": "face",
+          "provenance": {
+            "evolution": "last_shape",
+            "kernel": "OCCT",
+            "operation": "extrude",
+            "operation_id": "ext",
+            "relation": "last_shape",
+            "semantic_status": "stable"
+          },
+          "role": "cap.end",
+          "signature": {
+            "area": 357.0796326794896,
+            "centroid": [
+              9.06650141081407,
+              5.001093614833311e-16,
+              -7.0
+            ],
+            "normal": [
+              -0.0,
+              -0.0,
+              -1.0
+            ],
+            "surface": "plane"
+          }
+        }
+      ],
+      "valid": true,
+      "wire_unique_edges": 4,
+      "wire_unique_vertices": 4
+    },
+    "rounded_rect_reversed": {
+      "analytic_volume": 2499.5574287564277,
+      "generated_counts": {
+        "arc.round": 1,
+        "line.bottom": 1,
+        "line.left": 1,
+        "line.top": 1
+      },
+      "inserted_same_as_raw": {
+        "arc.round": true,
+        "line.bottom": true,
+        "line.left": true,
+        "line.top": true
+      },
+      "mesh": {
+        "check": {
+          "consistently_oriented": true,
+          "signed_volume": 2498.8340917629816,
+          "triangles": 208,
+          "vertex_manifold": true,
+          "vertices": 106,
+          "watertight": true,
+          "weld_tolerance": 1e-07
+        },
+        "face_ids": [
+          "ext/face/cap.end",
+          "ext/face/cap.start",
+          "ext/face/side.arc.round",
+          "ext/face/side.line.bottom",
+          "ext/face/side.line.left",
+          "ext/face/side.line.top"
+        ],
+        "triangles": 208,
+        "vertices": 220
+      },
+      "raw_generated_counts": {
+        "arc.round": 1,
+        "line.bottom": 1,
+        "line.left": 1,
+        "line.top": 1
+      },
+      "stats": {
+        "area": 1214.0707511102646,
+        "faces": 6,
+        "solids": 1,
+        "valid": true,
+        "volume": 2499.5574287564277
+      },
+      "topology": [
+        {
+          "feature_id": "ext",
+          "id": "ext/face/side.line.left",
+          "kind": "face",
+          "provenance": {
+            "evolution": "generated_from_profile_edge",
+            "kernel": "OCCT",
+            "operation": "extrude",
+            "operation_id": "ext",
+            "relation": "generated_from_profile_edge",
+            "semantic_status": "stable",
+            "source_boundary": "line.left"
+          },
+          "role": "side.line.left",
+          "signature": {
+            "area": 139.99999999999997,
+            "centroid": [
+              0.0,
+              1.387778780781446e-17,
+              3.5
+            ],
+            "normal": [
+              -1.0,
+              -0.0,
+              0.0
+            ],
+            "surface": "plane"
+          }
+        },
+        {
+          "feature_id": "ext",
+          "id": "ext/face/side.line.top",
+          "kind": "face",
+          "provenance": {
+            "evolution": "generated_from_profile_edge",
+            "kernel": "OCCT",
+            "operation": "extrude",
+            "operation_id": "ext",
+            "relation": "generated_from_profile_edge",
+            "semantic_status": "stable",
+            "source_boundary": "line.top"
+          },
+          "role": "side.line.top",
+          "signature": {
+            "area": 69.99999999999999,
+            "centroid": [
+              5.0,
+              10.0,
+              3.5
+            ],
+            "normal": [
+              -0.0,
+              1.0,
+              -0.0
+            ],
+            "surface": "plane"
+          }
+        },
+        {
+          "feature_id": "ext",
+          "id": "ext/face/side.arc.round",
+          "kind": "face",
+          "provenance": {
+            "evolution": "generated_from_profile_edge",
+            "kernel": "OCCT",
+            "operation": "extrude",
+            "operation_id": "ext",
+            "relation": "generated_from_profile_edge",
+            "semantic_status": "stable",
+            "source_boundary": "arc.round"
+          },
+          "role": "side.arc.round",
+          "signature": {
+            "area": 219.91148575128554,
+            "axis": [
+              -0.0,
+              -0.0,
+              -1.0
+            ],
+            "centroid": [
+              16.36619772367581,
+              -1.5848433676524108e-15,
+              3.5
+            ],
+            "radius": 10.0,
+            "surface": "cylinder"
+          }
+        },
+        {
+          "feature_id": "ext",
+          "id": "ext/face/side.line.bottom",
+          "kind": "face",
+          "provenance": {
+            "evolution": "generated_from_profile_edge",
+            "kernel": "OCCT",
+            "operation": "extrude",
+            "operation_id": "ext",
+            "relation": "generated_from_profile_edge",
+            "semantic_status": "stable",
+            "source_boundary": "line.bottom"
+          },
+          "role": "side.line.bottom",
+          "signature": {
+            "area": 69.99999999999999,
+            "centroid": [
+              5.0,
+              -10.0,
+              3.5
+            ],
+            "normal": [
+              -0.0,
+              -1.0,
+              -0.0
+            ],
+            "surface": "plane"
+          }
+        },
+        {
+          "feature_id": "ext",
+          "id": "ext/face/cap.start",
+          "kind": "face",
+          "provenance": {
+            "evolution": "first_shape",
+            "kernel": "OCCT",
+            "operation": "extrude",
+            "operation_id": "ext",
+            "relation": "first_shape",
+            "semantic_status": "stable"
+          },
+          "role": "cap.start",
+          "signature": {
+            "area": 357.0796326794896,
+            "centroid": [
+              9.06650141081407,
+              5.001093614833311e-16,
+              0.0
+            ],
+            "normal": [
+              -0.0,
+              -0.0,
+              -1.0
+            ],
+            "surface": "plane"
+          }
+        },
+        {
+          "feature_id": "ext",
+          "id": "ext/face/cap.end",
+          "kind": "face",
+          "provenance": {
+            "evolution": "last_shape",
+            "kernel": "OCCT",
+            "operation": "extrude",
+            "operation_id": "ext",
+            "relation": "last_shape",
+            "semantic_status": "stable"
+          },
+          "role": "cap.end",
+          "signature": {
+            "area": 357.0796326794896,
+            "centroid": [
+              9.06650141081407,
+              5.001093614833311e-16,
+              7.0
+            ],
+            "normal": [
+              0.0,
+              0.0,
+              1.0
+            ],
+            "surface": "plane"
+          }
+        }
+      ],
+      "valid": true,
+      "wire_unique_edges": 4,
+      "wire_unique_vertices": 4
+    },
+    "rounded_rect_tilted": {
+      "analytic_volume": 2499.5574287564277,
+      "generated_counts": {
+        "arc.round": 1,
+        "line.bottom": 1,
+        "line.left": 1,
+        "line.top": 1
+      },
+      "inserted_same_as_raw": {
+        "arc.round": true,
+        "line.bottom": true,
+        "line.left": true,
+        "line.top": true
+      },
+      "mesh": {
+        "check": {
+          "consistently_oriented": true,
+          "signed_volume": 2498.834091762984,
+          "triangles": 208,
+          "vertex_manifold": true,
+          "vertices": 106,
+          "watertight": true,
+          "weld_tolerance": 1e-07
+        },
+        "face_ids": [
+          "ext/face/cap.end",
+          "ext/face/cap.start",
+          "ext/face/side.arc.round",
+          "ext/face/side.line.bottom",
+          "ext/face/side.line.left",
+          "ext/face/side.line.top"
+        ],
+        "triangles": 208,
+        "vertices": 220
+      },
+      "raw_generated_counts": {
+        "arc.round": 1,
+        "line.bottom": 1,
+        "line.left": 1,
+        "line.top": 1
+      },
+      "stats": {
+        "area": 1214.070751110265,
+        "faces": 6,
+        "solids": 1,
+        "valid": true,
+        "volume": 2499.5574287564277
+      },
+      "topology": [
+        {
+          "feature_id": "ext",
+          "id": "ext/face/side.line.bottom",
+          "kind": "face",
+          "provenance": {
+            "evolution": "generated_from_profile_edge",
+            "kernel": "OCCT",
+            "operation": "extrude",
+            "operation_id": "ext",
+            "relation": "generated_from_profile_edge",
+            "semantic_status": "stable",
+            "source_boundary": "line.bottom"
+          },
+          "role": "side.line.bottom",
+          "signature": {
+            "area": 69.99999999999999,
+            "centroid": [
+              128.0,
+              -64.74469327799439,
+              84.8417608392721
+            ],
+            "normal": [
+              0.0,
+              -0.7384685587295878,
+              -0.6742879116281452
+            ],
+            "surface": "plane"
+          }
+        },
+        {
+          "feature_id": "ext",
+          "id": "ext/face/side.arc.round",
+          "kind": "face",
+          "provenance": {
+            "evolution": "generated_from_profile_edge",
+            "kernel": "OCCT",
+            "operation": "extrude",
+            "operation_id": "ext",
+            "relation": "generated_from_profile_edge",
+            "semantic_status": "stable",
+            "source_boundary": "arc.round"
+          },
+          "role": "side.arc.round",
+          "signature": {
+            "area": 219.91148575128554,
+            "axis": [
+              -0.0,
+              0.6742879116281452,
+              -0.7384685587295878
+            ],
+            "centroid": [
+              139.3661977236758,
+              -57.36000769069851,
+              91.58463995555356
+            ],
+            "radius": 10.0,
+            "surface": "cylinder"
+          }
+        },
+        {
+          "feature_id": "ext",
+          "id": "ext/face/side.line.top",
+          "kind": "face",
+          "provenance": {
+            "evolution": "generated_from_profile_edge",
+            "kernel": "OCCT",
+            "operation": "extrude",
+            "operation_id": "ext",
+            "relation": "generated_from_profile_edge",
+            "semantic_status": "stable",
+            "source_boundary": "line.top"
+          },
+          "role": "side.line.top",
+          "signature": {
+            "area": 69.99999999999999,
+            "centroid": [
+              128.0,
+              -49.97532210340263,
+              98.32751907183501
+            ],
+            "normal": [
+              0.0,
+              0.7384685587295878,
+              0.6742879116281452
+            ],
+            "surface": "plane"
+          }
+        },
+        {
+          "feature_id": "ext",
+          "id": "ext/face/side.line.left",
+          "kind": "face",
+          "provenance": {
+            "evolution": "generated_from_profile_edge",
+            "kernel": "OCCT",
+            "operation": "extrude",
+            "operation_id": "ext",
+            "relation": "generated_from_profile_edge",
+            "semantic_status": "stable",
+            "source_boundary": "line.left"
+          },
+          "role": "side.line.left",
+          "signature": {
+            "area": 140.00000000000009,
+            "centroid": [
+              123.0,
+              -57.36000769069851,
+              91.58463995555356
+            ],
+            "normal": [
+              -1.0,
+              -0.0,
+              -0.0
+            ],
+            "surface": "plane"
+          }
+        },
+        {
+          "feature_id": "ext",
+          "id": "ext/face/cap.start",
+          "kind": "face",
+          "provenance": {
+            "evolution": "first_shape",
+            "kernel": "OCCT",
+            "operation": "extrude",
+            "operation_id": "ext",
+            "relation": "first_shape",
+            "semantic_status": "stable"
+          },
+          "role": "cap.start",
+          "signature": {
+            "area": 357.0796326794898,
+            "centroid": [
+              132.06650141081406,
+              -55.00000000000001,
+              89.0
+            ],
+            "normal": [
+              -0.0,
+              0.6742879116281452,
+              -0.7384685587295878
+            ],
+            "surface": "plane"
+          }
+        },
+        {
+          "feature_id": "ext",
+          "id": "ext/face/cap.end",
+          "kind": "face",
+          "provenance": {
+            "evolution": "last_shape",
+            "kernel": "OCCT",
+            "operation": "extrude",
+            "operation_id": "ext",
+            "relation": "last_shape",
+            "semantic_status": "stable"
+          },
+          "role": "cap.end",
+          "signature": {
+            "area": 357.0796326794898,
+            "centroid": [
+              132.06650141081406,
+              -59.720015381397026,
+              94.16927991110711
+            ],
+            "normal": [
+              0.0,
+              -0.6742879116281452,
+              0.7384685587295878
+            ],
+            "surface": "plane"
+          }
+        }
+      ],
+      "valid": true,
+      "wire_unique_edges": 4,
+      "wire_unique_vertices": 4
+    },
+    "semicircle": {
+      "analytic_area": 157.07963267948966,
+      "analytic_volume": 1099.5574287564277,
+      "generated_counts": {
+        "arc.round": 1,
+        "line.chord": 1
+      },
+      "inserted_same_as_raw": {
+        "arc.round": true,
+        "line.chord": true
+      },
+      "mesh": {
+        "check": {
+          "consistently_oriented": true,
+          "signed_volume": 1098.834091762984,
+          "triangles": 200,
+          "vertex_manifold": true,
+          "vertices": 102,
+          "watertight": true,
+          "weld_tolerance": 1e-07
+        },
+        "face_ids": [
+          "ext/face/cap.end",
+          "ext/face/cap.start",
+          "ext/face/side.arc.round",
+          "ext/face/side.line.chord"
+        ],
+        "triangles": 200,
+        "vertices": 208
+      },
+      "raw_generated_counts": {
+        "arc.round": 1,
+        "line.chord": 1
+      },
+      "stats": {
+        "area": 674.0707511102648,
+        "faces": 4,
+        "solids": 1,
+        "valid": true,
+        "volume": 1099.5574287564275
+      },
+      "topology": [
+        {
+          "feature_id": "ext",
+          "id": "ext/face/side.arc.round",
+          "kind": "face",
+          "provenance": {
+            "evolution": "generated_from_profile_edge",
+            "kernel": "OCCT",
+            "operation": "extrude",
+            "operation_id": "ext",
+            "relation": "generated_from_profile_edge",
+            "semantic_status": "stable",
+            "source_boundary": "arc.round"
+          },
+          "role": "side.arc.round",
+          "signature": {
+            "area": 219.91148575128554,
+            "axis": [
+              -0.0,
+              -0.0,
+              -1.0
+            ],
+            "centroid": [
+              1.498801083243961e-16,
+              6.366197723675812,
+              3.5
+            ],
+            "radius": 10.0,
+            "surface": "cylinder"
+          }
+        },
+        {
+          "feature_id": "ext",
+          "id": "ext/face/side.line.chord",
+          "kind": "face",
+          "provenance": {
+            "evolution": "generated_from_profile_edge",
+            "kernel": "OCCT",
+            "operation": "extrude",
+            "operation_id": "ext",
+            "relation": "generated_from_profile_edge",
+            "semantic_status": "stable",
+            "source_boundary": "line.chord"
+          },
+          "role": "side.line.chord",
+          "signature": {
+            "area": 139.99999999999997,
+            "centroid": [
+              -1.387778780781446e-17,
+              0.0,
+              3.5
+            ],
+            "normal": [
+              -0.0,
+              -1.0,
+              -0.0
+            ],
+            "surface": "plane"
+          }
+        },
+        {
+          "feature_id": "ext",
+          "id": "ext/face/cap.start",
+          "kind": "face",
+          "provenance": {
+            "evolution": "first_shape",
+            "kernel": "OCCT",
+            "operation": "extrude",
+            "operation_id": "ext",
+            "relation": "first_shape",
+            "semantic_status": "stable"
+          },
+          "role": "cap.start",
+          "signature": {
+            "area": 157.07963267948966,
+            "centroid": [
+              2.842170943040401e-16,
+              4.2441318157838746,
+              0.0
+            ],
+            "normal": [
+              -0.0,
+              -0.0,
+              -1.0
+            ],
+            "surface": "plane"
+          }
+        },
+        {
+          "feature_id": "ext",
+          "id": "ext/face/cap.end",
+          "kind": "face",
+          "provenance": {
+            "evolution": "last_shape",
+            "kernel": "OCCT",
+            "operation": "extrude",
+            "operation_id": "ext",
+            "relation": "last_shape",
+            "semantic_status": "stable"
+          },
+          "role": "cap.end",
+          "signature": {
+            "area": 157.07963267948966,
+            "centroid": [
+              2.842170943040401e-16,
+              4.2441318157838746,
+              7.0
+            ],
+            "normal": [
+              0.0,
+              0.0,
+              1.0
+            ],
+            "surface": "plane"
+          }
+        }
+      ],
+      "valid": true,
+      "wire_unique_edges": 2,
+      "wire_unique_vertices": 2
+    },
+    "two_arcs_disk": {
+      "analytic_area": 314.1592653589793,
+      "analytic_volume": 2199.1148575128555,
+      "generated_counts": {
+        "arc.lower": 1,
+        "arc.upper": 1
+      },
+      "inserted_same_as_raw": {
+        "arc.lower": true,
+        "arc.upper": true
+      },
+      "mesh": {
+        "check": {
+          "consistently_oriented": true,
+          "signed_volume": 2197.668183525973,
+          "triangles": 396,
+          "vertex_manifold": true,
+          "vertices": 200,
+          "watertight": true,
+          "weld_tolerance": 1e-07
+        },
+        "face_ids": [
+          "ext/face/cap.end",
+          "ext/face/cap.start",
+          "ext/face/side.arc.lower",
+          "ext/face/side.arc.upper"
+        ],
+        "triangles": 396,
+        "vertices": 404
+      },
+      "raw_generated_counts": {
+        "arc.lower": 1,
+        "arc.upper": 1
+      },
+      "stats": {
+        "area": 1068.1415022205297,
+        "faces": 4,
+        "solids": 1,
+        "valid": true,
+        "volume": 2199.1148575128555
+      },
+      "topology": [
+        {
+          "feature_id": "ext",
+          "id": "ext/face/side.arc.upper",
+          "kind": "face",
+          "provenance": {
+            "evolution": "generated_from_profile_edge",
+            "kernel": "OCCT",
+            "operation": "extrude",
+            "operation_id": "ext",
+            "relation": "generated_from_profile_edge",
+            "semantic_status": "stable",
+            "source_boundary": "arc.upper"
+          },
+          "role": "side.arc.upper",
+          "signature": {
+            "area": 219.91148575128554,
+            "axis": [
+              -0.0,
+              -0.0,
+              -1.0
+            ],
+            "centroid": [
+              1.498801083243961e-16,
+              6.366197723675812,
+              3.5
+            ],
+            "radius": 10.0,
+            "surface": "cylinder"
+          }
+        },
+        {
+          "feature_id": "ext",
+          "id": "ext/face/side.arc.lower",
+          "kind": "face",
+          "provenance": {
+            "evolution": "generated_from_profile_edge",
+            "kernel": "OCCT",
+            "operation": "extrude",
+            "operation_id": "ext",
+            "relation": "generated_from_profile_edge",
+            "semantic_status": "stable",
+            "source_boundary": "arc.lower"
+          },
+          "role": "side.arc.lower",
+          "signature": {
+            "area": 219.91148575128554,
+            "axis": [
+              -0.0,
+              -0.0,
+              -1.0
+            ],
+            "centroid": [
+              -1.0703243846776898e-15,
+              -6.366197723675812,
+              3.5
+            ],
+            "radius": 10.0,
+            "surface": "cylinder"
+          }
+        },
+        {
+          "feature_id": "ext",
+          "id": "ext/face/cap.start",
+          "kind": "face",
+          "provenance": {
+            "evolution": "first_shape",
+            "kernel": "OCCT",
+            "operation": "extrude",
+            "operation_id": "ext",
+            "relation": "first_shape",
+            "semantic_status": "stable"
+          },
+          "role": "cap.start",
+          "signature": {
+            "area": 314.15926535897927,
+            "centroid": [
+              4.085620730620576e-16,
+              -1.0856293312728805e-15,
+              0.0
+            ],
+            "normal": [
+              -0.0,
+              -0.0,
+              -1.0
+            ],
+            "surface": "plane"
+          }
+        },
+        {
+          "feature_id": "ext",
+          "id": "ext/face/cap.end",
+          "kind": "face",
+          "provenance": {
+            "evolution": "last_shape",
+            "kernel": "OCCT",
+            "operation": "extrude",
+            "operation_id": "ext",
+            "relation": "last_shape",
+            "semantic_status": "stable"
+          },
+          "role": "cap.end",
+          "signature": {
+            "area": 314.15926535897927,
+            "centroid": [
+              4.085620730620576e-16,
+              -1.0856293312728805e-15,
+              7.0
+            ],
+            "normal": [
+              0.0,
+              0.0,
+              1.0
+            ],
+            "surface": "plane"
+          }
+        }
+      ],
+      "valid": true,
+      "wire_unique_edges": 2,
+      "wire_unique_vertices": 2
+    }
+  },
+  "radial_mismatch": {
+    "0_mean": {
+      "curve": "GeomAbs_CurveType.GeomAbs_Circle",
+      "end": [
+        0.0,
+        10.0,
+        0.0
+      ],
+      "length": 15.707963267948966,
+      "orientation": "TopAbs_Orientation.TopAbs_FORWARD",
+      "parameters": [
+        0.0,
+        1.5707963267948966
+      ],
+      "start": [
+        10.0,
+        0.0,
+        0.0
+      ],
+      "valid": true,
+      "vertices_same": false
+    },
+    "0_start": {
+      "curve": "GeomAbs_CurveType.GeomAbs_Circle",
+      "end": [
+        0.0,
+        10.0,
+        0.0
+      ],
+      "length": 15.707963267948966,
+      "orientation": "TopAbs_Orientation.TopAbs_FORWARD",
+      "parameters": [
+        0.0,
+        1.5707963267948966
+      ],
+      "start": [
+        10.0,
+        0.0,
+        0.0
+      ],
+      "valid": true,
+      "vertices_same": false
+    },
+    "1.1e-07_mean": {
+      "curve": "GeomAbs_CurveType.GeomAbs_Circle",
+      "end": [
+        0.0,
+        10.00000011,
+        0.0
+      ],
+      "length": 15.707963354342764,
+      "orientation": "TopAbs_Orientation.TopAbs_FORWARD",
+      "parameters": [
+        0.0,
+        1.5707963267948966
+      ],
+      "start": [
+        10.0,
+        0.0,
+        0.0
+      ],
+      "valid": true,
+      "vertices_same": false
+    },
+    "1.1e-07_start": {
+      "error": "ValueError",
+      "message": "BRepBuilderAPI_EdgeError.BRepBuilderAPI_DifferentsPointAndParameter"
+    },
+    "1e-06_mean": {
+      "error": "ValueError",
+      "message": "BRepBuilderAPI_EdgeError.BRepBuilderAPI_DifferentsPointAndParameter"
+    },
+    "1e-06_start": {
+      "error": "ValueError",
+      "message": "BRepBuilderAPI_EdgeError.BRepBuilderAPI_DifferentsPointAndParameter"
+    },
+    "1e-07_mean": {
+      "curve": "GeomAbs_CurveType.GeomAbs_Circle",
+      "end": [
+        0.0,
+        10.0000001,
+        0.0
+      ],
+      "length": 15.707963346488782,
+      "orientation": "TopAbs_Orientation.TopAbs_FORWARD",
+      "parameters": [
+        0.0,
+        1.5707963267948966
+      ],
+      "start": [
+        10.0,
+        0.0,
+        0.0
+      ],
+      "valid": true,
+      "vertices_same": false
+    },
+    "1e-07_start": {
+      "curve": "GeomAbs_CurveType.GeomAbs_Circle",
+      "end": [
+        0.0,
+        10.0000001,
+        0.0
+      ],
+      "length": 15.707963267948966,
+      "orientation": "TopAbs_Orientation.TopAbs_FORWARD",
+      "parameters": [
+        0.0,
+        1.5707963267948966
+      ],
+      "start": [
+        10.0,
+        0.0,
+        0.0
+      ],
+      "valid": true,
+      "vertices_same": false
+    },
+    "1e-09_mean": {
+      "curve": "GeomAbs_CurveType.GeomAbs_Circle",
+      "end": [
+        0.0,
+        10.000000001,
+        0.0
+      ],
+      "length": 15.707963268734366,
+      "orientation": "TopAbs_Orientation.TopAbs_FORWARD",
+      "parameters": [
+        0.0,
+        1.5707963267948966
+      ],
+      "start": [
+        10.0,
+        0.0,
+        0.0
+      ],
+      "valid": true,
+      "vertices_same": false
+    },
+    "1e-09_start": {
+      "curve": "GeomAbs_CurveType.GeomAbs_Circle",
+      "end": [
+        0.0,
+        10.000000001,
+        0.0
+      ],
+      "length": 15.707963267948966,
+      "orientation": "TopAbs_Orientation.TopAbs_FORWARD",
+      "parameters": [
+        0.0,
+        1.5707963267948966
+      ],
+      "start": [
+        10.0,
+        0.0,
+        0.0
+      ],
+      "valid": true,
+      "vertices_same": false
+    },
+    "2e-07_mean": {
+      "error": "ValueError",
+      "message": "BRepBuilderAPI_EdgeError.BRepBuilderAPI_DifferentsPointAndParameter"
+    },
+    "2e-07_start": {
+      "error": "ValueError",
+      "message": "BRepBuilderAPI_EdgeError.BRepBuilderAPI_DifferentsPointAndParameter"
+    },
+    "5e-08_mean": {
+      "curve": "GeomAbs_CurveType.GeomAbs_Circle",
+      "end": [
+        0.0,
+        10.00000005,
+        0.0
+      ],
+      "length": 15.707963307218874,
+      "orientation": "TopAbs_Orientation.TopAbs_FORWARD",
+      "parameters": [
+        0.0,
+        1.5707963267948966
+      ],
+      "start": [
+        10.0,
+        0.0,
+        0.0
+      ],
+      "valid": true,
+      "vertices_same": false
+    },
+    "5e-08_start": {
+      "curve": "GeomAbs_CurveType.GeomAbs_Circle",
+      "end": [
+        0.0,
+        10.00000005,
+        0.0
+      ],
+      "length": 15.707963267948966,
+      "orientation": "TopAbs_Orientation.TopAbs_FORWARD",
+      "parameters": [
+        0.0,
+        1.5707963267948966
+      ],
+      "start": [
+        10.0,
+        0.0,
+        0.0
+      ],
+      "valid": true,
+      "vertices_same": false
+    }
+  },
+  "raw_parameter_boundaries": {
+    "0.0": {
+      "curve": "GeomAbs_CurveType.GeomAbs_Circle",
+      "end": [
+        10.0,
+        0.0,
+        0.0
+      ],
+      "length": 62.83185307179586,
+      "orientation": "TopAbs_Orientation.TopAbs_FORWARD",
+      "parameters": [
+        0.0,
+        6.283185307179586
+      ],
+      "start": [
+        10.0,
+        0.0,
+        0.0
+      ],
+      "valid": true,
+      "vertices_same": true
+    },
+    "12.566370614359172": {
+      "curve": "GeomAbs_CurveType.GeomAbs_Circle",
+      "end": [
+        10.0,
+        0.0,
+        0.0
+      ],
+      "length": 62.83185307179586,
+      "orientation": "TopAbs_Orientation.TopAbs_FORWARD",
+      "parameters": [
+        0.0,
+        6.283185307179586
+      ],
+      "start": [
+        10.0,
+        0.0,
+        0.0
+      ],
+      "valid": true,
+      "vertices_same": true
+    },
+    "1e-06": {
+      "curve": "GeomAbs_CurveType.GeomAbs_Circle",
+      "end": [
+        9.999999999995,
+        9.999999999998332e-06,
+        0.0
+      ],
+      "length": 9.999999999999999e-06,
+      "orientation": "TopAbs_Orientation.TopAbs_FORWARD",
+      "parameters": [
+        0.0,
+        1e-06
+      ],
+      "start": [
+        10.0,
+        0.0,
+        0.0
+      ],
+      "valid": true,
+      "vertices_same": false
+    },
+    "1e-07": {
+      "curve": "GeomAbs_CurveType.GeomAbs_Circle",
+      "end": [
+        9.99999999999995,
+        9.999999999999983e-07,
+        0.0
+      ],
+      "length": 1e-06,
+      "orientation": "TopAbs_Orientation.TopAbs_FORWARD",
+      "parameters": [
+        0.0,
+        1e-07
+      ],
+      "start": [
+        10.0,
+        0.0,
+        0.0
+      ],
+      "valid": true,
+      "vertices_same": false
+    },
+    "1e-08": {
+      "curve": "GeomAbs_CurveType.GeomAbs_Circle",
+      "end": [
+        10.0,
+        0.0,
+        0.0
+      ],
+      "length": 1e-07,
+      "orientation": "TopAbs_Orientation.TopAbs_FORWARD",
+      "parameters": [
+        0.0,
+        1e-08
+      ],
+      "start": [
+        10.0,
+        0.0,
+        0.0
+      ],
+      "valid": true,
+      "vertices_same": true
+    },
+    "1e-10": {
+      "curve": "GeomAbs_CurveType.GeomAbs_Circle",
+      "end": [
+        10.0,
+        0.0,
+        0.0
+      ],
+      "length": 62.831853072795866,
+      "orientation": "TopAbs_Orientation.TopAbs_FORWARD",
+      "parameters": [
+        0.0,
+        6.283185307279586
+      ],
+      "start": [
+        10.0,
+        0.0,
+        0.0
+      ],
+      "valid": true,
+      "vertices_same": true
+    },
+    "1e-12": {
+      "curve": "GeomAbs_CurveType.GeomAbs_Circle",
+      "end": [
+        10.0,
+        0.0,
+        0.0
+      ],
+      "length": 62.83185307180587,
+      "orientation": "TopAbs_Orientation.TopAbs_FORWARD",
+      "parameters": [
+        0.0,
+        6.283185307180586
+      ],
+      "start": [
+        10.0,
+        0.0,
+        0.0
+      ],
+      "valid": true,
+      "vertices_same": true
+    },
+    "1e-15": {
+      "curve": "GeomAbs_CurveType.GeomAbs_Circle",
+      "end": [
+        10.0,
+        0.0,
+        0.0
+      ],
+      "length": 62.83185307179587,
+      "orientation": "TopAbs_Orientation.TopAbs_FORWARD",
+      "parameters": [
+        0.0,
+        6.283185307179587
+      ],
+      "start": [
+        10.0,
+        0.0,
+        0.0
+      ],
+      "valid": true,
+      "vertices_same": true
+    },
+    "6.283185297179586": {
+      "curve": "GeomAbs_CurveType.GeomAbs_Circle",
+      "end": [
+        10.0,
+        -1.0000000184154649e-07,
+        0.0
+      ],
+      "length": 62.83185297179586,
+      "orientation": "TopAbs_Orientation.TopAbs_FORWARD",
+      "parameters": [
+        0.0,
+        6.283185297179586
+      ],
+      "start": [
+        10.0,
+        0.0,
+        0.0
+      ],
+      "valid": true,
+      "vertices_same": false
+    },
+    "6.283185307178586": {
+      "curve": "GeomAbs_CurveType.GeomAbs_Circle",
+      "end": [
+        10.0,
+        0.0,
+        0.0
+      ],
+      "length": 62.83185307178586,
+      "orientation": "TopAbs_Orientation.TopAbs_FORWARD",
+      "parameters": [
+        0.0,
+        6.283185307178586
+      ],
+      "start": [
+        10.0,
+        0.0,
+        0.0
+      ],
+      "valid": true,
+      "vertices_same": true
+    },
+    "6.283185307179586": {
+      "curve": "GeomAbs_CurveType.GeomAbs_Circle",
+      "end": [
+        10.0,
+        0.0,
+        0.0
+      ],
+      "length": 62.83185307179586,
+      "orientation": "TopAbs_Orientation.TopAbs_FORWARD",
+      "parameters": [
+        0.0,
+        6.283185307179586
+      ],
+      "start": [
+        10.0,
+        0.0,
+        0.0
+      ],
+      "valid": true,
+      "vertices_same": true
+    },
+    "6.283186307179586": {
+      "curve": "GeomAbs_CurveType.GeomAbs_Circle",
+      "end": [
+        9.999999999995,
+        1.0000000001396113e-05,
+        0.0
+      ],
+      "length": 1.000000000139778e-05,
+      "orientation": "TopAbs_Orientation.TopAbs_FORWARD",
+      "parameters": [
+        0.0,
+        1.000000000139778e-06
+      ],
+      "start": [
+        10.0,
+        0.0,
+        0.0
+      ],
+      "valid": true,
+      "vertices_same": false
+    }
+  }
+}

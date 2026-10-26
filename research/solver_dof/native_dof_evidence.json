@@ -1,0 +1,890 @@
+{
+  "cases": {
+    "coincident_cycle:diagnose=false": {
+      "diagnose": false,
+      "failed_handles": [],
+      "input": {
+        "expected_native_dof": 0,
+        "expected_native_status": 0,
+        "kind": "coincident",
+        "mathematical_dof": 2,
+        "pairs": [
+          [
+            0,
+            1
+          ],
+          [
+            0,
+            2
+          ],
+          [
+            1,
+            2
+          ]
+        ],
+        "seeds": [
+          [
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0
+          ]
+        ]
+      },
+      "max_coordinate_residual": 0.0,
+      "native": {
+        "dof": 0,
+        "nbad": 0,
+        "result": 0
+      },
+      "positions": [
+        [
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0
+        ]
+      ],
+      "reproduced_recorded_observation": true
+    },
+    "coincident_cycle:diagnose=true": {
+      "diagnose": true,
+      "failed_handles": [],
+      "input": {
+        "expected_native_dof": 0,
+        "expected_native_status": 0,
+        "kind": "coincident",
+        "mathematical_dof": 2,
+        "pairs": [
+          [
+            0,
+            1
+          ],
+          [
+            0,
+            2
+          ],
+          [
+            1,
+            2
+          ]
+        ],
+        "seeds": [
+          [
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0
+          ]
+        ]
+      },
+      "max_coordinate_residual": 0.0,
+      "native": {
+        "dof": 0,
+        "nbad": 0,
+        "result": 0
+      },
+      "positions": [
+        [
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0
+        ]
+      ],
+      "reproduced_recorded_observation": true
+    },
+    "coincident_tree:diagnose=false": {
+      "diagnose": false,
+      "failed_handles": [],
+      "input": {
+        "expected_native_dof": 2,
+        "expected_native_status": 0,
+        "kind": "coincident",
+        "mathematical_dof": 2,
+        "pairs": [
+          [
+            0,
+            1
+          ],
+          [
+            1,
+            2
+          ]
+        ],
+        "seeds": [
+          [
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0
+          ]
+        ]
+      },
+      "max_coordinate_residual": 0.0,
+      "native": {
+        "dof": 2,
+        "nbad": 0,
+        "result": 0
+      },
+      "positions": [
+        [
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0
+        ]
+      ],
+      "reproduced_recorded_observation": true
+    },
+    "coincident_tree:diagnose=true": {
+      "diagnose": true,
+      "failed_handles": [],
+      "input": {
+        "expected_native_dof": 2,
+        "expected_native_status": 0,
+        "kind": "coincident",
+        "mathematical_dof": 2,
+        "pairs": [
+          [
+            0,
+            1
+          ],
+          [
+            1,
+            2
+          ]
+        ],
+        "seeds": [
+          [
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0
+          ]
+        ]
+      },
+      "max_coordinate_residual": 0.0,
+      "native": {
+        "dof": 2,
+        "nbad": 0,
+        "result": 0
+      },
+      "positions": [
+        [
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0
+        ]
+      ],
+      "reproduced_recorded_observation": true
+    },
+    "fixed_same_target_control:diagnose=false": {
+      "diagnose": false,
+      "failed_handles": [],
+      "input": {
+        "expected_native_dof": 0,
+        "expected_native_status": 0,
+        "fixed": [
+          [
+            0,
+            0.0,
+            0.0
+          ],
+          [
+            1,
+            0.0,
+            0.0
+          ]
+        ],
+        "kind": "coincident",
+        "mathematical_dof": 0,
+        "pairs": [],
+        "seeds": [
+          [
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0
+          ]
+        ]
+      },
+      "max_coordinate_residual": 0.0,
+      "native": {
+        "dof": 0,
+        "nbad": 0,
+        "result": 0
+      },
+      "positions": [
+        [
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0
+        ]
+      ],
+      "reproduced_recorded_observation": true
+    },
+    "fixed_same_target_control:diagnose=true": {
+      "diagnose": true,
+      "failed_handles": [],
+      "input": {
+        "expected_native_dof": 0,
+        "expected_native_status": 0,
+        "fixed": [
+          [
+            0,
+            0.0,
+            0.0
+          ],
+          [
+            1,
+            0.0,
+            0.0
+          ]
+        ],
+        "kind": "coincident",
+        "mathematical_dof": 0,
+        "pairs": [],
+        "seeds": [
+          [
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0
+          ]
+        ]
+      },
+      "max_coordinate_residual": 0.0,
+      "native": {
+        "dof": 0,
+        "nbad": 0,
+        "result": 0
+      },
+      "positions": [
+        [
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0
+        ]
+      ],
+      "reproduced_recorded_observation": true
+    },
+    "horizontal_cycle:diagnose=false": {
+      "diagnose": false,
+      "failed_handles": [],
+      "input": {
+        "expected_native_dof": 3,
+        "expected_native_status": 0,
+        "kind": "horizontal",
+        "mathematical_dof": 4,
+        "pairs": [
+          [
+            0,
+            1
+          ],
+          [
+            0,
+            2
+          ],
+          [
+            1,
+            2
+          ]
+        ],
+        "seeds": [
+          [
+            0.0,
+            0.0
+          ],
+          [
+            5.0,
+            0.0
+          ],
+          [
+            10.0,
+            0.0
+          ]
+        ]
+      },
+      "max_coordinate_residual": 0.0,
+      "native": {
+        "dof": 3,
+        "nbad": 0,
+        "result": 0
+      },
+      "positions": [
+        [
+          0.0,
+          0.0
+        ],
+        [
+          5.0,
+          0.0
+        ],
+        [
+          10.0,
+          0.0
+        ]
+      ],
+      "reproduced_recorded_observation": true
+    },
+    "horizontal_cycle:diagnose=true": {
+      "diagnose": true,
+      "failed_handles": [],
+      "input": {
+        "expected_native_dof": 3,
+        "expected_native_status": 0,
+        "kind": "horizontal",
+        "mathematical_dof": 4,
+        "pairs": [
+          [
+            0,
+            1
+          ],
+          [
+            0,
+            2
+          ],
+          [
+            1,
+            2
+          ]
+        ],
+        "seeds": [
+          [
+            0.0,
+            0.0
+          ],
+          [
+            5.0,
+            0.0
+          ],
+          [
+            10.0,
+            0.0
+          ]
+        ]
+      },
+      "max_coordinate_residual": 0.0,
+      "native": {
+        "dof": 3,
+        "nbad": 0,
+        "result": 0
+      },
+      "positions": [
+        [
+          0.0,
+          0.0
+        ],
+        [
+          5.0,
+          0.0
+        ],
+        [
+          10.0,
+          0.0
+        ]
+      ],
+      "reproduced_recorded_observation": true
+    },
+    "horizontal_parallel_lines:diagnose=false": {
+      "diagnose": false,
+      "failed_handles": [],
+      "input": {
+        "expected_native_dof": 2,
+        "expected_native_status": 0,
+        "kind": "horizontal",
+        "mathematical_dof": 3,
+        "pairs": [
+          [
+            0,
+            1
+          ],
+          [
+            1,
+            0
+          ]
+        ],
+        "seeds": [
+          [
+            0.0,
+            0.0
+          ],
+          [
+            5.0,
+            0.0
+          ]
+        ]
+      },
+      "max_coordinate_residual": 0.0,
+      "native": {
+        "dof": 2,
+        "nbad": 0,
+        "result": 0
+      },
+      "positions": [
+        [
+          0.0,
+          0.0
+        ],
+        [
+          5.0,
+          0.0
+        ]
+      ],
+      "reproduced_recorded_observation": true
+    },
+    "horizontal_parallel_lines:diagnose=true": {
+      "diagnose": true,
+      "failed_handles": [],
+      "input": {
+        "expected_native_dof": 2,
+        "expected_native_status": 0,
+        "kind": "horizontal",
+        "mathematical_dof": 3,
+        "pairs": [
+          [
+            0,
+            1
+          ],
+          [
+            1,
+            0
+          ]
+        ],
+        "seeds": [
+          [
+            0.0,
+            0.0
+          ],
+          [
+            5.0,
+            0.0
+          ]
+        ]
+      },
+      "max_coordinate_residual": 0.0,
+      "native": {
+        "dof": 2,
+        "nbad": 0,
+        "result": 0
+      },
+      "positions": [
+        [
+          0.0,
+          0.0
+        ],
+        [
+          5.0,
+          0.0
+        ]
+      ],
+      "reproduced_recorded_observation": true
+    },
+    "horizontal_tree:diagnose=false": {
+      "diagnose": false,
+      "failed_handles": [],
+      "input": {
+        "expected_native_dof": 4,
+        "expected_native_status": 0,
+        "kind": "horizontal",
+        "mathematical_dof": 4,
+        "pairs": [
+          [
+            0,
+            1
+          ],
+          [
+            1,
+            2
+          ]
+        ],
+        "seeds": [
+          [
+            0.0,
+            0.0
+          ],
+          [
+            5.0,
+            0.0
+          ],
+          [
+            10.0,
+            0.0
+          ]
+        ]
+      },
+      "max_coordinate_residual": 0.0,
+      "native": {
+        "dof": 4,
+        "nbad": 0,
+        "result": 0
+      },
+      "positions": [
+        [
+          0.0,
+          0.0
+        ],
+        [
+          5.0,
+          0.0
+        ],
+        [
+          10.0,
+          0.0
+        ]
+      ],
+      "reproduced_recorded_observation": true
+    },
+    "horizontal_tree:diagnose=true": {
+      "diagnose": true,
+      "failed_handles": [],
+      "input": {
+        "expected_native_dof": 4,
+        "expected_native_status": 0,
+        "kind": "horizontal",
+        "mathematical_dof": 4,
+        "pairs": [
+          [
+            0,
+            1
+          ],
+          [
+            1,
+            2
+          ]
+        ],
+        "seeds": [
+          [
+            0.0,
+            0.0
+          ],
+          [
+            5.0,
+            0.0
+          ],
+          [
+            10.0,
+            0.0
+          ]
+        ]
+      },
+      "max_coordinate_residual": 0.0,
+      "native": {
+        "dof": 4,
+        "nbad": 0,
+        "result": 0
+      },
+      "positions": [
+        [
+          0.0,
+          0.0
+        ],
+        [
+          5.0,
+          0.0
+        ],
+        [
+          10.0,
+          0.0
+        ]
+      ],
+      "reproduced_recorded_observation": true
+    },
+    "vertical_cycle:diagnose=false": {
+      "diagnose": false,
+      "failed_handles": [],
+      "input": {
+        "expected_native_dof": 3,
+        "expected_native_status": 0,
+        "kind": "vertical",
+        "mathematical_dof": 4,
+        "pairs": [
+          [
+            0,
+            1
+          ],
+          [
+            0,
+            2
+          ],
+          [
+            1,
+            2
+          ]
+        ],
+        "seeds": [
+          [
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            5.0
+          ],
+          [
+            0.0,
+            10.0
+          ]
+        ]
+      },
+      "max_coordinate_residual": 0.0,
+      "native": {
+        "dof": 3,
+        "nbad": 0,
+        "result": 0
+      },
+      "positions": [
+        [
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          5.0
+        ],
+        [
+          0.0,
+          10.0
+        ]
+      ],
+      "reproduced_recorded_observation": true
+    },
+    "vertical_cycle:diagnose=true": {
+      "diagnose": true,
+      "failed_handles": [],
+      "input": {
+        "expected_native_dof": 3,
+        "expected_native_status": 0,
+        "kind": "vertical",
+        "mathematical_dof": 4,
+        "pairs": [
+          [
+            0,
+            1
+          ],
+          [
+            0,
+            2
+          ],
+          [
+            1,
+            2
+          ]
+        ],
+        "seeds": [
+          [
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            5.0
+          ],
+          [
+            0.0,
+            10.0
+          ]
+        ]
+      },
+      "max_coordinate_residual": 0.0,
+      "native": {
+        "dof": 3,
+        "nbad": 0,
+        "result": 0
+      },
+      "positions": [
+        [
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          5.0
+        ],
+        [
+          0.0,
+          10.0
+        ]
+      ],
+      "reproduced_recorded_observation": true
+    },
+    "vertical_tree:diagnose=false": {
+      "diagnose": false,
+      "failed_handles": [],
+      "input": {
+        "expected_native_dof": 4,
+        "expected_native_status": 0,
+        "kind": "vertical",
+        "mathematical_dof": 4,
+        "pairs": [
+          [
+            0,
+            1
+          ],
+          [
+            1,
+            2
+          ]
+        ],
+        "seeds": [
+          [
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            5.0
+          ],
+          [
+            0.0,
+            10.0
+          ]
+        ]
+      },
+      "max_coordinate_residual": 0.0,
+      "native": {
+        "dof": 4,
+        "nbad": 0,
+        "result": 0
+      },
+      "positions": [
+        [
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          5.0
+        ],
+        [
+          0.0,
+          10.0
+        ]
+      ],
+      "reproduced_recorded_observation": true
+    },
+    "vertical_tree:diagnose=true": {
+      "diagnose": true,
+      "failed_handles": [],
+      "input": {
+        "expected_native_dof": 4,
+        "expected_native_status": 0,
+        "kind": "vertical",
+        "mathematical_dof": 4,
+        "pairs": [
+          [
+            0,
+            1
+          ],
+          [
+            1,
+            2
+          ]
+        ],
+        "seeds": [
+          [
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            5.0
+          ],
+          [
+            0.0,
+            10.0
+          ]
+        ]
+      },
+      "max_coordinate_residual": 0.0,
+      "native": {
+        "dof": 4,
+        "nbad": 0,
+        "result": 0
+      },
+      "positions": [
+        [
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          5.0
+        ],
+        [
+          0.0,
+          10.0
+        ]
+      ],
+      "reproduced_recorded_observation": true
+    }
+  },
+  "recorded_observations_reproduced": true,
+  "runtime": {
+    "native_binary_sha256": "44f9887db70750a513f07c20ec15737f26843d469e8b741172c69f3390dba49d",
+    "platform": "Linux-6.18.44-x86_64-with-glibc2.41",
+    "python": "3.12.14 (main, Aug 25 2026, 14:00:49) [Clang 22.1.3 ]",
+    "script_sha256": "27a8b4ef218c372b8e03a3095319ff850e445dbb0f5809889d8e25b1778d4175",
+    "slvs_version": "3.2"
+  }
+}

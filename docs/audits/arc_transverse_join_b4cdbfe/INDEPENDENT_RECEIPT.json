@@ -1,0 +1,36 @@
+{
+  "disposition": "accept revised pure mathematical design under parent-approved provisional semantics; implementation audit and native activation remain blocked",
+  "reviewed_contract_sha256": "befbd79b5105535b3c0fa3efcdadca2433559d2dbd0ba76927b584de6c918fe8",
+  "reviewed_contract_path": "/workspace/scratch/e704d81da019/cad_arc_join_design/b4cdbfe/designer/TRANSVERSE_JOIN_CONTRACT.md",
+  "source_commit": "b4cdbfeb9afa945a7cc207e15ff71d16b16b6bf1",
+  "parent_approved_choices": [
+    "exact-authored-ray reference target with frozen core outputs unchanged",
+    "exact endpoint-vector dot<=0 supported sweep restriction",
+    "rho=16 eta<=1.6e-8 mm with exact-zero handling"
+  ],
+  "unresolved_conversion_proposal": "r*abs(theta_exact-sweep_core)<=Delta, same signed unwrapped branch; explicitly not adopted or part of first primitive scope; requires separate conversion review",
+  "normalized_precision_contract": "normalized dyadic endpoint m*2^e; <=256 significand bits; exponent [-32768,32768]; directed rounding and separate checked integer/shift budgets",
+  "clearance_candidate_completeness": "at most 9 line-line candidates, at most 14 line-circle candidates; cap24 sufficient; <=27 closed patches",
+  "area_disposition": "disk symmetric-difference bound valid only for consistently oriented simple Jordan closures with exact agreement outside disjoint disks; not native healing authority",
+  "runtime_hashes_checked": 105,
+  "runtime_hash_mismatches": [],
+  "repository_status_porcelain": "",
+  "diagnostic_examples": 14,
+  "diagnostic_marker": "EXACT_JOIN_EXAMPLES_COMPLETE",
+  "oracle_precision_note": "independent 192-fractional-bit isqrt reference; not production significand-cap implementation",
+  "native_processes": 0,
+  "production_files_changed": 0,
+  "still_blocked": [
+    "same-source production primitive independent audit",
+    "angular/cell/clearance/area implementation certification",
+    "native parameter and whole-frame conversion",
+    "actual inserted representation and endpoint/height certification",
+    "unchanged R0/C0 native qualification against production intervals",
+    "service/capability/UI/release activation"
+  ],
+  "artifacts": {
+    "INDEPENDENT_REVIEW.md": "5a35e2c0791fe5e5efd3e46b1e87df2c3f5b2b5b554c2ecf30063570f2957b3c",
+    "exact_join_examples.py": "1411635010d231e320a32c85b295c7b78ae7bcd5dce2e108d0db86dae0324c9e",
+    "exact_join_examples.json": "ecae34b16b5956e29a2ca003482a48aff5a51f5c05372f766d03744d563d0a01"
+  }
+}

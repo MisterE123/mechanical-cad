@@ -1,0 +1,274 @@
+{
+  "base_commit": "de70a45c2d34e74d61adb93e7f7db881bd6f8404",
+  "changed": {
+    "tests/unit/test_arc_profile_incidence.py": {
+      "hunks": [
+        {
+          "new_end": 31164,
+          "new_start": 30992,
+          "original": "",
+          "replacement": "            \"GATE_C_OWNER_SOURCE_FIXTURE\",\n            \"GATE_C_OWNER_SOURCE_SHA256\",\n            \"GATE_C_OWNER_HARNESS_FIXTURE\",\n            \"GATE_C_OWNER_HARNESS_SHA256\",\n"
+        },
+        {
+          "new_end": 32692,
+          "new_start": 32651,
+          "original": "",
+          "replacement": "            \"GATE_C_OWNER_SOURCE_ADDED\",\n"
+        },
+        {
+          "new_end": 33224,
+          "new_start": 33133,
+          "original": "",
+          "replacement": "            \"GATE_C_OWNER_SOURCE_ORIGINALS\",\n            \"GATE_C_OWNER_HARNESS_ORIGINALS\",\n"
+        },
+        {
+          "new_end": 33883,
+          "new_start": 33792,
+          "original": "",
+          "replacement": "            \"gate_c_owner_source_originals\",\n            \"gate_c_owner_harness_originals\",\n"
+        }
+      ],
+      "original_bytes": 49200,
+      "original_sha256": "ac5b575ddf4f5b143408289a3e7cc87ff54a7a07d7f5a0aa0b8c27b16d8999b7",
+      "reviewed_bytes": 49595,
+      "reviewed_sha256": "09afce10d188ad0a4462abd60c717670a3cd03f8f0009fc60793c7851d6e6646"
+    },
+    "tests/unit/test_arc_profile_native_end_cap.py": {
+      "hunks": [
+        {
+          "new_end": 49613,
+          "new_start": 42773,
+          "original": "",
+          "replacement": "GATE_C_OWNER_SOURCE_FIXTURE = \"tests/fixtures/geometry_v3/gate_c_owner_source_de70a45.json\"\nGATE_C_OWNER_SOURCE_SHA256 = \"eb50cfaa8aaf9223f7c377c8109395490b1e490e9c200049d9f689aebb4710da\"\nGATE_C_OWNER_SOURCE_ADDED = frozenset(\n    {\n        \"tests/unit/test_geometry3_owner.py\",\n        \"tests/blender_geometry3_owner_smoke.py\",\n        \"tests/blender_geometry3_persistence_smoke.py\",\n    }\n)\nGATE_C_OWNER_SOURCE_ORIGINALS = {\n    \"blender_addon/mechanical_cad_blender/operation_contracts.py\": (\n        6384,\n        \"56fd489d36da312360274a1c35a85846f83ef3f495444a1e07e3d15bc37a3258\",\n    ),\n    \"blender_addon/mechanical_cad_blender/geometry_operations.py\": (\n        15030,\n        \"7643ebd28b4b26f5d84981cce31d09d7d1645cc13f205d269c01ceb49ce48fe6\",\n    ),\n    \"blender_addon/mechanical_cad_blender/workspace_ui.py\": (\n        41686,\n        \"5aed3a04330dbc87cb6c0b206df9def26a62da587341d9f65551e078cb1e1ba9\",\n    ),\n    \"blender_addon/mechanical_cad_blender/help_topics.py\": (\n        21131,\n        \"7a8add001d718862ca26f1f5ccd93bcb5253bdb6b0bacfc461549d8832154a4c\",\n    ),\n    \"src/mechanical_cad/actions.py\": (\n        9159,\n        \"23f7bb6c3de3c09b6bcc513a55c4b40659bdd8bbcd3e73a35473cb571acb8420\",\n    ),\n    \"src/mechanical_cad/geometry_protocol_v3.py\": (\n        3246,\n        \"cbec5f30417c52ae704533da7bb290c434e57897866bbc3fb4b57b2a66b419e0\",\n    ),\n    \"src/mechanical_cad/backend_contract.py\": (\n        21395,\n        \"904ce69d50d80d07093496b717e78a37789b46d17baaa5cd081cecbe8f5ce52b\",\n    ),\n    \"tests/unit/test_arc_operation_contracts.py\": (\n        7456,\n        \"a51207ea1da56abd40ba45956c8859558aadfb5f5074aeda245caa3fa484b206\",\n    ),\n    \"tests/unit/test_arc_ui_availability.py\": (\n        33055,\n        \"61b3316a07d5681aa9b9a8c2a88cf1275a5b71253d63ead7e3141b399121c743\",\n    ),\n    \"tests/unit/test_arc_guarded_evidence.py\": (\n        17952,\n        \"ff292d3b68198fb613101a556a17b439de116c53bcb77b890ec623c523832b07\",\n    ),\n    \"tests/unit/test_arc_downstream_barriers.py\": (\n        23282,\n        \"b83199cbd578cbecc3d4e55bc34190f7cd23cb1770c4ed800d65a39585cda405\",\n    ),\n    \"tests/unit/test_arc_part_owners.py\": (\n        25480,\n        \"60d17c236521ed82b7d37962ea3b4de128ed2fbb8d822e95e6754781731327e8\",\n    ),\n    \"tests/unit/test_arc_live_owner_boundary.py\": (\n        17795,\n        \"a1c303ed0f2ade91288c001d6ab21fb4a2b5a14d97303dd42db1252cad7a481f\",\n    ),\n    \"tests/unit/test_backend_contract_server.py\": (\n        26791,\n        \"13c1d65c484c87db90120909f06d6342cc1838e1e095c2749b1e66d2fc6ea0c7\",\n    ),\n    \"tests/unit/test_geometry3_core_contracts.py\": (\n        23768,\n        \"eddb8be5b3fb235ed4eb72c3b18eb0eb0bd14580768a4027dfa449d1f27d160b\",\n    ),\n    \"tests/unit/test_geometry3_dispatch.py\": (\n        15160,\n        \"9beceb6679717073385404530ddbf5b73861699891bfd817414dad98dd3fd77e\",\n    ),\n    \"tests/blender_arc_owner_smoke.py\": (\n        18874,\n        \"62c098a5b03fb801d7d750c5dc545318bd4a89c84be905a4cf13e078fdd930f3\",\n    ),\n    \"tests/blender_arc_editor_smoke.py\": (\n        11797,\n        \"6c64c0abb2470882e9883c88fbd060966b5b4d53722fa3481fea8428ebaf4231\",\n    ),\n}\n\nGATE_C_OWNER_HARNESS_FIXTURE = \"tests/fixtures/geometry_v3/gate_c_owner_harness_de70a45.json\"\nGATE_C_OWNER_HARNESS_SHA256 = \"0000000000000000000000000000000000000000000000000000000000000000\"\nGATE_C_OWNER_HARNESS_ORIGINALS = {\n    \"tests/unit/test_arc_profile_native_end_cap.py\": (\n        142598,\n        \"19557cea87dfdc79ce104649d7f38fe6ef852b64a881edb66f76f8f3a416f627\",\n    ),\n    \"tests/unit/test_arc_profile_incidence.py\": (\n        49200,\n        \"ac5b575ddf4f5b143408289a3e7cc87ff54a7a07d7f5a0aa0b8c27b16d8999b7\",\n    ),\n    \"tests/unit/test_arc_sector_native_boundary_mutations.py\": (\n        39307,\n        \"917619b440f3dc32b340a9c1a1c858b70a7f8405eaa28f12a8771b317dcf3c0d\",\n    ),\n    \"tests/unit/test_result_v3_dependency_boundary.py\": (\n        17931,\n        \"d47b65a70ca1b5b94c7c97a312ad52e098f88aa75a719faa3714460e298201a7\",\n    ),\n    \"tests/unit/test_standalone_runtime_boundary.py\": (\n        113570,\n        \"978501183c4f1983be92ac2aae933f2037ae45b70fd5f1ebfa77f356f39887b8\",\n    ),\n}\n\n\ndef gate_c_owner_source_originals(root):\n    \"\"\"Restore only the finite owner/output source and tests to exact de70a45.\"\"\"\n    raw = (root / GATE_C_OWNER_SOURCE_FIXTURE).read_bytes()\n    assert hashlib.sha256(raw).hexdigest() == GATE_C_OWNER_SOURCE_SHA256\n    revision = json.loads(raw)\n    assert set(revision) == {\"schema\", \"base_commit\", \"added\", \"changed\"}\n    assert revision[\"schema\"] == \"gate-c-owner-source-boundary-v1\"\n    assert revision[\"base_commit\"] == \"de70a45c2d34e74d61adb93e7f7db881bd6f8404\"\n    assert set(revision[\"added\"]) == GATE_C_OWNER_SOURCE_ADDED\n    assert set(revision[\"changed\"]) == set(GATE_C_OWNER_SOURCE_ORIGINALS)\n    assert not GATE_C_OWNER_SOURCE_ADDED & GATE_C_OWNER_SOURCE_ORIGINALS.keys()\n    for name, entry in revision[\"added\"].items():\n        assert set(entry) == {\"bytes\", \"sha256\"}\n        assert type(entry[\"bytes\"]) is int and entry[\"bytes\"] > 0\n        data = (root / name).read_bytes()\n        assert len(data) == entry[\"bytes\"]\n        assert hashlib.sha256(data).hexdigest() == entry[\"sha256\"]\n    restored = {\n        name: _integration_restore_entry(\n            (root / name).read_bytes(), entry, GATE_C_OWNER_SOURCE_ORIGINALS[name]\n        )\n        for name, entry in revision[\"changed\"].items()\n    }\n    return GATE_C_OWNER_SOURCE_ADDED, restored\n\n\ndef gate_c_owner_harness_originals(root):\n    \"\"\"Restore five exact de70a45 guards before inventory repair and older layers.\n\n    Only this layer's one digest slot is normalized. All earlier seals remain\n    literal bytes, and copied validators/constants are never executed.\n    \"\"\"\n    raw = (root / GATE_C_OWNER_HARNESS_FIXTURE).read_bytes()\n    assert hashlib.sha256(raw).hexdigest() == GATE_C_OWNER_HARNESS_SHA256\n    revision = json.loads(raw)\n    assert set(revision) == {\"schema\", \"base_commit\", \"changed\"}\n    assert revision[\"schema\"] == \"gate-c-owner-harness-boundary-v1\"\n    assert revision[\"base_commit\"] == \"de70a45c2d34e74d61adb93e7f7db881bd6f8404\"\n    assert set(revision[\"changed\"]) == set(GATE_C_OWNER_HARNESS_ORIGINALS)\n    restored = {}\n    for name, entry in revision[\"changed\"].items():\n        data = (root / name).read_bytes()\n        if name == \"tests/unit/test_arc_profile_native_end_cap.py\":\n            label = b\"GATE_C_OWNER_HARNESS_\" + b'SHA256 = \"'\n            assert data.count(label) == 1\n            slot = label + GATE_C_OWNER_HARNESS_SHA256.encode(\"ascii\") + b'\"'\n            assert data.count(slot) == 1, \"copied outer digest differs from trusted namespace\"\n            data = data.replace(slot, label + b\"0\" * 64 + b'\"')\n        restored[name] = _integration_restore_entry(\n            data, entry, GATE_C_OWNER_HARNESS_ORIGINALS[name]\n        )\n    return restored\n\n\n"
+        },
+        {
+          "new_end": 50964,
+          "new_start": 50914,
+          "original": "",
+          "replacement": "    before = gate_c_owner_harness_originals(root)\n"
+        },
+        {
+          "new_end": 51566,
+          "new_start": 51506,
+          "original": "        data = (root / name).read_bytes()\n",
+          "replacement": "        data = before.get(name, (root / name).read_bytes())\n"
+        },
+        {
+          "new_end": 60140,
+          "new_start": 60088,
+          "original": "",
+          "replacement": "    _, before = gate_c_owner_source_originals(root)\n"
+        },
+        {
+          "new_end": 60970,
+          "new_start": 60910,
+          "original": "        data = (root / name).read_bytes()\n",
+          "replacement": "        data = before.get(name, (root / name).read_bytes())\n"
+        },
+        {
+          "new_end": 61303,
+          "new_start": 61203,
+          "original": "            (root / name).read_bytes(), entry, INTEGRATION_SOURCE_ORIGINALS[name]\n",
+          "replacement": "            before.get(name, (root / name).read_bytes()), entry, INTEGRATION_SOURCE_ORIGINALS[name]\n"
+        },
+        {
+          "new_end": 61748,
+          "new_start": 61656,
+          "original": "    before = redundant_solve_harness_originals(root)\n",
+          "replacement": "    before = gate_c_owner_harness_originals(root) | redundant_solve_harness_originals(root)\n"
+        },
+        {
+          "new_end": 64518,
+          "new_start": 64466,
+          "original": "",
+          "replacement": "    _, before = gate_c_owner_source_originals(root)\n"
+        },
+        {
+          "new_end": 65535,
+          "new_start": 65475,
+          "original": "        data = (root / name).read_bytes()\n",
+          "replacement": "        data = before.get(name, (root / name).read_bytes())\n"
+        },
+        {
+          "new_end": 66021,
+          "new_start": 65959,
+          "original": "            else (root / name).read_bytes()\n",
+          "replacement": "            else before.get(name, (root / name).read_bytes())\n"
+        },
+        {
+          "new_end": 100179,
+          "new_start": 100117,
+          "original": "",
+          "replacement": "    _, gate_c_originals = gate_c_owner_source_originals(root)\n"
+        },
+        {
+          "new_end": 100614,
+          "new_start": 100456,
+          "original": "    harness_originals = cache_originals | transport_originals | standalone_harness_originals(root)\n",
+          "replacement": "    harness_originals = (\n        gate_c_originals\n        | cache_originals\n        | transport_originals\n        | standalone_harness_originals(root)\n    )\n"
+        },
+        {
+          "new_end": 103615,
+          "new_start": 103489,
+          "original": "    integration_originals = integration_originals | redundant_solve_source_originals(root)\n",
+          "replacement": "    integration_originals = (\n        gate_c_originals | integration_originals | redundant_solve_source_originals(root)\n    )\n"
+        },
+        {
+          "new_end": 104635,
+          "new_start": 104573,
+          "original": "",
+          "replacement": "    _, gate_c_originals = gate_c_owner_source_originals(root)\n"
+        },
+        {
+          "new_end": 105612,
+          "new_start": 105571,
+          "original": "",
+          "replacement": "    before = gate_c_originals | restored\n"
+        },
+        {
+          "new_end": 105710,
+          "new_start": 105650,
+          "original": "        data = restored.get(name, (root / name).read_bytes())\n",
+          "replacement": "        data = before.get(name, (root / name).read_bytes())\n"
+        },
+        {
+          "new_end": 105920,
+          "new_start": 105860,
+          "original": "        data = restored.get(name, (root / name).read_bytes())\n",
+          "replacement": "        data = before.get(name, (root / name).read_bytes())\n"
+        },
+        {
+          "new_end": 111216,
+          "new_start": 111158,
+          "original": "",
+          "replacement": "    gate_c_added, _ = gate_c_owner_source_originals(root)\n"
+        },
+        {
+          "new_end": 112976,
+          "new_start": 112857,
+          "original": "        if path.relative_to(root).as_posix() not in excluded | service_added | standalone_added\n",
+          "replacement": "        if path.relative_to(root).as_posix()\n        not in excluded | service_added | standalone_added | gate_c_added\n"
+        },
+        {
+          "new_end": 114639,
+          "new_start": 114564,
+          "original": "",
+          "replacement": "        GATE_C_OWNER_SOURCE_FIXTURE,\n        GATE_C_OWNER_HARNESS_FIXTURE,\n"
+        },
+        {
+          "new_end": 130187,
+          "new_start": 130187,
+          "original": "        guard = tmp_path / \"tests/unit/test_arc_profile_native_end_cap.py\"\n",
+          "replacement": ""
+        },
+        {
+          "new_end": 130534,
+          "new_start": 130457,
+          "original": "        data = guard.read_bytes()\n",
+          "replacement": "        data = outer_before[\"tests/unit/test_arc_profile_native_end_cap.py\"]\n"
+        },
+        {
+          "new_end": 130573,
+          "new_start": 130573,
+          "original": "        guard.write_bytes(data.replace(before, after))\n",
+          "replacement": ""
+        },
+        {
+          "new_end": 146505,
+          "new_start": 146445,
+          "original": "",
+          "replacement": "    outer_before = gate_c_owner_harness_originals(tmp_path)\n"
+        },
+        {
+          "new_end": 148944,
+          "new_start": 148907,
+          "original": "        current = (tmp_path / name).read_bytes()\n",
+          "replacement": "        current = outer_before[name]\n"
+        },
+        {
+          "new_end": 149684,
+          "new_start": 149608,
+          "original": "    guard = tmp_path / name\n    data, old = guard.read_bytes(), INVENTORY_GUARD_HARNESS_SHA256.encode()\n",
+          "replacement": "    data, old = outer_before[name], INVENTORY_GUARD_HARNESS_SHA256.encode()\n"
+        },
+        {
+          "new_end": 149873,
+          "new_start": 149716,
+          "original": "    guard.write_bytes(data.replace(old, digest.encode()))\n",
+          "replacement": "    outer_before[name] = data.replace(old, digest.encode())\n    monkeypatch.setitem(globals(), \"gate_c_owner_harness_originals\", lambda _root: outer_before)\n"
+        },
+        {
+          "new_end": 163016,
+          "new_start": 150164,
+          "original": "",
+          "replacement": "\n\ndef test_gate_c_owner_restores_exact_de70a45_then_every_unchanged_historical_layer():\n    added, source = gate_c_owner_source_originals(ROOT)\n    harness = gate_c_owner_harness_originals(ROOT)\n    assert len(added) == 3 and added == GATE_C_OWNER_SOURCE_ADDED\n    assert len(source) == 18 and set(source) == set(GATE_C_OWNER_SOURCE_ORIGINALS)\n    assert len(harness) == 5 and set(harness) == set(GATE_C_OWNER_HARNESS_ORIGINALS)\n    assert not added & (source.keys() | harness.keys())\n    assert all(name.startswith(\"tests/\") for name in added)\n    for name, data in (source | harness).items():\n        assert (len(data), hashlib.sha256(data).hexdigest()) == (\n            GATE_C_OWNER_SOURCE_ORIGINALS | GATE_C_OWNER_HARNESS_ORIGINALS\n        )[name]\n    # Each old layer keeps its exact return set and independent original pins.\n    for function, expected in (\n        (inventory_guard_harness_originals, INVENTORY_GUARD_HARNESS_ORIGINALS),\n        (redundant_solve_source_originals, REDUNDANT_SOLVE_SOURCE_ORIGINALS),\n        (redundant_solve_harness_originals, REDUNDANT_SOLVE_HARNESS_ORIGINALS),\n        (standalone_integration_harness_originals, INTEGRATION_HARNESS_ORIGINALS),\n        (windows_runtime_cache_harness_originals, WINDOWS_RUNTIME_CACHE_HARNESS_ORIGINALS),\n        (windows_cache_harness_originals, WINDOWS_CACHE_HARNESS_ORIGINALS),\n        (windows_transport_harness_originals, WINDOWS_TRANSPORT_HARNESS_ORIGINALS),\n        (standalone_harness_originals, STANDALONE_HARNESS_ORIGINALS),\n    ):\n        restored = function(ROOT)\n        assert set(restored) == set(expected)\n        for name, data in restored.items():\n            assert (len(data), hashlib.sha256(data).hexdigest()) == expected[name]\n    integration_added, integration = standalone_integration_source_originals(ROOT)\n    assert integration_added == INTEGRATION_SOURCE_ADDED and len(integration_added) == 7\n    assert set(integration) == set(INTEGRATION_SOURCE_ORIGINALS) and len(integration) == 5\n    geometry_added, geometry = geometry_revision_originals(ROOT)\n    assert geometry_added == integration_added and len(geometry) == 8\n    assert protected_python_digest(ROOT) == SNAPSHOT3_PYTHON_PROTECTED\n\n\n@pytest.mark.parametrize(\n    \"name\",\n    sorted(\n        GATE_C_OWNER_SOURCE_ADDED\n        | GATE_C_OWNER_SOURCE_ORIGINALS.keys()\n        | GATE_C_OWNER_HARNESS_ORIGINALS.keys()\n    ),\n)\ndef test_gate_c_owner_seal_rejects_every_unlisted_hunk(tmp_path, name):\n    copy_python_guard_tree(tmp_path)\n    path = tmp_path / name\n    path.write_bytes(path.read_bytes() + b\"\\n# Unlisted Gate C hunk.\\n\")\n    with pytest.raises(AssertionError):\n        protected_python_digest(tmp_path)\n\n\n@pytest.mark.parametrize(\"kind\", [\"source\", \"harness\"])\n@pytest.mark.parametrize(\"mutation\", [\"fixture\", \"slot\", \"helper\", \"coordinated\"])\ndef test_gate_c_owner_copied_validator_constants_and_fixtures_are_only_data(\n    tmp_path, kind, mutation\n):\n    copy_python_guard_tree(tmp_path)\n    prefix = \"GATE_C_OWNER_\" + kind.upper()\n    fixture = tmp_path / globals()[prefix + \"_FIXTURE\"]\n    guard = tmp_path / \"tests/unit/test_arc_profile_native_end_cap.py\"\n    if mutation in {\"fixture\", \"coordinated\"}:\n        fixture.write_bytes(fixture.read_bytes() + b\"\\n\")\n    if mutation in {\"slot\", \"coordinated\"}:\n        old = globals()[prefix + \"_SHA256\"].encode()\n        replacement = (\n            hashlib.sha256(fixture.read_bytes()).hexdigest().encode()\n            if mutation == \"coordinated\"\n            else b\"f\" * 64\n        )\n        data = guard.read_bytes()\n        assert data.count(old) == 1\n        guard.write_bytes(data.replace(old, replacement))\n    if mutation == \"helper\":\n        old = (\"def gate_c_owner_\" + kind + \"_originals(root):\\n\").encode()\n        data = guard.read_bytes()\n        assert data.count(old) == 1\n        guard.write_bytes(data.replace(old, old + b\"    # Untrusted copied validator.\\n\"))\n    with pytest.raises(AssertionError):\n        protected_python_digest(tmp_path)\n\n\n@pytest.mark.parametrize(\n    \"constant\",\n    [\n        \"GATE_C_OWNER_SOURCE_SHA256\",\n        \"INVENTORY_GUARD_HARNESS_SHA256\",\n        \"REDUNDANT_SOLVE_SOURCE_SHA256\",\n        \"REDUNDANT_SOLVE_HARNESS_SHA256\",\n        \"INTEGRATION_SOURCE_SHA256\",\n        \"STANDALONE_INTEGRATION_HARNESS_SHA256\",\n        \"GEOMETRY_REVISION_SHA256\",\n        \"WINDOWS_RUNTIME_CACHE_REVISION_SHA256\",\n        \"WINDOWS_RUNTIME_CACHE_HARNESS_SHA256\",\n        \"WINDOWS_CACHE_REVISION_SHA256\",\n        \"WINDOWS_CACHE_HARNESS_SHA256\",\n        \"WINDOWS_TRANSPORT_REVISION_SHA256\",\n        \"WINDOWS_TRANSPORT_HARNESS_SHA256\",\n        \"STANDALONE_LIVE_SHA256\",\n        \"STANDALONE_HARNESS_SHA256\",\n        \"STANDALONE_REVISION_SHA256\",\n        \"AUTHORING_REVISION_SHA256\",\n        \"SERVICE_REVISION_SHA256\",\n    ],\n)\ndef test_gate_c_owner_normalizes_only_its_own_outer_digest_slot(tmp_path, constant):\n    copy_python_guard_tree(tmp_path)\n    guard = tmp_path / \"tests/unit/test_arc_profile_native_end_cap.py\"\n    data, old = guard.read_bytes(), globals()[constant].encode()\n    assert data.count(old) == 1\n    guard.write_bytes(data.replace(old, b\"f\" * 64))\n    with pytest.raises(AssertionError):\n        gate_c_owner_harness_originals(tmp_path)\n\n\n@pytest.mark.parametrize(\n    \"name,statement\",\n    [\n        (\"src/mechanical_cad/backend_contract.py\", \"_observe_geometry_v3(None)\"),\n        (\n            \"blender_addon/mechanical_cad_blender/geometry_operations.py\",\n            \"guarded_evidence.revalidate(None, expected_result_version=3)\",\n        ),\n        (\n            \"blender_addon/mechanical_cad_blender/operation_contracts.py\",\n            \"geometry_result_v3.validate_response(None, None)\",\n        ),\n    ],\n)\ndef test_gate_c_owner_extra_capability_or_authority_calls_cannot_hide(tmp_path, name, statement):\n    copy_python_guard_tree(tmp_path)\n    path = tmp_path / name\n    path.write_bytes(path.read_bytes() + b\"\\n\" + statement.encode() + b\"\\n\")\n    with pytest.raises(AssertionError):\n        gate_c_owner_source_originals(tmp_path)\n\n\n@pytest.mark.parametrize(\"kind\", [\"source\", \"harness\"])\n@pytest.mark.parametrize(\n    \"mutation\",\n    [\n        \"schema\",\n        \"base\",\n        \"extra_key\",\n        \"missing\",\n        \"extra\",\n        \"production\",\n        \"before_pin\",\n        \"before_length\",\n        \"reviewed_hash\",\n        \"reviewed_length\",\n        \"entry_key\",\n        \"empty_hunks\",\n        \"hunk_key\",\n        \"start_bool\",\n        \"end_overflow\",\n        \"replacement\",\n        \"original\",\n        \"duplicate\",\n        \"forged_original\",\n        \"equivalent\",\n    ],\n)\ndef test_gate_c_owner_inner_schema_hunks_and_pinned_originals_are_nonvacuous(\n    tmp_path, monkeypatch, kind, mutation\n):\n    copy_python_guard_tree(tmp_path)\n    function = globals()[\"gate_c_owner_\" + kind + \"_originals\"]\n    prefix = \"GATE_C_OWNER_\" + kind.upper()\n    clean = function(tmp_path)\n    expected = clean[1] if kind == \"source\" else clean\n    name = (\n        \"src/mechanical_cad/backend_contract.py\"\n        if kind == \"source\"\n        else \"tests/unit/test_arc_profile_incidence.py\"\n    )\n    fixture = tmp_path / globals()[prefix + \"_FIXTURE\"]\n    revision = json.loads(fixture.read_bytes())\n    entry = revision[\"changed\"][name]\n    hunk = entry[\"hunks\"][0]\n    if mutation == \"schema\":\n        revision[\"schema\"] = \"other\"\n    elif mutation == \"base\":\n        revision[\"base_commit\"] = \"0\" * 40\n    elif mutation == \"extra_key\":\n        revision[\"exempt\"] = True\n    elif mutation == \"missing\":\n        revision[\"changed\"].pop(name)\n    elif mutation == \"extra\":\n        revision[\"changed\"][\"tests/unit/unreviewed.py\"] = dict(entry)\n    elif mutation == \"production\":\n        revision[\"changed\"][\"src/mechanical_cad/kernel_ocp.py\"] = revision[\"changed\"].pop(name)\n    elif mutation == \"before_pin\":\n        entry[\"original_sha256\"] = \"f\" * 64\n    elif mutation == \"before_length\":\n        entry[\"original_bytes\"] = True\n    elif mutation == \"reviewed_hash\":\n        entry[\"reviewed_sha256\"] = \"f\" * 64\n    elif mutation == \"reviewed_length\":\n        entry[\"reviewed_bytes\"] = True\n    elif mutation == \"entry_key\":\n        entry[\"skip\"] = True\n    elif mutation == \"empty_hunks\":\n        entry[\"hunks\"] = []\n    elif mutation == \"hunk_key\":\n        hunk[\"skip\"] = True\n    elif mutation == \"start_bool\":\n        hunk[\"new_start\"] = True\n    elif mutation == \"end_overflow\":\n        hunk[\"new_end\"] = entry[\"reviewed_bytes\"] + 1\n    elif mutation in {\"replacement\", \"original\"}:\n        hunk[mutation] += \"# Altered hunk bytes.\\n\"\n    elif mutation == \"duplicate\":\n        entry[\"hunks\"].insert(1, dict(hunk))\n    else:\n        current = (tmp_path / name).read_bytes()\n        before = expected[name]\n        if mutation == \"forged_original\":\n            before += b\"\\n# Forged pinned original.\\n\"\n            entry[\"original_bytes\"] = len(before)\n            entry[\"original_sha256\"] = hashlib.sha256(before).hexdigest()\n        else:\n            assert mutation == \"equivalent\"\n        entry[\"hunks\"] = [\n            {\n                \"new_start\": 0,\n                \"new_end\": len(current),\n                \"original\": before.decode(),\n                \"replacement\": current.decode(),\n            }\n        ]\n    raw = (json.dumps(revision, sort_keys=True, indent=2) + \"\\n\").encode()\n    assert raw != fixture.read_bytes()\n    fixture.write_bytes(raw)\n    digest = hashlib.sha256(raw).hexdigest()\n    if kind == \"harness\":\n        guard = tmp_path / \"tests/unit/test_arc_profile_native_end_cap.py\"\n        data, old = guard.read_bytes(), GATE_C_OWNER_HARNESS_SHA256.encode()\n        assert data.count(old) == 1\n        guard.write_bytes(data.replace(old, digest.encode()))\n    monkeypatch.setitem(globals(), prefix + \"_SHA256\", digest)\n    if mutation == \"equivalent\":\n        assert function(tmp_path) == clean\n    else:\n        with pytest.raises(AssertionError):\n            function(tmp_path)\n\n\n@pytest.mark.parametrize(\n    \"mutation\", [\"missing\", \"extra\", \"wrong_directory\", \"entry_key\", \"length_bool\", \"hash\"]\n)\ndef test_gate_c_owner_new_tests_have_exact_paths_bytes_and_no_before_image(\n    tmp_path, monkeypatch, mutation\n):\n    copy_python_guard_tree(tmp_path)\n    added, before = gate_c_owner_source_originals(tmp_path)\n    assert len(added) == 3 and not added & before.keys()\n    fixture = tmp_path / GATE_C_OWNER_SOURCE_FIXTURE\n    revision = json.loads(fixture.read_bytes())\n    name = sorted(added)[0]\n    if mutation == \"missing\":\n        revision[\"added\"].pop(name)\n    elif mutation == \"extra\":\n        revision[\"added\"][\"tests/unit/unreviewed.py\"] = dict(revision[\"added\"][name])\n    elif mutation == \"wrong_directory\":\n        revision[\"added\"][\"src/mechanical_cad/unreviewed.py\"] = revision[\"added\"].pop(name)\n    elif mutation == \"entry_key\":\n        revision[\"added\"][name][\"skip\"] = True\n    elif mutation == \"length_bool\":\n        revision[\"added\"][name][\"bytes\"] = True\n    else:\n        revision[\"added\"][name][\"sha256\"] = \"f\" * 64\n    raw = (json.dumps(revision, sort_keys=True, indent=2) + \"\\n\").encode()\n    assert raw != fixture.read_bytes()\n    fixture.write_bytes(raw)\n    monkeypatch.setitem(globals(), \"GATE_C_OWNER_SOURCE_SHA256\", hashlib.sha256(raw).hexdigest())\n    with pytest.raises(AssertionError):\n        gate_c_owner_source_originals(tmp_path)\n\n\ndef test_gate_c_owner_unlisted_new_test_remains_in_the_original_digest(tmp_path):\n    copy_python_guard_tree(tmp_path)\n    (tmp_path / \"tests/unit/test_unlisted_gate_c.py\").write_bytes(b\"pass\\n\")\n    assert protected_python_digest(tmp_path) != SNAPSHOT3_PYTHON_PROTECTED\n\n\ndef test_gate_c_source_equivalent_inner_repin_reaches_unchanged_geometry_layer(\n    tmp_path, monkeypatch\n):\n    copy_python_guard_tree(tmp_path)\n    expected = standalone_integration_source_originals(tmp_path)\n    _, before = gate_c_owner_source_originals(tmp_path)\n    fixture = tmp_path / INTEGRATION_SOURCE_FIXTURE\n    revision = json.loads(fixture.read_bytes())\n    name = \"src/mechanical_cad/actions.py\"\n    current = before[name]\n    revision[\"changed\"][name][\"hunks\"] = [\n        {\n            \"new_start\": 0,\n            \"new_end\": len(current),\n            \"original\": expected[1][name].decode(),\n            \"replacement\": current.decode(),\n        }\n    ]\n    raw = (json.dumps(revision, sort_keys=True, indent=2) + \"\\n\").encode()\n    assert raw != fixture.read_bytes()\n    fixture.write_bytes(raw)\n    monkeypatch.setitem(globals(), \"INTEGRATION_SOURCE_SHA256\", hashlib.sha256(raw).hexdigest())\n    assert standalone_integration_source_originals(tmp_path) == expected\n\n\n@pytest.mark.parametrize(\"name\", sorted(GATE_C_OWNER_SOURCE_ADDED))\ndef test_gate_c_owner_missing_added_file_is_not_reconstructed_as_historical_source(tmp_path, name):\n    copy_python_guard_tree(tmp_path)\n    (tmp_path / name).unlink()\n    with pytest.raises(FileNotFoundError):\n        gate_c_owner_source_originals(tmp_path)\n"
+        }
+      ],
+      "original_bytes": 142598,
+      "original_sha256": "19557cea87dfdc79ce104649d7f38fe6ef852b64a881edb66f76f8f3a416f627",
+      "reviewed_bytes": 163016,
+      "reviewed_sha256": "df17f3508f0e7f2ce3f5d2adaf34eeabbc48eb234892826ee291dde701e505b2"
+    },
+    "tests/unit/test_arc_sector_native_boundary_mutations.py": {
+      "hunks": [
+        {
+          "new_end": 25951,
+          "new_start": 25808,
+          "original": "",
+          "replacement": "        \"tests/fixtures/geometry_v3/gate_c_owner_source_de70a45.json\",\n        \"tests/fixtures/geometry_v3/gate_c_owner_harness_de70a45.json\",\n"
+        }
+      ],
+      "original_bytes": 39307,
+      "original_sha256": "917619b440f3dc32b340a9c1a1c858b70a7f8405eaa28f12a8771b317dcf3c0d",
+      "reviewed_bytes": 39450,
+      "reviewed_sha256": "35b1c5a7e762dd218e3f4eae48452247eabf93609e0228ab9f23ced051a7ad6c"
+    },
+    "tests/unit/test_result_v3_dependency_boundary.py": {
+      "hunks": [
+        {
+          "new_end": 372,
+          "new_start": 306,
+          "original": "",
+          "replacement": "    GATE_C_OWNER_SOURCE_ADDED,\n    GATE_C_OWNER_SOURCE_ORIGINALS,\n"
+        },
+        {
+          "new_end": 441,
+          "new_start": 406,
+          "original": "",
+          "replacement": "    gate_c_owner_source_originals,\n"
+        },
+        {
+          "new_end": 19034,
+          "new_start": 18032,
+          "original": "",
+          "replacement": "\n\ndef test_gate_c_owner_before_view_adds_no_runtime_or_historical_importer_exemption():\n    added, originals = gate_c_owner_source_originals(ROOT)\n    assert added == GATE_C_OWNER_SOURCE_ADDED\n    assert len(added) == 3 and all(name.startswith(\"tests/\") for name in added)\n    assert not added & originals.keys()\n    assert set(originals) == set(GATE_C_OWNER_SOURCE_ORIGINALS)\n    assert {name for name in originals if name.startswith((\"src/\", \"blender_addon/\"))} == {\n        \"src/mechanical_cad/actions.py\",\n        \"src/mechanical_cad/geometry_protocol_v3.py\",\n        \"src/mechanical_cad/backend_contract.py\",\n        \"blender_addon/mechanical_cad_blender/operation_contracts.py\",\n        \"blender_addon/mechanical_cad_blender/geometry_operations.py\",\n        \"blender_addon/mechanical_cad_blender/workspace_ui.py\",\n        \"blender_addon/mechanical_cad_blender/help_topics.py\",\n    }\n    test_historical_importer_boundary_and_exact_gate_b_c_edges()\n    test_new_runtime_paths_are_exactly_scoped()\n"
+        }
+      ],
+      "original_bytes": 17931,
+      "original_sha256": "d47b65a70ca1b5b94c7c97a312ad52e098f88aa75a719faa3714460e298201a7",
+      "reviewed_bytes": 19034,
+      "reviewed_sha256": "d894454076b2a17755717c54936dcbea69975cdf05573d344e8eb30558da1594"
+    },
+    "tests/unit/test_standalone_runtime_boundary.py": {
+      "hunks": [
+        {
+          "new_end": 4292,
+          "new_start": 3933,
+          "original": "",
+          "replacement": "        \"GATE_C_OWNER_SOURCE_FIXTURE\",\n        \"GATE_C_OWNER_SOURCE_SHA256\",\n        \"GATE_C_OWNER_SOURCE_ADDED\",\n        \"GATE_C_OWNER_SOURCE_ORIGINALS\",\n        \"GATE_C_OWNER_HARNESS_FIXTURE\",\n        \"GATE_C_OWNER_HARNESS_SHA256\",\n        \"GATE_C_OWNER_HARNESS_ORIGINALS\",\n        \"gate_c_owner_source_originals\",\n        \"gate_c_owner_harness_originals\",\n"
+        },
+        {
+          "new_end": 18834,
+          "new_start": 18610,
+          "original": "    integration_originals = integration_originals | namespace[\"redundant_solve_source_originals\"](\n        ROOT\n",
+          "replacement": "    _, gate_c_originals = namespace[\"gate_c_owner_source_originals\"](ROOT)\n    integration_originals = (\n        gate_c_originals\n        | integration_originals\n        | namespace[\"redundant_solve_source_originals\"](ROOT)\n"
+        }
+      ],
+      "original_bytes": 113570,
+      "original_sha256": "978501183c4f1983be92ac2aae933f2037ae45b70fd5f1ebfa77f356f39887b8",
+      "reviewed_bytes": 114041,
+      "reviewed_sha256": "22701544a5058a03991887a3a03c17c81cbde073d19cd2148a070ceac0aceaf5"
+    }
+  },
+  "schema": "gate-c-owner-harness-boundary-v1"
+}

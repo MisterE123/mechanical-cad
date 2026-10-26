@@ -1,0 +1,53 @@
+{
+  "disposition": "ACCEPT isolated exact finite-arc membership at frozen commit; no profile/native/service/UI/release activation",
+  "sealed_at": "2026-10-17T05:28:30.916818+00:00",
+  "frozen": {
+    "commit": "362f13b330639d256c18d6a3599b281ae631df27",
+    "baseline_commit": "cf47a4fbd04d87fe5d5649d2c1b02e1cee596d8e",
+    "source_root": "/workspace/scratch/e704d81da019/cad_arc_membership/membership-362f13b-source",
+    "source_manifest_sha256": "f1906e4d705d5777f029bf7cab85075f8fab3ad22ed5e448c2287eac371cb57a",
+    "source_archive_sha256": "a4d384d5eeca6de045c2bf8ece6b11eff68ca1af926e5aecdb2eb50e39a8dad3",
+    "files_verified_git_zip_tree": 952,
+    "baseline_runtime_files_verified": 105,
+    "delivered_release_sha256": "d644fbce66b843047a6cb3e3cd775c1af8517a7ff82e3f22ce3888b710d1971f",
+    "allowed_changes": [
+      "M src/mechanical_cad/arc_profile_primitives.py",
+      "A tests/unit/test_arc_profile_arc_membership.py"
+    ],
+    "source_sha256": {
+      "src/mechanical_cad/arc_profile_primitives.py": "ebd60e4dd35c98459dd6d688e81322f88adcb1766c0864e16d10b9defea738bd",
+      "tests/unit/test_arc_profile_arc_membership.py": "25177d066c87fe501a34a6627c87de2c5b8a8107d124303c7838c22e549ed504",
+      "tests/unit/test_arc_profile_primitives.py": "6837a5600461bc15c65fcf4601249a988ecff4220062da6e12d1c9510fcc5379"
+    }
+  },
+  "native_processes_started": 0,
+  "gates": {
+    "frozen_independent": 0,
+    "frozen_original_primitives": 0,
+    "frozen_new_membership": 0,
+    "frozen_existing_pure": 0,
+    "frozen_dof_guard": 0
+  },
+  "gate_counts": {
+    "independent": 57,
+    "original_primitives": 138,
+    "new_membership": 191,
+    "existing_pure": 379,
+    "dof_guard": 18
+  },
+  "artifacts_sha256": {
+    "FROZEN_GATE_RECEIPTS.json": "8ff711b43afe3774250a073432126ad33f0d2cf892d8ea1bf729bda631454149",
+    "INDEPENDENT_REVIEW.md": "b5c5a330642872587fa4a6c4358e162e4f11b71e473cfb9b219cf71a9a1aff04",
+    "frozen_dof_guard.log": "6670fcc2276a1c39d635167c583e03f9eefdfa8a1018e78814ac3de833280b11",
+    "frozen_existing_pure.log": "7d6107cd6769c1c2d90219f4918ab7373f8a584501bb4e7cc240936f52171707",
+    "frozen_gate_runner.log": "b0b1583b30a89115357acae456ee12d47d3627d85036cd22677ba874dcb74283",
+    "frozen_independent.log": "bd7644091eb0d36ba80a2a8e4bcced7a26192734cfac3b3d29f4586e62ec1da5",
+    "frozen_new_membership.log": "b7232bd58fd6cca0ecf6aa88e00719f0ee7d94745dc80b038113f34913483ca8",
+    "frozen_original_primitives.log": "91655f12f1060169662969d171831f0b2a54c1a32092bf6c42fc3e4c73a3dd69",
+    "original_primitive.py.txt": "1a92f9f68fef5f8284efc91f3431abf00d0b0fdab371646303680421a540553a",
+    "preserve_frozen.py": "6fb69cb66b6eb2e7f9831c7b59ce2024837ba396243272e4c4f35597961821b5",
+    "pure_test_launcher.py": "a2827b6a3800c727ea8ebc3f5b932a74f1798a6cba71906ddd8c8f78db0ce4e8",
+    "run_frozen_gates.py": "b9903a2e3ef12ec13f2942a73211d9c5ce703847568afdd0b5d6d7f2bff69894",
+    "test_exact_arc_membership_independent.py": "03cf0618693d8ee0c858475e5eeaa6f80c9cab8fe50402bb0c1d187b34e8ed98"
+  }
+}

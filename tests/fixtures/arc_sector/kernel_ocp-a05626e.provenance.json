@@ -1,0 +1,9 @@
+{
+  "baseline_commit": "a05626ef841478bbdaabe5ac3c58e7795a6be375",
+  "source_path": "src/mechanical_cad/kernel_ocp.py",
+  "fixture": "kernel_ocp-a05626e.py.txt",
+  "source_command": "git show a05626ef841478bbdaabe5ac3c58e7795a6be375:src/mechanical_cad/kernel_ocp.py",
+  "sha256": "bd06d4b5372758bfd02cf89eebcb1a1385e8222fb36aba06b55764fd449bcbfc",
+  "size_bytes": 53739,
+  "purpose": "Byte-exact historical source for the reviewed additive sector-native kernel boundary. Never imported or executed."
+}

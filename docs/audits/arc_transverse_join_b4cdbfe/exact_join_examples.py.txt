@@ -1,0 +1,139 @@
+"""Independent pure diagnostic examples; not a production admission classifier.
+All certified statements use Fraction intervals and integer isqrt. Decimal/float
+formatting is descriptive only. No native imports or production edits.
+"""
+from __future__ import annotations
+import hashlib
+import json
+import math
+from pathlib import Path
+import runpy
+from fractions import Fraction as F
+from math import isqrt
+
+BASE = Path('/workspace/scratch/e704d81da019/cad_arc_core')
+OUT = Path(__file__).parent
+CORE = BASE / 'src/mechanical_cad/arc_geometry.py'
+arc_geometry = runpy.run_path(str(CORE))['arc_geometry']
+T = F(1, 10**9)
+BITS = 192
+
+def exact(x):
+    return F.from_float(x) if type(x) is float else F(x)
+def point(p):
+    return tuple(map(exact,p))
+def add(a,b): return tuple(x+y for x,y in zip(a,b))
+def sub(a,b): return tuple(x-y for x,y in zip(a,b))
+def mul(s,a): return tuple(s*x for x in a)
+def dot(a,b): return sum((x*y for x,y in zip(a,b)),F(0))
+def cross(a,b): return a[0]*b[1]-a[1]*b[0]
+def sqrti(x):
+    assert x>=0
+    n,d=isqrt(x.numerator),isqrt(x.denominator)
+    if n*n==x.numerator and d*d==x.denominator: return F(n,d),F(n,d)
+    scaled=isqrt((x.numerator << (2*BITS))//x.denominator)
+    a,b=F(scaled,1<<BITS),F(scaled+1,1<<BITS)
+    assert a*a<=x<=b*b
+    return a,b
+def iadd(x,y): return x[0]+y[0],x[1]+y[1]
+def ineg(x): return -x[1],-x[0]
+def isub(x,y): return iadd(x,ineg(y))
+def imul(x,y):
+    a=[u*v for u in x for v in y]
+    return min(a),max(a)
+def idiv(x,y):
+    assert y[0]*y[1]>0
+    return imul(x,(1/y[1],1/y[0]))
+def const(x): return x,x
+def isign(x):
+    if x[0]>0:return 1
+    if x[1]<0:return -1
+    if x==(0,0):return 0
+    return None
+def interval_text(x):
+    return {'lo':str(x[0]),'hi':str(x[1]),'approx':[float(x[0]),float(x[1])]}
+def ivec(p): return tuple(const(x) for x in p)
+def ivadd(a,b): return tuple(iadd(x,y) for x,y in zip(a,b))
+def ivsub(a,b): return tuple(isub(x,y) for x,y in zip(a,b))
+def ivmul(s,a): return tuple(imul(s,x) for x in a)
+def icross(a,b): return isub(imul(a[0],b[1]),imul(a[1],b[0]))
+def idistance(a,b):
+    dif=ivsub(a,b)
+    sq=[imul(x,x) if isign(x) is not None else (F(0),max(x[0]*x[0],x[1]*x[1])) for x in dif]
+    z=iadd(*sq)
+    return sqrti(max(F(0),z[0]))[0],sqrti(z[1])[1]
+def finite_line(t):
+    if t[0]>=0 and t[1]<=1:return 'in'
+    if t[1]<0 or t[0]>1:return 'out'
+    return 'ambiguous'
+def finite_arc(v0,v1,w,direction):
+    if direction=='cw':v0,v1=v1,v0
+    a=isign(icross(ivec(v0),w)); b=isign(icross(w,ivec(v1)))
+    major=cross(v0,v1)<0
+    if major:
+        if (a is not None and a>=0) or (b is not None and b>=0):return 'in'
+        if a is not None and b is not None:return 'out'
+    else:
+        if (a is not None and a<0) or (b is not None and b<0):return 'out'
+        if a is not None and b is not None:return 'in'
+    return 'ambiguous'
+
+def example(name,c,p0,p1,direction='ccw'):
+    g=arc_geometry(tuple(c),tuple(p0),tuple(p1),direction,require_equal_radii=True)
+    c,p0,p1=point(c),point(p0),point(p1)
+    v0,v1=sub(p0,c),sub(p1,c);r=exact(g.start_radius)
+    q=[];gaps=[]
+    for p,v in [(p0,v0),(p1,v1)]:
+        qq=ivadd(ivec(c),ivmul(idiv(const(r),sqrti(dot(v,v))),ivec(v)))
+        q.append(qq);gaps.append(idistance(qq,ivec(p)))
+    d=sub(p1,p0);g0=sub(p0,c)
+    a=dot(d,d);b=2*dot(g0,d);cc=dot(g0,g0)-r*r;disc=b*b-4*a*cc
+    roots=[]
+    for sign in [-1,1]:
+        radical=sqrti(disc)
+        t=idiv(iadd(const(-b),radical if sign==1 else ineg(radical)),const(2*a))
+        root=ivadd(ivec(p0),ivmul(t,ivec(d)))
+        distances=[idistance(root,ivec(p)) for p in [p0,p1]]
+        roots.append({'t':interval_text(t),'finite_line':finite_line(t),'finite_arc':finite_arc(v0,v1,ivsub(root,ivec(c)),direction),'distance_to_endpoints':[interval_text(z) for z in distances]})
+    ceiling='pass' if max(z[1] for z in gaps)<=T else ('reject' if max(z[0] for z in gaps)>T else 'ambiguous')
+    return {'name':name,'input':{'c':[float(x) for x in c],'p0':[float(x) for x in p0],'p1':[float(x) for x in p1],'direction':direction},'canonical_radius':str(r),'canonical_radius_squared_minus_start_squared':str(r*r-dot(v0,v0)),'core_sweep_radians':g.sweep_radians,'exact_dot_gate':dot(v0,v1)<=0,'endpoint_gap':[interval_text(z) for z in gaps],'local_exact_ray_ceiling':ceiling,'line_circle_discriminant_sign':(disc>0)-(disc<0),'roots':roots}
+
+cases=[
+('quarter_exact',(0.,0.),(10.,0.),(0.,10.)),
+('quarter_outward_gap',(0.,0.),(10.,0.),(0.,10.+5e-10)),
+('quarter_inward_gap',(0.,0.),(10.,0.),(0.,10.-5e-10)),
+('major_outward_gap',(0.,0.),(10.,0.),(0.,10.+5e-10),'cw'),
+('major_inward_gap',(0.,0.),(10.,0.),(0.,10.-5e-10),'cw'),
+('semicircle_exact',(0.,0.),(10.,0.),(-10.,0.)),
+('rounded_hypot_quarter',(0.,0.),(13.,29.),(-29.,13.)),
+('rounded_hypot_major',(0.,0.),(13.,29.),(-29.,13.),'cw'),
+('threshold_rounded_nominal',(0.,0.),(10.,0.),(0.,10.+1e-9)),
+('threshold_lower_neighbor',(0.,0.),(10.,0.),(0.,math.nextafter(10.+1e-9,10.))),
+('far_local_eight_ulps',(999900.,999900.),(999910.,999900.),(999900.,999910.+8*math.ulp(999910.))),
+('far_local_nine_ulps',(999900.,999900.),(999910.,999900.),(999900.,999910.+9*math.ulp(999910.))),
+('sixty_degree_like_dot_positive',(0.,0.),(10.,0.),(6.,8.)),
+('near_subnormal_exact_difference',(1.,0.),(math.ulp(0.),0.),(1.,-1.)),
+]
+results=[example(*x) for x in cases]
+expected={
+ 'quarter_exact': [('in','in'),('in','in')],
+ 'quarter_outward_gap':[('in','in'),('in','in')],
+ 'quarter_inward_gap':[('in','in'),('out','out')],
+ 'major_outward_gap':[('in','in'),('in','out')],
+ 'major_inward_gap':[('in','in'),('out','in')],
+ 'rounded_hypot_quarter':[('out','out'),('out','out')],
+ 'rounded_hypot_major':[('out','in'),('out','in')],
+}
+for x in results:
+    if x['name'] in expected:
+        actual=[(z['finite_line'],z['finite_arc']) for z in x['roots']]
+        assert actual==expected[x['name']],(x['name'],actual,expected[x['name']])
+assert next(x for x in results if x['name']=='threshold_rounded_nominal')['local_exact_ray_ceiling']=='reject'
+assert next(x for x in results if x['name']=='threshold_lower_neighbor')['local_exact_ray_ceiling']=='pass'
+assert next(x for x in results if x['name']=='far_local_eight_ulps')['local_exact_ray_ceiling']=='pass'
+assert next(x for x in results if x['name']=='far_local_nine_ulps')['local_exact_ray_ceiling']=='reject'
+report={'kind':'independent pure reference examples, not production implementation or kernel qualification','source_sha256':hashlib.sha256(CORE.read_bytes()).hexdigest(),'sqrt_interval_bits':BITS,'threshold_exact_rational':str(T),'native_processes':0,'cases':results}
+(OUT/'exact_join_examples.json').write_text(json.dumps(report,indent=2)+'\n')
+for x in results:
+    print(x['name'], 'dot_gate='+str(x['exact_dot_gate']), 'local_gap='+x['local_exact_ray_ceiling'], 'roots='+str([(z['finite_line'],z['finite_arc']) for z in x['roots']]), 'max_gap_upper='+str(max(z['approx'][1] for z in x['endpoint_gap'])))
+print('EXACT_JOIN_EXAMPLES_COMPLETE')

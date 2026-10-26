@@ -1,0 +1,239 @@
+"""One request/one response JSON process protocol for Blender ABI isolation.
+
+stdin is a bounded request. Missing action means replay; explicit export actions
+require a separately supplied destination, never a field in the document.
+stdout is reserved for JSON; native kernel console messages are redirected to
+stderr at the OS file-descriptor boundary until process teardown.
+No pickle, shell evaluation, network listener or arbitrary command exists here.
+"""
+
+from __future__ import annotations
+
+import json
+import math
+import os
+import sys
+
+from .errors import CADException
+from .model import MAX_DOCUMENT_BYTES, Document, reject_duplicate_keys
+
+PROTOCOL_VERSION = 1
+
+
+def _finite_json_float(token):
+    value = float(token)
+    if not math.isfinite(value):
+        raise CADException("invalid_json", "JSON numbers must be finite.")
+    return value
+
+
+def _reject_json_constant(token):
+    raise CADException("invalid_json", f"Non-finite JSON constant is not supported: {token}")
+
+
+def process_request(request: dict) -> dict:
+    if isinstance(request, dict) and "backend_contract" in request:
+        from .backend_contract import process_guarded_request
+
+        return process_guarded_request(request, _process_legacy_request)
+    return _process_legacy_request(request)
+
+
+def _process_legacy_request(request: dict) -> dict:
+    if not isinstance(request, dict):
+        raise CADException("invalid_request", "Request must be a JSON object.")
+    if (
+        type(request.get("protocol_version")) is not int
+        or request["protocol_version"] != PROTOCOL_VERSION
+    ):
+        raise CADException("unsupported_protocol", "Only sidecar protocol 1 is supported.")
+    if "kind" in request:
+        from .assembly_protocol import process_assembly_request
+
+        return process_assembly_request(request)
+    if request.get("action") == "solve_sketch":
+        from .sketch_protocol import process_sketch_request
+
+        return process_sketch_request(request)
+    if set(request) - {
+        "protocol_version",
+        "document",
+        "options",
+        "action",
+        "destination",
+        "result_version",
+    }:
+        raise CADException("invalid_request", "Unknown request fields.")
+    result_version = request.get("result_version", 1)
+    if type(result_version) is not int or result_version not in (1, 2):
+        raise CADException(
+            "unsupported_result_version", "Only result versions 1 and 2 are supported."
+        )
+    from .sketch_protocol import needs_numeric_policy, validate_request_budget
+
+    request_fingerprint = None
+    if needs_numeric_policy(request):
+        request_fingerprint = validate_request_budget(request)
+    options = request.get("options", {})
+    if not isinstance(options, dict) or set(options) - {"linear_deflection"}:
+        raise CADException("invalid_request", "Only linear_deflection is a supported option.")
+    action = request.get("action", "replay")
+    if not isinstance(action, str) or action not in {
+        "replay",
+        "canonical_snapshot",
+        "check_geometry",
+        "export_step",
+        "export_stl",
+    }:
+        raise CADException("invalid_action", "Unsupported sidecar action.")
+    if action in {"export_step", "export_stl"}:
+        destination = request.get("destination")
+        if not isinstance(destination, str) or not destination.strip() or "\0" in destination:
+            raise CADException("invalid_destination", "Choose an explicit local export file path.")
+    elif "destination" in request:
+        raise CADException("invalid_request", "Only explicit exports can have a destination.")
+    if action == "canonical_snapshot":
+        if "options" in request or "result_version" in request:
+            raise CADException(
+                "invalid_request", "Canonical snapshots do not accept options or result versions."
+            )
+        from .part_snapshot import canonical_snapshot, input_fingerprint
+
+        return {
+            "protocol_version": PROTOCOL_VERSION,
+            "action": action,
+            "input_fingerprint": input_fingerprint(request),
+            "ok": True,
+            "result": canonical_snapshot(request.get("document")),
+            "error": None,
+        }
+    document = Document.from_dict(request.get("document"))
+    from .engine import validate_result_version
+
+    validate_result_version(document, result_version)
+    version_fields = (
+        {"result_version": 2, "input_fingerprint": request_fingerprint}
+        if result_version == 2
+        else {}
+    )
+    if action != "replay":
+        from .actions import run_geometry_action
+
+        return {
+            "protocol_version": PROTOCOL_VERSION,
+            **version_fields,
+            **run_geometry_action(
+                document,
+                action,
+                destination=request.get("destination"),
+                linear_deflection=options.get("linear_deflection", 0.1),
+                result_version=result_version,
+            ),
+        }
+    from .engine import regenerate
+    from .kernel_ocp import OCPKernel
+
+    replay = regenerate(
+        document,
+        OCPKernel(),
+        linear_deflection=options.get("linear_deflection", 0.1),
+        result_version=result_version,
+    )
+    return {
+        "protocol_version": PROTOCOL_VERSION,
+        **version_fields,
+        "ok": replay.ok,
+        "result": replay.result,
+        "error": None,
+    }
+
+
+def main() -> int:
+    # Reserve the real stdout for exactly one JSON response. Leave fd 1 pointed
+    # at stderr until process exit: STEP/OCCT can flush C++ console buffers only
+    # during teardown, after a temporary Python context would have restored it.
+    # This entry point owns a short-lived process and must not run inside Blender.
+    sys.stdout.flush()
+    output = os.fdopen(os.dup(1), "w", encoding="utf-8")
+    os.dup2(2, 1)
+    request = None
+    try:
+        from .backend_contract import MAX_GUARDED_BYTES
+
+        raw = sys.stdin.buffer.read(MAX_GUARDED_BYTES + 1)
+        if len(raw) > MAX_GUARDED_BYTES:
+            raise CADException("document_too_large", "Request exceeds the 2 MiB limit.")
+        try:
+            request = json.loads(
+                raw,
+                object_pairs_hook=reject_duplicate_keys,
+                parse_constant=_reject_json_constant,
+                parse_float=_finite_json_float,
+            )
+            guarded = isinstance(request, dict) and "backend_contract" in request
+            if not guarded and len(raw) > MAX_DOCUMENT_BYTES:
+                # The old read rejected before parsing, so even a result-v2
+                # field must not stamp this legacy oversized-input failure.
+                request = None
+                raise CADException("document_too_large", "Request exceeds the 2 MiB limit.")
+            if isinstance(request, dict) and request.get("kind") == "assembly":
+                # The assembly loader's numeric-token cap also applies when
+                # the document is nested in a process envelope. Keep the legacy
+                # Part token policy unchanged.
+                from .assembly_model import _parse_number
+
+                request = json.loads(
+                    raw,
+                    object_pairs_hook=reject_duplicate_keys,
+                    parse_constant=_reject_json_constant,
+                    parse_int=lambda token: _parse_number(token, integer=True),
+                    parse_float=_parse_number,
+                )
+            elif isinstance(request, dict):
+                from .sketch_protocol import needs_numeric_policy, parse_bounded_numbers
+
+                if needs_numeric_policy(request):
+                    request = parse_bounded_numbers(raw)
+        except CADException as exc:
+            if len(raw) > MAX_DOCUMENT_BYTES and not (
+                isinstance(request, dict) and "backend_contract" in request
+            ):
+                raise CADException(
+                    "document_too_large", "Request exceeds the 2 MiB limit."
+                ) from exc
+            raise
+        except (ValueError, RecursionError) as exc:
+            if len(raw) > MAX_DOCUMENT_BYTES and request is None:
+                raise CADException(
+                    "document_too_large", "Request exceeds the 2 MiB limit."
+                ) from exc
+            raise CADException("invalid_json", "Request is not valid JSON.") from exc
+        response = process_request(request)
+    except CADException as exc:
+        response = {
+            "protocol_version": PROTOCOL_VERSION,
+            "ok": False,
+            "result": None,
+            "error": exc.to_dict(),
+        }
+    except Exception as exc:
+        response = {
+            "protocol_version": PROTOCOL_VERSION,
+            "ok": False,
+            "result": None,
+            "error": {"code": "sidecar_error", "message": f"{type(exc).__name__}: {exc}"},
+        }
+    if (
+        isinstance(request, dict)
+        and "backend_contract" not in request
+        and type(request.get("result_version")) is int
+    ):
+        if request["result_version"] == 2:
+            response["result_version"] = 2
+    with output:
+        print(json.dumps(response, allow_nan=False, separators=(",", ":")), file=output)
+    return 0 if response["ok"] else 1
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

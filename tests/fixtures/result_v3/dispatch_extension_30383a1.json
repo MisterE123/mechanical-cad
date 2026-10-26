@@ -1,0 +1,144 @@
+{
+  "base_commit": "30383a1bbaeae02b447bab2c37290d5f3927df8c",
+  "scope": "Only reviewed exact result3 solve/replay dispatch and actual-module capability markers. All other old runtime files, old sketch output and live owners remain protected.",
+  "files": {
+    "src/mechanical_cad/engine.py": {
+      "original_bytes": 10179,
+      "original_sha256": "319cd0f39d0b8571ae762b96627c4189beffe6e21d65198cd59833bd5e300dcf",
+      "reviewed_bytes": 14546,
+      "reviewed_sha256": "0628f2cc84c35fa2d7198da747e3265df21d8fb0a2e7820d3115d5e4f2cc33ab",
+      "hunks": [
+        {
+          "new_start": 1390,
+          "new_end": 1514,
+          "original": "",
+          "replacement": "    def sector_profile(self, sketch: Any) -> Any: ...\n    def extrude_sector(self, profile: Any, length: float) -> Any: ...\n"
+        },
+        {
+          "new_start": 4897,
+          "new_end": 7854,
+          "original": "",
+          "replacement": "def _sketch_output_v3(feature, values, kernel, item):\n    from .profile_adapter_v3 import sketch_output_v3\n\n    return sketch_output_v3(feature, values, kernel, item, legacy_output=_sketch_output)\n\n\ndef _extrude_output_v3(output, profile, length, kernel):\n    if (\n        isinstance(output, SketchOutput)\n        and isinstance(output.profile, AvailableProfile)\n        and output.profile.region_kind == \"curve_loop\"\n    ):\n        from .profile_adapter_v3 import sector_native_call\n\n        return sector_native_call(kernel.extrude_sector, profile, length)\n    return kernel.extrude(profile, length)\n\n\ndef _is_curve_loop_output(output):\n    return (\n        isinstance(output, SketchOutput)\n        and isinstance(output.profile, AvailableProfile)\n        and output.profile.region_kind == \"curve_loop\"\n    )\n\n\ndef _finalize_sector_meshes_v3(pending, kernel, linear_deflection, results, shapes, outputs):\n    \"\"\"Display only after the retained checked sector continuation has finished.\"\"\"\n    for feature_id, shape in pending:\n        item = results[feature_id]\n        if item[\"status\"] != \"ok\":\n            continue\n        try:\n            item[\"mesh\"] = kernel.tessellate(shape, linear_deflection=linear_deflection)\n        except Exception as exc:\n            item.update(status=\"failed\", stats=None, mesh=None, topology=[], output=None)\n            if isinstance(exc, CADException) and exc.code == \"profile_unavailable\":\n                item[\"status\"] = \"blocked\"\n            item[\"error\"] = (\n                exc.to_dict()\n                if isinstance(exc, CADException)\n                else {\n                    \"code\": \"kernel_error\",\n                    \"message\": f\"{feature_id}: {type(exc).__name__}: {exc}\",\n                }\n            )\n            shapes.pop(feature_id, None)\n            outputs.pop(feature_id, None)\n            # The admitted arc graph has only this profile and at most one\n            # direct solid. Walk topological insertion order so no provisional\n            # descendant remains usable after an upstream display failure.\n            for descendant in results.values():\n                blocked_by = [\n                    target\n                    for target in descendant[\"inputs\"].values()\n                    if results[target][\"status\"] != \"ok\"\n                ]\n                if blocked_by:\n                    descendant.update(\n                        status=\"blocked\",\n                        stats=None,\n                        mesh=None,\n                        topology=[],\n                        output=None,\n                        resolved_params={},\n                        error={\n                            \"code\": \"upstream_failed\",\n                            \"message\": f\"Waiting for valid input: {', '.join(blocked_by)}.\",\n                        },\n                    )\n                    shapes.pop(descendant[\"id\"], None)\n                    outputs.pop(descendant[\"id\"], None)\n\n\n"
+        },
+        {
+          "new_start": 8349,
+          "new_end": 8606,
+          "original": "    validate_result_version(document, result_version)\n",
+          "replacement": "    is_v3 = type(result_version) is int and result_version == 3\n    if is_v3:\n        from .result_policy_v3 import validate_replay_v3\n\n        validate_replay_v3(document, result_version)\n    else:\n        validate_result_version(document, result_version)\n"
+        },
+        {
+          "new_start": 9074,
+          "new_end": 9106,
+          "original": "",
+          "replacement": "    deferred_sector_meshes = []\n"
+        },
+        {
+          "new_start": 9500,
+          "new_end": 9541,
+          "original": "        if result_version == 2:\n",
+          "replacement": "        if result_version == 2 or is_v3:\n"
+        },
+        {
+          "new_start": 10655,
+          "new_end": 10872,
+          "original": "                evaluated = _sketch_output(feature, values, kernel, item)\n",
+          "replacement": "                evaluated = (\n                    _sketch_output_v3(feature, values, kernel, item)\n                    if is_v3\n                    else _sketch_output(feature, values, kernel, item)\n                )\n"
+        },
+        {
+          "new_start": 11172,
+          "new_end": 11561,
+          "original": "                shape = kernel.extrude(inputs[\"profile\"], params[\"length\"])\n",
+          "replacement": "                shape = (\n                    _extrude_output_v3(\n                        outputs[feature.inputs[\"profile\"]],\n                        inputs[\"profile\"],\n                        params[\"length\"],\n                        kernel,\n                    )\n                    if is_v3\n                    else kernel.extrude(inputs[\"profile\"], params[\"length\"])\n                )\n"
+        },
+        {
+          "new_start": 12449,
+          "new_end": 12928,
+          "original": "            item[\"mesh\"] = kernel.tessellate(shape, linear_deflection=linear_deflection)\n",
+          "replacement": "            if is_v3 and (\n                (feature.kind == \"sketch_constrained\" and _is_curve_loop_output(evaluated))\n                or (\n                    feature.kind == \"extrude\"\n                    and _is_curve_loop_output(outputs[feature.inputs[\"profile\"]])\n                )\n            ):\n                deferred_sector_meshes.append((feature.id, shape))\n            else:\n                item[\"mesh\"] = kernel.tessellate(shape, linear_deflection=linear_deflection)\n"
+        },
+        {
+          "new_start": 13257,
+          "new_end": 13302,
+          "original": "            if result_version == 2:\n",
+          "replacement": "            if result_version == 2 or is_v3:\n"
+        },
+        {
+          "new_start": 13856,
+          "new_end": 14021,
+          "original": "",
+          "replacement": "    if deferred_sector_meshes:\n        _finalize_sector_meshes_v3(\n            deferred_sector_meshes, kernel, linear_deflection, results, shapes, outputs\n        )\n"
+        },
+        {
+          "new_start": 14416,
+          "new_end": 14503,
+          "original": "    if result_version == 2:\n        result[\"result_version\"] = 2\n",
+          "replacement": "    if result_version == 2 or is_v3:\n        result[\"result_version\"] = result_version\n"
+        }
+      ]
+    },
+    "src/mechanical_cad/sidecar.py": {
+      "original_bytes": 9317,
+      "original_sha256": "89df8ba643ee609a51f2c237889699c59cdf3f18bad12626866b6addbd0f89ac",
+      "reviewed_bytes": 10301,
+      "reviewed_sha256": "ae6180f7ff15efe54cb8a50db1e80349a58f940f7a00d3aa51dcd0c1e12d91e3",
+      "hunks": [
+        {
+          "new_start": 1673,
+          "new_end": 2362,
+          "original": "",
+          "replacement": "    if (\n        \"kind\" not in request\n        and type(request.get(\"result_version\")) is int\n        and request[\"result_version\"] == 3\n    ):\n        action = request.get(\"action\", \"replay\")\n        if type(action) is not str or action not in {\"solve_sketch\", \"replay\"} or \"kind\" in request:\n            raise CADException(\n                \"invalid_action\", \"Result 3 supports only Solve Sketch and Part replay.\"\n            )\n        from .sketch_protocol_v3 import process_replay_request_v3, process_sketch_request_v3\n\n        return (\n            process_sketch_request_v3(request)\n            if action == \"solve_sketch\"\n            else process_replay_request_v3(request)\n        )\n"
+        },
+        {
+          "new_start": 8276,
+          "new_end": 8513,
+          "original": "                if needs_numeric_policy(request):\n",
+          "replacement": "                if (\n                    \"kind\" not in request\n                    and type(request.get(\"result_version\")) is int\n                    and request[\"result_version\"] == 3\n                ) or needs_numeric_policy(request):\n"
+        },
+        {
+          "new_start": 9905,
+          "new_end": 10099,
+          "original": "        if request[\"result_version\"] == 2:\n            response[\"result_version\"] = 2\n",
+          "replacement": "        if request[\"result_version\"] == 2 or (\n            request[\"result_version\"] == 3 and \"kind\" not in request\n        ):\n            response[\"result_version\"] = request[\"result_version\"]\n"
+        }
+      ]
+    },
+    "src/mechanical_cad/backend_contract.py": {
+      "original_bytes": 17872,
+      "original_sha256": "93bf12633f57f21f0e94ba2f3ee10ed612c226dc168a00783a204e4a135ad22c",
+      "reviewed_bytes": 19017,
+      "reviewed_sha256": "d24a47c78d8e78b6ead6961d99bdba48719f48163c812066d9e2b4a19aa503ad",
+      "hunks": [
+        {
+          "new_start": 79,
+          "new_end": 398,
+          "original": "This module never imports an operation service or a native adapter. Its only\nsolver import is the pure, guard-owning module, after bounded request policy has\nselected a potentially solving action. Capabilities describe implementations,\nnot dependency availability, package versions, or authentication.\n",
+          "replacement": "This module never imports a native adapter. The legacy path imports only the\npure solver guard owner; exact result-3 solve/replay also checks the accepted\npure service marker owners. Imports follow bounded request policy. Capabilities\ndescribe implementations, not dependency availability, versions, or authentication.\n"
+        },
+        {
+          "new_start": 14830,
+          "new_end": 15736,
+          "original": "",
+          "replacement": "    if (\n        type(operation.get(\"result_version\")) is int\n        and operation[\"result_version\"] == 3\n        and operation.get(\"action\", \"replay\") in {\"solve_sketch\", \"replay\"}\n    ):\n        for name, capability in (\n            (\"profile_adapter_v3\", \"mcad.sketch-arcs/1\"),\n            (\"sketch_service_v3\", \"mcad.solve-result/3\"),\n            (\"sketch_protocol_v3\", \"mcad.part-result/3\"),\n        ):\n            try:\n                module = importlib.import_module(f\".{name}\", __package__)\n                origin = Path(_path(getattr(module, \"__file__\", None)))\n            except Exception:\n                continue\n            if origin != core / f\"{name}.py\":\n                mismatch = True\n                continue\n            marker = getattr(module, \"BACKEND_CAPABILITIES\", None)\n            if type(marker) is frozenset and capability in marker:\n                supported.add(capability)\n"
+        },
+        {
+          "new_start": 16613,
+          "new_end": 16691,
+          "original": "    \"\"\"Match the old main() common failure, including its ordinary v2 stamp.\"\"\"\n",
+          "replacement": "    \"\"\"Match main() common failure, retaining exact explicit v2/v3 stamps.\"\"\"\n"
+        },
+        {
+          "new_start": 17019,
+          "new_end": 17138,
+          "original": "        if operation[\"result_version\"] == 2:\n            response[\"result_version\"] = 2\n",
+          "replacement": "        if operation[\"result_version\"] in (2, 3):\n            response[\"result_version\"] = operation[\"result_version\"]\n"
+        },
+        {
+          "new_start": 18361,
+          "new_end": 18554,
+          "original": "",
+          "replacement": "        elif (\n            type(prepared.operation.get(\"result_version\")) is int\n            and prepared.operation[\"result_version\"] == 3\n        ):\n            response[\"result_version\"] = 3\n"
+        }
+      ]
+    }
+  }
+}

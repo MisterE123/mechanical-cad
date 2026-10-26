@@ -1,0 +1,2574 @@
+{
+  "commit": "30383a1bbaeae02b447bab2c37290d5f3927df8c",
+  "file_count": 640,
+  "files": {
+    "blender_addon/mechanical_cad_blender/__init__.py": {
+      "bytes": 1649,
+      "sha256": "c92e1556baa2401e52a1336df060f17bf927eaf8a7d35d7734c8f28021de1f80"
+    },
+    "blender_addon/mechanical_cad_blender/assembly_bridge.py": {
+      "bytes": 19166,
+      "sha256": "a464afa6b5a368b33c47ec8416965e39788243d522ddfa9dd96f7b9b868180b9"
+    },
+    "blender_addon/mechanical_cad_blender/assembly_display.py": {
+      "bytes": 21908,
+      "sha256": "641dc7f2cd823ac34a7583a76d35f861df4bb563a719cd95c717282ddb83f8d6"
+    },
+    "blender_addon/mechanical_cad_blender/assembly_edit.py": {
+      "bytes": 9957,
+      "sha256": "7c8dfe7d516d8fccbe7ef5eaa7337fe2b114ae0f7a2ef60c171f7ec5331d586a"
+    },
+    "blender_addon/mechanical_cad_blender/assembly_files.py": {
+      "bytes": 3755,
+      "sha256": "72a21642bad9b949624101a5e7677181d58a3729861695520dd6dc37ce2eec84"
+    },
+    "blender_addon/mechanical_cad_blender/assembly_job_ui.py": {
+      "bytes": 9842,
+      "sha256": "7c74b054ee2a752c7aa1e7130b54b9f541c6120cfc9bb8c674f736cdb209a806"
+    },
+    "blender_addon/mechanical_cad_blender/assembly_operator_helpers.py": {
+      "bytes": 10111,
+      "sha256": "ab78c6b5da71d08bed289fc9f44229c4dc62f8527e352b9ecdb5bc23329b3307"
+    },
+    "blender_addon/mechanical_cad_blender/assembly_operators.py": {
+      "bytes": 19466,
+      "sha256": "c8b0baff650888721f7179fcc0dc1e168616e58ea81a83f5e39f6d1a1fb76ade"
+    },
+    "blender_addon/mechanical_cad_blender/assembly_pending.py": {
+      "bytes": 17782,
+      "sha256": "d71c309c616f93d4603a2f3f0e0aaf75c35ac9945de6e03cf1ac43f1ac0bd89b"
+    },
+    "blender_addon/mechanical_cad_blender/assembly_properties.py": {
+      "bytes": 1362,
+      "sha256": "5c3c7cd84eae0860d58e12dd075b61da94d8b9611d1209fb5a1db32234f612f2"
+    },
+    "blender_addon/mechanical_cad_blender/assembly_state.py": {
+      "bytes": 31328,
+      "sha256": "fa334184aacc604ce52d2caa15fdd986b7f68034a948351e3e2b225305c03440"
+    },
+    "blender_addon/mechanical_cad_blender/assembly_ui.py": {
+      "bytes": 12167,
+      "sha256": "bffbba803f165429e0b3f21eb07585d4347b37804b388199222718fbeee86539"
+    },
+    "blender_addon/mechanical_cad_blender/assembly_validation_common.py": {
+      "bytes": 4836,
+      "sha256": "8d1779544e5ef25a446d33e1b36bad654fef07960b646320bc0933196e386349"
+    },
+    "blender_addon/mechanical_cad_blender/assembly_validation_evidence.py": {
+      "bytes": 9602,
+      "sha256": "0afff0166eb02a4675a194e530516912346a2aaa9634dd09c003adecb6ffaeb8"
+    },
+    "blender_addon/mechanical_cad_blender/assembly_validation_model.py": {
+      "bytes": 22857,
+      "sha256": "138716801be2e29ea0bb7d25c7eafc9d1c292822356aada9e3b9b29f45a3285f"
+    },
+    "blender_addon/mechanical_cad_blender/assembly_verification_ui.py": {
+      "bytes": 22077,
+      "sha256": "e78c9b24c80f680aa0ab69bf0d76af4ebfc678d79e1019f88ea971156d2ae176"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/INTEGRATION.md": {
+      "bytes": 641,
+      "sha256": "e3421ef556f2c3328c23e6c2c12d0337adefd336b3f0f644b58d6dd60d4b9a99"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/NOTICE.txt": {
+      "bytes": 1345,
+      "sha256": "b1c8186d56129307d47d9c5c3639ece67fc0f82f118990b85d0b53fbf92a1d3f"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/README.md": {
+      "bytes": 5568,
+      "sha256": "6710b76b2a3eb27f99ee3d2215cd3f479cbf625536bcdce2e4f7c65e2fa41261"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/SHA256SUMS.txt": {
+      "bytes": 49966,
+      "sha256": "50229d740b13668a9a7793835a4d49e385fb2654d945eb3ce14d984a94f80228"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/catalog.json": {
+      "bytes": 9492,
+      "sha256": "096bc8a95d03e86dc3b8325e53f5122f6b7b62a0f734ab447f6192098033ee0d"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/licenses/Apache-2.0.txt": {
+      "bytes": 11358,
+      "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/licenses/GPL-3.0-or-later.txt": {
+      "bytes": 35149,
+      "sha256": "3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/manifest.json": {
+      "bytes": 71830,
+      "sha256": "50dbc999ed2b4f519f11744a86588dda270ec74688ac202862dffed41f5eea70"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/original_geometry.json": {
+      "bytes": 3222,
+      "sha256": "09d4fa3dfc5e5a4c06289c005677f8643332865cbf309161f0631388dd5a242c"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/16/assembly_component.png": {
+      "bytes": 416,
+      "sha256": "2a75b0bc69dd000d4a75417f018aadfd9d88aac055e922f6da956292cae50f25"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/16/assembly_instance.png": {
+      "bytes": 436,
+      "sha256": "eb3410a50e1f8eeb328d29676046a2032c0bc4b961136e80d33fd9fdab252028"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/16/constraint_coincident.png": {
+      "bytes": 337,
+      "sha256": "e9508db1b7afe84042e4f30770611f461327da3fb227618aae7a233bdd4f0155"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/16/constraint_equal.png": {
+      "bytes": 200,
+      "sha256": "752865664320356bd5d99cdf7ae5207a0a5e32624b364d841c5bf3659f277700"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/16/constraint_fixed.png": {
+      "bytes": 362,
+      "sha256": "a311818a4c3f270b276e373044b190cea0d1436fd11f8b0d553b9143c36fce36"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/16/constraint_horizontal.png": {
+      "bytes": 214,
+      "sha256": "8364eb9631f9d87c09d62c2a200a53d36fcb745264094e6567a4b97bdc0aa189"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/16/constraint_parallel.png": {
+      "bytes": 356,
+      "sha256": "4ba85d2d0e9a3c286e52ff90940115c753578ad07d81bb75f0fec175c409126a"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/16/constraint_perpendicular.png": {
+      "bytes": 272,
+      "sha256": "e905d9056c1414f60cddb1c7fd4af4529e7d531bdca1653f9714b001dca2c932"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/16/constraint_tangent.png": {
+      "bytes": 345,
+      "sha256": "e9217bfcdaea175f6df692b8a2ab78f5af5ec823cd3ddb45faa24842be70d54c"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/16/constraint_vertical.png": {
+      "bytes": 257,
+      "sha256": "512cfe7976edf0f2781d4083008886584c80d81b6715cbcbda5f327b69c534f2"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/16/doc_demo.png": {
+      "bytes": 376,
+      "sha256": "fbfcc58e4ffe1097bd95a867ad4776888867ac028378f6e188a51cb53d038bb2"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/16/doc_load.png": {
+      "bytes": 374,
+      "sha256": "93c2f65ae06d38b31a13b5e9061c9eff11406b717b894ae897e8e61e7cf7bfdb"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/16/doc_new.png": {
+      "bytes": 381,
+      "sha256": "7b0160d4739dba611d3fee775d1e6b6cb8b7bfc2f962ecca21f582d68e2170d3"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/16/doc_save.png": {
+      "bytes": 373,
+      "sha256": "b81773d071097a816ecbefc1b4da20fa8df9273b7e5d617186d3309ebe1e43e3"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/16/edit_apply.png": {
+      "bytes": 277,
+      "sha256": "f4c4519ce41368a6a28d8c2bfe8957164586c84cb3a33250df107ee60a134a19"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/16/edit_cancel.png": {
+      "bytes": 307,
+      "sha256": "861d9caeb978281f35338c155cd2c8af98971ab464c974802a95eea31626fe9f"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/16/feature_cut.png": {
+      "bytes": 376,
+      "sha256": "83ab97c4ec968da830caff80091286818aefad08bcb6a487c56773f3dbb4f7be"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/16/feature_extrude.png": {
+      "bytes": 423,
+      "sha256": "5635aa986d786b2bfcce2e1640e7765c4635a3205bed0155f4a370e82c75a891"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/16/file_export.png": {
+      "bytes": 341,
+      "sha256": "d9f03791d213a862fe0895ba22c9fe950ef5a1750c3219fac4f2026325fa8637"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/16/file_export_step.png": {
+      "bytes": 420,
+      "sha256": "84e80862f31bd52362eddbb624032112b8e17c41de6fde74dedc7f31553315c4"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/16/file_export_stl.png": {
+      "bytes": 439,
+      "sha256": "c58c7d34369f8a979216fc7f9d4c6e937df71111cdc137e9214965540d8b2c9f"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/16/help_open.png": {
+      "bytes": 430,
+      "sha256": "526ba4add7f607e088dfaaacdb94f7e91917c0e3c11ff95af065fbdd896750f8"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/16/history_inspect.png": {
+      "bytes": 454,
+      "sha256": "34dd18d205842135c3e132114e1ec7f12046149b46f86e7f03c6f25836495a51"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/16/history_next.png": {
+      "bytes": 253,
+      "sha256": "d17f612c10e5b696a79390d2ddc27e24d9113219892e53f5232c7db9a0aa7c0f"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/16/history_previous.png": {
+      "bytes": 235,
+      "sha256": "cb27874ea7c79b42d3f44ce02f369f9448cb6ce8cf8cfff95ca6a1b294331027"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/16/history_regenerate.png": {
+      "bytes": 384,
+      "sha256": "a8cfe8b92708acd3c0d1104decb022b347f0868afd8eb1a0c863fd437b42fa33"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/16/mate_fixed.png": {
+      "bytes": 415,
+      "sha256": "a522eb85f7b453f17b59a89671b17738a0c8d7c1b0b84476011918eded3bbe51"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/16/mate_revolute.png": {
+      "bytes": 420,
+      "sha256": "618a0b5684ff2f255be0f79e5c80d6fe4591a27adda5ce578c1671f611b4545c"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/16/mate_slider.png": {
+      "bytes": 362,
+      "sha256": "c91faddce3b1907ef8ae0d5407699f1ba0968a4dcff256b3e060b2fd1af6e814"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/16/session_redo.png": {
+      "bytes": 344,
+      "sha256": "c07bd3562bd1f07f9ab4d592c737f28475c113b7657222039a28a77e1537fb4e"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/16/session_undo.png": {
+      "bytes": 347,
+      "sha256": "2b487b664b0b85dd635bb6abdd8f063eca8a3cbc4775d2e30b77ff7c3b57e555"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/16/setup_settings.png": {
+      "bytes": 405,
+      "sha256": "9869266d018f9ee01e339a35b5a127fe4ebccbcb28727624a4485e77f38a1c51"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/16/sketch_circle.png": {
+      "bytes": 404,
+      "sha256": "4523f6a59c2e14044e4bcf96b035deeca7d3012857c6b2112f7703e295e2e9c0"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/16/sketch_dimension.png": {
+      "bytes": 363,
+      "sha256": "0687c12de43d6bd9c15c9df459a0ca35a684d20b615bbade12042976e37913e1"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/16/sketch_line.png": {
+      "bytes": 298,
+      "sha256": "f5ae57cc6b0d6edd209dd7d80856f771deda09d73e8c44906e01618498338766"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/16/sketch_rectangle.png": {
+      "bytes": 312,
+      "sha256": "bd8b6d542721cc943e5adadcd65f531c9e28726ff17598c83faa4a1c7f3783fb"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/16/status_failure.png": {
+      "bytes": 407,
+      "sha256": "9cef36ed60af152edb93023609b3bd9d6401220e3e30bd56d6b6ea8af6ccb19d"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/16/status_success.png": {
+      "bytes": 422,
+      "sha256": "b79ba50bff90a5ec224ff1af8d92cb11fb3028264025e849f7476561e246a0e8"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/16/status_warning.png": {
+      "bytes": 386,
+      "sha256": "c00ab466cc58dc8e996bf653d4e15412298a96de6961c305c07f78b32258d45d"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/16/verify_clearance.png": {
+      "bytes": 359,
+      "sha256": "5a6c7dfdaa4497ae9f6bfe2ef17e0165d50f01c91be8475eac13705ab2684857"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/16/verify_interference.png": {
+      "bytes": 372,
+      "sha256": "7f5708750b582051657d6244155936a8d0e63af0046ac384589c7dac4c2b7140"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/16/verify_model.png": {
+      "bytes": 375,
+      "sha256": "5a845e100cc17e8d026416e264763bb33aaf89156ca727b9a4eb371187319210"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/16/view_focus.png": {
+      "bytes": 402,
+      "sha256": "5eed65810c8e83cf9b497d20e1caacfd761c275559f77db6f67c21c1c89619ac"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/16/view_whole_scene.png": {
+      "bytes": 394,
+      "sha256": "233f4a57919838fcae5f251ecdad20c58a11222d2948618c2d274438b04175c1"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/24/assembly_component.png": {
+      "bytes": 649,
+      "sha256": "e88044f5ead8b3e5a958d6525dcec8647006e9a8105e482c8617ccd4bc10afa0"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/24/assembly_instance.png": {
+      "bytes": 662,
+      "sha256": "7c4e32b432b52eae7936d7637ea6f7959c3fbe9a347ba210811ddf30b585fd92"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/24/constraint_coincident.png": {
+      "bytes": 495,
+      "sha256": "42d721804d54e6374b5bd12669312143afccf3447744c13d4bd35c65b6cf4463"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/24/constraint_equal.png": {
+      "bytes": 204,
+      "sha256": "2a18f0250caf09239c147352bf999606a1bee83060b54545ec273c6be93e5045"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/24/constraint_fixed.png": {
+      "bytes": 494,
+      "sha256": "b2c06c917ef1cbf79e42bee90f657e1695d35feae1315635332c31ae74627286"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/24/constraint_horizontal.png": {
+      "bytes": 266,
+      "sha256": "edd99c6c17f858efc54e1b67fdd5ea92112824ea0261aab90e1930b198f01ba1"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/24/constraint_parallel.png": {
+      "bytes": 379,
+      "sha256": "abffa9ed3c93e245f92cbe07497390ba819a9d63bd245f4cd86538b98cb3cf56"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/24/constraint_perpendicular.png": {
+      "bytes": 356,
+      "sha256": "24e4ef088635a981c9f36cbfc774f9302236b2eaed6618be235f00d83425bcb7"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/24/constraint_tangent.png": {
+      "bytes": 551,
+      "sha256": "b3d6587315c9e90ba3aaf882d6d8506c7d4589bcf3acba5659f3d7d12e308942"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/24/constraint_vertical.png": {
+      "bytes": 307,
+      "sha256": "af7249072e8908b0ed3a6367905b84ec2e0f7d8035a953a86d4c208b7f2d314e"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/24/doc_demo.png": {
+      "bytes": 570,
+      "sha256": "0174271cae68bb50be52fb8858424928d3c3475eb12da4100a0eef3dacf04ecd"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/24/doc_load.png": {
+      "bytes": 556,
+      "sha256": "2f561fbbaa7810e1ca7d91ddd737ec64cad7571c6a134695834ddd1aa991faff"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/24/doc_new.png": {
+      "bytes": 531,
+      "sha256": "1428e1c24c8abd2df8cac368d1fee811d157b391f9ed57118e0c5478148fb323"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/24/doc_save.png": {
+      "bytes": 569,
+      "sha256": "9a52dab25cedf8032d468f49d76a8594354bbd80c7404756367d8c48a227b81f"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/24/edit_apply.png": {
+      "bytes": 365,
+      "sha256": "cd038f2c37c57efbf1c1a7662ae3112c0d7a5ba6e604871a5764529cb2a70747"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/24/edit_cancel.png": {
+      "bytes": 468,
+      "sha256": "466eb0a5947f69b53619fef64450660e052fec81c125b0cf4d6b856f82e9fbce"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/24/feature_cut.png": {
+      "bytes": 520,
+      "sha256": "3e70dee078de63b80dcb965591d701cb08c494726fee297a9f94023f5383c48a"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/24/feature_extrude.png": {
+      "bytes": 598,
+      "sha256": "e3dddb47097be6093a6ab33fe9d2ae7e44a3261db7a60887ce74bf8337eb10f2"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/24/file_export.png": {
+      "bytes": 529,
+      "sha256": "7dd21d225b9118898eac776b7b1036b19be4d7d4077612cacbe15b6cd25c39b4"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/24/file_export_step.png": {
+      "bytes": 609,
+      "sha256": "60b1efebf98c5664cdad3e57c08d674c136e818b3e12f888a912a1547f8610bb"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/24/file_export_stl.png": {
+      "bytes": 682,
+      "sha256": "a252c7674e9bcb95a50c7ca79a116cf5a959149bbad366460282da5ae6add94f"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/24/help_open.png": {
+      "bytes": 731,
+      "sha256": "b306c0e659081de4b29c2125ba112ca8fcc0c6382a201202bdfc927856d8e247"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/24/history_inspect.png": {
+      "bytes": 726,
+      "sha256": "fb8d880bcede4245b1ee12bdf013a8f7e93e00a1acc6043816ed8c3d14a82f2a"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/24/history_next.png": {
+      "bytes": 329,
+      "sha256": "74f7d35c9d903ae2ea11e498232431e62a021ae2a4a884d03e1961950b88545e"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/24/history_previous.png": {
+      "bytes": 310,
+      "sha256": "38e26dcce0bb905c2689bb9be0f4f563da674d771efb88fcfcb8874151d93f13"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/24/history_regenerate.png": {
+      "bytes": 616,
+      "sha256": "ebb95d93e2c5848cf326595bf5b694d5cc4d35213dd5f5fc0ac1c24174a79923"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/24/mate_fixed.png": {
+      "bytes": 588,
+      "sha256": "aaf575ce521c6dd34c5421d239488702b19b25866af8150df3218d541155b1ee"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/24/mate_revolute.png": {
+      "bytes": 652,
+      "sha256": "f7e7c849a1e9a2fd834eb6e99ca6d7f99312e4bb1e0297cfab964b2682a5126c"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/24/mate_slider.png": {
+      "bytes": 533,
+      "sha256": "9ee14c6fa905318e64f91b5a8a10655c4585373fc5c498298ccaf07ce1961db1"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/24/session_redo.png": {
+      "bytes": 515,
+      "sha256": "3d86037ea46d611d24ec2eaebbe22b4bd4c5a9f6b0d1e9183391857ce8cc23eb"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/24/session_undo.png": {
+      "bytes": 531,
+      "sha256": "01f5e59c214a494c43db41b1a35baf70d4ef6998331aa454e6313c6f275664c2"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/24/setup_settings.png": {
+      "bytes": 751,
+      "sha256": "501093f043aea65cb439bc7ee04bf7a05fafbe66815aad0db0dd04fb3c822846"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/24/sketch_circle.png": {
+      "bytes": 624,
+      "sha256": "8898def90c52f839b0144fc1965556efc4b11057dd7d2cfaf7449770766c52bb"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/24/sketch_dimension.png": {
+      "bytes": 499,
+      "sha256": "bb2e1ea7e722bb86f9c80c08fb5f894c9b5bb1e0cbee5fca1034ffcea3d9c57a"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/24/sketch_line.png": {
+      "bytes": 391,
+      "sha256": "4e1c06c04e35ceba88ef6a6ec737cce58719ab196b0e8475b996110654256f11"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/24/sketch_rectangle.png": {
+      "bytes": 407,
+      "sha256": "a91c58525625388d125d8b2a005fc6bbfb240fe6f99dfeade7ad5e454333f950"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/24/status_failure.png": {
+      "bytes": 672,
+      "sha256": "b912f9879afc6ab153af109be85c8f21c856e3a24e3fcdd42f21010f8b2e6f45"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/24/status_success.png": {
+      "bytes": 726,
+      "sha256": "b9a1dddbd1c18caa41ea952ad0e1812134f5d604befdf1b3588a92ffe327340d"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/24/status_warning.png": {
+      "bytes": 611,
+      "sha256": "7541badf71b1f9d3e056253c8420568829c0c9366eb8acc234ad99eee3e6011a"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/24/verify_clearance.png": {
+      "bytes": 546,
+      "sha256": "f4bb0c65bd80b84588cc6ace9138a8aa1bbdaacd025d270b6c3492c06d839ab5"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/24/verify_interference.png": {
+      "bytes": 529,
+      "sha256": "5fac617f3aa29fb5067dd24671f40f5d680498cb2de34fd81aed17ac3f911f20"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/24/verify_model.png": {
+      "bytes": 564,
+      "sha256": "9810338a5f51ada6b724bc8ee0c102990f4ed905b94f5b7a239687f59abe7f4e"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/24/view_focus.png": {
+      "bytes": 626,
+      "sha256": "f746f67185839908d33b6dc9d833a2f222cd61532bccf7d3d984c8806bf02c5d"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/24/view_whole_scene.png": {
+      "bytes": 543,
+      "sha256": "62e01390394b54f2426e6fd5f7f6296a9c4e3d1d431badcd8b75c0199662fe36"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/32/assembly_component.png": {
+      "bytes": 894,
+      "sha256": "20392f722ef6265c9c37347862c36224e3923006345a7398b62cbf10602703da"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/32/assembly_instance.png": {
+      "bytes": 1033,
+      "sha256": "5121f89dc411292be67b40442efa2779539896c3339a18d08451ea69bff2b1d0"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/32/constraint_coincident.png": {
+      "bytes": 678,
+      "sha256": "6b78d904c4ac4455438c0979cad0b17dbc3e2208dd6c698d934890ef32d15a42"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/32/constraint_equal.png": {
+      "bytes": 248,
+      "sha256": "e8f723edb5738e09e969f7b1ca21ab814d1b5f97d13a2fb14bc8ecb93ff54c19"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/32/constraint_fixed.png": {
+      "bytes": 660,
+      "sha256": "24d7a5c6f1518a9bfaac1bd88b908f7a6d190fc7493c64852c1cc70afc8ae2a9"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/32/constraint_horizontal.png": {
+      "bytes": 331,
+      "sha256": "6394b05c17c54d643ef0db46a83d6377d428a9b4699b7a9e968b634541ad2fdd"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/32/constraint_parallel.png": {
+      "bytes": 560,
+      "sha256": "dcd8ac260c1a93945779fcf91c49b2ad51681a72d9c431abbabd03ce9aa64903"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/32/constraint_perpendicular.png": {
+      "bytes": 381,
+      "sha256": "4874d7a57307fedebce268779283d5b7698e2dd61d6ef7606c4aa075b6f09fd9"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/32/constraint_tangent.png": {
+      "bytes": 755,
+      "sha256": "8dda5c1f07e4cb316048e7d939df1cd3c168b0bf5c34c8a5810b05806c7696d6"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/32/constraint_vertical.png": {
+      "bytes": 410,
+      "sha256": "dc67e40d70850191d851102f1914c47825584fef94bace15a95afc5de7b1dd64"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/32/doc_demo.png": {
+      "bytes": 735,
+      "sha256": "ff67fe151b80a9479d8f6007346f98d9383e48c4072d469e480a6637636aa806"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/32/doc_load.png": {
+      "bytes": 702,
+      "sha256": "dec632ecd9e50a6a76e2091f2903c347d7ed5b400520e8d5d550ecda3995b340"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/32/doc_new.png": {
+      "bytes": 690,
+      "sha256": "a7399800025f739b7f4b95c6a7f5529a6630fb8ffa61cf3eb80237316ed107cf"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/32/doc_save.png": {
+      "bytes": 714,
+      "sha256": "7f1dfcada7f41cbd37fc8d12d02c94952f68040ca99dfe89fdd60ac10da66c6c"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/32/edit_apply.png": {
+      "bytes": 407,
+      "sha256": "c341a6d648f160f6832dab0bc95b3687da3b02acbaf23eed1f6cdbd3997b041e"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/32/edit_cancel.png": {
+      "bytes": 480,
+      "sha256": "1649a514936ca19def0810ecbd0e771cc4b8a5900dc4807ae04d282f446dd420"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/32/feature_cut.png": {
+      "bytes": 702,
+      "sha256": "b6ecfbfde9b46f8f9fc732f443bf648551c859c974472c340605250a16240916"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/32/feature_extrude.png": {
+      "bytes": 891,
+      "sha256": "5725b1bdc98ccee87140d465ba6e7f56b9177bd2e72acac1b5555ab86dad6e7c"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/32/file_export.png": {
+      "bytes": 676,
+      "sha256": "234a750aa8e0174715523540335fbdbbcd2f8637473546aff31518866d0c151e"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/32/file_export_step.png": {
+      "bytes": 873,
+      "sha256": "1b90fce84f81bfcbfa658e9f9a652e3eff67a3ad9e4113c15657c795e27d6d02"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/32/file_export_stl.png": {
+      "bytes": 1000,
+      "sha256": "401662cc3e261ce8e63f1aafb6619c136a8e5b2f1b4e9091feee76842569136c"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/32/help_open.png": {
+      "bytes": 1066,
+      "sha256": "864cb2a9920095c92677d7084436d193a07909bf93f3fcbcdbd5ab4a3b124ec2"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/32/history_inspect.png": {
+      "bytes": 988,
+      "sha256": "6ee0de8ea6502f46a8da40eb29dec237d2e726a0cb08b54a24bb2f01ad76934b"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/32/history_next.png": {
+      "bytes": 382,
+      "sha256": "7d4d9311544b0f026e3c44e3a3a336b8b283b5f9de33875299c474f168b73f76"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/32/history_previous.png": {
+      "bytes": 370,
+      "sha256": "65da59c9153c50d1daf0fe17e3c0f7ce4de52fd700f405e316b7c86ffa94fcf1"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/32/history_regenerate.png": {
+      "bytes": 813,
+      "sha256": "ec8f277286f98ce5dd70d4cea561f66ba9b3eca415b8477b08949c134d25550f"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/32/mate_fixed.png": {
+      "bytes": 828,
+      "sha256": "44710355bced13bf4471b67ceb501f6a64303959f9e37ab18b1046923ae780e6"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/32/mate_revolute.png": {
+      "bytes": 988,
+      "sha256": "67d813cd303bfbdc67ded6cc38636ff1961df4aeea5ac63a7076b789de6f1d52"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/32/mate_slider.png": {
+      "bytes": 695,
+      "sha256": "7fbb81b7c24a241e613e5c51c078c87210d7bc95e81d04ed8e7bb7d146d87573"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/32/session_redo.png": {
+      "bytes": 639,
+      "sha256": "84db138bd9824ec579f71c92a4fa06005eb6de634b5eca11292da11bc6efe239"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/32/session_undo.png": {
+      "bytes": 589,
+      "sha256": "798686d93f1c3dcc80ed411bac886766647d218f6f1e1d00c3efb9671cf54e2b"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/32/setup_settings.png": {
+      "bytes": 1099,
+      "sha256": "1c7aad9253d8a0abe0848c48ef3d517f882cfebb11c0904919f220b91bffec7f"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/32/sketch_circle.png": {
+      "bytes": 930,
+      "sha256": "406543fba97f2f8ea459abad3bb6ec47c2e5687f9efb782f0eaad18725fe2af1"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/32/sketch_dimension.png": {
+      "bytes": 705,
+      "sha256": "f45411006fc2a03e481643816d82ed1a8582861dce2ce76669e5d9d94dff074a"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/32/sketch_line.png": {
+      "bytes": 575,
+      "sha256": "cdae0465583f6ff76f11751c75cfa8ed5aa572a4a56c2f59c9c8db8a9b0cc887"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/32/sketch_rectangle.png": {
+      "bytes": 449,
+      "sha256": "9e519ca01f268dd913e569ae82ddfb5e9ca2390dbc424ed2b5851275f96f2817"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/32/status_failure.png": {
+      "bytes": 945,
+      "sha256": "2b146afbf38a7fdb8c5cf78c442aaac31d6bb09aa58a74d75de6fd7b525d4040"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/32/status_success.png": {
+      "bytes": 990,
+      "sha256": "6525a5f88583c40c090d3cb723d8aed667e601adf124348b906752fef1e1c36b"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/32/status_warning.png": {
+      "bytes": 865,
+      "sha256": "d9d078f795425e5eec41d839ad071131300d45e7cb08e10de383e8226b0c0ba3"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/32/verify_clearance.png": {
+      "bytes": 719,
+      "sha256": "0a32e915fc5a4922a98fb6cd3b1d7c6a783d110d5a026941a25d10612058883c"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/32/verify_interference.png": {
+      "bytes": 633,
+      "sha256": "686b0bf9a3247bd9df9a2e4e9821c4ad6c03310bf928ec1f03d5ff1116fa3dc3"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/32/verify_model.png": {
+      "bytes": 728,
+      "sha256": "80e09fa97ce2aa73aa50fde60b960eceb3d6f8ceff04b7d4f2bd50dd05c84fd9"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/32/view_focus.png": {
+      "bytes": 897,
+      "sha256": "d2ce627913b94c5943b1788d64d745042b8b0a2c300f956a2ad803115068973e"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/32/view_whole_scene.png": {
+      "bytes": 876,
+      "sha256": "560281a3d8af056325c65dda2271b252679ae08e5ed641548f6c116cf379f0fc"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/48/assembly_component.png": {
+      "bytes": 1356,
+      "sha256": "bc9ab6c7c7e73d8aafc063d389f8a0c7e7bb5e3b141f9b3c5d624d96a57a639d"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/48/assembly_instance.png": {
+      "bytes": 1547,
+      "sha256": "f078eacdf43d07f86eb08a57964e60938729e33203d55d5fffda370564b4db83"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/48/constraint_coincident.png": {
+      "bytes": 1034,
+      "sha256": "1eb36a8095306c758a7f443146a83ac483b75ecdb94bb8079d0577456911d962"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/48/constraint_equal.png": {
+      "bytes": 278,
+      "sha256": "39615a18a9ad8f7ed059429b826ebd78f7a5d7c75f409a17623a6f214bf6f76a"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/48/constraint_fixed.png": {
+      "bytes": 911,
+      "sha256": "a0c171bb5300d3ff9fde03dcdd994d39a36c8ec24e22dc23817e6ae66a5b0dd0"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/48/constraint_horizontal.png": {
+      "bytes": 438,
+      "sha256": "764aac968048e626b4def1e0615752718c7e6e8d54208ae59935eaec9e8628c5"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/48/constraint_parallel.png": {
+      "bytes": 664,
+      "sha256": "dc139497b9c951941fb453e01e9aeaafed1a01f6a4d6e8701f8af09abc69d23f"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/48/constraint_perpendicular.png": {
+      "bytes": 490,
+      "sha256": "b454e87998446fb56c47544e2f7febb2c3c975efbe305f08fd708a187a2920f2"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/48/constraint_tangent.png": {
+      "bytes": 1152,
+      "sha256": "643ee1473310942cc157b531ead3d112d97ae8eec58de8113cbc4e7f89c1fe8b"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/48/constraint_vertical.png": {
+      "bytes": 495,
+      "sha256": "c8773cce6024ad30c97fea80690ac8f8a5f66fbf7ea92420ee28b83f0045bbef"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/48/doc_demo.png": {
+      "bytes": 936,
+      "sha256": "64251f633d1622b466fde2c5dc1b345d632015fa7bff1efafa68d38fdcbd5d3c"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/48/doc_load.png": {
+      "bytes": 1057,
+      "sha256": "a86d29a80e1b3d94a1def75532ba0bae7d0cc0a7a6c5e7689fdc4eba4a209a37"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/48/doc_new.png": {
+      "bytes": 902,
+      "sha256": "53bb4c6a351419ed097a0df05a07cef2a27dccb8ee5c48c1e8e7b0871015a815"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/48/doc_save.png": {
+      "bytes": 1048,
+      "sha256": "9df88cb9d17316d07557bd45bec2d4a225e2e0ff24d7ab758ebe77534e264498"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/48/edit_apply.png": {
+      "bytes": 597,
+      "sha256": "abd1b7ad16a802990ce539dfe447c2ffb9a505a769168623687512918ef937ee"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/48/edit_cancel.png": {
+      "bytes": 742,
+      "sha256": "1155a2c509fc08ca83f811ac2fea727700063a6c8972f5e0cde04d5100153609"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/48/feature_cut.png": {
+      "bytes": 938,
+      "sha256": "c6643f643b68b97cda0fed1a684bc63be8e364043e023a597a1280c5d8d23eb0"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/48/feature_extrude.png": {
+      "bytes": 1221,
+      "sha256": "dd9eeba7c214e3a0d5f12b5da5126465de0444ab997dae2482ea9741589da0ef"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/48/file_export.png": {
+      "bytes": 984,
+      "sha256": "59fd9ed559e34bc3621640503236f32050ef8d002ac3abb974885daaaa509f33"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/48/file_export_step.png": {
+      "bytes": 1233,
+      "sha256": "783dd910de28c593932ce2352fbcf7710d7272de60f876834132687be4fb79ce"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/48/file_export_stl.png": {
+      "bytes": 1543,
+      "sha256": "6cf5e26c4d6a4dd8f7ff881a10e6104db24c8e71975ad8aec0153f9f47a684d9"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/48/help_open.png": {
+      "bytes": 1859,
+      "sha256": "6bb10ba90e2ae49fcd22a8b0a7a017e43a94ef51005d0b59cfa40598d63b75ba"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/48/history_inspect.png": {
+      "bytes": 1643,
+      "sha256": "469c7136dc852daf5e37838a5dcf39e598735e022ccccbb77964deca0e418d99"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/48/history_next.png": {
+      "bytes": 515,
+      "sha256": "e8706769a9ed0493f961df142ce1061d33ac45a352a6611b53c43ff7f59bfcc4"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/48/history_previous.png": {
+      "bytes": 523,
+      "sha256": "3e1ec0b01bb0b7cf83cf7bdfff42c4811f0a96dd26fd1ca7cd5cceac9cba2df5"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/48/history_regenerate.png": {
+      "bytes": 1351,
+      "sha256": "f44309b8d6e052c309535301b0c30f5a795e64ca580f9b10635eed64c1b2439e"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/48/mate_fixed.png": {
+      "bytes": 1103,
+      "sha256": "9ae751d3ae62ca118572e8163f175b44617a9ebb74a02fc3d2d6dd2a1656ff6d"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/48/mate_revolute.png": {
+      "bytes": 1614,
+      "sha256": "226ce11a13e123aed3232de5be368417b26f6c8d6c2ae42ce6926591af42c780"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/48/mate_slider.png": {
+      "bytes": 948,
+      "sha256": "aab3c49719b3993c03ec46cee8e1d33b5776b09a2e1ddc321ad14ad830440beb"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/48/session_redo.png": {
+      "bytes": 988,
+      "sha256": "56adaaa9e1ca9d29340582fc9a267b5423a77450dce373dd1e44cb0a8ece2b2b"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/48/session_undo.png": {
+      "bytes": 972,
+      "sha256": "f5e8aad9e6b66671fec3cdd2c91865099208da9d4e2de72ddd1e9eb67d075221"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/48/setup_settings.png": {
+      "bytes": 1982,
+      "sha256": "1a899dbae1c24c00d95cb705714b64cd3538e358db9d2945a28d77ad8713c06e"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/48/sketch_circle.png": {
+      "bytes": 1507,
+      "sha256": "f965dd1f3c9fc7acc90b31c2cf6c5d4a8651e57e5f4ebb0a62e9b71ea7ce9edf"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/48/sketch_dimension.png": {
+      "bytes": 944,
+      "sha256": "5b37d32806d8e95e8811be5e2a0cc07e189152c5302bb1249b87a06407eb18ef"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/48/sketch_line.png": {
+      "bytes": 771,
+      "sha256": "5837f1a429fb5caff32f84a95a29ffb227ca2e61655bc739f17edc50ba7c1a1a"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/48/sketch_rectangle.png": {
+      "bytes": 627,
+      "sha256": "58e13d0fccfdffd3fd022864bec79b52b4f89e84776b757e0e5d5a65a2d06536"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/48/status_failure.png": {
+      "bytes": 1619,
+      "sha256": "df64e65a6fac6789826a309edfa6d6fe00b1b52c297c423fcf334eaf1c9268d7"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/48/status_success.png": {
+      "bytes": 1751,
+      "sha256": "6547a521d571054224d02560c1d344b84610335a914eed9b61a286b242e11beb"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/48/status_warning.png": {
+      "bytes": 1260,
+      "sha256": "668e57ac8a51d36b71189a6c2814ecff3f0f433c7451bb9a1665c79d2f0f2c19"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/48/verify_clearance.png": {
+      "bytes": 993,
+      "sha256": "bbf3be49baa59ac911fbceedfd070cc8bb6109889d754bab6f5328bdd357368f"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/48/verify_interference.png": {
+      "bytes": 804,
+      "sha256": "2b7289d5080cefec3902a3c4150c59c64e0d25815f52db57e741a768facb3486"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/48/verify_model.png": {
+      "bytes": 954,
+      "sha256": "4c25e3fe6cb82738cc574f30fbe7d0d131966ecb1a88862e58cb305c75c8f217"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/48/view_focus.png": {
+      "bytes": 1393,
+      "sha256": "2c553e443a386c51424efefdb3ffbb7c2b51e820048f73fab3b91dd1545448d0"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/48/view_whole_scene.png": {
+      "bytes": 887,
+      "sha256": "5b54eb26eae8494af5e7c0a65e796e49ba0cd5058fcf3e7e44009894e1d305a3"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/64/assembly_component.png": {
+      "bytes": 1754,
+      "sha256": "ceabeef4a81f751aa2c5956a4daf28f503f6b7e783edb5bb4a38231c4421ced9"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/64/assembly_instance.png": {
+      "bytes": 2168,
+      "sha256": "e82a495250e569df57d8791b3bd715ea34d6bcd26995b84bba0a2e21e9a9f062"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/64/constraint_coincident.png": {
+      "bytes": 1405,
+      "sha256": "818e0c370f65cf6195ae1ecf85b4772365ca995975039f564ad18cc7dc35e277"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/64/constraint_equal.png": {
+      "bytes": 507,
+      "sha256": "02a7cad1c1324d44317a4eb51b55d15da05760a5eaa07ed036073bb8af567ee9"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/64/constraint_fixed.png": {
+      "bytes": 1297,
+      "sha256": "bca451899bbc987712333634c90c4ce5305f5e771a36513ffc422500aaed5a11"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/64/constraint_horizontal.png": {
+      "bytes": 653,
+      "sha256": "3ffc9dac7054cb2f74421b057f5a2b78ead6d40d97f64c28510ea6b52f136cc6"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/64/constraint_parallel.png": {
+      "bytes": 955,
+      "sha256": "e985793eb19597f18ca21f3b5e8e3572309f5adbdeec2960c521818ffc74302c"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/64/constraint_perpendicular.png": {
+      "bytes": 691,
+      "sha256": "3ebdca58187ed2436ba7c7d458bbf00593e3d9b300085385ab375577945c337a"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/64/constraint_tangent.png": {
+      "bytes": 1669,
+      "sha256": "cffe12cbba59a39c2ec3d23d843faa5f51ef731a6442980cb27baffe2cbec609"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/64/constraint_vertical.png": {
+      "bytes": 684,
+      "sha256": "3d739968ee231b42b4a7e3671bc87d420f9ed4c25edd386f3815480fbad234e8"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/64/doc_demo.png": {
+      "bytes": 1360,
+      "sha256": "6e22a65fc002f397867d6e9e6f94c93324878c2d513ab27875c7ef3686261789"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/64/doc_load.png": {
+      "bytes": 1389,
+      "sha256": "18960813f34ab151d1c1444d51361f8c53ecbc516e1cf30c8594f20396d04b6a"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/64/doc_new.png": {
+      "bytes": 1097,
+      "sha256": "d9693a4ef7a301db543c77a1f088aed7296917b8928fd84883a01c788b129fc3"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/64/doc_save.png": {
+      "bytes": 1254,
+      "sha256": "069c3be48ecf129769e9a6fb79bb033fe6c1799d2916c48a3945c0477f8c37c0"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/64/edit_apply.png": {
+      "bytes": 721,
+      "sha256": "773a7367d2658e2dd557651bf724cdad6d9bbb7916ee0c6c6386895cc688d852"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/64/edit_cancel.png": {
+      "bytes": 917,
+      "sha256": "0df95deda6a66bb02677b08cce5487bed1442cdcabcd01c0f709a4909c0b195c"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/64/feature_cut.png": {
+      "bytes": 1400,
+      "sha256": "bcf58cea3a2c7d3f54fb62c8350245eda9f244e406376607bcfcbae34b0c1962"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/64/feature_extrude.png": {
+      "bytes": 1743,
+      "sha256": "92190f598007ce7fe00aaf92ff93d33a1d33ccca79c0a192e3a7a2337375d756"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/64/file_export.png": {
+      "bytes": 1236,
+      "sha256": "af21a950d025136c58969ed91c4384c7a36518b52276d8b1384511b61e41d985"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/64/file_export_step.png": {
+      "bytes": 1705,
+      "sha256": "c5890d33ebf9bfe212c3946a877e66634ad923d645e8410ff20c11f40f0313ac"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/64/file_export_stl.png": {
+      "bytes": 2133,
+      "sha256": "77427ff869d5b609abad3133203679076f1094d2d15ab76fe05b0a48bf60010e"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/64/help_open.png": {
+      "bytes": 2629,
+      "sha256": "effa236226710c3ac5889e593422b2763673a5d5f68f9c54c9863e4bfe686826"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/64/history_inspect.png": {
+      "bytes": 2230,
+      "sha256": "6d5d4bcfb1549e6ff382b2f72dc4e263683b67888e5cef03e77f5a9369965623"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/64/history_next.png": {
+      "bytes": 618,
+      "sha256": "d237c62196352b71dfd68ced567b1c16e36b4bbeb921d14da3abab7e357b9379"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/64/history_previous.png": {
+      "bytes": 612,
+      "sha256": "7db35e9a48735007ebfffdaa0902b17055d23bb41198057b4c5fed84ae194c42"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/64/history_regenerate.png": {
+      "bytes": 1866,
+      "sha256": "7934f9b41b256627fce3e9718c710c25f9337aeed062c5c5e27cf420411e7f0c"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/64/mate_fixed.png": {
+      "bytes": 1774,
+      "sha256": "18f771162f1e36bef061c20c4b3920149e17c3751bde99c18b640ccc2013fced"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/64/mate_revolute.png": {
+      "bytes": 2284,
+      "sha256": "14bd2ea6da6ddf16ad2aca72c332771a14f46afebc0d6bfb0a2c62ae90429a26"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/64/mate_slider.png": {
+      "bytes": 1288,
+      "sha256": "ec245914cae8084532923ccbe890507fe9da741ac6f10c08ae0768e5c3dffa36"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/64/session_redo.png": {
+      "bytes": 1266,
+      "sha256": "1c906447aed44ab66d6ef2349a25c0f12d6561f6cbc849fa815e3b59278a2d01"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/64/session_undo.png": {
+      "bytes": 1230,
+      "sha256": "9630e5b69c2e6214dc552b9245536960bb3854f423e23413caccff87c1608b4c"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/64/setup_settings.png": {
+      "bytes": 2819,
+      "sha256": "160ce048d4d181a73c4b8e266b7afab30ef59b103f43ff59039ac73d28eef319"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/64/sketch_circle.png": {
+      "bytes": 2029,
+      "sha256": "32169f6a348792c871a8c33e3b474375c07a59a90749e83dd854a0d40ae776b0"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/64/sketch_dimension.png": {
+      "bytes": 1401,
+      "sha256": "58d2faa6463fd70c51533d098f9abde1ec10c6f3dc5c9b717c300d2371df83c4"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/64/sketch_line.png": {
+      "bytes": 1112,
+      "sha256": "c2682c94729bbcdebaeb916452e62a42a75796a20013637e2b14166d384d30eb"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/64/sketch_rectangle.png": {
+      "bytes": 877,
+      "sha256": "29b4314a8e023814ac220f2900bb216a73cfd2a88d66b5c5b731c9f2ed42589d"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/64/status_failure.png": {
+      "bytes": 2226,
+      "sha256": "5c6b7bfba1017764d6c577e89dc53bb8e61a03593fe62bf62265dd258d1098a2"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/64/status_success.png": {
+      "bytes": 2343,
+      "sha256": "d01ff04379910885066363943a1a8aad9601f6c1cac5bf74897e5eed604da49f"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/64/status_warning.png": {
+      "bytes": 1747,
+      "sha256": "137956cf85f433d789dcb4b0046f7c3a36a1a54a5e1c74c2a9a59bbe67aabd65"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/64/verify_clearance.png": {
+      "bytes": 1460,
+      "sha256": "edad1ee7128aaefb829102f443de234c9b0370b0c5ed9253c48eaa138b91af80"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/64/verify_interference.png": {
+      "bytes": 1038,
+      "sha256": "1e1f2053d55f94f09a781a88b0ede9fea43547ccc6e015f8a06bafa0b4e24a4b"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/64/verify_model.png": {
+      "bytes": 1332,
+      "sha256": "a7327e48129b5965f4eb0511a32f8aa7a5ea9daaa4f3d0f400b184fb8f935796"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/64/view_focus.png": {
+      "bytes": 1886,
+      "sha256": "1779f500abbb2a34d7ed072198109869df0d14f5e0c33fc04f923d73b492b24a"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/dark/64/view_whole_scene.png": {
+      "bytes": 1560,
+      "sha256": "79ccd4c286f9721f4c919825c8304c0d0e93129797f3025e158e00da8538f8dc"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/16/assembly_component.png": {
+      "bytes": 416,
+      "sha256": "2794790a61e3746d5dbde1bbcdf5e4516883a010db6f999cb6ded5471a146ac6"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/16/assembly_instance.png": {
+      "bytes": 437,
+      "sha256": "a59674cc099e760cacc76cdbd620175d5b49a36d061b682facfcf5d8a342e5f3"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/16/constraint_coincident.png": {
+      "bytes": 337,
+      "sha256": "bd0f8e126f02d61ba0c190f1a707685c3b7627b23d8e78d512d352876bc52cea"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/16/constraint_equal.png": {
+      "bytes": 199,
+      "sha256": "c4c1790fcb14d47765af4e0a9f4d67a48dd449dccf618e0fc929434b483236a2"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/16/constraint_fixed.png": {
+      "bytes": 362,
+      "sha256": "ae6a5813a9ac41fb6bd046e4922b9774cc1c0801550b1a39d03e4f7bfe6e7289"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/16/constraint_horizontal.png": {
+      "bytes": 213,
+      "sha256": "833e32f19ea7524d84233d4650b766b43a94b95e02f6c450849409770bef127e"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/16/constraint_parallel.png": {
+      "bytes": 355,
+      "sha256": "8173a66024beb2ed0151638b73529330e7a0a5fe6d97a3f1017979d176c6bb59"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/16/constraint_perpendicular.png": {
+      "bytes": 280,
+      "sha256": "1ebbedfb609802ea51d69269148dde0406da8402f19f99a7de8f4564ad7dd583"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/16/constraint_tangent.png": {
+      "bytes": 345,
+      "sha256": "9940dfbf39c86467c307e53336d3190dd80664c942b8438a145210642f65b9b8"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/16/constraint_vertical.png": {
+      "bytes": 243,
+      "sha256": "36511fe24cf92912e49fa9be543937f4e83f17dda77aa3cf14d3a0c039083e0a"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/16/doc_demo.png": {
+      "bytes": 377,
+      "sha256": "30a101b7d26242fdfaf3ccd1a1e2bdbf8d2abbe41528361e54e5837cbdb35f1b"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/16/doc_load.png": {
+      "bytes": 377,
+      "sha256": "4d0d114cbf73b34223cecac213af6cf4d38638615b4986f4b7081f3dcebac427"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/16/doc_new.png": {
+      "bytes": 381,
+      "sha256": "e6cf8b3ad85b7e2096353f35be23a4409b4623cbc4fd8aea7407091822cc8b98"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/16/doc_save.png": {
+      "bytes": 372,
+      "sha256": "bd8a1dce22edb03ca772b934546b41f0572750aff411da375357f16bf74a5a41"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/16/edit_apply.png": {
+      "bytes": 276,
+      "sha256": "c71960fa44b63e332ebc65a2381f39a8f66e2f584dbcf3943426bc5722b0fc56"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/16/edit_cancel.png": {
+      "bytes": 307,
+      "sha256": "6ede15e00a84844b2678b39d2855cbbf59c5b9e79846e30bedbb98a0ba5e02d6"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/16/feature_cut.png": {
+      "bytes": 377,
+      "sha256": "121d9405d8ba7b26e475d42e3bacb88d7613935bc7b68a696cf20e90ba7a5cdf"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/16/feature_extrude.png": {
+      "bytes": 421,
+      "sha256": "24880d0fcc3b0c702217449d7c83b0ace14031362da421cf5083a8589d0b585d"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/16/file_export.png": {
+      "bytes": 344,
+      "sha256": "89eeb366c26d9d9f95978c208f42b4fdbdc459b0ae76f68a708ea43cf20201c2"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/16/file_export_step.png": {
+      "bytes": 419,
+      "sha256": "ae488f82480a5121eca4b3f3734aa43f567b545bd7f5540be1352bb7a908c431"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/16/file_export_stl.png": {
+      "bytes": 437,
+      "sha256": "795b0f4175438865d32c9dbba47c86d259e5361e9433d306b24d5c4218513e9e"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/16/help_open.png": {
+      "bytes": 436,
+      "sha256": "41f0ea160ea178b9d129c811054f0551bd87a0ae4fb33177089f2f46080f01db"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/16/history_inspect.png": {
+      "bytes": 450,
+      "sha256": "d37a794a3f0bd626ab2b8bd0f2a67a62cec9cdaaa1feb6bc7aecadd1fb09f066"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/16/history_next.png": {
+      "bytes": 252,
+      "sha256": "a6e6608ca90d0866a95adf7d87af5a7b6d1885fc31324721e703e32fa535b171"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/16/history_previous.png": {
+      "bytes": 235,
+      "sha256": "252192e3630387e93314e1b86816a285070ba0d5a2d189d04c4c308be3e3edfa"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/16/history_regenerate.png": {
+      "bytes": 391,
+      "sha256": "c986841cdeee486039a7e4396a3aeb18a3302b57d2bd72c63cfbfe30b4cd899e"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/16/mate_fixed.png": {
+      "bytes": 413,
+      "sha256": "c4ca968366ce7d70f126b1394606e095e085894140c1c963cb39724f1918a4bb"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/16/mate_revolute.png": {
+      "bytes": 419,
+      "sha256": "0ed0483f5bb05095078caf28488a4cf69fc6c56d18c72325fc9820bc3fcb93af"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/16/mate_slider.png": {
+      "bytes": 362,
+      "sha256": "a3383732f9eb65764b23e5d4ec1200cf4c90c0c0257f39f1728c697aa2a0a7d6"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/16/session_redo.png": {
+      "bytes": 347,
+      "sha256": "1756e0197bb69051bcc9be1b9b6e1671c30846396d239b310c2401331019edc0"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/16/session_undo.png": {
+      "bytes": 343,
+      "sha256": "b24bfeb13bac385371db82591a81a9f84d84256d4380a61fe465ef346a12750a"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/16/setup_settings.png": {
+      "bytes": 404,
+      "sha256": "81eb115b05581509c66596c7682728e8c2e7f6c30ba27ceab325b3f31926434e"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/16/sketch_circle.png": {
+      "bytes": 405,
+      "sha256": "712a0ac71397a4ce5ddae281953947d67c5d9fc78cc267dbc19b50a324878d75"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/16/sketch_dimension.png": {
+      "bytes": 363,
+      "sha256": "8efc861facca68d848f5cc1f29c71befb5a15c8c2285b28cc8e3a3cf64d1da07"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/16/sketch_line.png": {
+      "bytes": 299,
+      "sha256": "5e430fddf049c620837964637b2e6049e8e01daa78b2cd93dc5ddea1c6ed34aa"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/16/sketch_rectangle.png": {
+      "bytes": 313,
+      "sha256": "244b98815c353f369d0c4955c5b561d64198c237c799a258efe9d025ea6fa3a1"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/16/status_failure.png": {
+      "bytes": 413,
+      "sha256": "903347d752ddd442c8deee09ce7eaabee6df1a710e1d4e9b08e7b9371849529f"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/16/status_success.png": {
+      "bytes": 432,
+      "sha256": "595716a241d94851c8416c5a61aa50a6e2cf9282d21abea72b7f052a624f2b09"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/16/status_warning.png": {
+      "bytes": 386,
+      "sha256": "8dc82e87aa00bbea872284f726eba616b44665f4784853fed5cd819490c7b7e2"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/16/verify_clearance.png": {
+      "bytes": 358,
+      "sha256": "37471cbab7892b05b296f50a13701b111d656001e185217c338cd6af16e4de8d"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/16/verify_interference.png": {
+      "bytes": 370,
+      "sha256": "9e61ef877138e09d16fc6addec703d36effa522f20be511b3c371a1c4263a118"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/16/verify_model.png": {
+      "bytes": 374,
+      "sha256": "3a1695ef89e040bbdfff721d963cc7fc340f3d9bbead59e031fbb4c20f0c6ea1"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/16/view_focus.png": {
+      "bytes": 404,
+      "sha256": "acc2eeb5b4067e87c58e0c34fab31089a1a2c81e532f6f2478e8a66a2b589f0e"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/16/view_whole_scene.png": {
+      "bytes": 394,
+      "sha256": "2eadc4f95dd39eb1d9c3c876e1f12d0b5a57a015289a0492587f3105e3417de6"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/24/assembly_component.png": {
+      "bytes": 666,
+      "sha256": "f488497da14d11c7424f710cfcf58fac0e7fb987b285a46ca6bf94f3b9da8d0b"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/24/assembly_instance.png": {
+      "bytes": 656,
+      "sha256": "e816366a66de7cc270e740df17dc1f257f69686376722ed80ed1797d950c3cac"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/24/constraint_coincident.png": {
+      "bytes": 503,
+      "sha256": "55ce710e72b3f549a9adb829ab26248ac8e68c4cab3ce67365b93bc325604364"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/24/constraint_equal.png": {
+      "bytes": 206,
+      "sha256": "3d97f946cdd317bd8fe63a70676256b92ea9f44998998988e5542e66cd1d1a5d"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/24/constraint_fixed.png": {
+      "bytes": 496,
+      "sha256": "d0a465f968701dcd70a0b09717c10fa8b8c55365bf93003df269075305bc4521"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/24/constraint_horizontal.png": {
+      "bytes": 266,
+      "sha256": "501e14bd510f6c3991d22a5bfdeb17f32e0789f4ddbea311958fb47aeb50b834"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/24/constraint_parallel.png": {
+      "bytes": 379,
+      "sha256": "c9daaba4bca4c7e430564a8e4ea23363d4c1dd650af9e86999919c76f1c6e8b9"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/24/constraint_perpendicular.png": {
+      "bytes": 354,
+      "sha256": "c17fb17fab7fe2ac846ac6a8b64e4e3f04873b691044b6946012360195d8d4b9"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/24/constraint_tangent.png": {
+      "bytes": 557,
+      "sha256": "aaa2bd6e4900ec24dcc614b14cb0b388a76db6a9e51281c2962b53d09fb91d6a"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/24/constraint_vertical.png": {
+      "bytes": 306,
+      "sha256": "4b3926eb9de0b5cece9820eecd2260a520fae87dcfca5f3c32b3404ee5b766e8"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/24/doc_demo.png": {
+      "bytes": 569,
+      "sha256": "6c36468eb68263510234c9ab613d63d619b784ad46b876ab929d40b9755e72d7"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/24/doc_load.png": {
+      "bytes": 562,
+      "sha256": "966c5781344cde60e9b369f3aadea9956718bca53e081d5b52ccb30df2e9f20e"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/24/doc_new.png": {
+      "bytes": 532,
+      "sha256": "f742d7ab204363720ce305c63aab6c16468b4361729fd7743d64ff111a6f310c"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/24/doc_save.png": {
+      "bytes": 571,
+      "sha256": "3e5b0742a05afbc5c4cf79906cbefffdf98cac83f215a5a73a77d7ee6a43f498"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/24/edit_apply.png": {
+      "bytes": 366,
+      "sha256": "8277a111955c01327b25689f4f60a4bf311a04155d44d3f79ea19baffe360f04"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/24/edit_cancel.png": {
+      "bytes": 469,
+      "sha256": "9c04e07e44512c8aae16191d71ceaad0083c1bba961f733de283f953e529fe4e"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/24/feature_cut.png": {
+      "bytes": 520,
+      "sha256": "5c32d66cafa2b4617a7a5b0032c71a25dd8b0630ff7f5d2726540a7781a82b33"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/24/feature_extrude.png": {
+      "bytes": 599,
+      "sha256": "bb0cdf71f5d0cf9b4a26c341c3f94879bd12f78b106e331cc1f01e25042d012a"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/24/file_export.png": {
+      "bytes": 529,
+      "sha256": "891c0e607764c0f4b18fd44b914658cebf643120a970b0ae746c5e7371c08a48"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/24/file_export_step.png": {
+      "bytes": 598,
+      "sha256": "00f4ffdd333692e7e59f9c26d8a71ffe1a1d4453dc527a1c880dbf341216ecb3"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/24/file_export_stl.png": {
+      "bytes": 681,
+      "sha256": "34aedde89d77fb034d3954ed472222c803f2a0c1af70da6d2fd03d6803f20699"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/24/help_open.png": {
+      "bytes": 750,
+      "sha256": "982474344b00375e41c3ec90296dc460ed26d6ea69110ad2158498a6cc6e6e47"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/24/history_inspect.png": {
+      "bytes": 723,
+      "sha256": "07a700958e0483c3f003701ac88b639f4cdcb0d20a5d0e34d739b8f0bae472c5"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/24/history_next.png": {
+      "bytes": 331,
+      "sha256": "99565d9eb958423062b24c1b6912fc45fe411050b45c5aebdb790adf26fb6f65"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/24/history_previous.png": {
+      "bytes": 310,
+      "sha256": "ef6c868d50cc8a2524fa242be8456f1a3c85480558005d5674f6fd0dce566597"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/24/history_regenerate.png": {
+      "bytes": 610,
+      "sha256": "c7d203ab4298c1f097a09f4f4239e8d4c7512c05a295a4d5133d9f4f6846e023"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/24/mate_fixed.png": {
+      "bytes": 591,
+      "sha256": "d496d81ca9760a17faf45a4380f615a22b54e3c8355ca9cdff2da959becd0663"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/24/mate_revolute.png": {
+      "bytes": 675,
+      "sha256": "dc6abce3e0e4909c317adc1758f1514165a525a0683982f146028fa1ea4cf293"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/24/mate_slider.png": {
+      "bytes": 533,
+      "sha256": "1f2ec1ed5375f11bd8ee2e8ce3a5410de45c9752725fb08d2b2cfff4a01000a3"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/24/session_redo.png": {
+      "bytes": 524,
+      "sha256": "84932e7defa96cf7cec0b7c973fffccbb68abd538eebcc7500fca517a96acdcb"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/24/session_undo.png": {
+      "bytes": 536,
+      "sha256": "7b1d0f694734dd1e63fb8bbb9e8be2694a3b675f4db9c9d0a0999a8aa860343c"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/24/setup_settings.png": {
+      "bytes": 750,
+      "sha256": "15001393cd6f32f3d76356d181987214d1adf9c7497804f0ad57bcfbce0cda3a"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/24/sketch_circle.png": {
+      "bytes": 631,
+      "sha256": "3de95862c75da94aff1c1ffbfd75ac1ebd92e33e8e7d76254a9feaa8dcff09c5"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/24/sketch_dimension.png": {
+      "bytes": 496,
+      "sha256": "69371220abd96ebeafd4dea8bac58a80191919f44ca9321c93b8a185b5b8ab3d"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/24/sketch_line.png": {
+      "bytes": 388,
+      "sha256": "4f3878ae2548dab66a92a9adc1d1f736bc95e7e9f7c339f2364889e5fb47b169"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/24/sketch_rectangle.png": {
+      "bytes": 417,
+      "sha256": "f50ffc2b118d0a97c917d27d9b87afd80ee07d722ae611e5a09d628e362875b7"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/24/status_failure.png": {
+      "bytes": 666,
+      "sha256": "ab1e5806437fbca800a663a8df60882f6a429a9303979dc1f2595ab1e10fe50c"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/24/status_success.png": {
+      "bytes": 742,
+      "sha256": "3d01da5f043afbb57f52e80db10252aa7915e9b66bff03af8363b1493f03e1a7"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/24/status_warning.png": {
+      "bytes": 606,
+      "sha256": "c61f9c4576ba4c8c7f9e0cc6fe5390c935153cf1ee248263e9a33f0d8979d305"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/24/verify_clearance.png": {
+      "bytes": 543,
+      "sha256": "1c06925d961b629ef213de77355f80c42cf2f00cf17089c321b0ce10e04aeb42"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/24/verify_interference.png": {
+      "bytes": 528,
+      "sha256": "87f5f601cd35f3090be65b64461ea07630e53049ed3af581a320ce997b5607a0"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/24/verify_model.png": {
+      "bytes": 564,
+      "sha256": "2e1d2db775fd06e628faf086a54d93a5b341d982a2d2cfd68f301759b302182e"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/24/view_focus.png": {
+      "bytes": 624,
+      "sha256": "4837290ba330389e46dba19bbd7538e25d17b661734f7a0c83698fa15d816573"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/24/view_whole_scene.png": {
+      "bytes": 537,
+      "sha256": "fb4cd00ddc02b4b31b37cab000731f0004265322496595d4fa43ed9511dd9e45"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/32/assembly_component.png": {
+      "bytes": 894,
+      "sha256": "9333e0d54f403ce530f8b81bdfa0862a2b73b925d0eb4e82e856d8c45bcc6513"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/32/assembly_instance.png": {
+      "bytes": 1025,
+      "sha256": "b04dc484750fea35d7c57347faa35a9a4b2645b2ca63d4fb990859cc7deae15a"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/32/constraint_coincident.png": {
+      "bytes": 681,
+      "sha256": "bcd5f82a346f4f7f0fd924cb2da1b722d92bfcf151bb47215b56a9c6c8e84c8b"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/32/constraint_equal.png": {
+      "bytes": 250,
+      "sha256": "095b12f3ad88d0b33173de3936f236820de86f927a3d1c3773f3e897f2d489ed"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/32/constraint_fixed.png": {
+      "bytes": 659,
+      "sha256": "a92cd90834d7728ac8b73f5ea4a16a70148fb192b127cb1dea04188567e719a3"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/32/constraint_horizontal.png": {
+      "bytes": 330,
+      "sha256": "213de1179f08d2f33dcfc8dc0fcf21a06b9664e1011b041526018562de986bc3"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/32/constraint_parallel.png": {
+      "bytes": 561,
+      "sha256": "b5931e920ad969da192c2f260a1f9076445c4def8c2dc0be86100f11134a3a27"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/32/constraint_perpendicular.png": {
+      "bytes": 381,
+      "sha256": "b5718b330b91e6718d7e73d829e80ae1e5d67234fd1e7cd9dafd9a30ed44fbdd"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/32/constraint_tangent.png": {
+      "bytes": 756,
+      "sha256": "38fb539f0f2cad27b16cb38e9be69fe338d6c5e2f9c8185897b41547fb8fbf16"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/32/constraint_vertical.png": {
+      "bytes": 418,
+      "sha256": "ec7200441e9fe843d4fcc4f598d09eb1c4075c01ca8ad972f94b487a74d26c01"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/32/doc_demo.png": {
+      "bytes": 717,
+      "sha256": "135ce6a540225c09d6e1450fd41c6e7af3d4f1aa5dd1a55134f11b31c909caad"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/32/doc_load.png": {
+      "bytes": 701,
+      "sha256": "06eb7c3b07186c569be4537dc82a8eef44318ad5b90a4ee3cbbfa6c570bdceeb"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/32/doc_new.png": {
+      "bytes": 697,
+      "sha256": "6c841704f7f26e487290ccb625f9e150b2e90c73bed91eee7ff698cc86fab25a"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/32/doc_save.png": {
+      "bytes": 706,
+      "sha256": "ca390f4917d67ea49b77dad3f2e76552d29650ac9d1e76d61a69deedf0469ec6"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/32/edit_apply.png": {
+      "bytes": 405,
+      "sha256": "532d9715a22b4237ba24fe9d83de5ec70ff2f3b9e729d0c1693fde8e66686129"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/32/edit_cancel.png": {
+      "bytes": 476,
+      "sha256": "060d65b1ecc7cee7db04830dd26107fdead64ac5bc70187b5c838d06f60f3e08"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/32/feature_cut.png": {
+      "bytes": 704,
+      "sha256": "b379346af09505e78addcfab70759d5c1c85651fe2c85e17b799fda6080f2aa6"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/32/feature_extrude.png": {
+      "bytes": 891,
+      "sha256": "ac81bb7ba73bd4b819c64ec6a215f0e9ea5ed6ccf2afc5a9591e24083670c7e3"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/32/file_export.png": {
+      "bytes": 678,
+      "sha256": "ce23993249d7346de56b54c93eef1d0da33649db7156d62d529b31a0d435a05c"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/32/file_export_step.png": {
+      "bytes": 890,
+      "sha256": "77f877819c8cdd5c9a1b6b51d0af8ac9b118a3f35671f55a94fad91aceb7230f"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/32/file_export_stl.png": {
+      "bytes": 1018,
+      "sha256": "7485560c05368f95c546ba29443c37fa578040bd2508af02c24a7beacd72ff0d"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/32/help_open.png": {
+      "bytes": 1081,
+      "sha256": "ea0f0aeafcf4f913d1dd1b0a332002a976ff088852497f237fd8b05d0e383c4e"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/32/history_inspect.png": {
+      "bytes": 995,
+      "sha256": "5a9e4a1c738b3b31262396174b6f34f25e444eed3a1016f96066439160ac8f39"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/32/history_next.png": {
+      "bytes": 382,
+      "sha256": "233dc30b6e63ee8806ce4b4024816680e377fb01f96c311dc3ea3571e9e0f361"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/32/history_previous.png": {
+      "bytes": 376,
+      "sha256": "8070808662238053a0e0ca9f82bd5e7157fc57289a4887c2b152b8a8403df724"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/32/history_regenerate.png": {
+      "bytes": 834,
+      "sha256": "1e50a734737f11795c1d8fdf3ee0622172594b0a23553b31f0aee5582d363763"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/32/mate_fixed.png": {
+      "bytes": 830,
+      "sha256": "a6afe9e604bfc523a188be58c7553d13834e7715d4822ec3bfecc352e7eed134"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/32/mate_revolute.png": {
+      "bytes": 990,
+      "sha256": "cfb1f1542dd904667e816da1b159e1d920e54301511d2663f07f10a160e7f768"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/32/mate_slider.png": {
+      "bytes": 701,
+      "sha256": "bf98cc3d22cd3b4df7ac1a374595632c18c61344a3050549f4e90237fc18821c"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/32/session_redo.png": {
+      "bytes": 638,
+      "sha256": "b85a931a518561b02ab3514e4a73d3abfe583c5a07bdb2ab63124cd9eea7fe70"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/32/session_undo.png": {
+      "bytes": 598,
+      "sha256": "6f7e404a5180e65269c2f329f32f61fdcba8e3a0a5a3ca93fba21cece3eac885"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/32/setup_settings.png": {
+      "bytes": 1104,
+      "sha256": "4134ab9a5299d8c2876ec36dd5f7764aee044ce43b9cbfa303e601b1b5deb39d"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/32/sketch_circle.png": {
+      "bytes": 931,
+      "sha256": "f33434fa81f941a6465a705b044c81483bd83fa52bd3ea785124807085066455"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/32/sketch_dimension.png": {
+      "bytes": 704,
+      "sha256": "0fc62c79ddee308b9e46e946ad335408f784c3a24ac78fc82083d36684f3948b"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/32/sketch_line.png": {
+      "bytes": 576,
+      "sha256": "0e746b8a201cb7f1f5f901709f0e3d45f615fdc93f8a6665154f538b2ff51b4e"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/32/sketch_rectangle.png": {
+      "bytes": 453,
+      "sha256": "bc61a4dba6b65929dddf4cbeb640fed465ddd279ceba73cfa0f3be4b0ac27fd0"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/32/status_failure.png": {
+      "bytes": 948,
+      "sha256": "6a289e3d70edaaeb32a6ab07a8911121bf11aeacb740587088150015caad4670"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/32/status_success.png": {
+      "bytes": 997,
+      "sha256": "a9c6c1f6ebe3b5f2d89008d78f8818e4f2efe479ca5fec5d300bd36b89a7927e"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/32/status_warning.png": {
+      "bytes": 866,
+      "sha256": "b5e69580c72e96237264ecc123aea938722b2cd12ef6ad199a2247dbebbcf0b0"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/32/verify_clearance.png": {
+      "bytes": 720,
+      "sha256": "5934b1423c2cb107ff28254c2539afebf571eb75f194739750c901e2a1516244"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/32/verify_interference.png": {
+      "bytes": 633,
+      "sha256": "6acd93e06ef4fe38cc04d26e81135da49c554ba9b1f96b0632c5e82064c877bc"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/32/verify_model.png": {
+      "bytes": 747,
+      "sha256": "3cae5a33ad9afa49128d12ef270ba6ef86186a0aabc0dd999714a7e5274607da"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/32/view_focus.png": {
+      "bytes": 896,
+      "sha256": "5bab6529da6ada1c7a4e2f4a8bded465214476eb5712bda8a655f18d3769b879"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/32/view_whole_scene.png": {
+      "bytes": 894,
+      "sha256": "3ebef48f84375cad6535f6c2a91d10fc70294bae0cee9ca32489beb8b258ee7c"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/48/assembly_component.png": {
+      "bytes": 1361,
+      "sha256": "c2ebc42f789fc75fd3c98c09c4b28e1cecadbe5aea084b3863dadf3c5a8d9157"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/48/assembly_instance.png": {
+      "bytes": 1543,
+      "sha256": "83eec81bc1c00bcf21acaa6648a3da7347d1d2941453d7fd194eda54b59bdaec"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/48/constraint_coincident.png": {
+      "bytes": 1031,
+      "sha256": "41c90f9756a9b6f9b788ba6615468ca4092f0a019a6097dd81e6880f008ad326"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/48/constraint_equal.png": {
+      "bytes": 278,
+      "sha256": "d80c38d276b2b45b825ba23f8dfccd172cbe6d7ae6edb61afbd4309b6e75a199"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/48/constraint_fixed.png": {
+      "bytes": 924,
+      "sha256": "7f47e75d59b0eb5c3855c6304a94ef4fb5b81e30dc9c0bd9ce54b2c65dbb8ce1"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/48/constraint_horizontal.png": {
+      "bytes": 439,
+      "sha256": "dfbe5d2db76c924f899015652265a5a4ac739b58aee26f336653c7004a691e9c"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/48/constraint_parallel.png": {
+      "bytes": 650,
+      "sha256": "c2a14abebcfa0346607ae04df017842f7eca78d058bfa1facbcd873d8a549abf"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/48/constraint_perpendicular.png": {
+      "bytes": 490,
+      "sha256": "0c115ff1ea15baabd9a380fbbcff02c6a5f21b6b0363734e161f1ffd2da7ac96"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/48/constraint_tangent.png": {
+      "bytes": 1163,
+      "sha256": "eabb9ba6072231cc18966dfdb93885be12918d2dc413ec7a295f7af41731a17b"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/48/constraint_vertical.png": {
+      "bytes": 495,
+      "sha256": "3ce05b1b286d20249806cfb8ef86fd511febf98dfa46a33827aa288b4a6341f1"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/48/doc_demo.png": {
+      "bytes": 936,
+      "sha256": "105bc740ba293486e6d171356a6e524245be600864b0f7d249614ff0d9d8c06a"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/48/doc_load.png": {
+      "bytes": 1056,
+      "sha256": "50d24b049a16be67a400d1e8bf9cdc78310ac1210a84c155838bf3210596e39d"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/48/doc_new.png": {
+      "bytes": 903,
+      "sha256": "84c522fa8102fa0ff16aa2e3b3a2f11c4979a2928ac574d31249487e285523b2"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/48/doc_save.png": {
+      "bytes": 1047,
+      "sha256": "363ef0c4838bb5090c351912fdc2eebcc4d9f349395852eb610b64b0a5b553d5"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/48/edit_apply.png": {
+      "bytes": 593,
+      "sha256": "0c9bc0822b215deb6a80b898edb31a2a92f67044879da618de9ba407ae071d11"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/48/edit_cancel.png": {
+      "bytes": 739,
+      "sha256": "b918d359618b2e130a21539d9718c4d5ffe86ee4e325c24ee40c5c7888c38217"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/48/feature_cut.png": {
+      "bytes": 937,
+      "sha256": "49d872a9d4af3698fbd320817b5b3af8852a6d56aad40f5a4478c10e2e02c62f"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/48/feature_extrude.png": {
+      "bytes": 1235,
+      "sha256": "0bbb2f2e347b3dcd0a85fd4cce88838184e623d327976263e31cc47a64cc0a3f"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/48/file_export.png": {
+      "bytes": 985,
+      "sha256": "9508591bafeb6c5b159c139e2d7c2cd7c782174e3696032a131e795d6c9e8f5a"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/48/file_export_step.png": {
+      "bytes": 1244,
+      "sha256": "8b29273a1c5135f2a3cbd59a1df1db002074f293c5a39cea0df5abf862009f87"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/48/file_export_stl.png": {
+      "bytes": 1542,
+      "sha256": "67e3f7a9d68dc44adfc123df510fcc5ad1f2253602bb42dbd6cf892a54cc35b5"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/48/help_open.png": {
+      "bytes": 1900,
+      "sha256": "076b8d64e9f95f0118a5621a7491ec157c24c1a372b519d66ded2c4c4f2e8057"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/48/history_inspect.png": {
+      "bytes": 1654,
+      "sha256": "3343b89aff7e0d0099692ce88515dace62f96a0fb39750f903ad6552578cec7d"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/48/history_next.png": {
+      "bytes": 518,
+      "sha256": "1a60b8d67d9e43bdb4970b52a1e69802c427c8b564b257f8b1f18eeec0366355"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/48/history_previous.png": {
+      "bytes": 525,
+      "sha256": "657d8b6d5ddd00c6ff12fa9f11e77d05c1ed58084976468838870fbf285fd77f"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/48/history_regenerate.png": {
+      "bytes": 1370,
+      "sha256": "3f9fccaaca7b6a35325926e0d02ee28997abadc53fd5a3a2b68d7e055649aadb"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/48/mate_fixed.png": {
+      "bytes": 1099,
+      "sha256": "4c786619e130b90479a95f572ba9ff2a607c501a63b6f53fac1e49af5a36662e"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/48/mate_revolute.png": {
+      "bytes": 1624,
+      "sha256": "4d13a3df57b0e39f7b0a94937e235c69c292e7c0c5f5a966b90692871df101da"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/48/mate_slider.png": {
+      "bytes": 947,
+      "sha256": "aad94c3871dd6db1a041eaf7efa24bfac390bbb694f0c2622b7c8054d71d1a43"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/48/session_redo.png": {
+      "bytes": 993,
+      "sha256": "730678a271372da67225dd8c6d4c975dd88331929619904ddb7958e1f4f99f90"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/48/session_undo.png": {
+      "bytes": 994,
+      "sha256": "07ec133cc622e5e6a02d6dddf375a8768bbf7aec176464151db6a925fefac9c2"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/48/setup_settings.png": {
+      "bytes": 1982,
+      "sha256": "ee5d744e6b18b8bf888e248f7f39ff0a66c2b894d6af7a5cc15c5df4c06d40cf"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/48/sketch_circle.png": {
+      "bytes": 1507,
+      "sha256": "58ba9d9dade18f7a56eda73309a6eb7e8e049383f8bb6b66491e92d7288894c0"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/48/sketch_dimension.png": {
+      "bytes": 945,
+      "sha256": "4e358d1aa408d225de28fbf3d6bf90131c8a3c24ccf0ef46bcc82b89269a0764"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/48/sketch_line.png": {
+      "bytes": 784,
+      "sha256": "0445df82e971ddc670c387eba4397526d349ca2f3db5428da9890c6684c20fa1"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/48/sketch_rectangle.png": {
+      "bytes": 625,
+      "sha256": "464fa7bc468af05377fd598e243bfbde91fb606d2aff74cad94fc3277218bb8d"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/48/status_failure.png": {
+      "bytes": 1652,
+      "sha256": "0b8901b31ec2d44da4a19d6a9440a880090ecb4eb95247a89b566f49621dcec6"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/48/status_success.png": {
+      "bytes": 1776,
+      "sha256": "c0969df3211b94b506fc963daf30f449db878dd3c6a62c9c6adc13cf47c2cd93"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/48/status_warning.png": {
+      "bytes": 1246,
+      "sha256": "dcf8c819ce5b8f6bf51c86b8647b72b20f66c5b8894bd55f900bee9b31c181ca"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/48/verify_clearance.png": {
+      "bytes": 992,
+      "sha256": "718a8dccdfecb86130eb377ea75fa24c9e61f6d6e1e81c090d4641ad10d489e2"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/48/verify_interference.png": {
+      "bytes": 804,
+      "sha256": "bba944458252b3df8a615c82d0fefd55e49543e75f7eb67eaebff890422dc5bc"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/48/verify_model.png": {
+      "bytes": 953,
+      "sha256": "275933de3b844910cadd4fa1d06252cc1a96205eff581b6ad2797c3c05ed94bd"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/48/view_focus.png": {
+      "bytes": 1394,
+      "sha256": "b0f0d546aeaf456765949a5ef2f676bf1f23a95f967235a985063f1924183ab8"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/48/view_whole_scene.png": {
+      "bytes": 912,
+      "sha256": "f15608b985215f5b135b67741d49ff2449351780b2d36f012aa6a750e1ddfd50"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/64/assembly_component.png": {
+      "bytes": 1761,
+      "sha256": "25ace5d00cbf04428bb0cdc06dda36d7a655670794ebba6e2ee4a759901637f7"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/64/assembly_instance.png": {
+      "bytes": 2164,
+      "sha256": "8d20a4ffea77b80151c0c882a3cab57b601e39e3e271cebcae834118cb10151f"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/64/constraint_coincident.png": {
+      "bytes": 1404,
+      "sha256": "2f2b64393a036a4a9f2fb124eefdb5f37ea0ee49b311aca3a827931bec2b06ec"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/64/constraint_equal.png": {
+      "bytes": 514,
+      "sha256": "5072ce4a6a72c2d921c4e4839e4921636a35ec8ace448a7cbab9bd1340b4b257"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/64/constraint_fixed.png": {
+      "bytes": 1303,
+      "sha256": "321d6ab2209875b1d20faf09a4bf78256df2495d2629d8fffa107a3a9bc7f88d"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/64/constraint_horizontal.png": {
+      "bytes": 654,
+      "sha256": "3dae65c55ffa1860c6e319a7b01eada4abe5098521dbaa541b9d56c44122e202"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/64/constraint_parallel.png": {
+      "bytes": 956,
+      "sha256": "faa22980301ff172206ebf3085ee077b9346b8c62159c0837854adae37b4120a"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/64/constraint_perpendicular.png": {
+      "bytes": 687,
+      "sha256": "32772fe09fea7bbe4dfde84da4b0b9e1fe7750fb14796d4cedf422e2c5b35f29"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/64/constraint_tangent.png": {
+      "bytes": 1666,
+      "sha256": "a161592b7399d7ea5f1a0fb2cb1ba1d74877bf4f4f9b07be1b5e8b99f4086bdc"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/64/constraint_vertical.png": {
+      "bytes": 682,
+      "sha256": "c84e8123ff90a7987c7ab68d43cf0fc46558557d7fc8ca5112fd5fcd59d80a70"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/64/doc_demo.png": {
+      "bytes": 1354,
+      "sha256": "ba9401906bc4d8e785d03336e0d6a52b64cb098ae67163d77df29d22c805a508"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/64/doc_load.png": {
+      "bytes": 1389,
+      "sha256": "4d95d2ce7e62606453c9d4b860832ac3166adc70064733294bd364f3c71ebcfd"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/64/doc_new.png": {
+      "bytes": 1095,
+      "sha256": "e82f2a9eac7833c935fbb672cdc8348cbbad4a7d4f6473b8d377a8640da33630"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/64/doc_save.png": {
+      "bytes": 1269,
+      "sha256": "5ecca782b472605ae2b542e02e55604a45143ee1d3a351b8c0ec482c3eba829b"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/64/edit_apply.png": {
+      "bytes": 720,
+      "sha256": "2ba9ff58ab8551269a6a5a780bcec654e12734b0497de37bb720a7acfdc938f6"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/64/edit_cancel.png": {
+      "bytes": 919,
+      "sha256": "d854dfbff5de26af2e71b3a0a14354054cff42efafd65629b302266766a2899b"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/64/feature_cut.png": {
+      "bytes": 1403,
+      "sha256": "b82092aa25924580a20ec93ecf962d322fe1129f9e45c6ab16412437b628015d"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/64/feature_extrude.png": {
+      "bytes": 1743,
+      "sha256": "65dff27c4e6312ab9e128710d21f838cb42c9d89e94ca709fe896f8be63866b0"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/64/file_export.png": {
+      "bytes": 1247,
+      "sha256": "45de4b45ae2f1ba8be9573a9bdbbde4669686c3208e3ff7205e7df02a29c432c"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/64/file_export_step.png": {
+      "bytes": 1712,
+      "sha256": "ebece3dc41feab148f73d829d42a62843794bb8abb70b53276f57ca257814938"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/64/file_export_stl.png": {
+      "bytes": 2131,
+      "sha256": "812bbe74866aeb687e2eeb52d77f706a07cd630c25770ce46f3d2d678455d640"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/64/help_open.png": {
+      "bytes": 2712,
+      "sha256": "cc50d2958ad91f05ed3d3108e4ae88f77b86aaabee72aa35ce9f9238a2f7c25c"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/64/history_inspect.png": {
+      "bytes": 2261,
+      "sha256": "d4ffda9cf2c8343bae8362fa0a9cf7e9b5f4a7bad518cc1bf6ec8dccd27c70a0"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/64/history_next.png": {
+      "bytes": 618,
+      "sha256": "1e6c74f16698bf34d7e0eeb39002f2c842802849649ab32e94c68339e27deb1f"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/64/history_previous.png": {
+      "bytes": 613,
+      "sha256": "8f72b59d010586e6c63d8ebf137655bb4d538972e974c3bd4a5604e12f0f0f49"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/64/history_regenerate.png": {
+      "bytes": 1888,
+      "sha256": "4f3cada14375e78af17746e255b0cb461afd2618c07ba409d33e40f17a1a01fa"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/64/mate_fixed.png": {
+      "bytes": 1775,
+      "sha256": "804976c35390c2fb5082b5f3c7b95e4f1d07a72335160dae0c1e65b986659ada"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/64/mate_revolute.png": {
+      "bytes": 2295,
+      "sha256": "11ae5132a3e9cb4df0829dacd4e113978013419162cf855e26c2264e3a1e54e2"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/64/mate_slider.png": {
+      "bytes": 1306,
+      "sha256": "a26042997d73bda0385680a0b0a509cd21694775b15ef6874346856355b6a91b"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/64/session_redo.png": {
+      "bytes": 1259,
+      "sha256": "5d1f360737cc23c447b0eb0c78c6fbd14b869f3983378ef68555d5bdb6a452f5"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/64/session_undo.png": {
+      "bytes": 1266,
+      "sha256": "d1a6b2aa3021c13d772b3eaac83759a26d68eec87a483f6d28e6504101b7606b"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/64/setup_settings.png": {
+      "bytes": 2828,
+      "sha256": "c0ad8375631b1332de3e09a37792dd74519b1a818e946cd0bcbd14c0e594bf2f"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/64/sketch_circle.png": {
+      "bytes": 2094,
+      "sha256": "14ca986c0ee7562b0a4c79c13578b2f8b490a17123d4432156ecbe3a0e914563"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/64/sketch_dimension.png": {
+      "bytes": 1401,
+      "sha256": "ba103326d616813efd0b742f0f775fbbda5be3a8e18f7846b75b88e0fd9b5b77"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/64/sketch_line.png": {
+      "bytes": 1125,
+      "sha256": "e47e42907a09d3c4e9e880cc9e82a31a0e870e57e35b0cce67ca7e7b0ed61591"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/64/sketch_rectangle.png": {
+      "bytes": 877,
+      "sha256": "83a0c282f29b926995636a233cd3cdc7007dd79fbc15af1bfbf19cc9994b1f82"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/64/status_failure.png": {
+      "bytes": 2339,
+      "sha256": "7833d01a144a57da3dfcfd01b3e17630b7cb6f8091a919a5cffce8544baffd05"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/64/status_success.png": {
+      "bytes": 2445,
+      "sha256": "8432163f98a58680c133d8ee4aa24bca1069ef9ba6d1a8770811a60eecfd6c0f"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/64/status_warning.png": {
+      "bytes": 1739,
+      "sha256": "c92a5d60e0174765c4ab3bf1166886f1b89f803ea53a05a9790e0eddd1e7b4fb"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/64/verify_clearance.png": {
+      "bytes": 1460,
+      "sha256": "39adc19f09450f9b051e5ab61501d90cdbf378ba871196cdb68ad826be759f6f"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/64/verify_interference.png": {
+      "bytes": 1041,
+      "sha256": "84967579ced106b9309a7082e7008cd9d5331911548ab63eb92cb663463fb007"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/64/verify_model.png": {
+      "bytes": 1352,
+      "sha256": "72901d34e06d73c8e5d00ff1df9373b713ac381d95c6bc7dc3657ea62a8af4c8"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/64/view_focus.png": {
+      "bytes": 1879,
+      "sha256": "cbeceef8ef42d90b60c5c43111dfede8f4e8e86eb73fcfaeae74a8f633e38ad4"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/png/light/64/view_whole_scene.png": {
+      "bytes": 1556,
+      "sha256": "5f6aeb08badd318812cc3802f6475210b10eec035758dc6c2a51f07b938eeeb4"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/review/contact_sheet_dark.png": {
+      "bytes": 166348,
+      "sha256": "bb2ba2585898331e85f497261c1eb07e6d5cfdbe9d7b19c66f5a99af2102ef9b"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/review/contact_sheet_light.png": {
+      "bytes": 164692,
+      "sha256": "67ca2b1c3d40960f788688c84fa79b7f2cc7f4ae003a4af962dfd99f547e13f0"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/review/validation.json": {
+      "bytes": 600,
+      "sha256": "3cd75fd50422ce1df4b2116956c99e0e16ec8b242ec8a5dc210ffd6e1f2e2107"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/svg/assembly_component.svg": {
+      "bytes": 250,
+      "sha256": "7054fdb9ade5079cb6837501d4ff5458b34543524bbbcbdc434eaa3a8109b5e8"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/svg/assembly_instance.svg": {
+      "bytes": 289,
+      "sha256": "ac1b7ec26a68cef0c1b73902d971172ec4f61b41c767cace7fc57d06a880d500"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/svg/constraint_coincident.svg": {
+      "bytes": 277,
+      "sha256": "b1f409a358fdfd1b99d97fb07149ad73ca01a01589d4b3226b9f3182683e5f77"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/svg/constraint_equal.svg": {
+      "bytes": 219,
+      "sha256": "3250cc95c6edf57b3db96880ae1ff0c903ab6bdc3b83576aaf936b95cb459570"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/svg/constraint_fixed.svg": {
+      "bytes": 275,
+      "sha256": "3bcf33326e4aa274a715b47659d1134b3f592d48705f380bdddf703de4d98473"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/svg/constraint_horizontal.svg": {
+      "bytes": 343,
+      "sha256": "e71f86848ff444193fee5a252d300c56ef031546dd92c91ce155237bf740b18d"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/svg/constraint_parallel.svg": {
+      "bytes": 224,
+      "sha256": "1b58fc5ae3b0815f1101c7aae657fa704a72fcd2c578abf68c15dfd14c79f52d"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/svg/constraint_perpendicular.svg": {
+      "bytes": 223,
+      "sha256": "d960b59905b984d2d0b9d48cfcf2988926128075c0a3c705155f1a418f28dbec"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/svg/constraint_tangent.svg": {
+      "bytes": 310,
+      "sha256": "0b22e27a795a33576b08943c489b4f6c13f8f1643ee9313133f60f88383db9a5"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/svg/constraint_vertical.svg": {
+      "bytes": 343,
+      "sha256": "5d4602329402539ad63ff4007d017c632d575695cada8ac19c9eed76d4192923"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/svg/doc_demo.svg": {
+      "bytes": 305,
+      "sha256": "6c1eb85b9f99767a3dddfdc7f23962f2a059ecb04609644c3d21b1a6c3a33777"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/svg/doc_load.svg": {
+      "bytes": 399,
+      "sha256": "75627aa3d0ffadffab19c10315a04d322744dda27df91f7170d296294b4ec2e7"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/svg/doc_new.svg": {
+      "bytes": 390,
+      "sha256": "971f356a1e26c403c7eedbd5a8e6922964c74984048ce8e19b77497c5d24945b"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/svg/doc_save.svg": {
+      "bytes": 434,
+      "sha256": "6e1e6615eba74de901c297a5c428d604d60aa3a24e34aaa3da01a227adb43f86"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/svg/edit_apply.svg": {
+      "bytes": 224,
+      "sha256": "27c3a65637826a34f6e659476f9659f71be7090bbd146b2d5c061c87d61b6bf9"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/svg/edit_cancel.svg": {
+      "bytes": 268,
+      "sha256": "b072bb7a3bb4f6f309b98c68e0e25c60fea8b4fbeae4e593a4d61b0564d1a0d0"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/svg/feature_cut.svg": {
+      "bytes": 301,
+      "sha256": "7f793513c0ed6069396d0c2c94595be00fd184b6c796de8b40b3fd81a065d687"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/svg/feature_extrude.svg": {
+      "bytes": 266,
+      "sha256": "b4aad21f9b00d84d58136271568178684bf451db7e84b79e04936999867b5ae6"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/svg/file_export.svg": {
+      "bytes": 384,
+      "sha256": "700caeb0749165b796b9c2779f6140b1812be91a1c018a5a9cfa735463e1af25"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/svg/file_export_step.svg": {
+      "bytes": 270,
+      "sha256": "0bebc216750e486b22f688e5091d637f641545d02d9d5921ecd5e9ba1b34eaa5"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/svg/file_export_stl.svg": {
+      "bytes": 284,
+      "sha256": "968c0ea19e19d9df16b4f01f824b12dd7ad46b66d76ab2ff5fe46479b868d018"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/svg/help_open.svg": {
+      "bytes": 741,
+      "sha256": "fb2bef5f6cb6b713b10de87ad513faefc522b96d3ce0720d16d2f42016aa9374"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/svg/history_inspect.svg": {
+      "bytes": 490,
+      "sha256": "1cb2e6047066ae0d5de72a379fba73377f84bdec174f805f451c78da99f81dbf"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/svg/history_next.svg": {
+      "bytes": 224,
+      "sha256": "d7bfe02467b0e8a61bac24a966f9cd9bcb7ed3a88269fa256e7ec08a30f4de3a"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/svg/history_previous.svg": {
+      "bytes": 224,
+      "sha256": "2102bdeb03a7aaab3e01dcf3aa8ec3d7b89dbef62ea817e800abe63e627653bf"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/svg/history_regenerate.svg": {
+      "bytes": 379,
+      "sha256": "6a1742c54d91257e9c424f6acefce967dc33dd0595554bbe38c88281b268f217"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/svg/mate_fixed.svg": {
+      "bytes": 394,
+      "sha256": "df75c58f33d9507539746aca21a4c5eec06cca0cefd629dcdc29a5894d26a8c2"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/svg/mate_revolute.svg": {
+      "bytes": 313,
+      "sha256": "b23e1324dd0edb33ecdd500834a48790a40afec002b018e630c2635e83d5d7ed"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/svg/mate_slider.svg": {
+      "bytes": 279,
+      "sha256": "e47ca40e934dd0cf65bb127ee2184e7ffaf8f6b0b48c3f3ec3787db070bebf02"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/svg/session_redo.svg": {
+      "bytes": 333,
+      "sha256": "8664e4e14baba8140f155bc2fc929929f77b28eaf39e99fd6f5121c4604685de"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/svg/session_undo.svg": {
+      "bytes": 332,
+      "sha256": "8866628917ef58548971fad701ed67f2e851fd4e77b70b36bd681daa2c2b18fa"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/svg/setup_settings.svg": {
+      "bytes": 817,
+      "sha256": "109a3db012fe4d001c626e7f617df37a326e97680417a7aa884998201d5e4974"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/svg/sketch_circle.svg": {
+      "bytes": 316,
+      "sha256": "f0b3dc8f414b28b51ffdde0ff556ee397db3269c7d45cab86f486256827a3df3"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/svg/sketch_dimension.svg": {
+      "bytes": 260,
+      "sha256": "a8ce6b84dbe8f9d13e4ddb1d8d42479fdb1955fd3067c89e1e4c3362d3a49a9a"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/svg/sketch_line.svg": {
+      "bytes": 314,
+      "sha256": "4ec4c5be91ed1a21416f114f8ec6e58d27c6153ebb5515822c1eadb78ba77f76"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/svg/sketch_rectangle.svg": {
+      "bytes": 338,
+      "sha256": "95d3d206cd13effb10c49f103f27b58501509f4c6b91d458e50751ccc906aa7b"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/svg/status_failure.svg": {
+      "bytes": 583,
+      "sha256": "7f7ef494652f01f0b6b35281d049881e63064c8c31497bf7ff555bd1d535a121"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/svg/status_success.svg": {
+      "bytes": 509,
+      "sha256": "aaaa5384460e2c7eb1ac25d03c95e13117d01e980bf0734e44c01d9a6faa7277"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/svg/status_warning.svg": {
+      "bytes": 360,
+      "sha256": "d2637e94590d37ea3b9e697f8a92de3d321b690eeb515781eacf46027d1ba22a"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/svg/verify_clearance.svg": {
+      "bytes": 262,
+      "sha256": "85dc5665f67bcb072a3a683fb5b00d5bb0127d7696f8a8b811df38476cee0aef"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/svg/verify_interference.svg": {
+      "bytes": 315,
+      "sha256": "465d3dd2fb111bf76e5204748aaa002d33169504be15e81b60c86716fc508e26"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/svg/verify_model.svg": {
+      "bytes": 448,
+      "sha256": "2536bdcc4af5e6dd50e71d71ffe388c23c9045f0fe4204285e5f43bc04d5ec81"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/svg/view_focus.svg": {
+      "bytes": 582,
+      "sha256": "d744b75afd20f5000c95d7fe5bce62d1978340c0b5df61764a58baa3425f3140"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/svg/view_whole_scene.svg": {
+      "bytes": 633,
+      "sha256": "cb06ab5909ae19d8f7cdc1562fb4456e317afb95ab149ea52ef9b316491f53de"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/tests/validate_assets.py": {
+      "bytes": 5805,
+      "sha256": "fccb1fba1ac17f1866652568f8a425be8cbcab6e23c151f9d1d1732845552d08"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/tools/build_assets.py": {
+      "bytes": 7879,
+      "sha256": "521fd98662dfff815be25f01b2b6cacc8e686c4bc5c6c8e3eefd82fb95acf0b4"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/vendor/google/center_focus_strong.svg": {
+      "bytes": 517,
+      "sha256": "461ae10b48df0789c3e9a0be5355e923d219b07909a2cef7afc533e5575c9f92"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/vendor/google/check.svg": {
+      "bytes": 159,
+      "sha256": "01edd53418816632be08e9565b8ca40d9028c230a8a67baaf4b8a1de20db00e6"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/vendor/google/check_circle.svg": {
+      "bytes": 444,
+      "sha256": "42bf0950bc12ecf7952a8c3be86e0131f225095a7dc6c824a659a13df442e373"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/vendor/google/chevron_left.svg": {
+      "bytes": 159,
+      "sha256": "b1df6b8d30d0320c97db2368f7e41123e1a7817932aa01cd865013ed6f7c7048"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/vendor/google/chevron_right.svg": {
+      "bytes": 159,
+      "sha256": "f6b777ee0ce9059b5f8eea987d813ab12c4f309ba431063153841c742e668ac0"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/vendor/google/close.svg": {
+      "bytes": 203,
+      "sha256": "a82592b0faa0b104a4d4b0530bb05c6a4bfed5728f5aad03ae8e7a19f32b5511"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/vendor/google/error.svg": {
+      "bytes": 518,
+      "sha256": "f02b30c23e0c004e47a128526ab417832b2fd475c4cfbcdfff58e9df8f6c30ab"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/vendor/google/fact_check.svg": {
+      "bytes": 383,
+      "sha256": "5b869147b842c3cf1f7e5d0bb758fd2a218a6d68097147d744d13230200cb2af"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/vendor/google/folder_open.svg": {
+      "bytes": 334,
+      "sha256": "0bc856c7bb7bbd1b86b42b6a0c5d242d6759086c910f52e4a549139fb25d4f14"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/vendor/google/help.svg": {
+      "bytes": 676,
+      "sha256": "9f2bdd969cefc5843f95ccbd560c4281b1eec87c78b68bd4daf694d19fc9c5f9"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/vendor/google/history.svg": {
+      "bytes": 425,
+      "sha256": "9dbbac013fd1a1fa4677670e64164f953647e32878c2870909a3e0910f28b0d9"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/vendor/google/metadata.json": {
+      "bytes": 7281,
+      "sha256": "3dbaa800377590e5ce35f776a0e34fa6bac7c6658d752de8727d70634d62769b"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/vendor/google/note_add.svg": {
+      "bytes": 325,
+      "sha256": "94b802edf154830b7d0cdbeb8747e9c96e0fb230a13d282b4b1c9ce23a8d2773"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/vendor/google/output.svg": {
+      "bytes": 319,
+      "sha256": "1494087dbce5a8cb13da3ba1e1c07c6978809019ed93ee2351516194b25d9b8c"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/vendor/google/redo.svg": {
+      "bytes": 268,
+      "sha256": "840dbef868ae7c527bbf13a1bbb31b16b04eed24ce95ee33000c51d5157a4bca"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/vendor/google/refresh.svg": {
+      "bytes": 314,
+      "sha256": "e56d7ee330abd6d410cca7778419c524cebacf300c3b6e1b97ca9d0f3c3c1f7c"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/vendor/google/save.svg": {
+      "bytes": 369,
+      "sha256": "3d34bab9e571f0fc0f840662d178377237f5906e87e8ff295dd04e07b8ceea35"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/vendor/google/select_all.svg": {
+      "bytes": 568,
+      "sha256": "d3a698a7826bdf43266da6facb81471602d1a80af39bdc7a1fe3a678ff6571f0"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/vendor/google/settings.svg": {
+      "bytes": 752,
+      "sha256": "6aebb4a88b40a5bf1ce378ca532e4a885aedc402a0574562c6ed4ded03360fd2"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/vendor/google/undo.svg": {
+      "bytes": 267,
+      "sha256": "ed40d5c1ea954d7bd5e292e744b315662252685374dc7a86ed5ad872014244be"
+    },
+    "blender_addon/mechanical_cad_blender/assets/icons/vendor/google/warning.svg": {
+      "bytes": 295,
+      "sha256": "0212c59cfa1e2da887b0b36c7d89886de94b019feaaba5c063ec8dc7d32be436"
+    },
+    "blender_addon/mechanical_cad_blender/assets/palette_shapes/NOTICE.txt": {
+      "bytes": 963,
+      "sha256": "46448798a6fb9368591273b32e06141ecfb33988283bc50321249fca04e01dcb"
+    },
+    "blender_addon/mechanical_cad_blender/assets/palette_shapes/edit_apply.bin": {
+      "bytes": 26,
+      "sha256": "346154d34e137760a1a7d4ed8feb6511f91949a274612fcfe689662ad072ec9e"
+    },
+    "blender_addon/mechanical_cad_blender/assets/palette_shapes/edit_cancel.bin": {
+      "bytes": 68,
+      "sha256": "2e8ac0741675b8ced67d8328745329d58ac827f3fd71760ae2cad384a5ef1e7d"
+    },
+    "blender_addon/mechanical_cad_blender/assets/palette_shapes/feature_cut.bin": {
+      "bytes": 1152,
+      "sha256": "96d4cdeb5285f6a3ed9d55132a6456dae15d5bd41f3d9ef79fde09c8a1706144"
+    },
+    "blender_addon/mechanical_cad_blender/assets/palette_shapes/feature_extrude.bin": {
+      "bytes": 666,
+      "sha256": "5814c16f91f8d1279019e5bb42579941679b294b0f60fb70740028c147f3720e"
+    },
+    "blender_addon/mechanical_cad_blender/assets/palette_shapes/file_export.bin": {
+      "bytes": 296,
+      "sha256": "5e08f422da4d80550b49c4799f719511769cdd6f04a8b9771c4b5ea4cbc083ac"
+    },
+    "blender_addon/mechanical_cad_blender/assets/palette_shapes/manifest.json": {
+      "bytes": 21795,
+      "sha256": "7546a6c97fdd2b0d51eb4841ce84572a4a5f0810bfb9cc48da68682bd15a81a3"
+    },
+    "blender_addon/mechanical_cad_blender/assets/palette_shapes/sketch_dimension.bin": {
+      "bytes": 960,
+      "sha256": "b8e592e700c4a31eff5f209c337c0c1f6a6b63813687c39ced665239bf6b2449"
+    },
+    "blender_addon/mechanical_cad_blender/assets/palette_shapes/sketch_rectangle.bin": {
+      "bytes": 344,
+      "sha256": "fbb66457afae68708a3714854bf8e39b46940a21632e59e4bd3894e4c40effb7"
+    },
+    "blender_addon/mechanical_cad_blender/assets/palette_shapes/verify_model.bin": {
+      "bytes": 324,
+      "sha256": "7c6de30ad7431ba4297fa8dc41646cad19d9acdbc34a16471ca6cc1ec7e781b8"
+    },
+    "blender_addon/mechanical_cad_blender/backend_contracts.py": {
+      "bytes": 18328,
+      "sha256": "aabc3245636bb4ae1e0f02419cf61c3fbad33a4658e6649b21e251d9e2ffc4f0"
+    },
+    "blender_addon/mechanical_cad_blender/backend_runtime.py": {
+      "bytes": 5363,
+      "sha256": "f6f94ecef3300d142425c74d52a129fdbbd6991422e3da4c964e4d20c3441dfb"
+    },
+    "blender_addon/mechanical_cad_blender/backend_selection.py": {
+      "bytes": 7691,
+      "sha256": "8f7701af577b9913206d43ba04ceb4babe89f394a7824383066eb4e58a0ed222"
+    },
+    "blender_addon/mechanical_cad_blender/bridge.py": {
+      "bytes": 22690,
+      "sha256": "f34122b50b77aa15ba5570bfa8e42290f7044a467b253c240bce1bc29e178896"
+    },
+    "blender_addon/mechanical_cad_blender/common.py": {
+      "bytes": 379,
+      "sha256": "2f3397032999556360f07b62125d6827fc58ec4b2b3e4fa73409ddcf564a7bbd"
+    },
+    "blender_addon/mechanical_cad_blender/constraint_actions.py": {
+      "bytes": 11273,
+      "sha256": "e7012f5e9419e3451b4999f33bb5698c54c61778c2af3de8e1e2e42b12f6d4aa"
+    },
+    "blender_addon/mechanical_cad_blender/constraint_diagnostics.py": {
+      "bytes": 8835,
+      "sha256": "dbc1a0ff8002408b21e5467977f53dd716aace682a993a715832ce27ff7974d0"
+    },
+    "blender_addon/mechanical_cad_blender/constraint_selection.py": {
+      "bytes": 12925,
+      "sha256": "00e754a47e6f6750928c015150ad3237549c589648c38d62b44e1d0c9060af9e"
+    },
+    "blender_addon/mechanical_cad_blender/constraint_ui.py": {
+      "bytes": 20706,
+      "sha256": "5b7e3045986423660895dd2bae2eff23c7da20c8664f09a97c24042dd3ec61cf"
+    },
+    "blender_addon/mechanical_cad_blender/dimension_click.py": {
+      "bytes": 1313,
+      "sha256": "068c2a5e4b0e95fa4d723a8b8c65c284ceea76784b0df1cdc024faad32e91d4a"
+    },
+    "blender_addon/mechanical_cad_blender/dimension_input.py": {
+      "bytes": 17274,
+      "sha256": "6d75bff6569ad492285cb6d6da9042c5937ea4ce45f62ca59ac4be6fcdd837f9"
+    },
+    "blender_addon/mechanical_cad_blender/dimension_text_buffer.py": {
+      "bytes": 12383,
+      "sha256": "3fd0062c65cf537b55263db089f8dbbb7a1569a7ff39a31787e7eee805772d3d"
+    },
+    "blender_addon/mechanical_cad_blender/display.py": {
+      "bytes": 24883,
+      "sha256": "0a594840886b8138d39971df829c1c56984ea7d9f19acc994b6f63288b49c1f6"
+    },
+    "blender_addon/mechanical_cad_blender/document_state.py": {
+      "bytes": 33833,
+      "sha256": "7583f558c8194333a30834147e65111c8f0b8259e1cbc211069106e7d2447b10"
+    },
+    "blender_addon/mechanical_cad_blender/draft_dispatch.py": {
+      "bytes": 6083,
+      "sha256": "45420e567ee0d088c970004e580a647cb0598bda780ed0f9c97d1150f4ecae4a"
+    },
+    "blender_addon/mechanical_cad_blender/draft_store.py": {
+      "bytes": 10326,
+      "sha256": "c4e147b980ed6616b32c9ba60b4c19b5afd812fe61747a9b63eeba6080611ed2"
+    },
+    "blender_addon/mechanical_cad_blender/execution_lease.py": {
+      "bytes": 1264,
+      "sha256": "b0e47b43ac6054f23c4f9e8489c8f2fd27e532a2c12ae188b652a5faee9cdc1d"
+    },
+    "blender_addon/mechanical_cad_blender/general_authoring.py": {
+      "bytes": 19649,
+      "sha256": "d79f8f5e59b8d5d4913b40fcc049c8f4210b73ee4e4cda781e02cb20ac1ebf56"
+    },
+    "blender_addon/mechanical_cad_blender/general_authoring_store.py": {
+      "bytes": 3094,
+      "sha256": "31cac50ad09a45e068f59437229c6f4694c3937b091c68db70257c04aa722a27"
+    },
+    "blender_addon/mechanical_cad_blender/general_draft_store.py": {
+      "bytes": 3253,
+      "sha256": "4060157a9024f05c6f09dddad1e5edb536da498a9ec01404b205e9f89967fcaa"
+    },
+    "blender_addon/mechanical_cad_blender/general_proposals.py": {
+      "bytes": 3332,
+      "sha256": "220e4ecd43b3077101e5a6eb347f89862a2d3771324b7bc4949852041c8f88d5"
+    },
+    "blender_addon/mechanical_cad_blender/general_session.py": {
+      "bytes": 32356,
+      "sha256": "4268cef531623241cb58c654fd50f0392ff5b55878342a0bbb6236564555f7bf"
+    },
+    "blender_addon/mechanical_cad_blender/general_sketch_commands.py": {
+      "bytes": 21642,
+      "sha256": "58510b2141e0525e7601161f0ec2a64e49d40e82eeb7b6ebfc4bb093fda00a44"
+    },
+    "blender_addon/mechanical_cad_blender/general_sketch_draft.py": {
+      "bytes": 30894,
+      "sha256": "db5a9943ddc5532468eaf8f39865736cbb1df699d67e7b7e0d81a7a3bfbae6b0"
+    },
+    "blender_addon/mechanical_cad_blender/general_sketch_journal.py": {
+      "bytes": 10401,
+      "sha256": "d6058876b9d61442e66198cdd9e6c0b208b2b8252fb3fde563ca39702b142d15"
+    },
+    "blender_addon/mechanical_cad_blender/general_sketch_overlay.py": {
+      "bytes": 23318,
+      "sha256": "9a90fc74b762f218535978d4ff48062aab169438715a2d79716519abd76a11a1"
+    },
+    "blender_addon/mechanical_cad_blender/general_view_geometry.py": {
+      "bytes": 19943,
+      "sha256": "9f71e7cfb86909862e8eecde552be70ac808a630c76619946f41e3287d577a25"
+    },
+    "blender_addon/mechanical_cad_blender/general_viewport.py": {
+      "bytes": 23563,
+      "sha256": "361245627720cb9c83aaf9f3a217fda388a5287c2440fee1f2dba7263d6d815b"
+    },
+    "blender_addon/mechanical_cad_blender/geometry_evidence.py": {
+      "bytes": 7647,
+      "sha256": "7b9899f7df573a7e3e2380fdc5ff786abfd4da89679d5c6e4e0088f14453d5f9"
+    },
+    "blender_addon/mechanical_cad_blender/geometry_operations.py": {
+      "bytes": 14048,
+      "sha256": "c7e3f19b39c492ca8802419c49f02aad6baf848dd3bb080c51ef07e791f45a6d"
+    },
+    "blender_addon/mechanical_cad_blender/guarded_evidence.py": {
+      "bytes": 12638,
+      "sha256": "c0e0e03c273bcfe73cdbc9a9dadc997526aff207a1fd5d30fe5c6bc097c1696e"
+    },
+    "blender_addon/mechanical_cad_blender/guarded_operations.py": {
+      "bytes": 2304,
+      "sha256": "90dc547e1f5a6974a4c6b17158eb92a668b974f223007d46e8d61f34c88ea489"
+    },
+    "blender_addon/mechanical_cad_blender/guarded_transport.py": {
+      "bytes": 7458,
+      "sha256": "5ce5b60d91bcabba7ab1481c8bbbdbbd2371ff676f53d3d1a6fd4b97dddefa4a"
+    },
+    "blender_addon/mechanical_cad_blender/help_topics.py": {
+      "bytes": 17622,
+      "sha256": "1864143fea6dca4585eb78463ed7294cdc636a7d9cbd711a81e016a417ff2724"
+    },
+    "blender_addon/mechanical_cad_blender/help_ui.py": {
+      "bytes": 6182,
+      "sha256": "73231a688d07e2e5fc92e782994b664e59029957f67e5261ba9fb649598ddb52"
+    },
+    "blender_addon/mechanical_cad_blender/operators.py": {
+      "bytes": 19526,
+      "sha256": "017f8502c97ebb624656b2c8e284434fcdddfde4cb6c555bd089235381913477"
+    },
+    "blender_addon/mechanical_cad_blender/palette_shapes.py": {
+      "bytes": 5042,
+      "sha256": "e5dea3afe9f5bb7cb4d3f216ddb6f784d0ebad3dbfa9e0c94552c9bfe4bcfd0a"
+    },
+    "blender_addon/mechanical_cad_blender/panels.py": {
+      "bytes": 7471,
+      "sha256": "3a72a120e889b981b0a7cec4ddc322704cbc262306fc2e64052f2752fe0f70ec"
+    },
+    "blender_addon/mechanical_cad_blender/part_contracts.py": {
+      "bytes": 12695,
+      "sha256": "f5d15902d89e27b4a4c6badf2cc48bd5a1b55372ea3bf157f70584eb67aa1846"
+    },
+    "blender_addon/mechanical_cad_blender/part_geometry_evidence.py": {
+      "bytes": 2847,
+      "sha256": "ccc30750a87f6b428eef12d81aaa1313e7a5c5cd6b992a1ff925ad59bb705db5"
+    },
+    "blender_addon/mechanical_cad_blender/part_publication.py": {
+      "bytes": 8569,
+      "sha256": "696cbd7ef76d839b8b0696fa9be7136ecad0bdcdf0fb0cc29bf5fbf7e271f95e"
+    },
+    "blender_addon/mechanical_cad_blender/part_result_bridge.py": {
+      "bytes": 12061,
+      "sha256": "ed2a69e70912e5d8809f1a46738884a49f9e622d9fb5236521ffb80be4a632dc"
+    },
+    "blender_addon/mechanical_cad_blender/part_snapshot_bridge.py": {
+      "bytes": 6362,
+      "sha256": "447d4bf193c3cd7f8a3cd59c20a58c3ec3ea18630cf2b2db1c23dea8ad39bdc2"
+    },
+    "blender_addon/mechanical_cad_blender/properties.py": {
+      "bytes": 5070,
+      "sha256": "221dd6240572fc3d255ea7752b24f9d70e6448753ffbf345c6d7e5dc46b156e5"
+    },
+    "blender_addon/mechanical_cad_blender/registration.py": {
+      "bytes": 13982,
+      "sha256": "89ef132e68e48237dd66b5afa73585acf0541c9bbad94a44932e6de300310a99"
+    },
+    "blender_addon/mechanical_cad_blender/request_contracts.py": {
+      "bytes": 6008,
+      "sha256": "4da30e95c5d81631396d23cc52cd787d3811e8143f4da1272c1becd367d0d3e5"
+    },
+    "blender_addon/mechanical_cad_blender/sidecar_job.py": {
+      "bytes": 15974,
+      "sha256": "71cb56c349f2e9f257939391a57799632a8eab7494cc3ce407e199b6c6e39ae6"
+    },
+    "blender_addon/mechanical_cad_blender/sketch_action_bridge.py": {
+      "bytes": 5796,
+      "sha256": "2530bfbb350bb37af949ca01a342584f13a4eb25907c5d04f5aa29d9700d8e5a"
+    },
+    "blender_addon/mechanical_cad_blender/sketch_annotation_store.py": {
+      "bytes": 10396,
+      "sha256": "9ea49b1c8049c6c5da22e34fdc6205acfdd0355916405d361e9bf2df20124a70"
+    },
+    "blender_addon/mechanical_cad_blender/sketch_bridge.py": {
+      "bytes": 25387,
+      "sha256": "8a3cd726283617be294abb1e932d9f48f9a9e867621297f3de04b9ac7131b31f"
+    },
+    "blender_addon/mechanical_cad_blender/sketch_display.py": {
+      "bytes": 3864,
+      "sha256": "afc9a40b0f7b99fd9cd571d2ada181eb92a9e78970239ac25cc388a540dcafc5"
+    },
+    "blender_addon/mechanical_cad_blender/sketch_draft.py": {
+      "bytes": 20393,
+      "sha256": "f00bcd025e420d8ae1c77f568f0d798dbf72299be09b6c88a7e1d36e6f4eed72"
+    },
+    "blender_addon/mechanical_cad_blender/sketch_overlay.py": {
+      "bytes": 5279,
+      "sha256": "2735202a7fa39a57369075872815945a2ff2f45c27063415624fc4561c236c2f"
+    },
+    "blender_addon/mechanical_cad_blender/sketch_pending.py": {
+      "bytes": 16034,
+      "sha256": "ef6d00c51e55ef9645608ba103d68324ef82875c90b6561eca2b085a5007e85d"
+    },
+    "blender_addon/mechanical_cad_blender/sketch_session.py": {
+      "bytes": 18137,
+      "sha256": "84e7d8016dd78d107afbd85976259df590f3dba6dd928ab6fd925561c2ff5236"
+    },
+    "blender_addon/mechanical_cad_blender/sketch_view_presentation.py": {
+      "bytes": 3194,
+      "sha256": "527b0410b4a1eec65fe33332c96b9c18617c2732b86255c41dda21f6209a4c09"
+    },
+    "blender_addon/mechanical_cad_blender/topology_evidence.py": {
+      "bytes": 12233,
+      "sha256": "b5a0c6e861f5eac6d9a338eb6c628a85e7db6631694ef319bc9335af8f48b7eb"
+    },
+    "blender_addon/mechanical_cad_blender/viewport_sketch.py": {
+      "bytes": 28532,
+      "sha256": "b37637dd228d9d63b4f5e0b82e517946bca5e45ee45e4e5b8285474209428f03"
+    },
+    "blender_addon/mechanical_cad_blender/workspace.py": {
+      "bytes": 10986,
+      "sha256": "44941af6c214dc7bafe6706dd5f07198c020de351292cc3c6302a1c026d44346"
+    },
+    "blender_addon/mechanical_cad_blender/workspace_ui.py": {
+      "bytes": 35012,
+      "sha256": "d57d6cb6932ddcdf36c93c1ac207d4a92d0b172ae1e392808ca8e1cd017dfa80"
+    },
+    "src/mechanical_cad/__init__.py": {
+      "bytes": 111,
+      "sha256": "da77f6beaeac924f7724782d7f74080190e92fdaa250a7aecd6d76f6e8e867c2"
+    },
+    "src/mechanical_cad/actions.py": {
+      "bytes": 8172,
+      "sha256": "e85b03a54aefb171100252a8a6aa57f00cf0705b84d7e2005918a2dcef2c1649"
+    },
+    "src/mechanical_cad/arc_geometry.py": {
+      "bytes": 4166,
+      "sha256": "b2017ca26300712cdaece7325fcd12fd1330d650896a5494dea56967fa1a82aa"
+    },
+    "src/mechanical_cad/arc_profile_incidence.py": {
+      "bytes": 15595,
+      "sha256": "e9dd1ad7c2b74d72eec1be89d09f4a10e2e27f2fef3b5c783b510ce7469dbc76"
+    },
+    "src/mechanical_cad/arc_profile_intervals.py": {
+      "bytes": 13370,
+      "sha256": "88facdee48d067c5096eab12e3195d7db57bfb831a3217a5c4a3630a29457849"
+    },
+    "src/mechanical_cad/arc_profile_native_evidence.py": {
+      "bytes": 68830,
+      "sha256": "49a142f32239a03223a32d5fbdfaa7235bbc63a6be19bb336756e58e7af6a065"
+    },
+    "src/mechanical_cad/arc_profile_native_plan.py": {
+      "bytes": 74296,
+      "sha256": "3593b33dca94bb3ebcacfe0bce895a1a8268327e155284d5aa5c2012f967fc95"
+    },
+    "src/mechanical_cad/arc_profile_primitives.py": {
+      "bytes": 29605,
+      "sha256": "22994be172dae608d2f7334545c8b32a3b69e03d766d918ca6aab4361bfc81e0"
+    },
+    "src/mechanical_cad/arc_profile_sector.py": {
+      "bytes": 11535,
+      "sha256": "9bb85b4d7aa509ae8ae5314c28de19d751e5bde90071fe0f2c0d507e1011411b"
+    },
+    "src/mechanical_cad/arc_profile_sector_policy.py": {
+      "bytes": 35974,
+      "sha256": "c360bd15d8949ae02b03651f933743bb34c3e52cae2acfdc70fedab8995ce429"
+    },
+    "src/mechanical_cad/arc_profile_sector_source.py": {
+      "bytes": 16928,
+      "sha256": "f2eea6b9f16d5de8c6652c805847986952dc1c128353b1f2280e4f769492b6ff"
+    },
+    "src/mechanical_cad/assembly_kinematics.py": {
+      "bytes": 9599,
+      "sha256": "a3474e86fe48558b51940f39493684cbdf2d0d66b7127c6d73bf84bcc8b24a3e"
+    },
+    "src/mechanical_cad/assembly_model.py": {
+      "bytes": 28496,
+      "sha256": "7fef3f26995fc16c37543701da0559653e64402b32cab1ebabe285bead11513d"
+    },
+    "src/mechanical_cad/assembly_policy.py": {
+      "bytes": 10243,
+      "sha256": "00a5de3a551fb8d8bd958cfedd97980188a258427b8a6e4ef03b52da4df34d82"
+    },
+    "src/mechanical_cad/assembly_protocol.py": {
+      "bytes": 1995,
+      "sha256": "e2f15eb9838dfc3e5362e378c243c9906c45b5b403d71cd0e6901d2f867b36c8"
+    },
+    "src/mechanical_cad/assembly_requirements.py": {
+      "bytes": 8203,
+      "sha256": "fd40c210d12de5049a363c7072f834bc1ba2837fb5352c459bfbbd2e8ad5a5b2"
+    },
+    "src/mechanical_cad/assembly_service.py": {
+      "bytes": 16619,
+      "sha256": "2ab6263757abb12a878b124d81de01eae7dd969ea47dd20a35bc08b243b4b4c3"
+    },
+    "src/mechanical_cad/backend_contract.py": {
+      "bytes": 17872,
+      "sha256": "93bf12633f57f21f0e94ba2f3ee10ed612c226dc168a00783a204e4a135ad22c"
+    },
+    "src/mechanical_cad/cli.py": {
+      "bytes": 4341,
+      "sha256": "6dfdf09574000f31a3ca539c987b622d08c8786cdf1455a463acb2623eb8a736"
+    },
+    "src/mechanical_cad/engine.py": {
+      "bytes": 10179,
+      "sha256": "319cd0f39d0b8571ae762b96627c4189beffe6e21d65198cd59833bd5e300dcf"
+    },
+    "src/mechanical_cad/errors.py": {
+      "bytes": 386,
+      "sha256": "aeff0cc1cec8b87a7e1034945fa86f5163b58980c43fac0c360cb3f8e129bf65"
+    },
+    "src/mechanical_cad/expressions.py": {
+      "bytes": 5521,
+      "sha256": "e47366ca43f0d1be18ade1cf90428af5789aff4e16583fdd95bd54193caffdff"
+    },
+    "src/mechanical_cad/kernel_ocp.py": {
+      "bytes": 115844,
+      "sha256": "77f3f3033f95cbe72a97dbdab70769f1f0c3d34604f2d2ac036d6e10f78224ac"
+    },
+    "src/mechanical_cad/model.py": {
+      "bytes": 19269,
+      "sha256": "cb5fd6663ab2456f181c9417544411a4a8bc39c781a845c4a358b03cb3dd3365"
+    },
+    "src/mechanical_cad/outputs.py": {
+      "bytes": 2841,
+      "sha256": "1c854b64e090364a1f473d87498350b4ae5b78113efa2e3a1f008497a7c15fce"
+    },
+    "src/mechanical_cad/part_snapshot.py": {
+      "bytes": 5057,
+      "sha256": "767845d5b05659a25af27f96f5670c1292211eb56d3b4f144bbaf0d8b8ecabcd"
+    },
+    "src/mechanical_cad/profile_region.py": {
+      "bytes": 13662,
+      "sha256": "a9a21fe7d9c229727ef88841d4de21ab254a0dc100ca4bf7fa26bb2d88af9fc0"
+    },
+    "src/mechanical_cad/result_policy.py": {
+      "bytes": 1258,
+      "sha256": "682097c415ae7308b5b09d496d7439c92f777bd4de55b9ef467711c22da3f820"
+    },
+    "src/mechanical_cad/sidecar.py": {
+      "bytes": 9317,
+      "sha256": "89df8ba643ee609a51f2c237889699c59cdf3f18bad12626866b6addbd0f89ac"
+    },
+    "src/mechanical_cad/sketch_evaluation.py": {
+      "bytes": 1098,
+      "sha256": "fab3fe96229567bca01eb3595728b72362bc5227252f621365c3b36a30267bf4"
+    },
+    "src/mechanical_cad/sketch_model.py": {
+      "bytes": 28963,
+      "sha256": "aecf113a3f3f1611adfbe4150a0798f892eb1af90d1c897bdb94efe6c5378234"
+    },
+    "src/mechanical_cad/sketch_protocol.py": {
+      "bytes": 3179,
+      "sha256": "57f0fcef5ae5e271cf45731000d713b52e13027d370e91097efbcde2fbefdc33"
+    },
+    "src/mechanical_cad/sketch_service.py": {
+      "bytes": 4110,
+      "sha256": "4e4e2ba471cad089322be6d1d910b65f79a128215bc08e3adf6123f3008080cb"
+    },
+    "src/mechanical_cad/sketch_solver.py": {
+      "bytes": 15184,
+      "sha256": "fa991886586050be1f5e839f7e07a7c0d7404e012fb52273db2a89f69c0ccf8e"
+    },
+    "src/mechanical_cad/topology.py": {
+      "bytes": 10473,
+      "sha256": "2d741845d378a20f6ca3c069a3d2cfc753f1896972b57b4b9712904f2016b174"
+    }
+  },
+  "preserved_function_spans": {
+    "src/mechanical_cad/engine.py:_sketch_output": {
+      "bytes": 1791,
+      "sha256": "c7ec08489a5dd6d0ba27229e78721dd1f7936f205844c580355e2b6c39be227a"
+    }
+  },
+  "scope": "All pre-existing core and add-on files. New dormant v3 leaves are separately allowlisted. Existing dispatch changes require a later reviewed exact-span extension; no owner, solver, canonical, native-policy or kernel exemption.",
+  "source_archive_sha256": "42f09f07154cf06eacf40c7ed51cc7b0d8f0a2febf74c3b230a71a53faf26958"
+}

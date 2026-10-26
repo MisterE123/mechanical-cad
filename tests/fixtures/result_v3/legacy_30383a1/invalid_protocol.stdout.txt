@@ -1,0 +1,1 @@
+{"protocol_version":1,"ok":false,"result":null,"error":{"code":"unsupported_protocol","message":"Only sidecar protocol 1 is supported."},"result_version":2}

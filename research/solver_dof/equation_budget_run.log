@@ -1,0 +1,16 @@
+below_cap_1023 native_completed {'dof': 0, 'nbad': 0, 'result': 4} 0.081s
+cap_authored_1024 native_completed {'dof': 0, 'nbad': 0, 'result': 4} 0.090s
+cap_arc_few_scalars_1024 native_completed {'dof': 0, 'nbad': 0, 'result': 4} 0.088s
+cap_arc_max_scalars_1024 native_completed {'dof': 0, 'nbad': 0, 'result': 4} 0.078s
+cap_arc_max_scalars_unsolved_1024 native_completed {'dof': 0, 'nbad': 0, 'result': 4} 0.072s
+cap_arc_with_authored_dedup_1024 native_completed {'dof': 0, 'nbad': 0, 'result': 4} 0.074s
+cap_underconstrained_coincidence_1024 native_completed {'dof': 0, 'nbad': 0, 'result': 4} 0.081s
+cap_underconstrained_dedup_1024 native_completed {'dof': 255, 'nbad': 0, 'result': 4} 0.122s
+cap_distinct_coincidence_cycles_1024 native_completed {'dof': 0, 'nbad': 0, 'result': 4} 0.069s
+cap_plus_one_1025 rejected_before_native None 0.063s
+cap_plus_256_1280 rejected_before_native None 0.071s
+complement_intrinsic_only native_completed {'dof': 5, 'nbad': 0, 'result': 4} 0.076s
+complement_center_radius native_completed {'dof': 2, 'nbad': 0, 'result': 4} 0.093s
+complement_authored_conflict native_completed {'dof': 0, 'nbad': 1, 'result': 1} 0.095s
+cap_arc_dedup_diagnostics native_completed {'dof': 0, 'nbad': 0, 'result': 4} 0.101s
+CHECKS: 18/18 passed

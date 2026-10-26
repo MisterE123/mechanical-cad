@@ -1,0 +1,155 @@
+{
+  "schema_version": 1,
+  "id": "staged_end_face_repair",
+  "name": "Explicit end-face correction",
+  "units": "mm",
+  "parameters": {
+    "gap": -0.5,
+    "allowance": 0.25
+  },
+  "features": [
+    {
+      "id": "block_profile",
+      "kind": "sketch_rectangle",
+      "label": "Block profile",
+      "params": {
+        "x": 0,
+        "y": 0,
+        "z": 0,
+        "width": 10,
+        "height": 10
+      },
+      "inputs": {}
+    },
+    {
+      "id": "block",
+      "kind": "extrude",
+      "label": "Block",
+      "params": {
+        "length": 10
+      },
+      "inputs": {
+        "profile": "block_profile"
+      }
+    },
+    {
+      "id": "replacement",
+      "kind": "transform",
+      "label": "Independent replacement plane",
+      "params": {
+        "x": 0,
+        "y": 0,
+        "z": 3,
+        "rx": 0,
+        "ry": 0,
+        "rz": 0
+      },
+      "inputs": {
+        "base": "block"
+      }
+    },
+    {
+      "id": "slot_profile",
+      "kind": "sketch_rectangle",
+      "label": "Upstream slot profile",
+      "params": {
+        "x": 4,
+        "y": -1,
+        "z": 5,
+        "width": 2,
+        "height": 12
+      },
+      "inputs": {}
+    },
+    {
+      "id": "slot_tool",
+      "kind": "extrude",
+      "label": "Upstream slot depth",
+      "params": {
+        "length": 2
+      },
+      "inputs": {
+        "profile": "slot_profile"
+      }
+    },
+    {
+      "id": "slotted",
+      "kind": "cut",
+      "label": "Slotted block",
+      "params": {},
+      "inputs": {
+        "base": "block",
+        "tool": "slot_tool"
+      }
+    },
+    {
+      "id": "profile",
+      "kind": "sketch_circle",
+      "label": "First profile",
+      "params": {
+        "x": 2,
+        "y": 2,
+        "z": 20,
+        "radius": 1
+      },
+      "inputs": {}
+    },
+    {
+      "id": "tool",
+      "kind": "extrude_to_face",
+      "label": "First Up to Face",
+      "params": {
+        "direction": -1,
+        "offset": "gap"
+      },
+      "inputs": {
+        "profile": "profile",
+        "target": "slotted"
+      },
+      "end_face": "block/face/cap.end"
+    },
+    {
+      "id": "profile2",
+      "kind": "sketch_circle",
+      "label": "Second profile",
+      "params": {
+        "x": 8,
+        "y": 2,
+        "z": 0,
+        "radius": 1
+      },
+      "inputs": {}
+    },
+    {
+      "id": "tool2",
+      "kind": "extrude_to_face",
+      "label": "Second Up to Face",
+      "params": {
+        "direction": 1,
+        "offset": "gap + allowance"
+      },
+      "inputs": {
+        "profile": "profile2",
+        "target": "slotted"
+      },
+      "end_face": "block/face/cap.end"
+    },
+    {
+      "id": "downstream",
+      "kind": "transform",
+      "label": "Dependent solid",
+      "params": {
+        "x": 20,
+        "y": 0,
+        "z": 0,
+        "rx": 0,
+        "ry": 0,
+        "rz": 0
+      },
+      "inputs": {
+        "base": "tool2"
+      }
+    }
+  ],
+  "active_feature": "downstream"
+}

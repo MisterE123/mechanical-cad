@@ -1,0 +1,1 @@
+{"protocol_version":1,"ok":false,"result":null,"error":{"code":"invalid_assembly","message":"Assembly must be an object"},"result_version":2}

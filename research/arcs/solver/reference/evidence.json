@@ -1,0 +1,8555 @@
+{
+  "api_signatures": {
+    "add_arc": "(grouph: 'int', normal: 'Slvs_Entity', center: 'Slvs_Entity', start: 'Slvs_Entity', end: 'Slvs_Entity', workplane: 'Slvs_Entity') -> 'Slvs_Entity'",
+    "diameter": "(grouph: 'int', entityA: 'Slvs_Entity', value: 'float') -> 'Slvs_Constraint'",
+    "get_param_value": "(ph: 'int')",
+    "solve_sketch": "(grouph: 'int', calculateFaileds: 'bool')"
+  },
+  "cases": {
+    "all_points_fixed": {
+      "after": {
+        "chord": 7.0710678118654755,
+        "cross": 25.0,
+        "dot": 0.0,
+        "end_radius": 5.0,
+        "equal_radius_residual": 0.0,
+        "start_radius": 5.0,
+        "sweep": 1.5707963267948966,
+        "sweep_degrees": 90.0
+      },
+      "arc_entity": {
+        "distance": 0,
+        "group": 2,
+        "h": 7,
+        "normal": 2,
+        "param": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "point": [
+          4,
+          6,
+          5,
+          0
+        ],
+        "type": 80004,
+        "wrkpl": 3
+      },
+      "before": {
+        "chord": 7.0710678118654755,
+        "cross": 25,
+        "dot": 0,
+        "end_radius": 5.0,
+        "equal_radius_residual": 0.0,
+        "start_radius": 5.0,
+        "sweep": 1.5707963267948966,
+        "sweep_degrees": 90.0
+      },
+      "extra_arc_entity": null,
+      "failed_constraints": [
+        "fixed.c",
+        "fixed.e",
+        "fixed.s"
+      ],
+      "input": {
+        "fixed": [
+          "c",
+          "s",
+          "e"
+        ],
+        "points": {
+          "c": [
+            0,
+            0
+          ],
+          "e": [
+            0,
+            5
+          ],
+          "s": [
+            5,
+            0
+          ]
+        }
+      },
+      "line_entity": null,
+      "native": {
+        "dof": 0,
+        "nbad": 3,
+        "result": 4
+      },
+      "point_handles": {
+        "c": 4,
+        "e": 5,
+        "s": 6
+      },
+      "points": {
+        "c": [
+          0.0,
+          0.0
+        ],
+        "e": [
+          0.0,
+          5.0
+        ],
+        "s": [
+          5.0,
+          0.0
+        ]
+      },
+      "radial_lines": {}
+    },
+    "all_points_fixed_conflicting_radius": {
+      "after": {
+        "chord": 7.0710678118654755,
+        "cross": 25.0,
+        "dot": 0.0,
+        "end_radius": 5.0,
+        "equal_radius_residual": 0.0,
+        "start_radius": 5.0,
+        "sweep": 1.5707963267948966,
+        "sweep_degrees": 90.0
+      },
+      "arc_entity": {
+        "distance": 0,
+        "group": 2,
+        "h": 7,
+        "normal": 2,
+        "param": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "point": [
+          4,
+          6,
+          5,
+          0
+        ],
+        "type": 80004,
+        "wrkpl": 3
+      },
+      "before": {
+        "chord": 7.0710678118654755,
+        "cross": 25,
+        "dot": 0,
+        "end_radius": 5.0,
+        "equal_radius_residual": 0.0,
+        "start_radius": 5.0,
+        "sweep": 1.5707963267948966,
+        "sweep_degrees": 90.0
+      },
+      "extra_arc_entity": null,
+      "failed_constraints": [
+        "radius"
+      ],
+      "input": {
+        "fixed": [
+          "c",
+          "s",
+          "e"
+        ],
+        "points": {
+          "c": [
+            0,
+            0
+          ],
+          "e": [
+            0,
+            5
+          ],
+          "s": [
+            5,
+            0
+          ]
+        },
+        "radius": 7
+      },
+      "line_entity": null,
+      "native": {
+        "dof": 0,
+        "nbad": 1,
+        "result": 1
+      },
+      "point_handles": {
+        "c": 4,
+        "e": 5,
+        "s": 6
+      },
+      "points": {
+        "c": [
+          0.0,
+          0.0
+        ],
+        "e": [
+          0.0,
+          5.0
+        ],
+        "s": [
+          5.0,
+          0.0
+        ]
+      },
+      "radial_lines": {}
+    },
+    "all_zero": {
+      "after": {
+        "end_radius": 0.0,
+        "start_radius": 0.0,
+        "sweep": null
+      },
+      "arc_entity": {
+        "distance": 0,
+        "group": 2,
+        "h": 7,
+        "normal": 2,
+        "param": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "point": [
+          4,
+          6,
+          5,
+          0
+        ],
+        "type": 80004,
+        "wrkpl": 3
+      },
+      "before": {
+        "end_radius": 0.0,
+        "start_radius": 0.0,
+        "sweep": null
+      },
+      "extra_arc_entity": null,
+      "failed_constraints": [],
+      "input": {
+        "points": {
+          "c": [
+            0,
+            0
+          ],
+          "e": [
+            0,
+            0
+          ],
+          "s": [
+            0,
+            0
+          ]
+        }
+      },
+      "line_entity": null,
+      "native": {
+        "dof": 6,
+        "nbad": 0,
+        "result": 1
+      },
+      "point_handles": {
+        "c": 4,
+        "e": 5,
+        "s": 6
+      },
+      "points": {
+        "c": [
+          0.0,
+          0.0
+        ],
+        "e": [
+          0.0,
+          0.0
+        ],
+        "s": [
+          0.0,
+          0.0
+        ]
+      },
+      "radial_lines": {}
+    },
+    "center_fixed": {
+      "after": {
+        "chord": 7.0710678118654755,
+        "cross": 25.0,
+        "dot": 0.0,
+        "end_radius": 5.0,
+        "equal_radius_residual": 0.0,
+        "start_radius": 5.0,
+        "sweep": 1.5707963267948966,
+        "sweep_degrees": 90.0
+      },
+      "arc_entity": {
+        "distance": 0,
+        "group": 2,
+        "h": 7,
+        "normal": 2,
+        "param": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "point": [
+          4,
+          6,
+          5,
+          0
+        ],
+        "type": 80004,
+        "wrkpl": 3
+      },
+      "before": {
+        "chord": 7.0710678118654755,
+        "cross": 25,
+        "dot": 0,
+        "end_radius": 5.0,
+        "equal_radius_residual": 0.0,
+        "start_radius": 5.0,
+        "sweep": 1.5707963267948966,
+        "sweep_degrees": 90.0
+      },
+      "extra_arc_entity": null,
+      "failed_constraints": [],
+      "input": {
+        "fixed": [
+          "c"
+        ],
+        "points": {
+          "c": [
+            0,
+            0
+          ],
+          "e": [
+            0,
+            5
+          ],
+          "s": [
+            5,
+            0
+          ]
+        }
+      },
+      "line_entity": null,
+      "native": {
+        "dof": 3,
+        "nbad": 0,
+        "result": 0
+      },
+      "point_handles": {
+        "c": 4,
+        "e": 5,
+        "s": 6
+      },
+      "points": {
+        "c": [
+          0.0,
+          0.0
+        ],
+        "e": [
+          0.0,
+          5.0
+        ],
+        "s": [
+          5.0,
+          0.0
+        ]
+      },
+      "radial_lines": {}
+    },
+    "center_fixed_radius": {
+      "after": {
+        "chord": 9.899494936611665,
+        "cross": 49.0,
+        "dot": 0.0,
+        "end_radius": 7.0,
+        "equal_radius_residual": 0.0,
+        "start_radius": 7.0,
+        "sweep": 1.5707963267948966,
+        "sweep_degrees": 90.0
+      },
+      "arc_entity": {
+        "distance": 0,
+        "group": 2,
+        "h": 7,
+        "normal": 2,
+        "param": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "point": [
+          4,
+          6,
+          5,
+          0
+        ],
+        "type": 80004,
+        "wrkpl": 3
+      },
+      "before": {
+        "chord": 7.0710678118654755,
+        "cross": 25,
+        "dot": 0,
+        "end_radius": 5.0,
+        "equal_radius_residual": 0.0,
+        "start_radius": 5.0,
+        "sweep": 1.5707963267948966,
+        "sweep_degrees": 90.0
+      },
+      "extra_arc_entity": null,
+      "failed_constraints": [],
+      "input": {
+        "fixed": [
+          "c"
+        ],
+        "points": {
+          "c": [
+            0,
+            0
+          ],
+          "e": [
+            0,
+            5
+          ],
+          "s": [
+            5,
+            0
+          ]
+        },
+        "radius": 7
+      },
+      "line_entity": null,
+      "native": {
+        "dof": 2,
+        "nbad": 0,
+        "result": 0
+      },
+      "point_handles": {
+        "c": 4,
+        "e": 5,
+        "s": 6
+      },
+      "points": {
+        "c": [
+          0.0,
+          0.0
+        ],
+        "e": [
+          0.0,
+          7.0
+        ],
+        "s": [
+          7.0,
+          0.0
+        ]
+      },
+      "radial_lines": {}
+    },
+    "center_fixed_radius_cw": {
+      "after": {
+        "chord": 9.899494936611665,
+        "cross": 49.0,
+        "dot": 0.0,
+        "end_radius": 7.0,
+        "equal_radius_residual": 0.0,
+        "start_radius": 7.0,
+        "sweep": -4.71238898038469,
+        "sweep_degrees": -270.0
+      },
+      "arc_entity": {
+        "distance": 0,
+        "group": 2,
+        "h": 7,
+        "normal": 2,
+        "param": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "point": [
+          4,
+          5,
+          6,
+          0
+        ],
+        "type": 80004,
+        "wrkpl": 3
+      },
+      "before": {
+        "chord": 7.0710678118654755,
+        "cross": 25,
+        "dot": 0,
+        "end_radius": 5.0,
+        "equal_radius_residual": 0.0,
+        "start_radius": 5.0,
+        "sweep": -4.71238898038469,
+        "sweep_degrees": -270.0
+      },
+      "extra_arc_entity": null,
+      "failed_constraints": [],
+      "input": {
+        "direction": "cw",
+        "fixed": [
+          "c"
+        ],
+        "points": {
+          "c": [
+            0,
+            0
+          ],
+          "e": [
+            0,
+            5
+          ],
+          "s": [
+            5,
+            0
+          ]
+        },
+        "radius": 7
+      },
+      "line_entity": null,
+      "native": {
+        "dof": 2,
+        "nbad": 0,
+        "result": 0
+      },
+      "point_handles": {
+        "c": 4,
+        "e": 5,
+        "s": 6
+      },
+      "points": {
+        "c": [
+          0.0,
+          0.0
+        ],
+        "e": [
+          0.0,
+          7.0
+        ],
+        "s": [
+          7.0,
+          0.0
+        ]
+      },
+      "radial_lines": {}
+    },
+    "center_start_same_coordinates": {
+      "after": {
+        "end_radius": 5.0,
+        "start_radius": 0.0,
+        "sweep": null
+      },
+      "arc_entity": {
+        "distance": 0,
+        "group": 2,
+        "h": 7,
+        "normal": 2,
+        "param": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "point": [
+          4,
+          6,
+          5,
+          0
+        ],
+        "type": 80004,
+        "wrkpl": 3
+      },
+      "before": {
+        "end_radius": 5.0,
+        "start_radius": 0.0,
+        "sweep": null
+      },
+      "extra_arc_entity": null,
+      "failed_constraints": [],
+      "input": {
+        "points": {
+          "c": [
+            0,
+            0
+          ],
+          "e": [
+            0,
+            5
+          ],
+          "s": [
+            0,
+            0
+          ]
+        }
+      },
+      "line_entity": null,
+      "native": {
+        "dof": 5,
+        "nbad": 0,
+        "result": 2
+      },
+      "point_handles": {
+        "c": 4,
+        "e": 5,
+        "s": 6
+      },
+      "points": {
+        "c": [
+          0.0,
+          0.0
+        ],
+        "e": [
+          0.0,
+          5.0
+        ],
+        "s": [
+          0.0,
+          0.0
+        ]
+      },
+      "radial_lines": {}
+    },
+    "collinear_unequal_radii": {
+      "after": {
+        "chord": 0.0,
+        "cross": 0.0,
+        "dot": 16.0,
+        "end_radius": 4.0,
+        "equal_radius_residual": 0.0,
+        "start_radius": 4.0,
+        "sweep": 0.0,
+        "sweep_degrees": 0.0
+      },
+      "arc_entity": {
+        "distance": 0,
+        "group": 2,
+        "h": 7,
+        "normal": 2,
+        "param": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "point": [
+          4,
+          6,
+          5,
+          0
+        ],
+        "type": 80004,
+        "wrkpl": 3
+      },
+      "before": {
+        "chord": 2.0,
+        "cross": 0,
+        "dot": 15,
+        "end_radius": 5.0,
+        "equal_radius_residual": 2.0,
+        "start_radius": 3.0,
+        "sweep": 0.0,
+        "sweep_degrees": 0.0
+      },
+      "extra_arc_entity": null,
+      "failed_constraints": [],
+      "input": {
+        "points": {
+          "c": [
+            0,
+            0
+          ],
+          "e": [
+            5,
+            0
+          ],
+          "s": [
+            3,
+            0
+          ]
+        }
+      },
+      "line_entity": null,
+      "native": {
+        "dof": 5,
+        "nbad": 0,
+        "result": 0
+      },
+      "point_handles": {
+        "c": 4,
+        "e": 5,
+        "s": 6
+      },
+      "points": {
+        "c": [
+          0.0,
+          0.0
+        ],
+        "e": [
+          4.0,
+          0.0
+        ],
+        "s": [
+          4.0,
+          0.0
+        ]
+      },
+      "radial_lines": {}
+    },
+    "distinct_endpoints_same_coordinates": {
+      "after": {
+        "chord": 0.0,
+        "cross": 0.0,
+        "dot": 25.0,
+        "end_radius": 5.0,
+        "equal_radius_residual": 0.0,
+        "start_radius": 5.0,
+        "sweep": 0.0,
+        "sweep_degrees": 0.0
+      },
+      "arc_entity": {
+        "distance": 0,
+        "group": 2,
+        "h": 7,
+        "normal": 2,
+        "param": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "point": [
+          4,
+          6,
+          5,
+          0
+        ],
+        "type": 80004,
+        "wrkpl": 3
+      },
+      "before": {
+        "chord": 0.0,
+        "cross": 0,
+        "dot": 25,
+        "end_radius": 5.0,
+        "equal_radius_residual": 0.0,
+        "start_radius": 5.0,
+        "sweep": 0.0,
+        "sweep_degrees": 0.0
+      },
+      "extra_arc_entity": null,
+      "failed_constraints": [],
+      "input": {
+        "points": {
+          "c": [
+            0,
+            0
+          ],
+          "e": [
+            5,
+            0
+          ],
+          "s": [
+            5,
+            0
+          ]
+        }
+      },
+      "line_entity": null,
+      "native": {
+        "dof": 5,
+        "nbad": 0,
+        "result": 0
+      },
+      "point_handles": {
+        "c": 4,
+        "e": 5,
+        "s": 6
+      },
+      "points": {
+        "c": [
+          0.0,
+          0.0
+        ],
+        "e": [
+          5.0,
+          0.0
+        ],
+        "s": [
+          5.0,
+          0.0
+        ]
+      },
+      "radial_lines": {}
+    },
+    "endpoint_coincidence_relation": {
+      "after": {
+        "chord": 0.0,
+        "cross": 0.0,
+        "dot": 25.0,
+        "end_radius": 5.0,
+        "equal_radius_residual": 0.0,
+        "start_radius": 5.0,
+        "sweep": 0.0,
+        "sweep_degrees": 0.0
+      },
+      "arc_entity": {
+        "distance": 0,
+        "group": 2,
+        "h": 7,
+        "normal": 2,
+        "param": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "point": [
+          4,
+          6,
+          5,
+          0
+        ],
+        "type": 80004,
+        "wrkpl": 3
+      },
+      "before": {
+        "chord": 7.0710678118654755,
+        "cross": 25,
+        "dot": 0,
+        "end_radius": 5.0,
+        "equal_radius_residual": 0.0,
+        "start_radius": 5.0,
+        "sweep": 1.5707963267948966,
+        "sweep_degrees": 90.0
+      },
+      "extra_arc_entity": null,
+      "failed_constraints": [],
+      "input": {
+        "coincident_ends": true,
+        "points": {
+          "c": [
+            0,
+            0
+          ],
+          "e": [
+            0,
+            5
+          ],
+          "s": [
+            5,
+            0
+          ]
+        }
+      },
+      "line_entity": null,
+      "native": {
+        "dof": 4,
+        "nbad": 0,
+        "result": 0
+      },
+      "point_handles": {
+        "c": 4,
+        "e": 5,
+        "s": 6
+      },
+      "points": {
+        "c": [
+          0.0,
+          0.0
+        ],
+        "e": [
+          0.0,
+          5.0
+        ],
+        "s": [
+          0.0,
+          5.0
+        ]
+      },
+      "radial_lines": {}
+    },
+    "fixed_chord_side_-1_radius_2": {
+      "after": {
+        "chord": 6.0,
+        "cross": -24.0,
+        "dot": 7.0,
+        "end_radius": 5.0,
+        "equal_radius_residual": 0.0,
+        "start_radius": 5.0,
+        "sweep": 4.996183089593018,
+        "sweep_degrees": 286.26020470831196
+      },
+      "arc_entity": {
+        "distance": 0,
+        "group": 2,
+        "h": 7,
+        "normal": 2,
+        "param": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "point": [
+          4,
+          6,
+          5,
+          0
+        ],
+        "type": 80004,
+        "wrkpl": 3
+      },
+      "before": {
+        "chord": 6.0,
+        "cross": -24,
+        "dot": 7,
+        "end_radius": 5.0,
+        "equal_radius_residual": 0.0,
+        "start_radius": 5.0,
+        "sweep": 4.996183089593018,
+        "sweep_degrees": 286.26020470831196
+      },
+      "extra_arc_entity": null,
+      "failed_constraints": [
+        "radius"
+      ],
+      "input": {
+        "fixed": [
+          "s",
+          "e"
+        ],
+        "points": {
+          "c": [
+            0,
+            -4
+          ],
+          "e": [
+            3,
+            0
+          ],
+          "s": [
+            -3,
+            0
+          ]
+        },
+        "radius": 2
+      },
+      "line_entity": null,
+      "native": {
+        "dof": 0,
+        "nbad": 1,
+        "result": 2
+      },
+      "point_handles": {
+        "c": 4,
+        "e": 5,
+        "s": 6
+      },
+      "points": {
+        "c": [
+          0.0,
+          -4.0
+        ],
+        "e": [
+          3.0,
+          0.0
+        ],
+        "s": [
+          -3.0,
+          0.0
+        ]
+      },
+      "radial_lines": {}
+    },
+    "fixed_chord_side_-1_radius_3": {
+      "after": {
+        "chord": 6.0,
+        "cross": -0.0010187569325197494,
+        "dot": -8.999999971170398,
+        "end_radius": 3.0000000048049347,
+        "equal_radius_residual": 1.7763568394002505e-15,
+        "start_radius": 3.000000004804933,
+        "sweep": 3.1417058488043965,
+        "sweep_degrees": 180.00648560805786
+      },
+      "arc_entity": {
+        "distance": 0,
+        "group": 2,
+        "h": 7,
+        "normal": 2,
+        "param": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "point": [
+          4,
+          6,
+          5,
+          0
+        ],
+        "type": 80004,
+        "wrkpl": 3
+      },
+      "before": {
+        "chord": 6.0,
+        "cross": -24,
+        "dot": 7,
+        "end_radius": 5.0,
+        "equal_radius_residual": 0.0,
+        "start_radius": 5.0,
+        "sweep": 4.996183089593018,
+        "sweep_degrees": 286.26020470831196
+      },
+      "extra_arc_entity": null,
+      "failed_constraints": [],
+      "input": {
+        "fixed": [
+          "s",
+          "e"
+        ],
+        "points": {
+          "c": [
+            0,
+            -4
+          ],
+          "e": [
+            3,
+            0
+          ],
+          "s": [
+            -3,
+            0
+          ]
+        },
+        "radius": 3
+      },
+      "line_entity": null,
+      "native": {
+        "dof": 0,
+        "nbad": 0,
+        "result": 0
+      },
+      "point_handles": {
+        "c": 4,
+        "e": 5,
+        "s": 6
+      },
+      "points": {
+        "c": [
+          -6.661338147750939e-16,
+          -0.00016979282208662487
+        ],
+        "e": [
+          3.0,
+          0.0
+        ],
+        "s": [
+          -3.0,
+          0.0
+        ]
+      },
+      "radial_lines": {}
+    },
+    "fixed_chord_side_-1_radius_4": {
+      "after": {
+        "chord": 6.0,
+        "cross": -15.874507866387555,
+        "dot": -1.9999999999999902,
+        "end_radius": 4.000000000000001,
+        "equal_radius_residual": 0.0,
+        "start_radius": 4.000000000000001,
+        "sweep": 4.587061149216625,
+        "sweep_degrees": 262.81924421854177
+      },
+      "arc_entity": {
+        "distance": 0,
+        "group": 2,
+        "h": 7,
+        "normal": 2,
+        "param": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "point": [
+          4,
+          6,
+          5,
+          0
+        ],
+        "type": 80004,
+        "wrkpl": 3
+      },
+      "before": {
+        "chord": 6.0,
+        "cross": -24,
+        "dot": 7,
+        "end_radius": 5.0,
+        "equal_radius_residual": 0.0,
+        "start_radius": 5.0,
+        "sweep": 4.996183089593018,
+        "sweep_degrees": 286.26020470831196
+      },
+      "extra_arc_entity": null,
+      "failed_constraints": [],
+      "input": {
+        "fixed": [
+          "s",
+          "e"
+        ],
+        "points": {
+          "c": [
+            0,
+            -4
+          ],
+          "e": [
+            3,
+            0
+          ],
+          "s": [
+            -3,
+            0
+          ]
+        },
+        "radius": 4
+      },
+      "line_entity": null,
+      "native": {
+        "dof": 0,
+        "nbad": 0,
+        "result": 0
+      },
+      "point_handles": {
+        "c": 4,
+        "e": 5,
+        "s": 6
+      },
+      "points": {
+        "c": [
+          1.1102232893229526e-16,
+          -2.6457513110645925
+        ],
+        "e": [
+          3.0,
+          0.0
+        ],
+        "s": [
+          -3.0,
+          0.0
+        ]
+      },
+      "radial_lines": {}
+    },
+    "fixed_chord_side_1_radius_2": {
+      "after": {
+        "chord": 6.0,
+        "cross": 24.0,
+        "dot": 7.0,
+        "end_radius": 5.0,
+        "equal_radius_residual": 0.0,
+        "start_radius": 5.0,
+        "sweep": 1.2870022175865687,
+        "sweep_degrees": 73.73979529168804
+      },
+      "arc_entity": {
+        "distance": 0,
+        "group": 2,
+        "h": 7,
+        "normal": 2,
+        "param": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "point": [
+          4,
+          6,
+          5,
+          0
+        ],
+        "type": 80004,
+        "wrkpl": 3
+      },
+      "before": {
+        "chord": 6.0,
+        "cross": 24,
+        "dot": 7,
+        "end_radius": 5.0,
+        "equal_radius_residual": 0.0,
+        "start_radius": 5.0,
+        "sweep": 1.2870022175865687,
+        "sweep_degrees": 73.73979529168804
+      },
+      "extra_arc_entity": null,
+      "failed_constraints": [
+        "radius"
+      ],
+      "input": {
+        "fixed": [
+          "s",
+          "e"
+        ],
+        "points": {
+          "c": [
+            0,
+            4
+          ],
+          "e": [
+            3,
+            0
+          ],
+          "s": [
+            -3,
+            0
+          ]
+        },
+        "radius": 2
+      },
+      "line_entity": null,
+      "native": {
+        "dof": 0,
+        "nbad": 1,
+        "result": 2
+      },
+      "point_handles": {
+        "c": 4,
+        "e": 5,
+        "s": 6
+      },
+      "points": {
+        "c": [
+          0.0,
+          4.0
+        ],
+        "e": [
+          3.0,
+          0.0
+        ],
+        "s": [
+          -3.0,
+          0.0
+        ]
+      },
+      "radial_lines": {}
+    },
+    "fixed_chord_side_1_radius_3": {
+      "after": {
+        "chord": 6.0,
+        "cross": 0.0010187569325197494,
+        "dot": -8.999999971170398,
+        "end_radius": 3.0000000048049347,
+        "equal_radius_residual": 1.7763568394002505e-15,
+        "start_radius": 3.000000004804933,
+        "sweep": 3.1414794583751897,
+        "sweep_degrees": 179.99351439194214
+      },
+      "arc_entity": {
+        "distance": 0,
+        "group": 2,
+        "h": 7,
+        "normal": 2,
+        "param": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "point": [
+          4,
+          6,
+          5,
+          0
+        ],
+        "type": 80004,
+        "wrkpl": 3
+      },
+      "before": {
+        "chord": 6.0,
+        "cross": 24,
+        "dot": 7,
+        "end_radius": 5.0,
+        "equal_radius_residual": 0.0,
+        "start_radius": 5.0,
+        "sweep": 1.2870022175865687,
+        "sweep_degrees": 73.73979529168804
+      },
+      "extra_arc_entity": null,
+      "failed_constraints": [],
+      "input": {
+        "fixed": [
+          "s",
+          "e"
+        ],
+        "points": {
+          "c": [
+            0,
+            4
+          ],
+          "e": [
+            3,
+            0
+          ],
+          "s": [
+            -3,
+            0
+          ]
+        },
+        "radius": 3
+      },
+      "line_entity": null,
+      "native": {
+        "dof": 0,
+        "nbad": 0,
+        "result": 0
+      },
+      "point_handles": {
+        "c": 4,
+        "e": 5,
+        "s": 6
+      },
+      "points": {
+        "c": [
+          -6.661338147750939e-16,
+          0.00016979282208662487
+        ],
+        "e": [
+          3.0,
+          0.0
+        ],
+        "s": [
+          -3.0,
+          0.0
+        ]
+      },
+      "radial_lines": {}
+    },
+    "fixed_chord_side_1_radius_4": {
+      "after": {
+        "chord": 6.0,
+        "cross": 15.874507866387555,
+        "dot": -1.9999999999999902,
+        "end_radius": 4.000000000000001,
+        "equal_radius_residual": 0.0,
+        "start_radius": 4.000000000000001,
+        "sweep": 1.6961241579629613,
+        "sweep_degrees": 97.18075578145825
+      },
+      "arc_entity": {
+        "distance": 0,
+        "group": 2,
+        "h": 7,
+        "normal": 2,
+        "param": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "point": [
+          4,
+          6,
+          5,
+          0
+        ],
+        "type": 80004,
+        "wrkpl": 3
+      },
+      "before": {
+        "chord": 6.0,
+        "cross": 24,
+        "dot": 7,
+        "end_radius": 5.0,
+        "equal_radius_residual": 0.0,
+        "start_radius": 5.0,
+        "sweep": 1.2870022175865687,
+        "sweep_degrees": 73.73979529168804
+      },
+      "extra_arc_entity": null,
+      "failed_constraints": [],
+      "input": {
+        "fixed": [
+          "s",
+          "e"
+        ],
+        "points": {
+          "c": [
+            0,
+            4
+          ],
+          "e": [
+            3,
+            0
+          ],
+          "s": [
+            -3,
+            0
+          ]
+        },
+        "radius": 4
+      },
+      "line_entity": null,
+      "native": {
+        "dof": 0,
+        "nbad": 0,
+        "result": 0
+      },
+      "point_handles": {
+        "c": 4,
+        "e": 5,
+        "s": 6
+      },
+      "points": {
+        "c": [
+          1.1102232893229526e-16,
+          2.6457513110645925
+        ],
+        "e": [
+          3.0,
+          0.0
+        ],
+        "s": [
+          -3.0,
+          0.0
+        ]
+      },
+      "radial_lines": {}
+    },
+    "fixed_chord_singular_seed_-1e-10": {
+      "after": {
+        "chord": 6.0,
+        "cross": -6e-10,
+        "dot": -9.0,
+        "end_radius": 3.0,
+        "equal_radius_residual": 0.0,
+        "start_radius": 3.0,
+        "sweep": 3.14159265365646,
+        "sweep_degrees": 180.0000000038197
+      },
+      "arc_entity": {
+        "distance": 0,
+        "group": 2,
+        "h": 7,
+        "normal": 2,
+        "param": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "point": [
+          4,
+          6,
+          5,
+          0
+        ],
+        "type": 80004,
+        "wrkpl": 3
+      },
+      "before": {
+        "chord": 6.0,
+        "cross": -6e-10,
+        "dot": -9.0,
+        "end_radius": 3.0,
+        "equal_radius_residual": 0.0,
+        "start_radius": 3.0,
+        "sweep": 3.14159265365646,
+        "sweep_degrees": 180.0000000038197
+      },
+      "extra_arc_entity": null,
+      "failed_constraints": [
+        "radius"
+      ],
+      "input": {
+        "fixed": [
+          "s",
+          "e"
+        ],
+        "points": {
+          "c": [
+            0,
+            -1e-10
+          ],
+          "e": [
+            3,
+            0
+          ],
+          "s": [
+            -3,
+            0
+          ]
+        },
+        "radius": 5
+      },
+      "line_entity": null,
+      "native": {
+        "dof": 0,
+        "nbad": 1,
+        "result": 2
+      },
+      "point_handles": {
+        "c": 4,
+        "e": 5,
+        "s": 6
+      },
+      "points": {
+        "c": [
+          0.0,
+          -1e-10
+        ],
+        "e": [
+          3.0,
+          0.0
+        ],
+        "s": [
+          -3.0,
+          0.0
+        ]
+      },
+      "radial_lines": {}
+    },
+    "fixed_chord_singular_seed_0": {
+      "after": {
+        "chord": 6.0,
+        "cross": -0.0,
+        "dot": -9.0,
+        "end_radius": 3.0,
+        "equal_radius_residual": 0.0,
+        "start_radius": 3.0,
+        "sweep": 3.141592653589793,
+        "sweep_degrees": 180.0
+      },
+      "arc_entity": {
+        "distance": 0,
+        "group": 2,
+        "h": 7,
+        "normal": 2,
+        "param": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "point": [
+          4,
+          6,
+          5,
+          0
+        ],
+        "type": 80004,
+        "wrkpl": 3
+      },
+      "before": {
+        "chord": 6.0,
+        "cross": 0,
+        "dot": -9,
+        "end_radius": 3.0,
+        "equal_radius_residual": 0.0,
+        "start_radius": 3.0,
+        "sweep": 3.141592653589793,
+        "sweep_degrees": 180.0
+      },
+      "extra_arc_entity": null,
+      "failed_constraints": [
+        "radius"
+      ],
+      "input": {
+        "fixed": [
+          "s",
+          "e"
+        ],
+        "points": {
+          "c": [
+            0,
+            0
+          ],
+          "e": [
+            3,
+            0
+          ],
+          "s": [
+            -3,
+            0
+          ]
+        },
+        "radius": 5
+      },
+      "line_entity": null,
+      "native": {
+        "dof": 1,
+        "nbad": 1,
+        "result": 1
+      },
+      "point_handles": {
+        "c": 4,
+        "e": 5,
+        "s": 6
+      },
+      "points": {
+        "c": [
+          0.0,
+          0.0
+        ],
+        "e": [
+          3.0,
+          0.0
+        ],
+        "s": [
+          -3.0,
+          0.0
+        ]
+      },
+      "radial_lines": {}
+    },
+    "fixed_chord_singular_seed_1e-10": {
+      "after": {
+        "chord": 6.0,
+        "cross": 6e-10,
+        "dot": -9.0,
+        "end_radius": 3.0,
+        "equal_radius_residual": 0.0,
+        "start_radius": 3.0,
+        "sweep": 3.1415926535231264,
+        "sweep_degrees": 179.9999999961803
+      },
+      "arc_entity": {
+        "distance": 0,
+        "group": 2,
+        "h": 7,
+        "normal": 2,
+        "param": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "point": [
+          4,
+          6,
+          5,
+          0
+        ],
+        "type": 80004,
+        "wrkpl": 3
+      },
+      "before": {
+        "chord": 6.0,
+        "cross": 6e-10,
+        "dot": -9.0,
+        "end_radius": 3.0,
+        "equal_radius_residual": 0.0,
+        "start_radius": 3.0,
+        "sweep": 3.1415926535231264,
+        "sweep_degrees": 179.9999999961803
+      },
+      "extra_arc_entity": null,
+      "failed_constraints": [
+        "radius"
+      ],
+      "input": {
+        "fixed": [
+          "s",
+          "e"
+        ],
+        "points": {
+          "c": [
+            0,
+            1e-10
+          ],
+          "e": [
+            3,
+            0
+          ],
+          "s": [
+            -3,
+            0
+          ]
+        },
+        "radius": 5
+      },
+      "line_entity": null,
+      "native": {
+        "dof": 0,
+        "nbad": 1,
+        "result": 2
+      },
+      "point_handles": {
+        "c": 4,
+        "e": 5,
+        "s": 6
+      },
+      "points": {
+        "c": [
+          0.0,
+          1e-10
+        ],
+        "e": [
+          3.0,
+          0.0
+        ],
+        "s": [
+          -3.0,
+          0.0
+        ]
+      },
+      "radial_lines": {}
+    },
+    "free_major": {
+      "after": {
+        "chord": 7.0710678118654755,
+        "cross": -25.0,
+        "dot": 0.0,
+        "end_radius": 5.0,
+        "equal_radius_residual": 0.0,
+        "start_radius": 5.0,
+        "sweep": 4.71238898038469,
+        "sweep_degrees": 270.0
+      },
+      "arc_entity": {
+        "distance": 0,
+        "group": 2,
+        "h": 7,
+        "normal": 2,
+        "param": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "point": [
+          4,
+          6,
+          5,
+          0
+        ],
+        "type": 80004,
+        "wrkpl": 3
+      },
+      "before": {
+        "chord": 7.0710678118654755,
+        "cross": -25,
+        "dot": 0,
+        "end_radius": 5.0,
+        "equal_radius_residual": 0.0,
+        "start_radius": 5.0,
+        "sweep": 4.71238898038469,
+        "sweep_degrees": 270.0
+      },
+      "extra_arc_entity": null,
+      "failed_constraints": [],
+      "input": {
+        "points": {
+          "c": [
+            0,
+            0
+          ],
+          "e": [
+            0,
+            -5
+          ],
+          "s": [
+            5,
+            0
+          ]
+        }
+      },
+      "line_entity": null,
+      "native": {
+        "dof": 5,
+        "nbad": 0,
+        "result": 0
+      },
+      "point_handles": {
+        "c": 4,
+        "e": 5,
+        "s": 6
+      },
+      "points": {
+        "c": [
+          0.0,
+          0.0
+        ],
+        "e": [
+          0.0,
+          -5.0
+        ],
+        "s": [
+          5.0,
+          0.0
+        ]
+      },
+      "radial_lines": {}
+    },
+    "free_quarter": {
+      "after": {
+        "chord": 7.0710678118654755,
+        "cross": 25.0,
+        "dot": 0.0,
+        "end_radius": 5.0,
+        "equal_radius_residual": 0.0,
+        "start_radius": 5.0,
+        "sweep": 1.5707963267948966,
+        "sweep_degrees": 90.0
+      },
+      "arc_entity": {
+        "distance": 0,
+        "group": 2,
+        "h": 7,
+        "normal": 2,
+        "param": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "point": [
+          4,
+          6,
+          5,
+          0
+        ],
+        "type": 80004,
+        "wrkpl": 3
+      },
+      "before": {
+        "chord": 7.0710678118654755,
+        "cross": 25,
+        "dot": 0,
+        "end_radius": 5.0,
+        "equal_radius_residual": 0.0,
+        "start_radius": 5.0,
+        "sweep": 1.5707963267948966,
+        "sweep_degrees": 90.0
+      },
+      "extra_arc_entity": null,
+      "failed_constraints": [],
+      "input": {
+        "points": {
+          "c": [
+            0,
+            0
+          ],
+          "e": [
+            0,
+            5
+          ],
+          "s": [
+            5,
+            0
+          ]
+        }
+      },
+      "line_entity": null,
+      "native": {
+        "dof": 5,
+        "nbad": 0,
+        "result": 0
+      },
+      "point_handles": {
+        "c": 4,
+        "e": 5,
+        "s": 6
+      },
+      "points": {
+        "c": [
+          0.0,
+          0.0
+        ],
+        "e": [
+          0.0,
+          5.0
+        ],
+        "s": [
+          5.0,
+          0.0
+        ]
+      },
+      "radial_lines": {}
+    },
+    "free_quarter_cw": {
+      "after": {
+        "chord": 7.0710678118654755,
+        "cross": 25.0,
+        "dot": 0.0,
+        "end_radius": 5.0,
+        "equal_radius_residual": 0.0,
+        "start_radius": 5.0,
+        "sweep": -4.71238898038469,
+        "sweep_degrees": -270.0
+      },
+      "arc_entity": {
+        "distance": 0,
+        "group": 2,
+        "h": 7,
+        "normal": 2,
+        "param": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "point": [
+          4,
+          5,
+          6,
+          0
+        ],
+        "type": 80004,
+        "wrkpl": 3
+      },
+      "before": {
+        "chord": 7.0710678118654755,
+        "cross": 25,
+        "dot": 0,
+        "end_radius": 5.0,
+        "equal_radius_residual": 0.0,
+        "start_radius": 5.0,
+        "sweep": -4.71238898038469,
+        "sweep_degrees": -270.0
+      },
+      "extra_arc_entity": null,
+      "failed_constraints": [],
+      "input": {
+        "direction": "cw",
+        "points": {
+          "c": [
+            0,
+            0
+          ],
+          "e": [
+            0,
+            5
+          ],
+          "s": [
+            5,
+            0
+          ]
+        }
+      },
+      "line_entity": null,
+      "native": {
+        "dof": 5,
+        "nbad": 0,
+        "result": 0
+      },
+      "point_handles": {
+        "c": 4,
+        "e": 5,
+        "s": 6
+      },
+      "points": {
+        "c": [
+          0.0,
+          0.0
+        ],
+        "e": [
+          0.0,
+          5.0
+        ],
+        "s": [
+          5.0,
+          0.0
+        ]
+      },
+      "radial_lines": {}
+    },
+    "line_shared_endpoint": {
+      "after": {
+        "chord": 9.899494936611665,
+        "cross": 49.0,
+        "dot": 0.0,
+        "end_radius": 7.0,
+        "equal_radius_residual": 0.0,
+        "start_radius": 7.0,
+        "sweep": 1.5707963267948966,
+        "sweep_degrees": 90.0
+      },
+      "arc_entity": {
+        "distance": 0,
+        "group": 2,
+        "h": 8,
+        "normal": 2,
+        "param": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "point": [
+          4,
+          6,
+          5,
+          0
+        ],
+        "type": 80004,
+        "wrkpl": 3
+      },
+      "before": {
+        "chord": 7.0710678118654755,
+        "cross": 25,
+        "dot": 0,
+        "end_radius": 5.0,
+        "equal_radius_residual": 0.0,
+        "start_radius": 5.0,
+        "sweep": 1.5707963267948966,
+        "sweep_degrees": 90.0
+      },
+      "extra_arc_entity": null,
+      "failed_constraints": [],
+      "input": {
+        "fixed": [
+          "c"
+        ],
+        "line": [
+          "s",
+          "z"
+        ],
+        "points": {
+          "c": [
+            0,
+            0
+          ],
+          "e": [
+            0,
+            5
+          ],
+          "s": [
+            5,
+            0
+          ],
+          "z": [
+            10,
+            0
+          ]
+        },
+        "radius": 7
+      },
+      "line_entity": {
+        "distance": 0,
+        "group": 2,
+        "h": 9,
+        "normal": 0,
+        "param": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "point": [
+          6,
+          7,
+          0,
+          0
+        ],
+        "type": 80001,
+        "wrkpl": 3
+      },
+      "native": {
+        "dof": 4,
+        "nbad": 0,
+        "result": 0
+      },
+      "point_handles": {
+        "c": 4,
+        "e": 5,
+        "s": 6,
+        "z": 7
+      },
+      "points": {
+        "c": [
+          0.0,
+          0.0
+        ],
+        "e": [
+          0.0,
+          7.0
+        ],
+        "s": [
+          7.0,
+          0.0
+        ],
+        "z": [
+          10.0,
+          0.0
+        ]
+      },
+      "radial_lines": {}
+    },
+    "matrix_major_ccw_all_r5": {
+      "after": {
+        "chord": 7.0710678118654755,
+        "cross": -25.0,
+        "dot": 0.0,
+        "end_radius": 5.0,
+        "equal_radius_residual": 0.0,
+        "start_radius": 5.0,
+        "sweep": 4.71238898038469,
+        "sweep_degrees": 270.0
+      },
+      "arc_entity": {
+        "distance": 0,
+        "group": 2,
+        "h": 7,
+        "normal": 2,
+        "param": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "point": [
+          4,
+          6,
+          5,
+          0
+        ],
+        "type": 80004,
+        "wrkpl": 3
+      },
+      "before": {
+        "chord": 7.0710678118654755,
+        "cross": -25,
+        "dot": 0,
+        "end_radius": 5.0,
+        "equal_radius_residual": 0.0,
+        "start_radius": 5.0,
+        "sweep": 4.71238898038469,
+        "sweep_degrees": 270.0
+      },
+      "extra_arc_entity": null,
+      "failed_constraints": [
+        "fixed.c"
+      ],
+      "input": {
+        "direction": "ccw",
+        "fixed": [
+          "c",
+          "s",
+          "e"
+        ],
+        "points": {
+          "c": [
+            0,
+            0
+          ],
+          "e": [
+            0,
+            -5
+          ],
+          "s": [
+            5,
+            0
+          ]
+        },
+        "radius": 5
+      },
+      "line_entity": null,
+      "native": {
+        "dof": 0,
+        "nbad": 1,
+        "result": 4
+      },
+      "point_handles": {
+        "c": 4,
+        "e": 5,
+        "s": 6
+      },
+      "points": {
+        "c": [
+          0.0,
+          0.0
+        ],
+        "e": [
+          0.0,
+          -5.0
+        ],
+        "s": [
+          5.0,
+          0.0
+        ]
+      },
+      "radial_lines": {}
+    },
+    "matrix_major_ccw_all_r7": {
+      "after": {
+        "chord": 7.0710678118654755,
+        "cross": -25.0,
+        "dot": 0.0,
+        "end_radius": 5.0,
+        "equal_radius_residual": 0.0,
+        "start_radius": 5.0,
+        "sweep": 4.71238898038469,
+        "sweep_degrees": 270.0
+      },
+      "arc_entity": {
+        "distance": 0,
+        "group": 2,
+        "h": 7,
+        "normal": 2,
+        "param": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "point": [
+          4,
+          6,
+          5,
+          0
+        ],
+        "type": 80004,
+        "wrkpl": 3
+      },
+      "before": {
+        "chord": 7.0710678118654755,
+        "cross": -25,
+        "dot": 0,
+        "end_radius": 5.0,
+        "equal_radius_residual": 0.0,
+        "start_radius": 5.0,
+        "sweep": 4.71238898038469,
+        "sweep_degrees": 270.0
+      },
+      "extra_arc_entity": null,
+      "failed_constraints": [
+        "radius"
+      ],
+      "input": {
+        "direction": "ccw",
+        "fixed": [
+          "c",
+          "s",
+          "e"
+        ],
+        "points": {
+          "c": [
+            0,
+            0
+          ],
+          "e": [
+            0,
+            -5
+          ],
+          "s": [
+            5,
+            0
+          ]
+        },
+        "radius": 7
+      },
+      "line_entity": null,
+      "native": {
+        "dof": 0,
+        "nbad": 1,
+        "result": 1
+      },
+      "point_handles": {
+        "c": 4,
+        "e": 5,
+        "s": 6
+      },
+      "points": {
+        "c": [
+          0.0,
+          0.0
+        ],
+        "e": [
+          0.0,
+          -5.0
+        ],
+        "s": [
+          5.0,
+          0.0
+        ]
+      },
+      "radial_lines": {}
+    },
+    "matrix_major_ccw_center_r5": {
+      "after": {
+        "chord": 7.0710678118654755,
+        "cross": -25.0,
+        "dot": 0.0,
+        "end_radius": 5.0,
+        "equal_radius_residual": 0.0,
+        "start_radius": 5.0,
+        "sweep": 4.71238898038469,
+        "sweep_degrees": 270.0
+      },
+      "arc_entity": {
+        "distance": 0,
+        "group": 2,
+        "h": 7,
+        "normal": 2,
+        "param": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "point": [
+          4,
+          6,
+          5,
+          0
+        ],
+        "type": 80004,
+        "wrkpl": 3
+      },
+      "before": {
+        "chord": 7.0710678118654755,
+        "cross": -25,
+        "dot": 0,
+        "end_radius": 5.0,
+        "equal_radius_residual": 0.0,
+        "start_radius": 5.0,
+        "sweep": 4.71238898038469,
+        "sweep_degrees": 270.0
+      },
+      "extra_arc_entity": null,
+      "failed_constraints": [],
+      "input": {
+        "direction": "ccw",
+        "fixed": [
+          "c"
+        ],
+        "points": {
+          "c": [
+            0,
+            0
+          ],
+          "e": [
+            0,
+            -5
+          ],
+          "s": [
+            5,
+            0
+          ]
+        },
+        "radius": 5
+      },
+      "line_entity": null,
+      "native": {
+        "dof": 2,
+        "nbad": 0,
+        "result": 0
+      },
+      "point_handles": {
+        "c": 4,
+        "e": 5,
+        "s": 6
+      },
+      "points": {
+        "c": [
+          0.0,
+          0.0
+        ],
+        "e": [
+          0.0,
+          -5.0
+        ],
+        "s": [
+          5.0,
+          0.0
+        ]
+      },
+      "radial_lines": {}
+    },
+    "matrix_major_ccw_center_r7": {
+      "after": {
+        "chord": 9.899494936611665,
+        "cross": -49.0,
+        "dot": 0.0,
+        "end_radius": 7.0,
+        "equal_radius_residual": 0.0,
+        "start_radius": 7.0,
+        "sweep": 4.71238898038469,
+        "sweep_degrees": 270.0
+      },
+      "arc_entity": {
+        "distance": 0,
+        "group": 2,
+        "h": 7,
+        "normal": 2,
+        "param": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "point": [
+          4,
+          6,
+          5,
+          0
+        ],
+        "type": 80004,
+        "wrkpl": 3
+      },
+      "before": {
+        "chord": 7.0710678118654755,
+        "cross": -25,
+        "dot": 0,
+        "end_radius": 5.0,
+        "equal_radius_residual": 0.0,
+        "start_radius": 5.0,
+        "sweep": 4.71238898038469,
+        "sweep_degrees": 270.0
+      },
+      "extra_arc_entity": null,
+      "failed_constraints": [],
+      "input": {
+        "direction": "ccw",
+        "fixed": [
+          "c"
+        ],
+        "points": {
+          "c": [
+            0,
+            0
+          ],
+          "e": [
+            0,
+            -5
+          ],
+          "s": [
+            5,
+            0
+          ]
+        },
+        "radius": 7
+      },
+      "line_entity": null,
+      "native": {
+        "dof": 2,
+        "nbad": 0,
+        "result": 0
+      },
+      "point_handles": {
+        "c": 4,
+        "e": 5,
+        "s": 6
+      },
+      "points": {
+        "c": [
+          0.0,
+          0.0
+        ],
+        "e": [
+          0.0,
+          -7.0
+        ],
+        "s": [
+          7.0,
+          0.0
+        ]
+      },
+      "radial_lines": {}
+    },
+    "matrix_major_ccw_center_start_r5": {
+      "after": {
+        "chord": 7.0710678118654755,
+        "cross": -25.0,
+        "dot": 0.0,
+        "end_radius": 5.0,
+        "equal_radius_residual": 0.0,
+        "start_radius": 5.0,
+        "sweep": 4.71238898038469,
+        "sweep_degrees": 270.0
+      },
+      "arc_entity": {
+        "distance": 0,
+        "group": 2,
+        "h": 7,
+        "normal": 2,
+        "param": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "point": [
+          4,
+          6,
+          5,
+          0
+        ],
+        "type": 80004,
+        "wrkpl": 3
+      },
+      "before": {
+        "chord": 7.0710678118654755,
+        "cross": -25,
+        "dot": 0,
+        "end_radius": 5.0,
+        "equal_radius_residual": 0.0,
+        "start_radius": 5.0,
+        "sweep": 4.71238898038469,
+        "sweep_degrees": 270.0
+      },
+      "extra_arc_entity": null,
+      "failed_constraints": [
+        "radius"
+      ],
+      "input": {
+        "direction": "ccw",
+        "fixed": [
+          "c",
+          "s"
+        ],
+        "points": {
+          "c": [
+            0,
+            0
+          ],
+          "e": [
+            0,
+            -5
+          ],
+          "s": [
+            5,
+            0
+          ]
+        },
+        "radius": 5
+      },
+      "line_entity": null,
+      "native": {
+        "dof": 1,
+        "nbad": 1,
+        "result": 4
+      },
+      "point_handles": {
+        "c": 4,
+        "e": 5,
+        "s": 6
+      },
+      "points": {
+        "c": [
+          0.0,
+          0.0
+        ],
+        "e": [
+          0.0,
+          -5.0
+        ],
+        "s": [
+          5.0,
+          0.0
+        ]
+      },
+      "radial_lines": {}
+    },
+    "matrix_major_ccw_center_start_r7": {
+      "after": {
+        "chord": 7.0710678118654755,
+        "cross": -25.0,
+        "dot": 0.0,
+        "end_radius": 5.0,
+        "equal_radius_residual": 0.0,
+        "start_radius": 5.0,
+        "sweep": 4.71238898038469,
+        "sweep_degrees": 270.0
+      },
+      "arc_entity": {
+        "distance": 0,
+        "group": 2,
+        "h": 7,
+        "normal": 2,
+        "param": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "point": [
+          4,
+          6,
+          5,
+          0
+        ],
+        "type": 80004,
+        "wrkpl": 3
+      },
+      "before": {
+        "chord": 7.0710678118654755,
+        "cross": -25,
+        "dot": 0,
+        "end_radius": 5.0,
+        "equal_radius_residual": 0.0,
+        "start_radius": 5.0,
+        "sweep": 4.71238898038469,
+        "sweep_degrees": 270.0
+      },
+      "extra_arc_entity": null,
+      "failed_constraints": [
+        "radius"
+      ],
+      "input": {
+        "direction": "ccw",
+        "fixed": [
+          "c",
+          "s"
+        ],
+        "points": {
+          "c": [
+            0,
+            0
+          ],
+          "e": [
+            0,
+            -5
+          ],
+          "s": [
+            5,
+            0
+          ]
+        },
+        "radius": 7
+      },
+      "line_entity": null,
+      "native": {
+        "dof": 1,
+        "nbad": 1,
+        "result": 1
+      },
+      "point_handles": {
+        "c": 4,
+        "e": 5,
+        "s": 6
+      },
+      "points": {
+        "c": [
+          0.0,
+          0.0
+        ],
+        "e": [
+          0.0,
+          -5.0
+        ],
+        "s": [
+          5.0,
+          0.0
+        ]
+      },
+      "radial_lines": {}
+    },
+    "matrix_major_cw_all_r5": {
+      "after": {
+        "chord": 7.0710678118654755,
+        "cross": 25.0,
+        "dot": 0.0,
+        "end_radius": 5.0,
+        "equal_radius_residual": 0.0,
+        "start_radius": 5.0,
+        "sweep": -4.71238898038469,
+        "sweep_degrees": -270.0
+      },
+      "arc_entity": {
+        "distance": 0,
+        "group": 2,
+        "h": 7,
+        "normal": 2,
+        "param": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "point": [
+          4,
+          5,
+          6,
+          0
+        ],
+        "type": 80004,
+        "wrkpl": 3
+      },
+      "before": {
+        "chord": 7.0710678118654755,
+        "cross": 25,
+        "dot": 0,
+        "end_radius": 5.0,
+        "equal_radius_residual": 0.0,
+        "start_radius": 5.0,
+        "sweep": -4.71238898038469,
+        "sweep_degrees": -270.0
+      },
+      "extra_arc_entity": null,
+      "failed_constraints": [
+        "fixed.c"
+      ],
+      "input": {
+        "direction": "cw",
+        "fixed": [
+          "c",
+          "s",
+          "e"
+        ],
+        "points": {
+          "c": [
+            0,
+            0
+          ],
+          "e": [
+            0,
+            5
+          ],
+          "s": [
+            5,
+            0
+          ]
+        },
+        "radius": 5
+      },
+      "line_entity": null,
+      "native": {
+        "dof": 0,
+        "nbad": 1,
+        "result": 4
+      },
+      "point_handles": {
+        "c": 4,
+        "e": 5,
+        "s": 6
+      },
+      "points": {
+        "c": [
+          0.0,
+          0.0
+        ],
+        "e": [
+          0.0,
+          5.0
+        ],
+        "s": [
+          5.0,
+          0.0
+        ]
+      },
+      "radial_lines": {}
+    },
+    "matrix_major_cw_all_r7": {
+      "after": {
+        "chord": 7.0710678118654755,
+        "cross": 25.0,
+        "dot": 0.0,
+        "end_radius": 5.0,
+        "equal_radius_residual": 0.0,
+        "start_radius": 5.0,
+        "sweep": -4.71238898038469,
+        "sweep_degrees": -270.0
+      },
+      "arc_entity": {
+        "distance": 0,
+        "group": 2,
+        "h": 7,
+        "normal": 2,
+        "param": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "point": [
+          4,
+          5,
+          6,
+          0
+        ],
+        "type": 80004,
+        "wrkpl": 3
+      },
+      "before": {
+        "chord": 7.0710678118654755,
+        "cross": 25,
+        "dot": 0,
+        "end_radius": 5.0,
+        "equal_radius_residual": 0.0,
+        "start_radius": 5.0,
+        "sweep": -4.71238898038469,
+        "sweep_degrees": -270.0
+      },
+      "extra_arc_entity": null,
+      "failed_constraints": [
+        "radius"
+      ],
+      "input": {
+        "direction": "cw",
+        "fixed": [
+          "c",
+          "s",
+          "e"
+        ],
+        "points": {
+          "c": [
+            0,
+            0
+          ],
+          "e": [
+            0,
+            5
+          ],
+          "s": [
+            5,
+            0
+          ]
+        },
+        "radius": 7
+      },
+      "line_entity": null,
+      "native": {
+        "dof": 0,
+        "nbad": 1,
+        "result": 1
+      },
+      "point_handles": {
+        "c": 4,
+        "e": 5,
+        "s": 6
+      },
+      "points": {
+        "c": [
+          0.0,
+          0.0
+        ],
+        "e": [
+          0.0,
+          5.0
+        ],
+        "s": [
+          5.0,
+          0.0
+        ]
+      },
+      "radial_lines": {}
+    },
+    "matrix_major_cw_center_r5": {
+      "after": {
+        "chord": 7.0710678118654755,
+        "cross": 25.0,
+        "dot": 0.0,
+        "end_radius": 5.0,
+        "equal_radius_residual": 0.0,
+        "start_radius": 5.0,
+        "sweep": -4.71238898038469,
+        "sweep_degrees": -270.0
+      },
+      "arc_entity": {
+        "distance": 0,
+        "group": 2,
+        "h": 7,
+        "normal": 2,
+        "param": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "point": [
+          4,
+          5,
+          6,
+          0
+        ],
+        "type": 80004,
+        "wrkpl": 3
+      },
+      "before": {
+        "chord": 7.0710678118654755,
+        "cross": 25,
+        "dot": 0,
+        "end_radius": 5.0,
+        "equal_radius_residual": 0.0,
+        "start_radius": 5.0,
+        "sweep": -4.71238898038469,
+        "sweep_degrees": -270.0
+      },
+      "extra_arc_entity": null,
+      "failed_constraints": [],
+      "input": {
+        "direction": "cw",
+        "fixed": [
+          "c"
+        ],
+        "points": {
+          "c": [
+            0,
+            0
+          ],
+          "e": [
+            0,
+            5
+          ],
+          "s": [
+            5,
+            0
+          ]
+        },
+        "radius": 5
+      },
+      "line_entity": null,
+      "native": {
+        "dof": 2,
+        "nbad": 0,
+        "result": 0
+      },
+      "point_handles": {
+        "c": 4,
+        "e": 5,
+        "s": 6
+      },
+      "points": {
+        "c": [
+          0.0,
+          0.0
+        ],
+        "e": [
+          0.0,
+          5.0
+        ],
+        "s": [
+          5.0,
+          0.0
+        ]
+      },
+      "radial_lines": {}
+    },
+    "matrix_major_cw_center_r7": {
+      "after": {
+        "chord": 9.899494936611665,
+        "cross": 49.0,
+        "dot": 0.0,
+        "end_radius": 7.0,
+        "equal_radius_residual": 0.0,
+        "start_radius": 7.0,
+        "sweep": -4.71238898038469,
+        "sweep_degrees": -270.0
+      },
+      "arc_entity": {
+        "distance": 0,
+        "group": 2,
+        "h": 7,
+        "normal": 2,
+        "param": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "point": [
+          4,
+          5,
+          6,
+          0
+        ],
+        "type": 80004,
+        "wrkpl": 3
+      },
+      "before": {
+        "chord": 7.0710678118654755,
+        "cross": 25,
+        "dot": 0,
+        "end_radius": 5.0,
+        "equal_radius_residual": 0.0,
+        "start_radius": 5.0,
+        "sweep": -4.71238898038469,
+        "sweep_degrees": -270.0
+      },
+      "extra_arc_entity": null,
+      "failed_constraints": [],
+      "input": {
+        "direction": "cw",
+        "fixed": [
+          "c"
+        ],
+        "points": {
+          "c": [
+            0,
+            0
+          ],
+          "e": [
+            0,
+            5
+          ],
+          "s": [
+            5,
+            0
+          ]
+        },
+        "radius": 7
+      },
+      "line_entity": null,
+      "native": {
+        "dof": 2,
+        "nbad": 0,
+        "result": 0
+      },
+      "point_handles": {
+        "c": 4,
+        "e": 5,
+        "s": 6
+      },
+      "points": {
+        "c": [
+          0.0,
+          0.0
+        ],
+        "e": [
+          0.0,
+          7.0
+        ],
+        "s": [
+          7.0,
+          0.0
+        ]
+      },
+      "radial_lines": {}
+    },
+    "matrix_major_cw_center_start_r5": {
+      "after": {
+        "chord": 7.0710678118654755,
+        "cross": 25.0,
+        "dot": 0.0,
+        "end_radius": 5.0,
+        "equal_radius_residual": 0.0,
+        "start_radius": 5.0,
+        "sweep": -4.71238898038469,
+        "sweep_degrees": -270.0
+      },
+      "arc_entity": {
+        "distance": 0,
+        "group": 2,
+        "h": 7,
+        "normal": 2,
+        "param": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "point": [
+          4,
+          5,
+          6,
+          0
+        ],
+        "type": 80004,
+        "wrkpl": 3
+      },
+      "before": {
+        "chord": 7.0710678118654755,
+        "cross": 25,
+        "dot": 0,
+        "end_radius": 5.0,
+        "equal_radius_residual": 0.0,
+        "start_radius": 5.0,
+        "sweep": -4.71238898038469,
+        "sweep_degrees": -270.0
+      },
+      "extra_arc_entity": null,
+      "failed_constraints": [
+        "radius",
+        "fixed.c",
+        "fixed.s"
+      ],
+      "input": {
+        "direction": "cw",
+        "fixed": [
+          "c",
+          "s"
+        ],
+        "points": {
+          "c": [
+            0,
+            0
+          ],
+          "e": [
+            0,
+            5
+          ],
+          "s": [
+            5,
+            0
+          ]
+        },
+        "radius": 5
+      },
+      "line_entity": null,
+      "native": {
+        "dof": 1,
+        "nbad": 3,
+        "result": 4
+      },
+      "point_handles": {
+        "c": 4,
+        "e": 5,
+        "s": 6
+      },
+      "points": {
+        "c": [
+          0.0,
+          0.0
+        ],
+        "e": [
+          0.0,
+          5.0
+        ],
+        "s": [
+          5.0,
+          0.0
+        ]
+      },
+      "radial_lines": {}
+    },
+    "matrix_major_cw_center_start_r7": {
+      "after": {
+        "chord": 7.0710678118654755,
+        "cross": 25.0,
+        "dot": 0.0,
+        "end_radius": 5.0,
+        "equal_radius_residual": 0.0,
+        "start_radius": 5.0,
+        "sweep": -4.71238898038469,
+        "sweep_degrees": -270.0
+      },
+      "arc_entity": {
+        "distance": 0,
+        "group": 2,
+        "h": 7,
+        "normal": 2,
+        "param": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "point": [
+          4,
+          5,
+          6,
+          0
+        ],
+        "type": 80004,
+        "wrkpl": 3
+      },
+      "before": {
+        "chord": 7.0710678118654755,
+        "cross": 25,
+        "dot": 0,
+        "end_radius": 5.0,
+        "equal_radius_residual": 0.0,
+        "start_radius": 5.0,
+        "sweep": -4.71238898038469,
+        "sweep_degrees": -270.0
+      },
+      "extra_arc_entity": null,
+      "failed_constraints": [
+        "radius"
+      ],
+      "input": {
+        "direction": "cw",
+        "fixed": [
+          "c",
+          "s"
+        ],
+        "points": {
+          "c": [
+            0,
+            0
+          ],
+          "e": [
+            0,
+            5
+          ],
+          "s": [
+            5,
+            0
+          ]
+        },
+        "radius": 7
+      },
+      "line_entity": null,
+      "native": {
+        "dof": 1,
+        "nbad": 1,
+        "result": 1
+      },
+      "point_handles": {
+        "c": 4,
+        "e": 5,
+        "s": 6
+      },
+      "points": {
+        "c": [
+          0.0,
+          0.0
+        ],
+        "e": [
+          0.0,
+          5.0
+        ],
+        "s": [
+          5.0,
+          0.0
+        ]
+      },
+      "radial_lines": {}
+    },
+    "matrix_minor_ccw_all_r5": {
+      "after": {
+        "chord": 7.0710678118654755,
+        "cross": 25.0,
+        "dot": 0.0,
+        "end_radius": 5.0,
+        "equal_radius_residual": 0.0,
+        "start_radius": 5.0,
+        "sweep": 1.5707963267948966,
+        "sweep_degrees": 90.0
+      },
+      "arc_entity": {
+        "distance": 0,
+        "group": 2,
+        "h": 7,
+        "normal": 2,
+        "param": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "point": [
+          4,
+          6,
+          5,
+          0
+        ],
+        "type": 80004,
+        "wrkpl": 3
+      },
+      "before": {
+        "chord": 7.0710678118654755,
+        "cross": 25,
+        "dot": 0,
+        "end_radius": 5.0,
+        "equal_radius_residual": 0.0,
+        "start_radius": 5.0,
+        "sweep": 1.5707963267948966,
+        "sweep_degrees": 90.0
+      },
+      "extra_arc_entity": null,
+      "failed_constraints": [
+        "fixed.c"
+      ],
+      "input": {
+        "direction": "ccw",
+        "fixed": [
+          "c",
+          "s",
+          "e"
+        ],
+        "points": {
+          "c": [
+            0,
+            0
+          ],
+          "e": [
+            0,
+            5
+          ],
+          "s": [
+            5,
+            0
+          ]
+        },
+        "radius": 5
+      },
+      "line_entity": null,
+      "native": {
+        "dof": 0,
+        "nbad": 1,
+        "result": 4
+      },
+      "point_handles": {
+        "c": 4,
+        "e": 5,
+        "s": 6
+      },
+      "points": {
+        "c": [
+          0.0,
+          0.0
+        ],
+        "e": [
+          0.0,
+          5.0
+        ],
+        "s": [
+          5.0,
+          0.0
+        ]
+      },
+      "radial_lines": {}
+    },
+    "matrix_minor_ccw_all_r7": {
+      "after": {
+        "chord": 7.0710678118654755,
+        "cross": 25.0,
+        "dot": 0.0,
+        "end_radius": 5.0,
+        "equal_radius_residual": 0.0,
+        "start_radius": 5.0,
+        "sweep": 1.5707963267948966,
+        "sweep_degrees": 90.0
+      },
+      "arc_entity": {
+        "distance": 0,
+        "group": 2,
+        "h": 7,
+        "normal": 2,
+        "param": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "point": [
+          4,
+          6,
+          5,
+          0
+        ],
+        "type": 80004,
+        "wrkpl": 3
+      },
+      "before": {
+        "chord": 7.0710678118654755,
+        "cross": 25,
+        "dot": 0,
+        "end_radius": 5.0,
+        "equal_radius_residual": 0.0,
+        "start_radius": 5.0,
+        "sweep": 1.5707963267948966,
+        "sweep_degrees": 90.0
+      },
+      "extra_arc_entity": null,
+      "failed_constraints": [
+        "radius"
+      ],
+      "input": {
+        "direction": "ccw",
+        "fixed": [
+          "c",
+          "s",
+          "e"
+        ],
+        "points": {
+          "c": [
+            0,
+            0
+          ],
+          "e": [
+            0,
+            5
+          ],
+          "s": [
+            5,
+            0
+          ]
+        },
+        "radius": 7
+      },
+      "line_entity": null,
+      "native": {
+        "dof": 0,
+        "nbad": 1,
+        "result": 1
+      },
+      "point_handles": {
+        "c": 4,
+        "e": 5,
+        "s": 6
+      },
+      "points": {
+        "c": [
+          0.0,
+          0.0
+        ],
+        "e": [
+          0.0,
+          5.0
+        ],
+        "s": [
+          5.0,
+          0.0
+        ]
+      },
+      "radial_lines": {}
+    },
+    "matrix_minor_ccw_center_r5": {
+      "after": {
+        "chord": 7.0710678118654755,
+        "cross": 25.0,
+        "dot": 0.0,
+        "end_radius": 5.0,
+        "equal_radius_residual": 0.0,
+        "start_radius": 5.0,
+        "sweep": 1.5707963267948966,
+        "sweep_degrees": 90.0
+      },
+      "arc_entity": {
+        "distance": 0,
+        "group": 2,
+        "h": 7,
+        "normal": 2,
+        "param": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "point": [
+          4,
+          6,
+          5,
+          0
+        ],
+        "type": 80004,
+        "wrkpl": 3
+      },
+      "before": {
+        "chord": 7.0710678118654755,
+        "cross": 25,
+        "dot": 0,
+        "end_radius": 5.0,
+        "equal_radius_residual": 0.0,
+        "start_radius": 5.0,
+        "sweep": 1.5707963267948966,
+        "sweep_degrees": 90.0
+      },
+      "extra_arc_entity": null,
+      "failed_constraints": [],
+      "input": {
+        "direction": "ccw",
+        "fixed": [
+          "c"
+        ],
+        "points": {
+          "c": [
+            0,
+            0
+          ],
+          "e": [
+            0,
+            5
+          ],
+          "s": [
+            5,
+            0
+          ]
+        },
+        "radius": 5
+      },
+      "line_entity": null,
+      "native": {
+        "dof": 2,
+        "nbad": 0,
+        "result": 0
+      },
+      "point_handles": {
+        "c": 4,
+        "e": 5,
+        "s": 6
+      },
+      "points": {
+        "c": [
+          0.0,
+          0.0
+        ],
+        "e": [
+          0.0,
+          5.0
+        ],
+        "s": [
+          5.0,
+          0.0
+        ]
+      },
+      "radial_lines": {}
+    },
+    "matrix_minor_ccw_center_r7": {
+      "after": {
+        "chord": 9.899494936611665,
+        "cross": 49.0,
+        "dot": 0.0,
+        "end_radius": 7.0,
+        "equal_radius_residual": 0.0,
+        "start_radius": 7.0,
+        "sweep": 1.5707963267948966,
+        "sweep_degrees": 90.0
+      },
+      "arc_entity": {
+        "distance": 0,
+        "group": 2,
+        "h": 7,
+        "normal": 2,
+        "param": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "point": [
+          4,
+          6,
+          5,
+          0
+        ],
+        "type": 80004,
+        "wrkpl": 3
+      },
+      "before": {
+        "chord": 7.0710678118654755,
+        "cross": 25,
+        "dot": 0,
+        "end_radius": 5.0,
+        "equal_radius_residual": 0.0,
+        "start_radius": 5.0,
+        "sweep": 1.5707963267948966,
+        "sweep_degrees": 90.0
+      },
+      "extra_arc_entity": null,
+      "failed_constraints": [],
+      "input": {
+        "direction": "ccw",
+        "fixed": [
+          "c"
+        ],
+        "points": {
+          "c": [
+            0,
+            0
+          ],
+          "e": [
+            0,
+            5
+          ],
+          "s": [
+            5,
+            0
+          ]
+        },
+        "radius": 7
+      },
+      "line_entity": null,
+      "native": {
+        "dof": 2,
+        "nbad": 0,
+        "result": 0
+      },
+      "point_handles": {
+        "c": 4,
+        "e": 5,
+        "s": 6
+      },
+      "points": {
+        "c": [
+          0.0,
+          0.0
+        ],
+        "e": [
+          0.0,
+          7.0
+        ],
+        "s": [
+          7.0,
+          0.0
+        ]
+      },
+      "radial_lines": {}
+    },
+    "matrix_minor_ccw_center_start_r5": {
+      "after": {
+        "chord": 7.0710678118654755,
+        "cross": 25.0,
+        "dot": 0.0,
+        "end_radius": 5.0,
+        "equal_radius_residual": 0.0,
+        "start_radius": 5.0,
+        "sweep": 1.5707963267948966,
+        "sweep_degrees": 90.0
+      },
+      "arc_entity": {
+        "distance": 0,
+        "group": 2,
+        "h": 7,
+        "normal": 2,
+        "param": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "point": [
+          4,
+          6,
+          5,
+          0
+        ],
+        "type": 80004,
+        "wrkpl": 3
+      },
+      "before": {
+        "chord": 7.0710678118654755,
+        "cross": 25,
+        "dot": 0,
+        "end_radius": 5.0,
+        "equal_radius_residual": 0.0,
+        "start_radius": 5.0,
+        "sweep": 1.5707963267948966,
+        "sweep_degrees": 90.0
+      },
+      "extra_arc_entity": null,
+      "failed_constraints": [
+        "radius",
+        "fixed.c",
+        "fixed.s"
+      ],
+      "input": {
+        "direction": "ccw",
+        "fixed": [
+          "c",
+          "s"
+        ],
+        "points": {
+          "c": [
+            0,
+            0
+          ],
+          "e": [
+            0,
+            5
+          ],
+          "s": [
+            5,
+            0
+          ]
+        },
+        "radius": 5
+      },
+      "line_entity": null,
+      "native": {
+        "dof": 1,
+        "nbad": 3,
+        "result": 4
+      },
+      "point_handles": {
+        "c": 4,
+        "e": 5,
+        "s": 6
+      },
+      "points": {
+        "c": [
+          0.0,
+          0.0
+        ],
+        "e": [
+          0.0,
+          5.0
+        ],
+        "s": [
+          5.0,
+          0.0
+        ]
+      },
+      "radial_lines": {}
+    },
+    "matrix_minor_ccw_center_start_r7": {
+      "after": {
+        "chord": 7.0710678118654755,
+        "cross": 25.0,
+        "dot": 0.0,
+        "end_radius": 5.0,
+        "equal_radius_residual": 0.0,
+        "start_radius": 5.0,
+        "sweep": 1.5707963267948966,
+        "sweep_degrees": 90.0
+      },
+      "arc_entity": {
+        "distance": 0,
+        "group": 2,
+        "h": 7,
+        "normal": 2,
+        "param": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "point": [
+          4,
+          6,
+          5,
+          0
+        ],
+        "type": 80004,
+        "wrkpl": 3
+      },
+      "before": {
+        "chord": 7.0710678118654755,
+        "cross": 25,
+        "dot": 0,
+        "end_radius": 5.0,
+        "equal_radius_residual": 0.0,
+        "start_radius": 5.0,
+        "sweep": 1.5707963267948966,
+        "sweep_degrees": 90.0
+      },
+      "extra_arc_entity": null,
+      "failed_constraints": [
+        "radius"
+      ],
+      "input": {
+        "direction": "ccw",
+        "fixed": [
+          "c",
+          "s"
+        ],
+        "points": {
+          "c": [
+            0,
+            0
+          ],
+          "e": [
+            0,
+            5
+          ],
+          "s": [
+            5,
+            0
+          ]
+        },
+        "radius": 7
+      },
+      "line_entity": null,
+      "native": {
+        "dof": 1,
+        "nbad": 1,
+        "result": 1
+      },
+      "point_handles": {
+        "c": 4,
+        "e": 5,
+        "s": 6
+      },
+      "points": {
+        "c": [
+          0.0,
+          0.0
+        ],
+        "e": [
+          0.0,
+          5.0
+        ],
+        "s": [
+          5.0,
+          0.0
+        ]
+      },
+      "radial_lines": {}
+    },
+    "matrix_minor_cw_all_r5": {
+      "after": {
+        "chord": 7.0710678118654755,
+        "cross": -25.0,
+        "dot": 0.0,
+        "end_radius": 5.0,
+        "equal_radius_residual": 0.0,
+        "start_radius": 5.0,
+        "sweep": -1.5707963267948966,
+        "sweep_degrees": -90.0
+      },
+      "arc_entity": {
+        "distance": 0,
+        "group": 2,
+        "h": 7,
+        "normal": 2,
+        "param": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "point": [
+          4,
+          5,
+          6,
+          0
+        ],
+        "type": 80004,
+        "wrkpl": 3
+      },
+      "before": {
+        "chord": 7.0710678118654755,
+        "cross": -25,
+        "dot": 0,
+        "end_radius": 5.0,
+        "equal_radius_residual": 0.0,
+        "start_radius": 5.0,
+        "sweep": -1.5707963267948966,
+        "sweep_degrees": -90.0
+      },
+      "extra_arc_entity": null,
+      "failed_constraints": [
+        "fixed.c"
+      ],
+      "input": {
+        "direction": "cw",
+        "fixed": [
+          "c",
+          "s",
+          "e"
+        ],
+        "points": {
+          "c": [
+            0,
+            0
+          ],
+          "e": [
+            0,
+            -5
+          ],
+          "s": [
+            5,
+            0
+          ]
+        },
+        "radius": 5
+      },
+      "line_entity": null,
+      "native": {
+        "dof": 0,
+        "nbad": 1,
+        "result": 4
+      },
+      "point_handles": {
+        "c": 4,
+        "e": 5,
+        "s": 6
+      },
+      "points": {
+        "c": [
+          0.0,
+          0.0
+        ],
+        "e": [
+          0.0,
+          -5.0
+        ],
+        "s": [
+          5.0,
+          0.0
+        ]
+      },
+      "radial_lines": {}
+    },
+    "matrix_minor_cw_all_r7": {
+      "after": {
+        "chord": 7.0710678118654755,
+        "cross": -25.0,
+        "dot": 0.0,
+        "end_radius": 5.0,
+        "equal_radius_residual": 0.0,
+        "start_radius": 5.0,
+        "sweep": -1.5707963267948966,
+        "sweep_degrees": -90.0
+      },
+      "arc_entity": {
+        "distance": 0,
+        "group": 2,
+        "h": 7,
+        "normal": 2,
+        "param": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "point": [
+          4,
+          5,
+          6,
+          0
+        ],
+        "type": 80004,
+        "wrkpl": 3
+      },
+      "before": {
+        "chord": 7.0710678118654755,
+        "cross": -25,
+        "dot": 0,
+        "end_radius": 5.0,
+        "equal_radius_residual": 0.0,
+        "start_radius": 5.0,
+        "sweep": -1.5707963267948966,
+        "sweep_degrees": -90.0
+      },
+      "extra_arc_entity": null,
+      "failed_constraints": [
+        "radius"
+      ],
+      "input": {
+        "direction": "cw",
+        "fixed": [
+          "c",
+          "s",
+          "e"
+        ],
+        "points": {
+          "c": [
+            0,
+            0
+          ],
+          "e": [
+            0,
+            -5
+          ],
+          "s": [
+            5,
+            0
+          ]
+        },
+        "radius": 7
+      },
+      "line_entity": null,
+      "native": {
+        "dof": 0,
+        "nbad": 1,
+        "result": 1
+      },
+      "point_handles": {
+        "c": 4,
+        "e": 5,
+        "s": 6
+      },
+      "points": {
+        "c": [
+          0.0,
+          0.0
+        ],
+        "e": [
+          0.0,
+          -5.0
+        ],
+        "s": [
+          5.0,
+          0.0
+        ]
+      },
+      "radial_lines": {}
+    },
+    "matrix_minor_cw_center_r5": {
+      "after": {
+        "chord": 7.0710678118654755,
+        "cross": -25.0,
+        "dot": 0.0,
+        "end_radius": 5.0,
+        "equal_radius_residual": 0.0,
+        "start_radius": 5.0,
+        "sweep": -1.5707963267948966,
+        "sweep_degrees": -90.0
+      },
+      "arc_entity": {
+        "distance": 0,
+        "group": 2,
+        "h": 7,
+        "normal": 2,
+        "param": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "point": [
+          4,
+          5,
+          6,
+          0
+        ],
+        "type": 80004,
+        "wrkpl": 3
+      },
+      "before": {
+        "chord": 7.0710678118654755,
+        "cross": -25,
+        "dot": 0,
+        "end_radius": 5.0,
+        "equal_radius_residual": 0.0,
+        "start_radius": 5.0,
+        "sweep": -1.5707963267948966,
+        "sweep_degrees": -90.0
+      },
+      "extra_arc_entity": null,
+      "failed_constraints": [],
+      "input": {
+        "direction": "cw",
+        "fixed": [
+          "c"
+        ],
+        "points": {
+          "c": [
+            0,
+            0
+          ],
+          "e": [
+            0,
+            -5
+          ],
+          "s": [
+            5,
+            0
+          ]
+        },
+        "radius": 5
+      },
+      "line_entity": null,
+      "native": {
+        "dof": 2,
+        "nbad": 0,
+        "result": 0
+      },
+      "point_handles": {
+        "c": 4,
+        "e": 5,
+        "s": 6
+      },
+      "points": {
+        "c": [
+          0.0,
+          0.0
+        ],
+        "e": [
+          0.0,
+          -5.0
+        ],
+        "s": [
+          5.0,
+          0.0
+        ]
+      },
+      "radial_lines": {}
+    },
+    "matrix_minor_cw_center_r7": {
+      "after": {
+        "chord": 9.899494936611665,
+        "cross": -49.0,
+        "dot": 0.0,
+        "end_radius": 7.0,
+        "equal_radius_residual": 0.0,
+        "start_radius": 7.0,
+        "sweep": -1.5707963267948966,
+        "sweep_degrees": -90.0
+      },
+      "arc_entity": {
+        "distance": 0,
+        "group": 2,
+        "h": 7,
+        "normal": 2,
+        "param": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "point": [
+          4,
+          5,
+          6,
+          0
+        ],
+        "type": 80004,
+        "wrkpl": 3
+      },
+      "before": {
+        "chord": 7.0710678118654755,
+        "cross": -25,
+        "dot": 0,
+        "end_radius": 5.0,
+        "equal_radius_residual": 0.0,
+        "start_radius": 5.0,
+        "sweep": -1.5707963267948966,
+        "sweep_degrees": -90.0
+      },
+      "extra_arc_entity": null,
+      "failed_constraints": [],
+      "input": {
+        "direction": "cw",
+        "fixed": [
+          "c"
+        ],
+        "points": {
+          "c": [
+            0,
+            0
+          ],
+          "e": [
+            0,
+            -5
+          ],
+          "s": [
+            5,
+            0
+          ]
+        },
+        "radius": 7
+      },
+      "line_entity": null,
+      "native": {
+        "dof": 2,
+        "nbad": 0,
+        "result": 0
+      },
+      "point_handles": {
+        "c": 4,
+        "e": 5,
+        "s": 6
+      },
+      "points": {
+        "c": [
+          0.0,
+          0.0
+        ],
+        "e": [
+          0.0,
+          -7.0
+        ],
+        "s": [
+          7.0,
+          0.0
+        ]
+      },
+      "radial_lines": {}
+    },
+    "matrix_minor_cw_center_start_r5": {
+      "after": {
+        "chord": 7.0710678118654755,
+        "cross": -25.0,
+        "dot": 0.0,
+        "end_radius": 5.0,
+        "equal_radius_residual": 0.0,
+        "start_radius": 5.0,
+        "sweep": -1.5707963267948966,
+        "sweep_degrees": -90.0
+      },
+      "arc_entity": {
+        "distance": 0,
+        "group": 2,
+        "h": 7,
+        "normal": 2,
+        "param": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "point": [
+          4,
+          5,
+          6,
+          0
+        ],
+        "type": 80004,
+        "wrkpl": 3
+      },
+      "before": {
+        "chord": 7.0710678118654755,
+        "cross": -25,
+        "dot": 0,
+        "end_radius": 5.0,
+        "equal_radius_residual": 0.0,
+        "start_radius": 5.0,
+        "sweep": -1.5707963267948966,
+        "sweep_degrees": -90.0
+      },
+      "extra_arc_entity": null,
+      "failed_constraints": [
+        "radius",
+        "fixed.c",
+        "fixed.s"
+      ],
+      "input": {
+        "direction": "cw",
+        "fixed": [
+          "c",
+          "s"
+        ],
+        "points": {
+          "c": [
+            0,
+            0
+          ],
+          "e": [
+            0,
+            -5
+          ],
+          "s": [
+            5,
+            0
+          ]
+        },
+        "radius": 5
+      },
+      "line_entity": null,
+      "native": {
+        "dof": 1,
+        "nbad": 3,
+        "result": 4
+      },
+      "point_handles": {
+        "c": 4,
+        "e": 5,
+        "s": 6
+      },
+      "points": {
+        "c": [
+          0.0,
+          0.0
+        ],
+        "e": [
+          0.0,
+          -5.0
+        ],
+        "s": [
+          5.0,
+          0.0
+        ]
+      },
+      "radial_lines": {}
+    },
+    "matrix_minor_cw_center_start_r7": {
+      "after": {
+        "chord": 7.0710678118654755,
+        "cross": -25.0,
+        "dot": 0.0,
+        "end_radius": 5.0,
+        "equal_radius_residual": 0.0,
+        "start_radius": 5.0,
+        "sweep": -1.5707963267948966,
+        "sweep_degrees": -90.0
+      },
+      "arc_entity": {
+        "distance": 0,
+        "group": 2,
+        "h": 7,
+        "normal": 2,
+        "param": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "point": [
+          4,
+          5,
+          6,
+          0
+        ],
+        "type": 80004,
+        "wrkpl": 3
+      },
+      "before": {
+        "chord": 7.0710678118654755,
+        "cross": -25,
+        "dot": 0,
+        "end_radius": 5.0,
+        "equal_radius_residual": 0.0,
+        "start_radius": 5.0,
+        "sweep": -1.5707963267948966,
+        "sweep_degrees": -90.0
+      },
+      "extra_arc_entity": null,
+      "failed_constraints": [
+        "radius"
+      ],
+      "input": {
+        "direction": "cw",
+        "fixed": [
+          "c",
+          "s"
+        ],
+        "points": {
+          "c": [
+            0,
+            0
+          ],
+          "e": [
+            0,
+            -5
+          ],
+          "s": [
+            5,
+            0
+          ]
+        },
+        "radius": 7
+      },
+      "line_entity": null,
+      "native": {
+        "dof": 1,
+        "nbad": 1,
+        "result": 1
+      },
+      "point_handles": {
+        "c": 4,
+        "e": 5,
+        "s": 6
+      },
+      "points": {
+        "c": [
+          0.0,
+          0.0
+        ],
+        "e": [
+          0.0,
+          -5.0
+        ],
+        "s": [
+          5.0,
+          0.0
+        ]
+      },
+      "radial_lines": {}
+    },
+    "matrix_semicircle_ccw_all_r5": {
+      "after": {
+        "chord": 10.0,
+        "cross": 0.0,
+        "dot": -25.0,
+        "end_radius": 5.0,
+        "equal_radius_residual": 0.0,
+        "start_radius": 5.0,
+        "sweep": 3.141592653589793,
+        "sweep_degrees": 180.0
+      },
+      "arc_entity": {
+        "distance": 0,
+        "group": 2,
+        "h": 7,
+        "normal": 2,
+        "param": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "point": [
+          4,
+          6,
+          5,
+          0
+        ],
+        "type": 80004,
+        "wrkpl": 3
+      },
+      "before": {
+        "chord": 10.0,
+        "cross": 0,
+        "dot": -25,
+        "end_radius": 5.0,
+        "equal_radius_residual": 0.0,
+        "start_radius": 5.0,
+        "sweep": 3.141592653589793,
+        "sweep_degrees": 180.0
+      },
+      "extra_arc_entity": null,
+      "failed_constraints": [],
+      "input": {
+        "direction": "ccw",
+        "fixed": [
+          "c",
+          "s",
+          "e"
+        ],
+        "points": {
+          "c": [
+            0,
+            0
+          ],
+          "e": [
+            -5,
+            0
+          ],
+          "s": [
+            5,
+            0
+          ]
+        },
+        "radius": 5
+      },
+      "line_entity": null,
+      "native": {
+        "dof": 0,
+        "nbad": 0,
+        "result": 4
+      },
+      "point_handles": {
+        "c": 4,
+        "e": 5,
+        "s": 6
+      },
+      "points": {
+        "c": [
+          0.0,
+          0.0
+        ],
+        "e": [
+          -5.0,
+          0.0
+        ],
+        "s": [
+          5.0,
+          0.0
+        ]
+      },
+      "radial_lines": {}
+    },
+    "matrix_semicircle_ccw_all_r7": {
+      "after": {
+        "chord": 10.0,
+        "cross": 0.0,
+        "dot": -25.0,
+        "end_radius": 5.0,
+        "equal_radius_residual": 0.0,
+        "start_radius": 5.0,
+        "sweep": 3.141592653589793,
+        "sweep_degrees": 180.0
+      },
+      "arc_entity": {
+        "distance": 0,
+        "group": 2,
+        "h": 7,
+        "normal": 2,
+        "param": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "point": [
+          4,
+          6,
+          5,
+          0
+        ],
+        "type": 80004,
+        "wrkpl": 3
+      },
+      "before": {
+        "chord": 10.0,
+        "cross": 0,
+        "dot": -25,
+        "end_radius": 5.0,
+        "equal_radius_residual": 0.0,
+        "start_radius": 5.0,
+        "sweep": 3.141592653589793,
+        "sweep_degrees": 180.0
+      },
+      "extra_arc_entity": null,
+      "failed_constraints": [
+        "radius"
+      ],
+      "input": {
+        "direction": "ccw",
+        "fixed": [
+          "c",
+          "s",
+          "e"
+        ],
+        "points": {
+          "c": [
+            0,
+            0
+          ],
+          "e": [
+            -5,
+            0
+          ],
+          "s": [
+            5,
+            0
+          ]
+        },
+        "radius": 7
+      },
+      "line_entity": null,
+      "native": {
+        "dof": 0,
+        "nbad": 1,
+        "result": 1
+      },
+      "point_handles": {
+        "c": 4,
+        "e": 5,
+        "s": 6
+      },
+      "points": {
+        "c": [
+          0.0,
+          0.0
+        ],
+        "e": [
+          -5.0,
+          0.0
+        ],
+        "s": [
+          5.0,
+          0.0
+        ]
+      },
+      "radial_lines": {}
+    },
+    "matrix_semicircle_ccw_center_r5": {
+      "after": {
+        "chord": 10.0,
+        "cross": 0.0,
+        "dot": -25.0,
+        "end_radius": 5.0,
+        "equal_radius_residual": 0.0,
+        "start_radius": 5.0,
+        "sweep": 3.141592653589793,
+        "sweep_degrees": 180.0
+      },
+      "arc_entity": {
+        "distance": 0,
+        "group": 2,
+        "h": 7,
+        "normal": 2,
+        "param": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "point": [
+          4,
+          6,
+          5,
+          0
+        ],
+        "type": 80004,
+        "wrkpl": 3
+      },
+      "before": {
+        "chord": 10.0,
+        "cross": 0,
+        "dot": -25,
+        "end_radius": 5.0,
+        "equal_radius_residual": 0.0,
+        "start_radius": 5.0,
+        "sweep": 3.141592653589793,
+        "sweep_degrees": 180.0
+      },
+      "extra_arc_entity": null,
+      "failed_constraints": [],
+      "input": {
+        "direction": "ccw",
+        "fixed": [
+          "c"
+        ],
+        "points": {
+          "c": [
+            0,
+            0
+          ],
+          "e": [
+            -5,
+            0
+          ],
+          "s": [
+            5,
+            0
+          ]
+        },
+        "radius": 5
+      },
+      "line_entity": null,
+      "native": {
+        "dof": 2,
+        "nbad": 0,
+        "result": 0
+      },
+      "point_handles": {
+        "c": 4,
+        "e": 5,
+        "s": 6
+      },
+      "points": {
+        "c": [
+          0.0,
+          0.0
+        ],
+        "e": [
+          -5.0,
+          0.0
+        ],
+        "s": [
+          5.0,
+          0.0
+        ]
+      },
+      "radial_lines": {}
+    },
+    "matrix_semicircle_ccw_center_r7": {
+      "after": {
+        "chord": 14.0,
+        "cross": 0.0,
+        "dot": -49.0,
+        "end_radius": 7.0,
+        "equal_radius_residual": 0.0,
+        "start_radius": 7.0,
+        "sweep": 3.141592653589793,
+        "sweep_degrees": 180.0
+      },
+      "arc_entity": {
+        "distance": 0,
+        "group": 2,
+        "h": 7,
+        "normal": 2,
+        "param": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "point": [
+          4,
+          6,
+          5,
+          0
+        ],
+        "type": 80004,
+        "wrkpl": 3
+      },
+      "before": {
+        "chord": 10.0,
+        "cross": 0,
+        "dot": -25,
+        "end_radius": 5.0,
+        "equal_radius_residual": 0.0,
+        "start_radius": 5.0,
+        "sweep": 3.141592653589793,
+        "sweep_degrees": 180.0
+      },
+      "extra_arc_entity": null,
+      "failed_constraints": [],
+      "input": {
+        "direction": "ccw",
+        "fixed": [
+          "c"
+        ],
+        "points": {
+          "c": [
+            0,
+            0
+          ],
+          "e": [
+            -5,
+            0
+          ],
+          "s": [
+            5,
+            0
+          ]
+        },
+        "radius": 7
+      },
+      "line_entity": null,
+      "native": {
+        "dof": 2,
+        "nbad": 0,
+        "result": 0
+      },
+      "point_handles": {
+        "c": 4,
+        "e": 5,
+        "s": 6
+      },
+      "points": {
+        "c": [
+          0.0,
+          0.0
+        ],
+        "e": [
+          -7.0,
+          0.0
+        ],
+        "s": [
+          7.0,
+          0.0
+        ]
+      },
+      "radial_lines": {}
+    },
+    "matrix_semicircle_ccw_center_start_r5": {
+      "after": {
+        "chord": 10.0,
+        "cross": 0.0,
+        "dot": -25.0,
+        "end_radius": 5.0,
+        "equal_radius_residual": 0.0,
+        "start_radius": 5.0,
+        "sweep": 3.141592653589793,
+        "sweep_degrees": 180.0
+      },
+      "arc_entity": {
+        "distance": 0,
+        "group": 2,
+        "h": 7,
+        "normal": 2,
+        "param": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "point": [
+          4,
+          6,
+          5,
+          0
+        ],
+        "type": 80004,
+        "wrkpl": 3
+      },
+      "before": {
+        "chord": 10.0,
+        "cross": 0,
+        "dot": -25,
+        "end_radius": 5.0,
+        "equal_radius_residual": 0.0,
+        "start_radius": 5.0,
+        "sweep": 3.141592653589793,
+        "sweep_degrees": 180.0
+      },
+      "extra_arc_entity": null,
+      "failed_constraints": [
+        "radius",
+        "fixed.c",
+        "fixed.s"
+      ],
+      "input": {
+        "direction": "ccw",
+        "fixed": [
+          "c",
+          "s"
+        ],
+        "points": {
+          "c": [
+            0,
+            0
+          ],
+          "e": [
+            -5,
+            0
+          ],
+          "s": [
+            5,
+            0
+          ]
+        },
+        "radius": 5
+      },
+      "line_entity": null,
+      "native": {
+        "dof": 1,
+        "nbad": 3,
+        "result": 4
+      },
+      "point_handles": {
+        "c": 4,
+        "e": 5,
+        "s": 6
+      },
+      "points": {
+        "c": [
+          0.0,
+          0.0
+        ],
+        "e": [
+          -5.0,
+          0.0
+        ],
+        "s": [
+          5.0,
+          0.0
+        ]
+      },
+      "radial_lines": {}
+    },
+    "matrix_semicircle_ccw_center_start_r7": {
+      "after": {
+        "chord": 10.0,
+        "cross": 0.0,
+        "dot": -25.0,
+        "end_radius": 5.0,
+        "equal_radius_residual": 0.0,
+        "start_radius": 5.0,
+        "sweep": 3.141592653589793,
+        "sweep_degrees": 180.0
+      },
+      "arc_entity": {
+        "distance": 0,
+        "group": 2,
+        "h": 7,
+        "normal": 2,
+        "param": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "point": [
+          4,
+          6,
+          5,
+          0
+        ],
+        "type": 80004,
+        "wrkpl": 3
+      },
+      "before": {
+        "chord": 10.0,
+        "cross": 0,
+        "dot": -25,
+        "end_radius": 5.0,
+        "equal_radius_residual": 0.0,
+        "start_radius": 5.0,
+        "sweep": 3.141592653589793,
+        "sweep_degrees": 180.0
+      },
+      "extra_arc_entity": null,
+      "failed_constraints": [
+        "radius"
+      ],
+      "input": {
+        "direction": "ccw",
+        "fixed": [
+          "c",
+          "s"
+        ],
+        "points": {
+          "c": [
+            0,
+            0
+          ],
+          "e": [
+            -5,
+            0
+          ],
+          "s": [
+            5,
+            0
+          ]
+        },
+        "radius": 7
+      },
+      "line_entity": null,
+      "native": {
+        "dof": 1,
+        "nbad": 1,
+        "result": 1
+      },
+      "point_handles": {
+        "c": 4,
+        "e": 5,
+        "s": 6
+      },
+      "points": {
+        "c": [
+          0.0,
+          0.0
+        ],
+        "e": [
+          -5.0,
+          0.0
+        ],
+        "s": [
+          5.0,
+          0.0
+        ]
+      },
+      "radial_lines": {}
+    },
+    "matrix_semicircle_cw_all_r5": {
+      "after": {
+        "chord": 10.0,
+        "cross": 0.0,
+        "dot": -25.0,
+        "end_radius": 5.0,
+        "equal_radius_residual": 0.0,
+        "start_radius": 5.0,
+        "sweep": -3.141592653589793,
+        "sweep_degrees": -180.0
+      },
+      "arc_entity": {
+        "distance": 0,
+        "group": 2,
+        "h": 7,
+        "normal": 2,
+        "param": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "point": [
+          4,
+          5,
+          6,
+          0
+        ],
+        "type": 80004,
+        "wrkpl": 3
+      },
+      "before": {
+        "chord": 10.0,
+        "cross": 0,
+        "dot": -25,
+        "end_radius": 5.0,
+        "equal_radius_residual": 0.0,
+        "start_radius": 5.0,
+        "sweep": -3.141592653589793,
+        "sweep_degrees": -180.0
+      },
+      "extra_arc_entity": null,
+      "failed_constraints": [],
+      "input": {
+        "direction": "cw",
+        "fixed": [
+          "c",
+          "s",
+          "e"
+        ],
+        "points": {
+          "c": [
+            0,
+            0
+          ],
+          "e": [
+            -5,
+            0
+          ],
+          "s": [
+            5,
+            0
+          ]
+        },
+        "radius": 5
+      },
+      "line_entity": null,
+      "native": {
+        "dof": 0,
+        "nbad": 0,
+        "result": 4
+      },
+      "point_handles": {
+        "c": 4,
+        "e": 5,
+        "s": 6
+      },
+      "points": {
+        "c": [
+          0.0,
+          0.0
+        ],
+        "e": [
+          -5.0,
+          0.0
+        ],
+        "s": [
+          5.0,
+          0.0
+        ]
+      },
+      "radial_lines": {}
+    },
+    "matrix_semicircle_cw_all_r7": {
+      "after": {
+        "chord": 10.0,
+        "cross": 0.0,
+        "dot": -25.0,
+        "end_radius": 5.0,
+        "equal_radius_residual": 0.0,
+        "start_radius": 5.0,
+        "sweep": -3.141592653589793,
+        "sweep_degrees": -180.0
+      },
+      "arc_entity": {
+        "distance": 0,
+        "group": 2,
+        "h": 7,
+        "normal": 2,
+        "param": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "point": [
+          4,
+          5,
+          6,
+          0
+        ],
+        "type": 80004,
+        "wrkpl": 3
+      },
+      "before": {
+        "chord": 10.0,
+        "cross": 0,
+        "dot": -25,
+        "end_radius": 5.0,
+        "equal_radius_residual": 0.0,
+        "start_radius": 5.0,
+        "sweep": -3.141592653589793,
+        "sweep_degrees": -180.0
+      },
+      "extra_arc_entity": null,
+      "failed_constraints": [
+        "radius"
+      ],
+      "input": {
+        "direction": "cw",
+        "fixed": [
+          "c",
+          "s",
+          "e"
+        ],
+        "points": {
+          "c": [
+            0,
+            0
+          ],
+          "e": [
+            -5,
+            0
+          ],
+          "s": [
+            5,
+            0
+          ]
+        },
+        "radius": 7
+      },
+      "line_entity": null,
+      "native": {
+        "dof": 0,
+        "nbad": 1,
+        "result": 1
+      },
+      "point_handles": {
+        "c": 4,
+        "e": 5,
+        "s": 6
+      },
+      "points": {
+        "c": [
+          0.0,
+          0.0
+        ],
+        "e": [
+          -5.0,
+          0.0
+        ],
+        "s": [
+          5.0,
+          0.0
+        ]
+      },
+      "radial_lines": {}
+    },
+    "matrix_semicircle_cw_center_r5": {
+      "after": {
+        "chord": 10.0,
+        "cross": 0.0,
+        "dot": -25.0,
+        "end_radius": 5.0,
+        "equal_radius_residual": 0.0,
+        "start_radius": 5.0,
+        "sweep": -3.141592653589793,
+        "sweep_degrees": -180.0
+      },
+      "arc_entity": {
+        "distance": 0,
+        "group": 2,
+        "h": 7,
+        "normal": 2,
+        "param": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "point": [
+          4,
+          5,
+          6,
+          0
+        ],
+        "type": 80004,
+        "wrkpl": 3
+      },
+      "before": {
+        "chord": 10.0,
+        "cross": 0,
+        "dot": -25,
+        "end_radius": 5.0,
+        "equal_radius_residual": 0.0,
+        "start_radius": 5.0,
+        "sweep": -3.141592653589793,
+        "sweep_degrees": -180.0
+      },
+      "extra_arc_entity": null,
+      "failed_constraints": [],
+      "input": {
+        "direction": "cw",
+        "fixed": [
+          "c"
+        ],
+        "points": {
+          "c": [
+            0,
+            0
+          ],
+          "e": [
+            -5,
+            0
+          ],
+          "s": [
+            5,
+            0
+          ]
+        },
+        "radius": 5
+      },
+      "line_entity": null,
+      "native": {
+        "dof": 2,
+        "nbad": 0,
+        "result": 0
+      },
+      "point_handles": {
+        "c": 4,
+        "e": 5,
+        "s": 6
+      },
+      "points": {
+        "c": [
+          0.0,
+          0.0
+        ],
+        "e": [
+          -5.0,
+          0.0
+        ],
+        "s": [
+          5.0,
+          0.0
+        ]
+      },
+      "radial_lines": {}
+    },
+    "matrix_semicircle_cw_center_r7": {
+      "after": {
+        "chord": 14.0,
+        "cross": 0.0,
+        "dot": -49.0,
+        "end_radius": 7.0,
+        "equal_radius_residual": 0.0,
+        "start_radius": 7.0,
+        "sweep": -3.141592653589793,
+        "sweep_degrees": -180.0
+      },
+      "arc_entity": {
+        "distance": 0,
+        "group": 2,
+        "h": 7,
+        "normal": 2,
+        "param": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "point": [
+          4,
+          5,
+          6,
+          0
+        ],
+        "type": 80004,
+        "wrkpl": 3
+      },
+      "before": {
+        "chord": 10.0,
+        "cross": 0,
+        "dot": -25,
+        "end_radius": 5.0,
+        "equal_radius_residual": 0.0,
+        "start_radius": 5.0,
+        "sweep": -3.141592653589793,
+        "sweep_degrees": -180.0
+      },
+      "extra_arc_entity": null,
+      "failed_constraints": [],
+      "input": {
+        "direction": "cw",
+        "fixed": [
+          "c"
+        ],
+        "points": {
+          "c": [
+            0,
+            0
+          ],
+          "e": [
+            -5,
+            0
+          ],
+          "s": [
+            5,
+            0
+          ]
+        },
+        "radius": 7
+      },
+      "line_entity": null,
+      "native": {
+        "dof": 2,
+        "nbad": 0,
+        "result": 0
+      },
+      "point_handles": {
+        "c": 4,
+        "e": 5,
+        "s": 6
+      },
+      "points": {
+        "c": [
+          0.0,
+          0.0
+        ],
+        "e": [
+          -7.0,
+          0.0
+        ],
+        "s": [
+          7.0,
+          0.0
+        ]
+      },
+      "radial_lines": {}
+    },
+    "matrix_semicircle_cw_center_start_r5": {
+      "after": {
+        "chord": 10.0,
+        "cross": 0.0,
+        "dot": -25.0,
+        "end_radius": 5.0,
+        "equal_radius_residual": 0.0,
+        "start_radius": 5.0,
+        "sweep": -3.141592653589793,
+        "sweep_degrees": -180.0
+      },
+      "arc_entity": {
+        "distance": 0,
+        "group": 2,
+        "h": 7,
+        "normal": 2,
+        "param": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "point": [
+          4,
+          5,
+          6,
+          0
+        ],
+        "type": 80004,
+        "wrkpl": 3
+      },
+      "before": {
+        "chord": 10.0,
+        "cross": 0,
+        "dot": -25,
+        "end_radius": 5.0,
+        "equal_radius_residual": 0.0,
+        "start_radius": 5.0,
+        "sweep": -3.141592653589793,
+        "sweep_degrees": -180.0
+      },
+      "extra_arc_entity": null,
+      "failed_constraints": [
+        "radius",
+        "fixed.c",
+        "fixed.s"
+      ],
+      "input": {
+        "direction": "cw",
+        "fixed": [
+          "c",
+          "s"
+        ],
+        "points": {
+          "c": [
+            0,
+            0
+          ],
+          "e": [
+            -5,
+            0
+          ],
+          "s": [
+            5,
+            0
+          ]
+        },
+        "radius": 5
+      },
+      "line_entity": null,
+      "native": {
+        "dof": 1,
+        "nbad": 3,
+        "result": 4
+      },
+      "point_handles": {
+        "c": 4,
+        "e": 5,
+        "s": 6
+      },
+      "points": {
+        "c": [
+          0.0,
+          0.0
+        ],
+        "e": [
+          -5.0,
+          0.0
+        ],
+        "s": [
+          5.0,
+          0.0
+        ]
+      },
+      "radial_lines": {}
+    },
+    "matrix_semicircle_cw_center_start_r7": {
+      "after": {
+        "chord": 10.0,
+        "cross": 0.0,
+        "dot": -25.0,
+        "end_radius": 5.0,
+        "equal_radius_residual": 0.0,
+        "start_radius": 5.0,
+        "sweep": -3.141592653589793,
+        "sweep_degrees": -180.0
+      },
+      "arc_entity": {
+        "distance": 0,
+        "group": 2,
+        "h": 7,
+        "normal": 2,
+        "param": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "point": [
+          4,
+          5,
+          6,
+          0
+        ],
+        "type": 80004,
+        "wrkpl": 3
+      },
+      "before": {
+        "chord": 10.0,
+        "cross": 0,
+        "dot": -25,
+        "end_radius": 5.0,
+        "equal_radius_residual": 0.0,
+        "start_radius": 5.0,
+        "sweep": -3.141592653589793,
+        "sweep_degrees": -180.0
+      },
+      "extra_arc_entity": null,
+      "failed_constraints": [
+        "radius"
+      ],
+      "input": {
+        "direction": "cw",
+        "fixed": [
+          "c",
+          "s"
+        ],
+        "points": {
+          "c": [
+            0,
+            0
+          ],
+          "e": [
+            -5,
+            0
+          ],
+          "s": [
+            5,
+            0
+          ]
+        },
+        "radius": 7
+      },
+      "line_entity": null,
+      "native": {
+        "dof": 1,
+        "nbad": 1,
+        "result": 1
+      },
+      "point_handles": {
+        "c": 4,
+        "e": 5,
+        "s": 6
+      },
+      "points": {
+        "c": [
+          0.0,
+          0.0
+        ],
+        "e": [
+          -5.0,
+          0.0
+        ],
+        "s": [
+          5.0,
+          0.0
+        ]
+      },
+      "radial_lines": {}
+    },
+    "points_without_arc": {
+      "after": {
+        "chord": 7.0710678118654755,
+        "cross": 25.0,
+        "dot": 0.0,
+        "end_radius": 5.0,
+        "equal_radius_residual": 0.0,
+        "start_radius": 5.0,
+        "sweep": 1.5707963267948966,
+        "sweep_degrees": 90.0
+      },
+      "arc_entity": null,
+      "before": {
+        "chord": 7.0710678118654755,
+        "cross": 25,
+        "dot": 0,
+        "end_radius": 5.0,
+        "equal_radius_residual": 0.0,
+        "start_radius": 5.0,
+        "sweep": 1.5707963267948966,
+        "sweep_degrees": 90.0
+      },
+      "extra_arc_entity": null,
+      "failed_constraints": [],
+      "input": {
+        "omit_arc": true,
+        "points": {
+          "c": [
+            0,
+            0
+          ],
+          "e": [
+            0,
+            5
+          ],
+          "s": [
+            5,
+            0
+          ]
+        }
+      },
+      "line_entity": null,
+      "native": {
+        "dof": 6,
+        "nbad": 0,
+        "result": 0
+      },
+      "point_handles": {
+        "c": 4,
+        "e": 5,
+        "s": 6
+      },
+      "points": {
+        "c": [
+          0.0,
+          0.0
+        ],
+        "e": [
+          0.0,
+          5.0
+        ],
+        "s": [
+          5.0,
+          0.0
+        ]
+      },
+      "radial_lines": {}
+    },
+    "radius_only": {
+      "after": {
+        "chord": 8.447843287101886,
+        "cross": 47.155681094781194,
+        "dot": 13.316971899017831,
+        "end_radius": 7.000000000052431,
+        "equal_radius_residual": 0.0,
+        "start_radius": 7.000000000052431,
+        "sweep": 1.2955594176017695,
+        "sweep_degrees": 74.23008673700834
+      },
+      "arc_entity": {
+        "distance": 0,
+        "group": 2,
+        "h": 7,
+        "normal": 2,
+        "param": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "point": [
+          4,
+          6,
+          5,
+          0
+        ],
+        "type": 80004,
+        "wrkpl": 3
+      },
+      "before": {
+        "chord": 7.0710678118654755,
+        "cross": 25,
+        "dot": 0,
+        "end_radius": 5.0,
+        "equal_radius_residual": 0.0,
+        "start_radius": 5.0,
+        "sweep": 1.5707963267948966,
+        "sweep_degrees": 90.0
+      },
+      "extra_arc_entity": null,
+      "failed_constraints": [],
+      "input": {
+        "points": {
+          "c": [
+            0,
+            0
+          ],
+          "e": [
+            0,
+            5
+          ],
+          "s": [
+            5,
+            0
+          ]
+        },
+        "radius": 7
+      },
+      "line_entity": null,
+      "native": {
+        "dof": 4,
+        "nbad": 0,
+        "result": 0
+      },
+      "point_handles": {
+        "c": 4,
+        "e": 5,
+        "s": 6
+      },
+      "points": {
+        "c": [
+          -0.9647033166046554,
+          -0.9647033166046558
+        ],
+        "e": [
+          -0.004411979053171301,
+          5.969115295657827
+        ],
+        "s": [
+          5.969115295657827,
+          -0.004411979053171302
+        ]
+      },
+      "radial_lines": {}
+    },
+    "same_endpoint_handle": {
+      "after": {
+        "chord": 7.0710678118654755,
+        "cross": 25.0,
+        "dot": 0.0,
+        "end_radius": 5.0,
+        "equal_radius_residual": 0.0,
+        "start_radius": 5.0,
+        "sweep": 1.5707963267948966,
+        "sweep_degrees": 90.0
+      },
+      "arc_entity": {
+        "distance": 0,
+        "group": 2,
+        "h": 7,
+        "normal": 2,
+        "param": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "point": [
+          4,
+          6,
+          6,
+          0
+        ],
+        "type": 80004,
+        "wrkpl": 3
+      },
+      "before": {
+        "chord": 7.0710678118654755,
+        "cross": 25,
+        "dot": 0,
+        "end_radius": 5.0,
+        "equal_radius_residual": 0.0,
+        "start_radius": 5.0,
+        "sweep": 1.5707963267948966,
+        "sweep_degrees": 90.0
+      },
+      "extra_arc_entity": null,
+      "failed_constraints": [],
+      "input": {
+        "points": {
+          "c": [
+            0,
+            0
+          ],
+          "e": [
+            0,
+            5
+          ],
+          "s": [
+            5,
+            0
+          ]
+        },
+        "same_endpoint_handle": true
+      },
+      "line_entity": null,
+      "native": {
+        "dof": 6,
+        "nbad": 0,
+        "result": 4
+      },
+      "point_handles": {
+        "c": 4,
+        "e": 5,
+        "s": 6
+      },
+      "points": {
+        "c": [
+          0.0,
+          0.0
+        ],
+        "e": [
+          0.0,
+          5.0
+        ],
+        "s": [
+          5.0,
+          0.0
+        ]
+      },
+      "radial_lines": {}
+    },
+    "scale_center_fixed_r0.001": {
+      "after": {
+        "chord": 0.0021213203435596424,
+        "cross": 2.25e-06,
+        "dot": 0.0,
+        "end_radius": 0.0015,
+        "equal_radius_residual": 0.0,
+        "start_radius": 0.0015,
+        "sweep": 1.5707963267948966,
+        "sweep_degrees": 90.0
+      },
+      "arc_entity": {
+        "distance": 0,
+        "group": 2,
+        "h": 7,
+        "normal": 2,
+        "param": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "point": [
+          4,
+          6,
+          5,
+          0
+        ],
+        "type": 80004,
+        "wrkpl": 3
+      },
+      "before": {
+        "chord": 0.001414213562373095,
+        "cross": 1e-06,
+        "dot": 0.0,
+        "end_radius": 0.001,
+        "equal_radius_residual": 0.0,
+        "start_radius": 0.001,
+        "sweep": 1.5707963267948966,
+        "sweep_degrees": 90.0
+      },
+      "extra_arc_entity": null,
+      "failed_constraints": [],
+      "input": {
+        "fixed": [
+          "c"
+        ],
+        "points": {
+          "c": [
+            0,
+            0
+          ],
+          "e": [
+            0,
+            0.001
+          ],
+          "s": [
+            0.001,
+            0
+          ]
+        },
+        "radius": 0.0015
+      },
+      "line_entity": null,
+      "native": {
+        "dof": 2,
+        "nbad": 0,
+        "result": 0
+      },
+      "point_handles": {
+        "c": 4,
+        "e": 5,
+        "s": 6
+      },
+      "points": {
+        "c": [
+          0.0,
+          0.0
+        ],
+        "e": [
+          0.0,
+          0.0015
+        ],
+        "s": [
+          0.0015,
+          0.0
+        ]
+      },
+      "radial_lines": {}
+    },
+    "scale_center_fixed_r1": {
+      "after": {
+        "chord": 2.1213203435596424,
+        "cross": 2.25,
+        "dot": 0.0,
+        "end_radius": 1.5,
+        "equal_radius_residual": 0.0,
+        "start_radius": 1.5,
+        "sweep": 1.5707963267948966,
+        "sweep_degrees": 90.0
+      },
+      "arc_entity": {
+        "distance": 0,
+        "group": 2,
+        "h": 7,
+        "normal": 2,
+        "param": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "point": [
+          4,
+          6,
+          5,
+          0
+        ],
+        "type": 80004,
+        "wrkpl": 3
+      },
+      "before": {
+        "chord": 1.4142135623730951,
+        "cross": 1,
+        "dot": 0,
+        "end_radius": 1.0,
+        "equal_radius_residual": 0.0,
+        "start_radius": 1.0,
+        "sweep": 1.5707963267948966,
+        "sweep_degrees": 90.0
+      },
+      "extra_arc_entity": null,
+      "failed_constraints": [],
+      "input": {
+        "fixed": [
+          "c"
+        ],
+        "points": {
+          "c": [
+            0,
+            0
+          ],
+          "e": [
+            0,
+            1
+          ],
+          "s": [
+            1,
+            0
+          ]
+        },
+        "radius": 1.5
+      },
+      "line_entity": null,
+      "native": {
+        "dof": 2,
+        "nbad": 0,
+        "result": 0
+      },
+      "point_handles": {
+        "c": 4,
+        "e": 5,
+        "s": 6
+      },
+      "points": {
+        "c": [
+          0.0,
+          0.0
+        ],
+        "e": [
+          0.0,
+          1.5
+        ],
+        "s": [
+          1.5,
+          0.0
+        ]
+      },
+      "radial_lines": {}
+    },
+    "scale_center_fixed_r1000.0": {
+      "after": {
+        "chord": 2121.3203435596424,
+        "cross": 2250000.0,
+        "dot": 0.0,
+        "end_radius": 1500.0,
+        "equal_radius_residual": 0.0,
+        "start_radius": 1500.0,
+        "sweep": 1.5707963267948966,
+        "sweep_degrees": 90.0
+      },
+      "arc_entity": {
+        "distance": 0,
+        "group": 2,
+        "h": 7,
+        "normal": 2,
+        "param": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "point": [
+          4,
+          6,
+          5,
+          0
+        ],
+        "type": 80004,
+        "wrkpl": 3
+      },
+      "before": {
+        "chord": 1414.213562373095,
+        "cross": 1000000.0,
+        "dot": 0.0,
+        "end_radius": 1000.0,
+        "equal_radius_residual": 0.0,
+        "start_radius": 1000.0,
+        "sweep": 1.5707963267948966,
+        "sweep_degrees": 90.0
+      },
+      "extra_arc_entity": null,
+      "failed_constraints": [],
+      "input": {
+        "fixed": [
+          "c"
+        ],
+        "points": {
+          "c": [
+            0,
+            0
+          ],
+          "e": [
+            0,
+            1000.0
+          ],
+          "s": [
+            1000.0,
+            0
+          ]
+        },
+        "radius": 1500.0
+      },
+      "line_entity": null,
+      "native": {
+        "dof": 2,
+        "nbad": 0,
+        "result": 0
+      },
+      "point_handles": {
+        "c": 4,
+        "e": 5,
+        "s": 6
+      },
+      "points": {
+        "c": [
+          0.0,
+          0.0
+        ],
+        "e": [
+          0.0,
+          1500.0
+        ],
+        "s": [
+          1500.0,
+          0.0
+        ]
+      },
+      "radial_lines": {}
+    },
+    "scale_center_fixed_r1e-06": {
+      "after": {
+        "chord": 2.1213203435596424e-06,
+        "cross": 2.2500000000000003e-12,
+        "dot": 0.0,
+        "end_radius": 1.5e-06,
+        "equal_radius_residual": 0.0,
+        "start_radius": 1.5e-06,
+        "sweep": 1.5707963267948966,
+        "sweep_degrees": 90.0
+      },
+      "arc_entity": {
+        "distance": 0,
+        "group": 2,
+        "h": 7,
+        "normal": 2,
+        "param": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "point": [
+          4,
+          6,
+          5,
+          0
+        ],
+        "type": 80004,
+        "wrkpl": 3
+      },
+      "before": {
+        "chord": 1.414213562373095e-06,
+        "cross": 1e-12,
+        "dot": 0.0,
+        "end_radius": 1e-06,
+        "equal_radius_residual": 0.0,
+        "start_radius": 1e-06,
+        "sweep": 1.5707963267948966,
+        "sweep_degrees": 90.0
+      },
+      "extra_arc_entity": null,
+      "failed_constraints": [],
+      "input": {
+        "fixed": [
+          "c"
+        ],
+        "points": {
+          "c": [
+            0,
+            0
+          ],
+          "e": [
+            0,
+            1e-06
+          ],
+          "s": [
+            1e-06,
+            0
+          ]
+        },
+        "radius": 1.5e-06
+      },
+      "line_entity": null,
+      "native": {
+        "dof": 2,
+        "nbad": 0,
+        "result": 0
+      },
+      "point_handles": {
+        "c": 4,
+        "e": 5,
+        "s": 6
+      },
+      "points": {
+        "c": [
+          0.0,
+          0.0
+        ],
+        "e": [
+          0.0,
+          1.5e-06
+        ],
+        "s": [
+          1.5e-06,
+          0.0
+        ]
+      },
+      "radial_lines": {}
+    },
+    "scale_center_fixed_r500000.0": {
+      "after": {
+        "chord": 1060660.1717798214,
+        "cross": 562500000000.0,
+        "dot": 0.0,
+        "end_radius": 750000.0,
+        "equal_radius_residual": 0.0,
+        "start_radius": 750000.0,
+        "sweep": 1.5707963267948966,
+        "sweep_degrees": 90.0
+      },
+      "arc_entity": {
+        "distance": 0,
+        "group": 2,
+        "h": 7,
+        "normal": 2,
+        "param": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "point": [
+          4,
+          6,
+          5,
+          0
+        ],
+        "type": 80004,
+        "wrkpl": 3
+      },
+      "before": {
+        "chord": 707106.7811865475,
+        "cross": 250000000000.0,
+        "dot": 0.0,
+        "end_radius": 500000.0,
+        "equal_radius_residual": 0.0,
+        "start_radius": 500000.0,
+        "sweep": 1.5707963267948966,
+        "sweep_degrees": 90.0
+      },
+      "extra_arc_entity": null,
+      "failed_constraints": [],
+      "input": {
+        "fixed": [
+          "c"
+        ],
+        "points": {
+          "c": [
+            0,
+            0
+          ],
+          "e": [
+            0,
+            500000.0
+          ],
+          "s": [
+            500000.0,
+            0
+          ]
+        },
+        "radius": 750000.0
+      },
+      "line_entity": null,
+      "native": {
+        "dof": 2,
+        "nbad": 0,
+        "result": 0
+      },
+      "point_handles": {
+        "c": 4,
+        "e": 5,
+        "s": 6
+      },
+      "points": {
+        "c": [
+          0.0,
+          0.0
+        ],
+        "e": [
+          0.0,
+          750000.0
+        ],
+        "s": [
+          750000.0,
+          0.0
+        ]
+      },
+      "radial_lines": {}
+    },
+    "sector_major_ccw": {
+      "after": {
+        "chord": 9.899494936611665,
+        "cross": -49.0,
+        "dot": 0.0,
+        "end_radius": 7.0,
+        "equal_radius_residual": 0.0,
+        "start_radius": 7.0,
+        "sweep": 4.71238898038469,
+        "sweep_degrees": 270.0
+      },
+      "arc_entity": {
+        "distance": 0,
+        "group": 2,
+        "h": 7,
+        "normal": 2,
+        "param": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "point": [
+          4,
+          6,
+          5,
+          0
+        ],
+        "type": 80004,
+        "wrkpl": 3
+      },
+      "before": {
+        "chord": 7.0710678118654755,
+        "cross": -25,
+        "dot": 0,
+        "end_radius": 5.0,
+        "equal_radius_residual": 0.0,
+        "start_radius": 5.0,
+        "sweep": 4.71238898038469,
+        "sweep_degrees": 270.0
+      },
+      "extra_arc_entity": null,
+      "failed_constraints": [],
+      "input": {
+        "direction": "ccw",
+        "fixed": [
+          "c"
+        ],
+        "points": {
+          "c": [
+            0,
+            0
+          ],
+          "e": [
+            0,
+            -5
+          ],
+          "s": [
+            5,
+            0
+          ]
+        },
+        "radial_lines": true,
+        "radius": 7
+      },
+      "line_entity": null,
+      "native": {
+        "dof": 0,
+        "nbad": 0,
+        "result": 0
+      },
+      "point_handles": {
+        "c": 4,
+        "e": 5,
+        "s": 6
+      },
+      "points": {
+        "c": [
+          0.0,
+          0.0
+        ],
+        "e": [
+          0.0,
+          -7.0
+        ],
+        "s": [
+          7.0,
+          0.0
+        ]
+      },
+      "radial_lines": {
+        "e": {
+          "distance": 0,
+          "group": 2,
+          "h": 9,
+          "normal": 0,
+          "param": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "point": [
+            4,
+            5,
+            0,
+            0
+          ],
+          "type": 80001,
+          "wrkpl": 3
+        },
+        "s": {
+          "distance": 0,
+          "group": 2,
+          "h": 8,
+          "normal": 0,
+          "param": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "point": [
+            4,
+            6,
+            0,
+            0
+          ],
+          "type": 80001,
+          "wrkpl": 3
+        }
+      }
+    },
+    "sector_major_cw": {
+      "after": {
+        "chord": 9.899494936611665,
+        "cross": 49.0,
+        "dot": 0.0,
+        "end_radius": 7.0,
+        "equal_radius_residual": 0.0,
+        "start_radius": 7.0,
+        "sweep": -4.71238898038469,
+        "sweep_degrees": -270.0
+      },
+      "arc_entity": {
+        "distance": 0,
+        "group": 2,
+        "h": 7,
+        "normal": 2,
+        "param": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "point": [
+          4,
+          5,
+          6,
+          0
+        ],
+        "type": 80004,
+        "wrkpl": 3
+      },
+      "before": {
+        "chord": 7.0710678118654755,
+        "cross": 25,
+        "dot": 0,
+        "end_radius": 5.0,
+        "equal_radius_residual": 0.0,
+        "start_radius": 5.0,
+        "sweep": -4.71238898038469,
+        "sweep_degrees": -270.0
+      },
+      "extra_arc_entity": null,
+      "failed_constraints": [],
+      "input": {
+        "direction": "cw",
+        "fixed": [
+          "c"
+        ],
+        "points": {
+          "c": [
+            0,
+            0
+          ],
+          "e": [
+            0,
+            5
+          ],
+          "s": [
+            5,
+            0
+          ]
+        },
+        "radial_lines": true,
+        "radius": 7
+      },
+      "line_entity": null,
+      "native": {
+        "dof": 0,
+        "nbad": 0,
+        "result": 0
+      },
+      "point_handles": {
+        "c": 4,
+        "e": 5,
+        "s": 6
+      },
+      "points": {
+        "c": [
+          0.0,
+          0.0
+        ],
+        "e": [
+          0.0,
+          7.0
+        ],
+        "s": [
+          7.0,
+          0.0
+        ]
+      },
+      "radial_lines": {
+        "e": {
+          "distance": 0,
+          "group": 2,
+          "h": 9,
+          "normal": 0,
+          "param": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "point": [
+            4,
+            5,
+            0,
+            0
+          ],
+          "type": 80001,
+          "wrkpl": 3
+        },
+        "s": {
+          "distance": 0,
+          "group": 2,
+          "h": 8,
+          "normal": 0,
+          "param": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "point": [
+            4,
+            6,
+            0,
+            0
+          ],
+          "type": 80001,
+          "wrkpl": 3
+        }
+      }
+    },
+    "sector_minor_ccw": {
+      "after": {
+        "chord": 9.899494936611665,
+        "cross": 49.0,
+        "dot": 0.0,
+        "end_radius": 7.0,
+        "equal_radius_residual": 0.0,
+        "start_radius": 7.0,
+        "sweep": 1.5707963267948966,
+        "sweep_degrees": 90.0
+      },
+      "arc_entity": {
+        "distance": 0,
+        "group": 2,
+        "h": 7,
+        "normal": 2,
+        "param": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "point": [
+          4,
+          6,
+          5,
+          0
+        ],
+        "type": 80004,
+        "wrkpl": 3
+      },
+      "before": {
+        "chord": 7.0710678118654755,
+        "cross": 25,
+        "dot": 0,
+        "end_radius": 5.0,
+        "equal_radius_residual": 0.0,
+        "start_radius": 5.0,
+        "sweep": 1.5707963267948966,
+        "sweep_degrees": 90.0
+      },
+      "extra_arc_entity": null,
+      "failed_constraints": [],
+      "input": {
+        "direction": "ccw",
+        "fixed": [
+          "c"
+        ],
+        "points": {
+          "c": [
+            0,
+            0
+          ],
+          "e": [
+            0,
+            5
+          ],
+          "s": [
+            5,
+            0
+          ]
+        },
+        "radial_lines": true,
+        "radius": 7
+      },
+      "line_entity": null,
+      "native": {
+        "dof": 0,
+        "nbad": 0,
+        "result": 0
+      },
+      "point_handles": {
+        "c": 4,
+        "e": 5,
+        "s": 6
+      },
+      "points": {
+        "c": [
+          0.0,
+          0.0
+        ],
+        "e": [
+          0.0,
+          7.0
+        ],
+        "s": [
+          7.0,
+          0.0
+        ]
+      },
+      "radial_lines": {
+        "e": {
+          "distance": 0,
+          "group": 2,
+          "h": 9,
+          "normal": 0,
+          "param": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "point": [
+            4,
+            5,
+            0,
+            0
+          ],
+          "type": 80001,
+          "wrkpl": 3
+        },
+        "s": {
+          "distance": 0,
+          "group": 2,
+          "h": 8,
+          "normal": 0,
+          "param": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "point": [
+            4,
+            6,
+            0,
+            0
+          ],
+          "type": 80001,
+          "wrkpl": 3
+        }
+      }
+    },
+    "sector_minor_cw": {
+      "after": {
+        "chord": 9.899494936611665,
+        "cross": -49.0,
+        "dot": 0.0,
+        "end_radius": 7.0,
+        "equal_radius_residual": 0.0,
+        "start_radius": 7.0,
+        "sweep": -1.5707963267948966,
+        "sweep_degrees": -90.0
+      },
+      "arc_entity": {
+        "distance": 0,
+        "group": 2,
+        "h": 7,
+        "normal": 2,
+        "param": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "point": [
+          4,
+          5,
+          6,
+          0
+        ],
+        "type": 80004,
+        "wrkpl": 3
+      },
+      "before": {
+        "chord": 7.0710678118654755,
+        "cross": -25,
+        "dot": 0,
+        "end_radius": 5.0,
+        "equal_radius_residual": 0.0,
+        "start_radius": 5.0,
+        "sweep": -1.5707963267948966,
+        "sweep_degrees": -90.0
+      },
+      "extra_arc_entity": null,
+      "failed_constraints": [],
+      "input": {
+        "direction": "cw",
+        "fixed": [
+          "c"
+        ],
+        "points": {
+          "c": [
+            0,
+            0
+          ],
+          "e": [
+            0,
+            -5
+          ],
+          "s": [
+            5,
+            0
+          ]
+        },
+        "radial_lines": true,
+        "radius": 7
+      },
+      "line_entity": null,
+      "native": {
+        "dof": 0,
+        "nbad": 0,
+        "result": 0
+      },
+      "point_handles": {
+        "c": 4,
+        "e": 5,
+        "s": 6
+      },
+      "points": {
+        "c": [
+          0.0,
+          0.0
+        ],
+        "e": [
+          0.0,
+          -7.0
+        ],
+        "s": [
+          7.0,
+          0.0
+        ]
+      },
+      "radial_lines": {
+        "e": {
+          "distance": 0,
+          "group": 2,
+          "h": 9,
+          "normal": 0,
+          "param": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "point": [
+            4,
+            5,
+            0,
+            0
+          ],
+          "type": 80001,
+          "wrkpl": 3
+        },
+        "s": {
+          "distance": 0,
+          "group": 2,
+          "h": 8,
+          "normal": 0,
+          "param": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "point": [
+            4,
+            6,
+            0,
+            0
+          ],
+          "type": 80001,
+          "wrkpl": 3
+        }
+      }
+    },
+    "semicircle_center_fixed_radius": {
+      "after": {
+        "chord": 14.0,
+        "cross": 0.0,
+        "dot": -49.0,
+        "end_radius": 7.0,
+        "equal_radius_residual": 0.0,
+        "start_radius": 7.0,
+        "sweep": 3.141592653589793,
+        "sweep_degrees": 180.0
+      },
+      "arc_entity": {
+        "distance": 0,
+        "group": 2,
+        "h": 7,
+        "normal": 2,
+        "param": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "point": [
+          4,
+          6,
+          5,
+          0
+        ],
+        "type": 80004,
+        "wrkpl": 3
+      },
+      "before": {
+        "chord": 10.0,
+        "cross": 0,
+        "dot": -25,
+        "end_radius": 5.0,
+        "equal_radius_residual": 0.0,
+        "start_radius": 5.0,
+        "sweep": 3.141592653589793,
+        "sweep_degrees": 180.0
+      },
+      "extra_arc_entity": null,
+      "failed_constraints": [],
+      "input": {
+        "fixed": [
+          "c"
+        ],
+        "points": {
+          "c": [
+            0,
+            0
+          ],
+          "e": [
+            -5,
+            0
+          ],
+          "s": [
+            5,
+            0
+          ]
+        },
+        "radius": 7
+      },
+      "line_entity": null,
+      "native": {
+        "dof": 2,
+        "nbad": 0,
+        "result": 0
+      },
+      "point_handles": {
+        "c": 4,
+        "e": 5,
+        "s": 6
+      },
+      "points": {
+        "c": [
+          0.0,
+          0.0
+        ],
+        "e": [
+          -7.0,
+          0.0
+        ],
+        "s": [
+          7.0,
+          0.0
+        ]
+      },
+      "radial_lines": {}
+    },
+    "semicircle_free": {
+      "after": {
+        "chord": 10.0,
+        "cross": 0.0,
+        "dot": -25.0,
+        "end_radius": 5.0,
+        "equal_radius_residual": 0.0,
+        "start_radius": 5.0,
+        "sweep": 3.141592653589793,
+        "sweep_degrees": 180.0
+      },
+      "arc_entity": {
+        "distance": 0,
+        "group": 2,
+        "h": 7,
+        "normal": 2,
+        "param": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "point": [
+          4,
+          6,
+          5,
+          0
+        ],
+        "type": 80004,
+        "wrkpl": 3
+      },
+      "before": {
+        "chord": 10.0,
+        "cross": 0,
+        "dot": -25,
+        "end_radius": 5.0,
+        "equal_radius_residual": 0.0,
+        "start_radius": 5.0,
+        "sweep": 3.141592653589793,
+        "sweep_degrees": 180.0
+      },
+      "extra_arc_entity": null,
+      "failed_constraints": [],
+      "input": {
+        "points": {
+          "c": [
+            0,
+            0
+          ],
+          "e": [
+            -5,
+            0
+          ],
+          "s": [
+            5,
+            0
+          ]
+        }
+      },
+      "line_entity": null,
+      "native": {
+        "dof": 5,
+        "nbad": 0,
+        "result": 0
+      },
+      "point_handles": {
+        "c": 4,
+        "e": 5,
+        "s": 6
+      },
+      "points": {
+        "c": [
+          0.0,
+          0.0
+        ],
+        "e": [
+          -5.0,
+          0.0
+        ],
+        "s": [
+          5.0,
+          0.0
+        ]
+      },
+      "radial_lines": {}
+    },
+    "sweep_1e-05": {
+      "after": {
+        "chord": 4.9999999999791666e-05,
+        "cross": 0.0002499999999958333,
+        "dot": 24.99999999875,
+        "end_radius": 5.0,
+        "equal_radius_residual": 0.0,
+        "start_radius": 5.0,
+        "sweep": 9.999999999999999e-06,
+        "sweep_degrees": 0.0005729577951308232
+      },
+      "arc_entity": {
+        "distance": 0,
+        "group": 2,
+        "h": 7,
+        "normal": 2,
+        "param": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "point": [
+          4,
+          6,
+          5,
+          0
+        ],
+        "type": 80004,
+        "wrkpl": 3
+      },
+      "before": {
+        "chord": 4.9999999999791666e-05,
+        "cross": 0.0002499999999958333,
+        "dot": 24.99999999875,
+        "end_radius": 5.0,
+        "equal_radius_residual": 0.0,
+        "start_radius": 5.0,
+        "sweep": 9.999999999999999e-06,
+        "sweep_degrees": 0.0005729577951308232
+      },
+      "extra_arc_entity": null,
+      "failed_constraints": [],
+      "input": {
+        "points": {
+          "c": [
+            0,
+            0
+          ],
+          "e": [
+            4.99999999975,
+            4.9999999999166664e-05
+          ],
+          "s": [
+            5,
+            0
+          ]
+        }
+      },
+      "line_entity": null,
+      "native": {
+        "dof": 5,
+        "nbad": 0,
+        "result": 0
+      },
+      "point_handles": {
+        "c": 4,
+        "e": 5,
+        "s": 6
+      },
+      "points": {
+        "c": [
+          0.0,
+          0.0
+        ],
+        "e": [
+          4.99999999975,
+          4.9999999999166664e-05
+        ],
+        "s": [
+          5.0,
+          0.0
+        ]
+      },
+      "radial_lines": {}
+    },
+    "sweep_1e-06": {
+      "after": {
+        "chord": 4.999999999999791e-06,
+        "cross": 2.499999999999583e-05,
+        "dot": 24.999999999987498,
+        "end_radius": 5.0,
+        "equal_radius_residual": 0.0,
+        "start_radius": 5.0,
+        "sweep": 1e-06,
+        "sweep_degrees": 5.729577951308232e-05
+      },
+      "arc_entity": {
+        "distance": 0,
+        "group": 2,
+        "h": 7,
+        "normal": 2,
+        "param": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "point": [
+          4,
+          6,
+          5,
+          0
+        ],
+        "type": 80004,
+        "wrkpl": 3
+      },
+      "before": {
+        "chord": 4.999999999999791e-06,
+        "cross": 2.499999999999583e-05,
+        "dot": 24.999999999987498,
+        "end_radius": 5.0,
+        "equal_radius_residual": 0.0,
+        "start_radius": 5.0,
+        "sweep": 1e-06,
+        "sweep_degrees": 5.729577951308232e-05
+      },
+      "extra_arc_entity": null,
+      "failed_constraints": [],
+      "input": {
+        "points": {
+          "c": [
+            0,
+            0
+          ],
+          "e": [
+            4.9999999999975,
+            4.999999999999166e-06
+          ],
+          "s": [
+            5,
+            0
+          ]
+        }
+      },
+      "line_entity": null,
+      "native": {
+        "dof": 5,
+        "nbad": 0,
+        "result": 0
+      },
+      "point_handles": {
+        "c": 4,
+        "e": 5,
+        "s": 6
+      },
+      "points": {
+        "c": [
+          0.0,
+          0.0
+        ],
+        "e": [
+          4.9999999999975,
+          4.999999999999166e-06
+        ],
+        "s": [
+          5.0,
+          0.0
+        ]
+      },
+      "radial_lines": {}
+    },
+    "sweep_1e-07": {
+      "after": {
+        "chord": 4.999999999999998e-07,
+        "cross": 2.4999999999999955e-06,
+        "dot": 24.999999999999876,
+        "end_radius": 5.0,
+        "equal_radius_residual": 0.0,
+        "start_radius": 5.0,
+        "sweep": 9.999999999999998e-08,
+        "sweep_degrees": 5.729577951308231e-06
+      },
+      "arc_entity": {
+        "distance": 0,
+        "group": 2,
+        "h": 7,
+        "normal": 2,
+        "param": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "point": [
+          4,
+          6,
+          5,
+          0
+        ],
+        "type": 80004,
+        "wrkpl": 3
+      },
+      "before": {
+        "chord": 4.999999999999998e-07,
+        "cross": 2.4999999999999955e-06,
+        "dot": 24.999999999999876,
+        "end_radius": 5.0,
+        "equal_radius_residual": 0.0,
+        "start_radius": 5.0,
+        "sweep": 9.999999999999998e-08,
+        "sweep_degrees": 5.729577951308231e-06
+      },
+      "extra_arc_entity": null,
+      "failed_constraints": [],
+      "input": {
+        "points": {
+          "c": [
+            0,
+            0
+          ],
+          "e": [
+            4.999999999999975,
+            4.999999999999991e-07
+          ],
+          "s": [
+            5,
+            0
+          ]
+        }
+      },
+      "line_entity": null,
+      "native": {
+        "dof": 5,
+        "nbad": 0,
+        "result": 0
+      },
+      "point_handles": {
+        "c": 4,
+        "e": 5,
+        "s": 6
+      },
+      "points": {
+        "c": [
+          0.0,
+          0.0
+        ],
+        "e": [
+          4.999999999999975,
+          4.999999999999991e-07
+        ],
+        "s": [
+          5.0,
+          0.0
+        ]
+      },
+      "radial_lines": {}
+    },
+    "sweep_1e-12": {
+      "after": {
+        "chord": 5e-12,
+        "cross": 2.4999999999999998e-11,
+        "dot": 25.0,
+        "end_radius": 5.0,
+        "equal_radius_residual": 0.0,
+        "start_radius": 5.0,
+        "sweep": 1e-12,
+        "sweep_degrees": 5.729577951308232e-11
+      },
+      "arc_entity": {
+        "distance": 0,
+        "group": 2,
+        "h": 7,
+        "normal": 2,
+        "param": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "point": [
+          4,
+          6,
+          5,
+          0
+        ],
+        "type": 80004,
+        "wrkpl": 3
+      },
+      "before": {
+        "chord": 5e-12,
+        "cross": 2.4999999999999998e-11,
+        "dot": 25.0,
+        "end_radius": 5.0,
+        "equal_radius_residual": 0.0,
+        "start_radius": 5.0,
+        "sweep": 1e-12,
+        "sweep_degrees": 5.729577951308232e-11
+      },
+      "extra_arc_entity": null,
+      "failed_constraints": [],
+      "input": {
+        "points": {
+          "c": [
+            0,
+            0
+          ],
+          "e": [
+            5.0,
+            5e-12
+          ],
+          "s": [
+            5,
+            0
+          ]
+        }
+      },
+      "line_entity": null,
+      "native": {
+        "dof": 5,
+        "nbad": 0,
+        "result": 0
+      },
+      "point_handles": {
+        "c": 4,
+        "e": 5,
+        "s": 6
+      },
+      "points": {
+        "c": [
+          0.0,
+          0.0
+        ],
+        "e": [
+          5.0,
+          5e-12
+        ],
+        "s": [
+          5.0,
+          0.0
+        ]
+      },
+      "radial_lines": {}
+    },
+    "sweep_6.283185207179586": {
+      "after": {
+        "chord": 5.000000026268032e-07,
+        "cross": -2.500000013134013e-06,
+        "dot": 24.999999999999876,
+        "end_radius": 5.0,
+        "equal_radius_residual": 0.0,
+        "start_radius": 5.0,
+        "sweep": 6.283185207179586,
+        "sweep_degrees": 359.999994270422
+      },
+      "arc_entity": {
+        "distance": 0,
+        "group": 2,
+        "h": 7,
+        "normal": 2,
+        "param": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "point": [
+          4,
+          6,
+          5,
+          0
+        ],
+        "type": 80004,
+        "wrkpl": 3
+      },
+      "before": {
+        "chord": 5.000000026268032e-07,
+        "cross": -2.500000013134013e-06,
+        "dot": 24.999999999999876,
+        "end_radius": 5.0,
+        "equal_radius_residual": 0.0,
+        "start_radius": 5.0,
+        "sweep": 6.283185207179586,
+        "sweep_degrees": 359.999994270422
+      },
+      "extra_arc_entity": null,
+      "failed_constraints": [],
+      "input": {
+        "points": {
+          "c": [
+            0,
+            0
+          ],
+          "e": [
+            4.999999999999975,
+            -5.000000026268026e-07
+          ],
+          "s": [
+            5,
+            0
+          ]
+        }
+      },
+      "line_entity": null,
+      "native": {
+        "dof": 5,
+        "nbad": 0,
+        "result": 0
+      },
+      "point_handles": {
+        "c": 4,
+        "e": 5,
+        "s": 6
+      },
+      "points": {
+        "c": [
+          0.0,
+          0.0
+        ],
+        "e": [
+          4.999999999999975,
+          -5.000000026268026e-07
+        ],
+        "s": [
+          5.0,
+          0.0
+        ]
+      },
+      "radial_lines": {}
+    },
+    "sweep_6.283185307178586": {
+      "after": {
+        "chord": 5.001669149710853e-12,
+        "cross": -2.5008345748554265e-11,
+        "dot": 25.0,
+        "end_radius": 5.0,
+        "equal_radius_residual": 0.0,
+        "start_radius": 5.0,
+        "sweep": 6.283185307178586,
+        "sweep_degrees": 359.9999999999427
+      },
+      "arc_entity": {
+        "distance": 0,
+        "group": 2,
+        "h": 7,
+        "normal": 2,
+        "param": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "point": [
+          4,
+          6,
+          5,
+          0
+        ],
+        "type": 80004,
+        "wrkpl": 3
+      },
+      "before": {
+        "chord": 5.001669149710853e-12,
+        "cross": -2.5008345748554265e-11,
+        "dot": 25.0,
+        "end_radius": 5.0,
+        "equal_radius_residual": 0.0,
+        "start_radius": 5.0,
+        "sweep": 6.283185307178586,
+        "sweep_degrees": 359.9999999999427
+      },
+      "extra_arc_entity": null,
+      "failed_constraints": [],
+      "input": {
+        "points": {
+          "c": [
+            0,
+            0
+          ],
+          "e": [
+            5.0,
+            -5.001669149710853e-12
+          ],
+          "s": [
+            5,
+            0
+          ]
+        }
+      },
+      "line_entity": null,
+      "native": {
+        "dof": 5,
+        "nbad": 0,
+        "result": 0
+      },
+      "point_handles": {
+        "c": 4,
+        "e": 5,
+        "s": 6
+      },
+      "points": {
+        "c": [
+          0.0,
+          0.0
+        ],
+        "e": [
+          5.0,
+          -5.001669149710853e-12
+        ],
+        "s": [
+          5.0,
+          0.0
+        ]
+      },
+      "radial_lines": {}
+    },
+    "two_arc_disk_quarter_complement_center_radius": {
+      "after": {
+        "chord": 9.899494936611665,
+        "cross": 48.99999999999999,
+        "dot": 0.0,
+        "end_radius": 6.999999999999999,
+        "equal_radius_residual": 8.881784197001252e-16,
+        "start_radius": 7.0,
+        "sweep": 1.5707963267948966,
+        "sweep_degrees": 90.0
+      },
+      "arc_entity": {
+        "distance": 0,
+        "group": 2,
+        "h": 7,
+        "normal": 2,
+        "param": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "point": [
+          4,
+          6,
+          5,
+          0
+        ],
+        "type": 80004,
+        "wrkpl": 3
+      },
+      "before": {
+        "chord": 7.0710678118654755,
+        "cross": 25,
+        "dot": 0,
+        "end_radius": 5.0,
+        "equal_radius_residual": 0.0,
+        "start_radius": 5.0,
+        "sweep": 1.5707963267948966,
+        "sweep_degrees": 90.0
+      },
+      "extra_arc_entity": {
+        "distance": 0,
+        "group": 2,
+        "h": 8,
+        "normal": 2,
+        "param": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "point": [
+          4,
+          5,
+          6,
+          0
+        ],
+        "type": 80004,
+        "wrkpl": 3
+      },
+      "failed_constraints": [],
+      "input": {
+        "extra_arc": [
+          "c",
+          "e",
+          "s"
+        ],
+        "fixed": [
+          "c"
+        ],
+        "points": {
+          "c": [
+            0,
+            0
+          ],
+          "e": [
+            0,
+            5
+          ],
+          "s": [
+            5,
+            0
+          ]
+        },
+        "radius": 7
+      },
+      "line_entity": null,
+      "native": {
+        "dof": 2,
+        "nbad": 0,
+        "result": 4
+      },
+      "point_handles": {
+        "c": 4,
+        "e": 5,
+        "s": 6
+      },
+      "points": {
+        "c": [
+          0.0,
+          0.0
+        ],
+        "e": [
+          0.0,
+          6.999999999999999
+        ],
+        "s": [
+          7.0,
+          0.0
+        ]
+      },
+      "radial_lines": {}
+    },
+    "two_arc_disk_quarter_complement_free": {
+      "after": {
+        "chord": 7.0710678118654755,
+        "cross": 25.0,
+        "dot": 0.0,
+        "end_radius": 5.0,
+        "equal_radius_residual": 0.0,
+        "start_radius": 5.0,
+        "sweep": 1.5707963267948966,
+        "sweep_degrees": 90.0
+      },
+      "arc_entity": {
+        "distance": 0,
+        "group": 2,
+        "h": 7,
+        "normal": 2,
+        "param": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "point": [
+          4,
+          6,
+          5,
+          0
+        ],
+        "type": 80004,
+        "wrkpl": 3
+      },
+      "before": {
+        "chord": 7.0710678118654755,
+        "cross": 25,
+        "dot": 0,
+        "end_radius": 5.0,
+        "equal_radius_residual": 0.0,
+        "start_radius": 5.0,
+        "sweep": 1.5707963267948966,
+        "sweep_degrees": 90.0
+      },
+      "extra_arc_entity": {
+        "distance": 0,
+        "group": 2,
+        "h": 8,
+        "normal": 2,
+        "param": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "point": [
+          4,
+          5,
+          6,
+          0
+        ],
+        "type": 80004,
+        "wrkpl": 3
+      },
+      "failed_constraints": [],
+      "input": {
+        "extra_arc": [
+          "c",
+          "e",
+          "s"
+        ],
+        "points": {
+          "c": [
+            0,
+            0
+          ],
+          "e": [
+            0,
+            5
+          ],
+          "s": [
+            5,
+            0
+          ]
+        }
+      },
+      "line_entity": null,
+      "native": {
+        "dof": 5,
+        "nbad": 0,
+        "result": 4
+      },
+      "point_handles": {
+        "c": 4,
+        "e": 5,
+        "s": 6
+      },
+      "points": {
+        "c": [
+          0.0,
+          0.0
+        ],
+        "e": [
+          0.0,
+          5.0
+        ],
+        "s": [
+          5.0,
+          0.0
+        ]
+      },
+      "radial_lines": {}
+    },
+    "two_arc_disk_quarter_complement_radius": {
+      "after": {
+        "chord": 8.447843287101886,
+        "cross": 47.155681094781194,
+        "dot": 13.316971899017833,
+        "end_radius": 7.000000000052431,
+        "equal_radius_residual": 0.0,
+        "start_radius": 7.000000000052431,
+        "sweep": 1.2955594176017693,
+        "sweep_degrees": 74.23008673700832
+      },
+      "arc_entity": {
+        "distance": 0,
+        "group": 2,
+        "h": 7,
+        "normal": 2,
+        "param": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "point": [
+          4,
+          6,
+          5,
+          0
+        ],
+        "type": 80004,
+        "wrkpl": 3
+      },
+      "before": {
+        "chord": 7.0710678118654755,
+        "cross": 25,
+        "dot": 0,
+        "end_radius": 5.0,
+        "equal_radius_residual": 0.0,
+        "start_radius": 5.0,
+        "sweep": 1.5707963267948966,
+        "sweep_degrees": 90.0
+      },
+      "extra_arc_entity": {
+        "distance": 0,
+        "group": 2,
+        "h": 8,
+        "normal": 2,
+        "param": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "point": [
+          4,
+          5,
+          6,
+          0
+        ],
+        "type": 80004,
+        "wrkpl": 3
+      },
+      "failed_constraints": [],
+      "input": {
+        "extra_arc": [
+          "c",
+          "e",
+          "s"
+        ],
+        "points": {
+          "c": [
+            0,
+            0
+          ],
+          "e": [
+            0,
+            5
+          ],
+          "s": [
+            5,
+            0
+          ]
+        },
+        "radius": 7
+      },
+      "line_entity": null,
+      "native": {
+        "dof": 4,
+        "nbad": 0,
+        "result": 4
+      },
+      "point_handles": {
+        "c": 4,
+        "e": 5,
+        "s": 6
+      },
+      "points": {
+        "c": [
+          -0.9647033166046555,
+          -0.9647033166046558
+        ],
+        "e": [
+          -0.004411979053171179,
+          5.969115295657827
+        ],
+        "s": [
+          5.969115295657827,
+          -0.004411979053171319
+        ]
+      },
+      "radial_lines": {}
+    },
+    "two_arc_disk_quarter_complement_unequal_seed": {
+      "after": {
+        "chord": 9.575324385547828,
+        "cross": 48.898220761109414,
+        "dot": 3.1565814567381247,
+        "end_radius": 7.000000000138765,
+        "equal_radius_residual": 1.3873346915715956e-10,
+        "start_radius": 7.000000000000032,
+        "sweep": 1.5063316571070513,
+        "sweep_degrees": 86.30644649918153
+      },
+      "arc_entity": {
+        "distance": 0,
+        "group": 2,
+        "h": 7,
+        "normal": 2,
+        "param": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "point": [
+          4,
+          6,
+          5,
+          0
+        ],
+        "type": 80004,
+        "wrkpl": 3
+      },
+      "before": {
+        "chord": 9.433981132056603,
+        "cross": 40.0,
+        "dot": 0.0,
+        "end_radius": 8.0,
+        "equal_radius_residual": 3.0,
+        "start_radius": 5.0,
+        "sweep": 1.5707963267948966,
+        "sweep_degrees": 90.0
+      },
+      "extra_arc_entity": {
+        "distance": 0,
+        "group": 2,
+        "h": 8,
+        "normal": 2,
+        "param": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "point": [
+          4,
+          5,
+          6,
+          0
+        ],
+        "type": 80004,
+        "wrkpl": 3
+      },
+      "failed_constraints": [],
+      "input": {
+        "extra_arc": [
+          "c",
+          "e",
+          "s"
+        ],
+        "points": {
+          "c": [
+            0,
+            0
+          ],
+          "e": [
+            0.0,
+            8.0
+          ],
+          "s": [
+            5,
+            0
+          ]
+        },
+        "radius": 7
+      },
+      "line_entity": null,
+      "native": {
+        "dof": 4,
+        "nbad": 0,
+        "result": 4
+      },
+      "point_handles": {
+        "c": 4,
+        "e": 5,
+        "s": 6
+      },
+      "points": {
+        "c": [
+          -0.9873147505681548,
+          0.5343594486469814
+        ],
+        "e": [
+          -0.004987076496144836,
+          7.46509045934816
+        ],
+        "s": [
+          5.992301827064299,
+          0.0005500920048587232
+        ]
+      },
+      "radial_lines": {}
+    },
+    "two_arc_disk_semicircles_center_radius": {
+      "after": {
+        "chord": 14.0,
+        "cross": 0.0,
+        "dot": -48.99999999999999,
+        "end_radius": 6.999999999999999,
+        "equal_radius_residual": 8.881784197001252e-16,
+        "start_radius": 7.0,
+        "sweep": 3.141592653589793,
+        "sweep_degrees": 180.0
+      },
+      "arc_entity": {
+        "distance": 0,
+        "group": 2,
+        "h": 7,
+        "normal": 2,
+        "param": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "point": [
+          4,
+          6,
+          5,
+          0
+        ],
+        "type": 80004,
+        "wrkpl": 3
+      },
+      "before": {
+        "chord": 10.0,
+        "cross": 0,
+        "dot": -25,
+        "end_radius": 5.0,
+        "equal_radius_residual": 0.0,
+        "start_radius": 5.0,
+        "sweep": 3.141592653589793,
+        "sweep_degrees": 180.0
+      },
+      "extra_arc_entity": {
+        "distance": 0,
+        "group": 2,
+        "h": 8,
+        "normal": 2,
+        "param": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "point": [
+          4,
+          5,
+          6,
+          0
+        ],
+        "type": 80004,
+        "wrkpl": 3
+      },
+      "failed_constraints": [],
+      "input": {
+        "extra_arc": [
+          "c",
+          "e",
+          "s"
+        ],
+        "fixed": [
+          "c"
+        ],
+        "points": {
+          "c": [
+            0,
+            0
+          ],
+          "e": [
+            -5,
+            0
+          ],
+          "s": [
+            5,
+            0
+          ]
+        },
+        "radius": 7
+      },
+      "line_entity": null,
+      "native": {
+        "dof": 2,
+        "nbad": 0,
+        "result": 4
+      },
+      "point_handles": {
+        "c": 4,
+        "e": 5,
+        "s": 6
+      },
+      "points": {
+        "c": [
+          0.0,
+          0.0
+        ],
+        "e": [
+          -6.999999999999999,
+          0.0
+        ],
+        "s": [
+          7.0,
+          0.0
+        ]
+      },
+      "radial_lines": {}
+    },
+    "two_arc_disk_semicircles_free": {
+      "after": {
+        "chord": 10.0,
+        "cross": 0.0,
+        "dot": -25.0,
+        "end_radius": 5.0,
+        "equal_radius_residual": 0.0,
+        "start_radius": 5.0,
+        "sweep": 3.141592653589793,
+        "sweep_degrees": 180.0
+      },
+      "arc_entity": {
+        "distance": 0,
+        "group": 2,
+        "h": 7,
+        "normal": 2,
+        "param": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "point": [
+          4,
+          6,
+          5,
+          0
+        ],
+        "type": 80004,
+        "wrkpl": 3
+      },
+      "before": {
+        "chord": 10.0,
+        "cross": 0,
+        "dot": -25,
+        "end_radius": 5.0,
+        "equal_radius_residual": 0.0,
+        "start_radius": 5.0,
+        "sweep": 3.141592653589793,
+        "sweep_degrees": 180.0
+      },
+      "extra_arc_entity": {
+        "distance": 0,
+        "group": 2,
+        "h": 8,
+        "normal": 2,
+        "param": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "point": [
+          4,
+          5,
+          6,
+          0
+        ],
+        "type": 80004,
+        "wrkpl": 3
+      },
+      "failed_constraints": [],
+      "input": {
+        "extra_arc": [
+          "c",
+          "e",
+          "s"
+        ],
+        "points": {
+          "c": [
+            0,
+            0
+          ],
+          "e": [
+            -5,
+            0
+          ],
+          "s": [
+            5,
+            0
+          ]
+        }
+      },
+      "line_entity": null,
+      "native": {
+        "dof": 5,
+        "nbad": 0,
+        "result": 4
+      },
+      "point_handles": {
+        "c": 4,
+        "e": 5,
+        "s": 6
+      },
+      "points": {
+        "c": [
+          0.0,
+          0.0
+        ],
+        "e": [
+          -5.0,
+          0.0
+        ],
+        "s": [
+          5.0,
+          0.0
+        ]
+      },
+      "radial_lines": {}
+    },
+    "two_arc_disk_semicircles_radius": {
+      "after": {
+        "chord": 14.0,
+        "cross": 0.0,
+        "dot": -49.0,
+        "end_radius": 7.0,
+        "equal_radius_residual": 0.0,
+        "start_radius": 7.0,
+        "sweep": 3.141592653589793,
+        "sweep_degrees": 180.0
+      },
+      "arc_entity": {
+        "distance": 0,
+        "group": 2,
+        "h": 7,
+        "normal": 2,
+        "param": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "point": [
+          4,
+          6,
+          5,
+          0
+        ],
+        "type": 80004,
+        "wrkpl": 3
+      },
+      "before": {
+        "chord": 10.0,
+        "cross": 0,
+        "dot": -25,
+        "end_radius": 5.0,
+        "equal_radius_residual": 0.0,
+        "start_radius": 5.0,
+        "sweep": 3.141592653589793,
+        "sweep_degrees": 180.0
+      },
+      "extra_arc_entity": {
+        "distance": 0,
+        "group": 2,
+        "h": 8,
+        "normal": 2,
+        "param": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "point": [
+          4,
+          5,
+          6,
+          0
+        ],
+        "type": 80004,
+        "wrkpl": 3
+      },
+      "failed_constraints": [],
+      "input": {
+        "extra_arc": [
+          "c",
+          "e",
+          "s"
+        ],
+        "points": {
+          "c": [
+            0,
+            0
+          ],
+          "e": [
+            -5,
+            0
+          ],
+          "s": [
+            5,
+            0
+          ]
+        },
+        "radius": 7
+      },
+      "line_entity": null,
+      "native": {
+        "dof": 4,
+        "nbad": 0,
+        "result": 4
+      },
+      "point_handles": {
+        "c": 4,
+        "e": 5,
+        "s": 6
+      },
+      "points": {
+        "c": [
+          0.0,
+          0.0
+        ],
+        "e": [
+          -7.0,
+          0.0
+        ],
+        "s": [
+          7.0,
+          0.0
+        ]
+      },
+      "radial_lines": {}
+    },
+    "two_arc_disk_semicircles_unequal_seed": {
+      "after": {
+        "chord": 14.0,
+        "cross": 0.0,
+        "dot": -49.0,
+        "end_radius": 7.0,
+        "equal_radius_residual": 0.0,
+        "start_radius": 7.0,
+        "sweep": 3.141592653589793,
+        "sweep_degrees": 180.0
+      },
+      "arc_entity": {
+        "distance": 0,
+        "group": 2,
+        "h": 7,
+        "normal": 2,
+        "param": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "point": [
+          4,
+          6,
+          5,
+          0
+        ],
+        "type": 80004,
+        "wrkpl": 3
+      },
+      "before": {
+        "chord": 13.0,
+        "cross": 0.0,
+        "dot": -40.0,
+        "end_radius": 8.0,
+        "equal_radius_residual": 3.0,
+        "start_radius": 5.0,
+        "sweep": 3.141592653589793,
+        "sweep_degrees": 180.0
+      },
+      "extra_arc_entity": {
+        "distance": 0,
+        "group": 2,
+        "h": 8,
+        "normal": 2,
+        "param": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "point": [
+          4,
+          5,
+          6,
+          0
+        ],
+        "type": 80004,
+        "wrkpl": 3
+      },
+      "failed_constraints": [],
+      "input": {
+        "extra_arc": [
+          "c",
+          "e",
+          "s"
+        ],
+        "points": {
+          "c": [
+            0,
+            0
+          ],
+          "e": [
+            -8.0,
+            0.0
+          ],
+          "s": [
+            5,
+            0
+          ]
+        },
+        "radius": 7
+      },
+      "line_entity": null,
+      "native": {
+        "dof": 4,
+        "nbad": 0,
+        "result": 4
+      },
+      "point_handles": {
+        "c": 4,
+        "e": 5,
+        "s": 6
+      },
+      "points": {
+        "c": [
+          -1.0,
+          0.0
+        ],
+        "e": [
+          -8.0,
+          0.0
+        ],
+        "s": [
+          6.0,
+          0.0
+        ]
+      },
+      "radial_lines": {}
+    },
+    "two_arcs_shared_endpoint": {
+      "after": {
+        "chord": 7.0710678118654755,
+        "cross": 25.0,
+        "dot": 0.0,
+        "end_radius": 5.0,
+        "equal_radius_residual": 0.0,
+        "start_radius": 5.0,
+        "sweep": 1.5707963267948966,
+        "sweep_degrees": 90.0
+      },
+      "arc_entity": {
+        "distance": 0,
+        "group": 2,
+        "h": 9,
+        "normal": 2,
+        "param": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "point": [
+          4,
+          8,
+          6,
+          0
+        ],
+        "type": 80004,
+        "wrkpl": 3
+      },
+      "before": {
+        "chord": 7.0710678118654755,
+        "cross": 25,
+        "dot": 0,
+        "end_radius": 5.0,
+        "equal_radius_residual": 0.0,
+        "start_radius": 5.0,
+        "sweep": 1.5707963267948966,
+        "sweep_degrees": 90.0
+      },
+      "extra_arc_entity": {
+        "distance": 0,
+        "group": 2,
+        "h": 10,
+        "normal": 2,
+        "param": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "point": [
+          5,
+          6,
+          7,
+          0
+        ],
+        "type": 80004,
+        "wrkpl": 3
+      },
+      "failed_constraints": [],
+      "input": {
+        "extra_arc": [
+          "c2",
+          "e",
+          "e2"
+        ],
+        "points": {
+          "c": [
+            0,
+            0
+          ],
+          "c2": [
+            0,
+            10
+          ],
+          "e": [
+            0,
+            5
+          ],
+          "e2": [
+            -5,
+            10
+          ],
+          "s": [
+            5,
+            0
+          ]
+        }
+      },
+      "line_entity": null,
+      "native": {
+        "dof": 8,
+        "nbad": 0,
+        "result": 0
+      },
+      "point_handles": {
+        "c": 4,
+        "c2": 5,
+        "e": 6,
+        "e2": 7,
+        "s": 8
+      },
+      "points": {
+        "c": [
+          0.0,
+          0.0
+        ],
+        "c2": [
+          0.0,
+          10.0
+        ],
+        "e": [
+          0.0,
+          5.0
+        ],
+        "e2": [
+          -5.0,
+          10.0
+        ],
+        "s": [
+          5.0,
+          0.0
+        ]
+      },
+      "radial_lines": {}
+    },
+    "unequal_radii_seed": {
+      "after": {
+        "chord": 9.253377761660873,
+        "cross": 42.8125,
+        "dot": 0.0,
+        "end_radius": 6.5431261641512,
+        "equal_radius_residual": 0.0,
+        "start_radius": 6.5431261641512,
+        "sweep": 1.5707963267948966,
+        "sweep_degrees": 90.0
+      },
+      "arc_entity": {
+        "distance": 0,
+        "group": 2,
+        "h": 7,
+        "normal": 2,
+        "param": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "point": [
+          4,
+          6,
+          5,
+          0
+        ],
+        "type": 80004,
+        "wrkpl": 3
+      },
+      "before": {
+        "chord": 9.433981132056603,
+        "cross": 40,
+        "dot": 0,
+        "end_radius": 8.0,
+        "equal_radius_residual": 3.0,
+        "start_radius": 5.0,
+        "sweep": 1.5707963267948966,
+        "sweep_degrees": 90.0
+      },
+      "extra_arc_entity": null,
+      "failed_constraints": [],
+      "input": {
+        "points": {
+          "c": [
+            0,
+            0
+          ],
+          "e": [
+            0,
+            8
+          ],
+          "s": [
+            5,
+            0
+          ]
+        }
+      },
+      "line_entity": null,
+      "native": {
+        "dof": 5,
+        "nbad": 0,
+        "result": 0
+      },
+      "point_handles": {
+        "c": 4,
+        "e": 5,
+        "s": 6
+      },
+      "points": {
+        "c": [
+          -0.75,
+          0.75
+        ],
+        "e": [
+          0.0,
+          7.25
+        ],
+        "s": [
+          5.75,
+          0.0
+        ]
+      },
+      "radial_lines": {}
+    }
+  },
+  "checks": {
+    "branch.side_-1": true,
+    "branch.side_1": true,
+    "dof.center_fixed": true,
+    "dof.center_fixed_radius": true,
+    "dof.free_major": true,
+    "dof.free_quarter": true,
+    "dof.free_quarter_cw": true,
+    "dof.line_shared_endpoint": true,
+    "dof.points_without_arc": true,
+    "dof.radius_only": true,
+    "dof.semicircle_free": true,
+    "dof.two_arcs_shared_endpoint": true,
+    "implicit_equal_radii": true,
+    "impossible.side_-1": true,
+    "impossible.side_1": true,
+    "matrix_major_ccw_all_r5": true,
+    "matrix_major_ccw_all_r7": true,
+    "matrix_major_ccw_center_start_r5": true,
+    "matrix_major_ccw_center_start_r7": true,
+    "matrix_major_ccw_free_endpoints_r5": true,
+    "matrix_major_ccw_free_endpoints_r7": true,
+    "matrix_major_cw_all_r5": true,
+    "matrix_major_cw_all_r7": true,
+    "matrix_major_cw_center_start_r5": true,
+    "matrix_major_cw_center_start_r7": true,
+    "matrix_major_cw_free_endpoints_r5": true,
+    "matrix_major_cw_free_endpoints_r7": true,
+    "matrix_minor_ccw_all_r5": true,
+    "matrix_minor_ccw_all_r7": true,
+    "matrix_minor_ccw_center_start_r5": true,
+    "matrix_minor_ccw_center_start_r7": true,
+    "matrix_minor_ccw_free_endpoints_r5": true,
+    "matrix_minor_ccw_free_endpoints_r7": true,
+    "matrix_minor_cw_all_r5": true,
+    "matrix_minor_cw_all_r7": true,
+    "matrix_minor_cw_center_start_r5": true,
+    "matrix_minor_cw_center_start_r7": true,
+    "matrix_minor_cw_free_endpoints_r5": true,
+    "matrix_minor_cw_free_endpoints_r7": true,
+    "matrix_semicircle_ccw_all_r5": true,
+    "matrix_semicircle_ccw_all_r7": true,
+    "matrix_semicircle_ccw_center_start_r5": true,
+    "matrix_semicircle_ccw_center_start_r7": true,
+    "matrix_semicircle_ccw_free_endpoints_r5": true,
+    "matrix_semicircle_ccw_free_endpoints_r7": true,
+    "matrix_semicircle_cw_all_r5": true,
+    "matrix_semicircle_cw_all_r7": true,
+    "matrix_semicircle_cw_center_start_r5": true,
+    "matrix_semicircle_cw_center_start_r7": true,
+    "matrix_semicircle_cw_free_endpoints_r5": true,
+    "matrix_semicircle_cw_free_endpoints_r7": true,
+    "native_shared_endpoint": true,
+    "radius_target": true,
+    "sector_major_ccw": true,
+    "sector_major_cw": true,
+    "sector_minor_ccw": true,
+    "sector_minor_cw": true,
+    "two_arc_disk_quarter_complement_center_radius": true,
+    "two_arc_disk_quarter_complement_free": true,
+    "two_arc_disk_quarter_complement_radius": true,
+    "two_arc_disk_quarter_complement_unequal_seed": true,
+    "two_arc_disk_semicircles_center_radius": true,
+    "two_arc_disk_semicircles_free": true,
+    "two_arc_disk_semicircles_radius": true,
+    "two_arc_disk_semicircles_unequal_seed": true
+  },
+  "checks_passed": true,
+  "native_binary_sha256": "44f9887db70750a513f07c20ec15737f26843d469e8b741172c69f3390dba49d",
+  "platform": "Linux-6.18.44-x86_64-with-glibc2.41",
+  "python": "3.12.14 (main, Aug 25 2026, 14:00:49) [Clang 22.1.3 ]",
+  "slvs_version": "3.2",
+  "source_hashes": {
+    "sketch_model.py": "d81b2f0b2a42c3abd727c6ae0215a05a710c903f0932c381c7bb326455080ab9",
+    "sketch_solver.py": "24bda44934c7712e837dc7f9546e7e1deeff0da654d273dd7a7e8648b9dcbcfa"
+  },
+  "source_revision": "158eaaec3282d55596abd17ec886961d971972c9"
+}

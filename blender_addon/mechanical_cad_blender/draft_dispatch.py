@@ -1,0 +1,188 @@
+"""Explicit pure codec dispatch for the single scene-owned sketch draft slot.
+
+Dispatch never migrates a payload or guesses an editor from its contents. The
+selected codec remains responsible for all schema, checksum and replay checks.
+Unknown/corrupt bytes must remain in the scene until an explicit Discard.
+"""
+
+from __future__ import annotations
+
+import json
+from dataclasses import dataclass
+
+from . import (
+    draft_store,
+    general_arc_authoring_store,
+    general_authoring_store,
+    general_draft_store,
+)
+from .general_authoring import ARC_UI_VERSION, UI_VERSION, GeneralSketchAuthoringState
+from .general_sketch_draft import GeneralSketchDraft
+from .sketch_draft import RectangleDraft
+
+RECTANGLE = "rectangle_ui_draft"
+GENERAL = "general_sketch_ui_draft"
+MAX_SNAPSHOT_BYTES = 8 * 1024 * 1024
+
+
+class SnapshotError(ValueError):
+    """No compatible saved draft; callers retain the original slot bytes."""
+
+
+@dataclass(frozen=True)
+class DraftDescriptor:
+    kind: str
+    document_json: str
+    feature_id: str
+    phase: str
+    pending_input: bool
+    schema_version: int = 1
+
+    def is_current(self, document_json: str) -> bool:
+        return self.document_json == document_json
+
+
+def _pairs(pairs):
+    result = {}
+    for key, value in pairs:
+        if key in result:
+            raise SnapshotError("Duplicate field in saved sketch draft.")
+        result[key] = value
+    return result
+
+
+def _constant(_value):
+    raise SnapshotError("Non-finite value in saved sketch draft.")
+
+
+def _validate_decoded_strings(value):
+    # Escaped lone surrogates can pass UTF-8 validation of the source JSON while
+    # becoming unencodable strings after json.loads. Validate all decoded text,
+    # including unknown fields, before advertising a snapshot as resumable.
+    stack, nodes = [(value, 0)], 0
+    while stack:
+        item, depth = stack.pop()
+        nodes += 1
+        if nodes > 1_000_000 or depth > 64:
+            raise SnapshotError("Saved draft exceeds its structural resource limit.")
+        if type(item) is str:
+            item.encode("utf-8")
+        elif type(item) is dict:
+            for key, child in item.items():
+                key.encode("utf-8")
+                stack.append((child, depth + 1))
+        elif type(item) is list:
+            stack.extend((child, depth + 1) for child in item)
+
+
+def _codec(serialized):
+    try:
+        if type(serialized) is not str or len(serialized) > MAX_SNAPSHOT_BYTES:
+            raise SnapshotError("Saved sketch draft is not bounded JSON text.")
+        if len(serialized.encode("utf-8")) > MAX_SNAPSHOT_BYTES:
+            raise SnapshotError("Saved sketch draft exceeds its byte limit.")
+        header = json.loads(serialized, object_pairs_hook=_pairs, parse_constant=_constant)
+        _validate_decoded_strings(header)
+        if type(header) is not dict:
+            raise SnapshotError("Saved sketch draft envelope must be an object.")
+        kind, version = header.get("kind"), header.get("schema_version")
+        if type(version) is not int:
+            raise SnapshotError("Unsupported saved sketch draft version; its text is retained.")
+        if kind == RECTANGLE:
+            if version == 1:
+                return RECTANGLE, version, draft_store
+        elif kind == GENERAL:
+            if version == 1:
+                return GENERAL, version, general_draft_store
+            if version == 2:
+                return GENERAL, version, general_authoring_store
+            if version == 3:
+                return GENERAL, version, general_arc_authoring_store
+        else:
+            raise SnapshotError("Unsupported saved sketch draft kind; its text is retained.")
+        raise SnapshotError("Unsupported saved sketch draft version; its text is retained.")
+    except (ValueError, TypeError, UnicodeError, OverflowError, RecursionError) as exc:
+        if isinstance(exc, SnapshotError):
+            raise
+        raise SnapshotError("Saved sketch draft cannot be read; its text is retained.") from exc
+
+
+def inspect(serialized: str) -> DraftDescriptor:
+    """Validate the matching codec and return only kind-independent UI facts."""
+    kind, version, codec = _codec(serialized)
+    try:
+        state = codec.loads(serialized)
+        # Authoring codecs return the whole envelope. Command intent remains
+        # the nested checkpoint, not the separately versioned UI value.
+        pending_diameter = None
+        pending_length = None
+        if kind == GENERAL and version in (2, 3):
+            pending_length = state["ui"].get("pending_length")
+            pending_diameter = state["ui"].get("pending_diameter")
+            state = state["draft"]
+        pending = state["pending_dimensions"] if kind == RECTANGLE else state["pending_edit"]
+        phase = (
+            state["phase"] if kind == RECTANGLE else ("DIMENSION_EDIT" if pending else "EDITING")
+        )
+        if pending_length is not None:
+            phase = "LINE_LENGTH_EDIT"
+        if pending_diameter is not None:
+            phase = "CIRCLE_DIAMETER_EDIT"
+        return DraftDescriptor(
+            kind,
+            state["document_json"],
+            state["feature_id"],
+            phase,
+            pending is not None or pending_length is not None or pending_diameter is not None,
+            version,
+        )
+    except (draft_store.SnapshotError, general_draft_store.SnapshotError, UnicodeError) as exc:
+        raise SnapshotError(str(exc)) from exc
+
+
+def restore(
+    serialized: str, document_json: str
+) -> RectangleDraft | GeneralSketchDraft | GeneralSketchAuthoringState:
+    """Restore intent only, through its named codec and exact original base."""
+    kind, _version, codec = _codec(serialized)
+    try:
+        if kind == RECTANGLE:
+            return codec.restore(serialized, document_json, RectangleDraft)
+        return codec.restore(serialized, document_json)
+    except (draft_store.SnapshotError, general_draft_store.SnapshotError, UnicodeError) as exc:
+        raise SnapshotError(str(exc)) from exc
+
+
+def dumps(draft: RectangleDraft | GeneralSketchDraft | GeneralSketchAuthoringState) -> str:
+    """Never accept a duck-typed object or silently change the persisted kind."""
+    try:
+        if type(draft) is RectangleDraft:
+            return draft_store.dumps(draft)
+        if type(draft) is GeneralSketchDraft:
+            return general_draft_store.dumps(draft)
+        if type(draft) is GeneralSketchAuthoringState:
+            # Choose from the explicit UI capability only; geometry, redo and
+            # tombstones never implicitly promote or downgrade an envelope.
+            if type(draft.ui_version) is int and draft.ui_version == UI_VERSION:
+                return general_authoring_store.dumps(draft)
+            if type(draft.ui_version) is int and draft.ui_version == ARC_UI_VERSION:
+                return general_arc_authoring_store.dumps(draft)
+            raise SnapshotError(
+                "Unsupported general authoring capability; no snapshot was written."
+            )
+        raise SnapshotError("Unsupported sketch draft type; no snapshot was written.")
+    except (draft_store.SnapshotError, general_draft_store.SnapshotError, UnicodeError) as exc:
+        raise SnapshotError(str(exc)) from exc
+
+
+def clone(
+    draft: RectangleDraft | GeneralSketchDraft | GeneralSketchAuthoringState,
+) -> RectangleDraft | GeneralSketchDraft | GeneralSketchAuthoringState:
+    """Detach exact persisted intent, preserving kind and explicit capability.
+
+    This is the same bounded roundtrip as Suspend/Resume. It transfers no native
+    evidence, owner identity, pointer capture or queued acceptance. Owners that
+    retain current evidence must separately validate their original full chain.
+    """
+    serialized = dumps(draft)
+    return restore(serialized, draft.document_json)

@@ -1,0 +1,556 @@
+{
+  "schema_version": 1,
+  "status": "adapter_only_unwired",
+  "format": "uint8 XY pairs, 0..255 maps to -1..1; repeat final vertex to terminate each simple polygon",
+  "source_pack_manifest_sha256": "50dbc999ed2b4f519f11744a86588dda270ec74688ac202862dffed41f5eea70",
+  "prototype_manifest_sha256": "9e1a464e1887edcbff81c6ad8c4c75ba36251665521367a3d18cbc146e49dc92",
+  "prototype_validation_sha256": "6242cf526cb8b6c6b6ca17430b2a771f3c1270b0066a92ad8d76ccab07ef31ec",
+  "tools": {
+    "inkscape": "Inkscape 1.4 (e7c3feb100, 2024-10-09)",
+    "bpy": "5.2.2 LTS",
+    "svgpathtools": "installed system Python package"
+  },
+  "build_scripts": {
+    "build_shapes.py": "e9ccbb561b3769102e9b09ec97b69601637e188688bfa65af61420d191dc4e87",
+    "triangulate_shapes.py": "06fa282dcce62ef64c7bf4eb769abc1e623ba2c749876b5bf9db9d68958fabb3",
+    "review_shapes.py": "c7097f1c6f432e45da2978722e1226723d0f64e3d797fd7117ccb91858fa37d4"
+  },
+  "reproducibility_evidence": {
+    "text": "Fresh isolated rebuild: all eight .bin, .expanded.svg, and .shape.svg outputs are byte-identical.",
+    "sha256": "f646892db855f0e7584a45d024a3601150ddbc48591a24d93d650db7e497baee"
+  },
+  "native_draw_tested": false,
+  "native_hit_tooltip_tested": false,
+  "raster_comparison": "256px Inkscape alpha masks, source SVG versus decoded shape fill; excludes native wire and backdrop",
+  "notices": {
+    "NOTICE.txt": "46448798a6fb9368591273b32e06141ecfb33988283bc50321249fca04e01dcb",
+    "../icons/NOTICE.txt": "b1c8186d56129307d47d9c5c3639ece67fc0f82f118990b85d0b53fbf92a1d3f"
+  },
+  "licenses": {
+    "Apache-2.0": {
+      "file": "../icons/licenses/Apache-2.0.txt",
+      "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30"
+    },
+    "GPL-3.0-or-later": {
+      "file": "../icons/licenses/GPL-3.0-or-later.txt",
+      "sha256": "3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986"
+    }
+  },
+  "actions": {
+    "NEW": "sketch_rectangle",
+    "EDIT": "sketch_rectangle",
+    "DIMENSIONS": "sketch_dimension",
+    "FINISH": "edit_apply",
+    "CANCEL": "edit_cancel",
+    "EXTRUDE": "feature_extrude",
+    "CUT": "feature_cut",
+    "CHECK": "verify_model",
+    "EXPORT": "file_export"
+  },
+  "assets": {
+    "sketch_rectangle": {
+      "name": "sketch_rectangle",
+      "source_svg": "../icons/svg/sketch_rectangle.svg",
+      "source_sha256": "95d3d206cd13effb10c49f103f27b58501509f4c6b91d458e50751ccc906aa7b",
+      "source_provenance": {
+        "kind": "original",
+        "name": "Mechanical CAD original vector geometry",
+        "license": "GPL-3.0-or-later",
+        "license_file": "../icons/licenses/GPL-3.0-or-later.txt",
+        "source_file": "../icons/original_geometry.json",
+        "created_on": "2026-10-16",
+        "modifications": "Original repository-native vector geometry created for this project; no third-party CAD artwork used."
+      },
+      "expanded_sha256": "6d1e1482547cf88b6ea091c8bd116205094d859f8a53e15b753823083c8571c7",
+      "conversion": "Inkscape stroke expansion and union; transforms applied; adaptive curve flattening; y-flip; 8-bit quantization; Blender scan-fill hole-aware triangulation",
+      "bytes": 344,
+      "triangles": 43,
+      "contours": 3,
+      "encoded_polygons": 43,
+      "wire_tail_polygon_merges": 0,
+      "vertices": 41,
+      "quantized_area": 13465.0,
+      "connected_components": 1,
+      "zero_area_scanfill_links_removed": 0,
+      "shape_sha256": "fbb66457afae68708a3714854bf8e39b46940a21632e59e4bd3894e4c40effb7",
+      "binary": "sketch_rectangle.bin",
+      "blender": "5.2.2 LTS",
+      "triangle_area_and_boundary_verified": true,
+      "all_triangles_nonzero_ccw": true,
+      "planar_nonoverlapping_edges_verified": true,
+      "native_wire_exact_boundary_verified": true,
+      "safe_binary_framing_verified": true,
+      "raster_fidelity": {
+        "name": "sketch_rectangle",
+        "threshold_mask_iou": 0.9929333824070666,
+        "mean_absolute_alpha_error": 0.005218984566482843,
+        "reference_alpha_area": 13643.407843137255,
+        "shape_alpha_area": 13567.32156862745,
+        "alpha_area_relative_error": 0.00557677930503821,
+        "source_bbox": [
+          29,
+          43,
+          223,
+          216
+        ],
+        "shape_bbox": [
+          30,
+          44,
+          223,
+          216
+        ]
+      },
+      "bounds": [
+        30,
+        40,
+        222,
+        211
+      ],
+      "encoded_vertices": 129,
+      "signed_area2": 26930
+    },
+    "sketch_dimension": {
+      "name": "sketch_dimension",
+      "source_svg": "../icons/svg/sketch_dimension.svg",
+      "source_sha256": "a8ce6b84dbe8f9d13e4ddb1d8d42479fdb1955fd3067c89e1e4c3362d3a49a9a",
+      "source_provenance": {
+        "kind": "original",
+        "name": "Mechanical CAD original vector geometry",
+        "license": "GPL-3.0-or-later",
+        "license_file": "../icons/licenses/GPL-3.0-or-later.txt",
+        "source_file": "../icons/original_geometry.json",
+        "created_on": "2026-10-16",
+        "modifications": "Original repository-native vector geometry created for this project; no third-party CAD artwork used."
+      },
+      "expanded_sha256": "6ae034fbac50a6eb54f9f0e19ed5cba8f783e80a5a88f75b8ec29df59b934f06",
+      "conversion": "Inkscape stroke expansion and union; transforms applied; adaptive curve flattening; y-flip; 8-bit quantization; Blender scan-fill hole-aware triangulation",
+      "bytes": 960,
+      "triangles": 120,
+      "contours": 2,
+      "encoded_polygons": 120,
+      "wire_tail_polygon_merges": 0,
+      "vertices": 124,
+      "quantized_area": 14976.0,
+      "connected_components": 2,
+      "zero_area_scanfill_links_removed": 4,
+      "shape_sha256": "b8e592e700c4a31eff5f209c337c0c1f6a6b63813687c39ced665239bf6b2449",
+      "binary": "sketch_dimension.bin",
+      "blender": "5.2.2 LTS",
+      "triangle_area_and_boundary_verified": true,
+      "all_triangles_nonzero_ccw": true,
+      "planar_nonoverlapping_edges_verified": true,
+      "native_wire_exact_boundary_verified": true,
+      "safe_binary_framing_verified": true,
+      "raster_fidelity": {
+        "name": "sketch_dimension",
+        "threshold_mask_iou": 0.9801115851657368,
+        "mean_absolute_alpha_error": 0.004685046626072303,
+        "reference_alpha_area": 15165.564705882352,
+        "shape_alpha_area": 15091.80392156863,
+        "alpha_area_relative_error": 0.004863701797079338,
+        "source_bbox": [
+          33,
+          43,
+          223,
+          223
+        ],
+        "shape_bbox": [
+          33,
+          44,
+          223,
+          223
+        ]
+      },
+      "bounds": [
+        33,
+        33,
+        222,
+        211
+      ],
+      "encoded_vertices": 360,
+      "signed_area2": 29952
+    },
+    "edit_apply": {
+      "name": "edit_apply",
+      "source_svg": "../icons/svg/edit_apply.svg",
+      "source_sha256": "27c3a65637826a34f6e659476f9659f71be7090bbd146b2d5c061c87d61b6bf9",
+      "source_provenance": {
+        "kind": "google",
+        "name": "Google Material Symbols Outlined",
+        "symbol": "check",
+        "license": "Apache-2.0",
+        "license_file": "../icons/licenses/Apache-2.0.txt",
+        "url": "https://github.com/google/material-design-icons/blob/49d4db35df873165d6bd6ba09b063c7dafbac2f4/symbols/web/check/materialsymbolsoutlined/check_24px.svg",
+        "upstream_commit": "49d4db35df873165d6bd6ba09b063c7dafbac2f4",
+        "upstream_git_blob_sha": "1655d12bf37e32e5c2121665cd720b483ad0661c",
+        "upstream_file": "../icons/vendor/google/check.svg",
+        "upstream_sha256": "01edd53418816632be08e9565b8ca40d9028c230a8a67baaf4b8a1de20db00e6",
+        "modifications": "Normalized coordinates to a 24-unit viewBox; currentColor; theme recolor; PNG rasterization. Path geometry unchanged."
+      },
+      "expanded_sha256": "c23a179639d08c0c5fc7faf0ab85bf0ce274a396021adf3170c7ac9172c28930",
+      "conversion": "Inkscape stroke expansion and union; transforms applied; adaptive curve flattening; y-flip; 8-bit quantization; Blender scan-fill hole-aware triangulation",
+      "bytes": 26,
+      "triangles": 4,
+      "contours": 1,
+      "encoded_polygons": 3,
+      "wire_tail_polygon_merges": 1,
+      "vertices": 6,
+      "quantized_area": 4789.0,
+      "connected_components": 1,
+      "zero_area_scanfill_links_removed": 0,
+      "shape_sha256": "346154d34e137760a1a7d4ed8feb6511f91949a274612fcfe689662ad072ec9e",
+      "binary": "edit_apply.bin",
+      "blender": "5.2.2 LTS",
+      "triangle_area_and_boundary_verified": true,
+      "all_triangles_nonzero_ccw": true,
+      "planar_nonoverlapping_edges_verified": true,
+      "native_wire_exact_boundary_verified": true,
+      "safe_binary_framing_verified": true,
+      "raster_fidelity": {
+        "name": "edit_apply",
+        "threshold_mask_iou": 0.9857201986754967,
+        "mean_absolute_alpha_error": 0.0019118365119485295,
+        "reference_alpha_area": 4820.105882352942,
+        "shape_alpha_area": 4826.254901960785,
+        "alpha_area_relative_error": 0.0012757021853721912,
+        "source_bbox": [
+          41,
+          63,
+          215,
+          192
+        ],
+        "shape_bbox": [
+          41,
+          63,
+          215,
+          192
+        ]
+      },
+      "bounds": [
+        41,
+        64,
+        214,
+        192
+      ],
+      "encoded_vertices": 10,
+      "signed_area2": 9578
+    },
+    "edit_cancel": {
+      "name": "edit_cancel",
+      "source_svg": "../icons/svg/edit_cancel.svg",
+      "source_sha256": "b072bb7a3bb4f6f309b98c68e0e25c60fea8b4fbeae4e593a4d61b0564d1a0d0",
+      "source_provenance": {
+        "kind": "google",
+        "name": "Google Material Symbols Outlined",
+        "symbol": "close",
+        "license": "Apache-2.0",
+        "license_file": "../icons/licenses/Apache-2.0.txt",
+        "url": "https://github.com/google/material-design-icons/blob/49d4db35df873165d6bd6ba09b063c7dafbac2f4/symbols/web/close/materialsymbolsoutlined/close_24px.svg",
+        "upstream_commit": "49d4db35df873165d6bd6ba09b063c7dafbac2f4",
+        "upstream_git_blob_sha": "5a60c58e77bd20036a345d0befd31fc5741317e4",
+        "upstream_file": "../icons/vendor/google/close.svg",
+        "upstream_sha256": "a82592b0faa0b104a4d4b0530bb05c6a4bfed5728f5aad03ae8e7a19f32b5511",
+        "modifications": "Normalized coordinates to a 24-unit viewBox; currentColor; theme recolor; PNG rasterization. Path geometry unchanged."
+      },
+      "expanded_sha256": "84809672d632ed1621a24364eea6e06318a3ba416887eb6717293180125edf91",
+      "conversion": "Inkscape stroke expansion and union; transforms applied; adaptive curve flattening; y-flip; 8-bit quantization; Blender scan-fill hole-aware triangulation",
+      "bytes": 68,
+      "triangles": 10,
+      "contours": 1,
+      "encoded_polygons": 8,
+      "wire_tail_polygon_merges": 2,
+      "vertices": 12,
+      "quantized_area": 7471.0,
+      "connected_components": 1,
+      "zero_area_scanfill_links_removed": 0,
+      "shape_sha256": "2e8ac0741675b8ced67d8328745329d58ac827f3fd71760ae2cad384a5ef1e7d",
+      "binary": "edit_cancel.bin",
+      "blender": "5.2.2 LTS",
+      "triangle_area_and_boundary_verified": true,
+      "all_triangles_nonzero_ccw": true,
+      "planar_nonoverlapping_edges_verified": true,
+      "native_wire_exact_boundary_verified": true,
+      "safe_binary_framing_verified": true,
+      "raster_fidelity": {
+        "name": "edit_cancel",
+        "threshold_mask_iou": 0.9676150517896945,
+        "mean_absolute_alpha_error": 0.001882814893535539,
+        "reference_alpha_area": 7583.176470588236,
+        "shape_alpha_area": 7525.956862745097,
+        "alpha_area_relative_error": 0.0075455988747022106,
+        "source_bbox": [
+          53,
+          53,
+          203,
+          203
+        ],
+        "shape_bbox": [
+          53,
+          53,
+          203,
+          203
+        ]
+      },
+      "bounds": [
+        53,
+        53,
+        202,
+        202
+      ],
+      "encoded_vertices": 26,
+      "signed_area2": 14942
+    },
+    "feature_extrude": {
+      "name": "feature_extrude",
+      "source_svg": "../icons/svg/feature_extrude.svg",
+      "source_sha256": "b4aad21f9b00d84d58136271568178684bf451db7e84b79e04936999867b5ae6",
+      "source_provenance": {
+        "kind": "original",
+        "name": "Mechanical CAD original vector geometry",
+        "license": "GPL-3.0-or-later",
+        "license_file": "../icons/licenses/GPL-3.0-or-later.txt",
+        "source_file": "../icons/original_geometry.json",
+        "created_on": "2026-10-16",
+        "modifications": "Original repository-native vector geometry created for this project; no third-party CAD artwork used."
+      },
+      "expanded_sha256": "cc8631e3b6027f510e56fe0b1f74d54ef0b403b8684bd1f495e7d3e762ce410e",
+      "conversion": "Inkscape stroke expansion and union; transforms applied; adaptive curve flattening; y-flip; 8-bit quantization; Blender scan-fill hole-aware triangulation",
+      "bytes": 666,
+      "triangles": 84,
+      "contours": 5,
+      "encoded_polygons": 83,
+      "wire_tail_polygon_merges": 1,
+      "vertices": 82,
+      "quantized_area": 15394.0,
+      "connected_components": 2,
+      "zero_area_scanfill_links_removed": 2,
+      "shape_sha256": "5814c16f91f8d1279019e5bb42579941679b294b0f60fb70740028c147f3720e",
+      "binary": "feature_extrude.bin",
+      "blender": "5.2.2 LTS",
+      "triangle_area_and_boundary_verified": true,
+      "all_triangles_nonzero_ccw": true,
+      "planar_nonoverlapping_edges_verified": true,
+      "native_wire_exact_boundary_verified": true,
+      "safe_binary_framing_verified": true,
+      "raster_fidelity": {
+        "name": "feature_extrude",
+        "threshold_mask_iou": 0.9754327902240326,
+        "mean_absolute_alpha_error": 0.005477247051164216,
+        "reference_alpha_area": 15393.450980392157,
+        "shape_alpha_area": 15515.69411764706,
+        "alpha_area_relative_error": 0.007941243156626308,
+        "source_bbox": [
+          22,
+          22,
+          245,
+          234
+        ],
+        "shape_bbox": [
+          22,
+          22,
+          244,
+          234
+        ]
+      },
+      "bounds": [
+        22,
+        22,
+        243,
+        233
+      ],
+      "encoded_vertices": 250,
+      "signed_area2": 30788
+    },
+    "feature_cut": {
+      "name": "feature_cut",
+      "source_svg": "../icons/svg/feature_cut.svg",
+      "source_sha256": "7f793513c0ed6069396d0c2c94595be00fd184b6c796de8b40b3fd81a065d687",
+      "source_provenance": {
+        "kind": "original",
+        "name": "Mechanical CAD original vector geometry",
+        "license": "GPL-3.0-or-later",
+        "license_file": "../icons/licenses/GPL-3.0-or-later.txt",
+        "source_file": "../icons/original_geometry.json",
+        "created_on": "2026-10-16",
+        "modifications": "Original repository-native vector geometry created for this project; no third-party CAD artwork used."
+      },
+      "expanded_sha256": "12bbbf3516f7d1b6e9929c0d3b120b7905d8c33c2fb57f858f9f93d257fb4368",
+      "conversion": "Inkscape stroke expansion and union; transforms applied; adaptive curve flattening; y-flip; 8-bit quantization; Blender scan-fill hole-aware triangulation",
+      "bytes": 1152,
+      "triangles": 144,
+      "contours": 6,
+      "encoded_polygons": 144,
+      "wire_tail_polygon_merges": 0,
+      "vertices": 148,
+      "quantized_area": 18130.5,
+      "connected_components": 4,
+      "zero_area_scanfill_links_removed": 1,
+      "shape_sha256": "96d4cdeb5285f6a3ed9d55132a6456dae15d5bd41f3d9ef79fde09c8a1706144",
+      "binary": "feature_cut.bin",
+      "blender": "5.2.2 LTS",
+      "triangle_area_and_boundary_verified": true,
+      "all_triangles_nonzero_ccw": true,
+      "planar_nonoverlapping_edges_verified": true,
+      "native_wire_exact_boundary_verified": true,
+      "safe_binary_framing_verified": true,
+      "raster_fidelity": {
+        "name": "feature_cut",
+        "threshold_mask_iou": 0.9720152254329062,
+        "mean_absolute_alpha_error": 0.006182562136182598,
+        "reference_alpha_area": 18281.952941176467,
+        "shape_alpha_area": 18276.780392156863,
+        "alpha_area_relative_error": 0.00028293197320040735,
+        "source_bbox": [
+          33,
+          22,
+          223,
+          234
+        ],
+        "shape_bbox": [
+          33,
+          22,
+          223,
+          234
+        ]
+      },
+      "bounds": [
+        33,
+        22,
+        222,
+        233
+      ],
+      "encoded_vertices": 432,
+      "signed_area2": 36261
+    },
+    "verify_model": {
+      "name": "verify_model",
+      "source_svg": "../icons/svg/verify_model.svg",
+      "source_sha256": "2536bdcc4af5e6dd50e71d71ffe388c23c9045f0fe4204285e5f43bc04d5ec81",
+      "source_provenance": {
+        "kind": "google",
+        "name": "Google Material Symbols Outlined",
+        "symbol": "fact_check",
+        "license": "Apache-2.0",
+        "license_file": "../icons/licenses/Apache-2.0.txt",
+        "url": "https://github.com/google/material-design-icons/blob/49d4db35df873165d6bd6ba09b063c7dafbac2f4/symbols/web/fact_check/materialsymbolsoutlined/fact_check_24px.svg",
+        "upstream_commit": "49d4db35df873165d6bd6ba09b063c7dafbac2f4",
+        "upstream_git_blob_sha": "7b2983cf26d5c865a4d906cef2008ed65f2330de",
+        "upstream_file": "../icons/vendor/google/fact_check.svg",
+        "upstream_sha256": "5b869147b842c3cf1f7e5d0bb758fd2a218a6d68097147d744d13230200cb2af",
+        "modifications": "Normalized coordinates to a 24-unit viewBox; currentColor; theme recolor; PNG rasterization. Path geometry unchanged."
+      },
+      "expanded_sha256": "14e80859779a8c8f7cf6f4c4d08ee6b508d2e5455d1c88787d00e619820c960d",
+      "conversion": "Inkscape stroke expansion and union; transforms applied; adaptive curve flattening; y-flip; 8-bit quantization; Blender scan-fill hole-aware triangulation",
+      "bytes": 324,
+      "triangles": 42,
+      "contours": 6,
+      "encoded_polygons": 40,
+      "wire_tail_polygon_merges": 2,
+      "vertices": 50,
+      "quantized_area": 20420.0,
+      "connected_components": 5,
+      "zero_area_scanfill_links_removed": 2,
+      "shape_sha256": "7c6de30ad7431ba4297fa8dc41646cad19d9acdbc34a16471ca6cc1ec7e781b8",
+      "binary": "verify_model.bin",
+      "blender": "5.2.2 LTS",
+      "triangle_area_and_boundary_verified": true,
+      "all_triangles_nonzero_ccw": true,
+      "planar_nonoverlapping_edges_verified": true,
+      "native_wire_exact_boundary_verified": true,
+      "safe_binary_framing_verified": true,
+      "raster_fidelity": {
+        "name": "verify_model",
+        "threshold_mask_iou": 0.9817465654721875,
+        "mean_absolute_alpha_error": 0.007904591279871323,
+        "reference_alpha_area": 20548.42745098039,
+        "shape_alpha_area": 20579.552941176473,
+        "alpha_area_relative_error": 0.0015147383063902984,
+        "source_bbox": [
+          21,
+          32,
+          235,
+          224
+        ],
+        "shape_bbox": [
+          21,
+          32,
+          235,
+          224
+        ]
+      },
+      "bounds": [
+        21,
+        32,
+        234,
+        223
+      ],
+      "encoded_vertices": 122,
+      "signed_area2": 40840
+    },
+    "file_export": {
+      "name": "file_export",
+      "source_svg": "../icons/svg/file_export.svg",
+      "source_sha256": "700caeb0749165b796b9c2779f6140b1812be91a1c018a5a9cfa735463e1af25",
+      "source_provenance": {
+        "kind": "google",
+        "name": "Google Material Symbols Outlined",
+        "symbol": "output",
+        "license": "Apache-2.0",
+        "license_file": "../icons/licenses/Apache-2.0.txt",
+        "url": "https://github.com/google/material-design-icons/blob/49d4db35df873165d6bd6ba09b063c7dafbac2f4/symbols/web/output/materialsymbolsoutlined/output_24px.svg",
+        "upstream_commit": "49d4db35df873165d6bd6ba09b063c7dafbac2f4",
+        "upstream_git_blob_sha": "efed99e347a4f81f7760654c2bae0ab7e9ca78e6",
+        "upstream_file": "../icons/vendor/google/output.svg",
+        "upstream_sha256": "1494087dbce5a8cb13da3ba1e1c07c6978809019ed93ee2351516194b25d9b8c",
+        "modifications": "Normalized coordinates to a 24-unit viewBox; currentColor; theme recolor; PNG rasterization. Path geometry unchanged."
+      },
+      "expanded_sha256": "d34170bc7a888cec513364ddfad7d181d5838fafc3882d3993a1077926e37749",
+      "conversion": "Inkscape stroke expansion and union; transforms applied; adaptive curve flattening; y-flip; 8-bit quantization; Blender scan-fill hole-aware triangulation",
+      "bytes": 296,
+      "triangles": 37,
+      "contours": 2,
+      "encoded_polygons": 37,
+      "wire_tail_polygon_merges": 0,
+      "vertices": 41,
+      "quantized_area": 16630.5,
+      "connected_components": 2,
+      "zero_area_scanfill_links_removed": 0,
+      "shape_sha256": "5e08f422da4d80550b49c4799f719511769cdd6f04a8b9771c4b5ea4cbc083ac",
+      "binary": "file_export.bin",
+      "blender": "5.2.2 LTS",
+      "triangle_area_and_boundary_verified": true,
+      "all_triangles_nonzero_ccw": true,
+      "planar_nonoverlapping_edges_verified": true,
+      "native_wire_exact_boundary_verified": true,
+      "safe_binary_framing_verified": true,
+      "raster_fidelity": {
+        "name": "file_export",
+        "threshold_mask_iou": 0.9898666666666667,
+        "mean_absolute_alpha_error": 0.004334393669577205,
+        "reference_alpha_area": 16852.42745098039,
+        "shape_alpha_area": 16754.63529411765,
+        "alpha_area_relative_error": 0.005802852861832288,
+        "source_bbox": [
+          32,
+          32,
+          235,
+          224
+        ],
+        "shape_bbox": [
+          32,
+          32,
+          235,
+          224
+        ]
+      },
+      "bounds": [
+        32,
+        32,
+        234,
+        223
+      ],
+      "encoded_vertices": 111,
+      "signed_area2": 33261
+    }
+  }
+}

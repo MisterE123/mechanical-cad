@@ -1,0 +1,2143 @@
+{
+  "open_wire": {
+    "closed": false,
+    "done": true,
+    "edges": 2,
+    "valid": true,
+    "vertices": 3
+  },
+  "parametric_confusion": 1e-09,
+  "radius_parameter_grid": [
+    {
+      "chord": 1e-16,
+      "curve": "GeomAbs_CurveType.GeomAbs_Circle",
+      "end": [
+        1e-06,
+        0.0,
+        0.0
+      ],
+      "explicit_vertices": false,
+      "length": 6.283185307279586e-06,
+      "orientation": "TopAbs_Orientation.TopAbs_FORWARD",
+      "parameters": [
+        0.0,
+        6.283185307279586
+      ],
+      "radius": 1e-06,
+      "start": [
+        1e-06,
+        0.0,
+        0.0
+      ],
+      "sweep": 1e-10,
+      "valid": true,
+      "vertices_same": true
+    },
+    {
+      "chord": 1e-16,
+      "error": "ValueError",
+      "explicit_vertices": true,
+      "message": "BRepBuilderAPI_EdgeError.BRepBuilderAPI_DifferentPointsOnClosedCurve",
+      "radius": 1e-06,
+      "sweep": 1e-10
+    },
+    {
+      "chord": 9.989999999999999e-16,
+      "curve": "GeomAbs_CurveType.GeomAbs_Circle",
+      "end": [
+        1e-06,
+        0.0,
+        0.0
+      ],
+      "explicit_vertices": false,
+      "length": 6.283185308178586e-06,
+      "orientation": "TopAbs_Orientation.TopAbs_FORWARD",
+      "parameters": [
+        0.0,
+        6.283185308178586
+      ],
+      "radius": 1e-06,
+      "start": [
+        1e-06,
+        0.0,
+        0.0
+      ],
+      "sweep": 9.99e-10,
+      "valid": true,
+      "vertices_same": true
+    },
+    {
+      "chord": 9.989999999999999e-16,
+      "error": "ValueError",
+      "explicit_vertices": true,
+      "message": "BRepBuilderAPI_EdgeError.BRepBuilderAPI_DifferentPointsOnClosedCurve",
+      "radius": 1e-06,
+      "sweep": 9.99e-10
+    },
+    {
+      "chord": 1e-15,
+      "curve": "GeomAbs_CurveType.GeomAbs_Circle",
+      "end": [
+        1e-06,
+        0.0,
+        0.0
+      ],
+      "explicit_vertices": false,
+      "length": 1e-15,
+      "orientation": "TopAbs_Orientation.TopAbs_FORWARD",
+      "parameters": [
+        0.0,
+        1e-09
+      ],
+      "radius": 1e-06,
+      "start": [
+        1e-06,
+        0.0,
+        0.0
+      ],
+      "sweep": 1e-09,
+      "valid": true,
+      "vertices_same": true
+    },
+    {
+      "chord": 1e-15,
+      "error": "ValueError",
+      "explicit_vertices": true,
+      "message": "BRepBuilderAPI_EdgeError.BRepBuilderAPI_DifferentPointsOnClosedCurve",
+      "radius": 1e-06,
+      "sweep": 1e-09
+    },
+    {
+      "chord": 1.0009999999999999e-15,
+      "curve": "GeomAbs_CurveType.GeomAbs_Circle",
+      "end": [
+        1e-06,
+        0.0,
+        0.0
+      ],
+      "explicit_vertices": false,
+      "length": 1.0009999999999999e-15,
+      "orientation": "TopAbs_Orientation.TopAbs_FORWARD",
+      "parameters": [
+        0.0,
+        1.001e-09
+      ],
+      "radius": 1e-06,
+      "start": [
+        1e-06,
+        0.0,
+        0.0
+      ],
+      "sweep": 1.001e-09,
+      "valid": true,
+      "vertices_same": true
+    },
+    {
+      "chord": 1.0009999999999999e-15,
+      "error": "ValueError",
+      "explicit_vertices": true,
+      "message": "BRepBuilderAPI_EdgeError.BRepBuilderAPI_DifferentPointsOnClosedCurve",
+      "radius": 1e-06,
+      "sweep": 1.001e-09
+    },
+    {
+      "chord": 1e-14,
+      "curve": "GeomAbs_CurveType.GeomAbs_Circle",
+      "end": [
+        1e-06,
+        0.0,
+        0.0
+      ],
+      "explicit_vertices": false,
+      "length": 1e-14,
+      "orientation": "TopAbs_Orientation.TopAbs_FORWARD",
+      "parameters": [
+        0.0,
+        1e-08
+      ],
+      "radius": 1e-06,
+      "start": [
+        1e-06,
+        0.0,
+        0.0
+      ],
+      "sweep": 1e-08,
+      "valid": true,
+      "vertices_same": true
+    },
+    {
+      "chord": 1e-14,
+      "error": "ValueError",
+      "explicit_vertices": true,
+      "message": "BRepBuilderAPI_EdgeError.BRepBuilderAPI_DifferentPointsOnClosedCurve",
+      "radius": 1e-06,
+      "sweep": 1e-08
+    },
+    {
+      "chord": 9.999999999999582e-13,
+      "curve": "GeomAbs_CurveType.GeomAbs_Circle",
+      "end": [
+        1e-06,
+        0.0,
+        0.0
+      ],
+      "explicit_vertices": false,
+      "length": 9.999999999999998e-13,
+      "orientation": "TopAbs_Orientation.TopAbs_FORWARD",
+      "parameters": [
+        0.0,
+        9.999999999999997e-07
+      ],
+      "radius": 1e-06,
+      "start": [
+        1e-06,
+        0.0,
+        0.0
+      ],
+      "sweep": 1e-06,
+      "valid": true,
+      "vertices_same": true
+    },
+    {
+      "chord": 9.999999999999582e-13,
+      "error": "ValueError",
+      "explicit_vertices": true,
+      "message": "BRepBuilderAPI_EdgeError.BRepBuilderAPI_DifferentPointsOnClosedCurve",
+      "radius": 1e-06,
+      "sweep": 1e-06
+    },
+    {
+      "chord": 1.0000025320339692e-16,
+      "curve": "GeomAbs_CurveType.GeomAbs_Circle",
+      "end": [
+        1e-06,
+        0.0,
+        0.0
+      ],
+      "explicit_vertices": false,
+      "length": 6.283185307079586e-06,
+      "orientation": "TopAbs_Orientation.TopAbs_FORWARD",
+      "parameters": [
+        0.0,
+        6.283185307079586
+      ],
+      "radius": 1e-06,
+      "start": [
+        1e-06,
+        0.0,
+        0.0
+      ],
+      "sweep": 6.283185307079586,
+      "valid": true,
+      "vertices_same": true
+    },
+    {
+      "chord": 1.0000025320339692e-16,
+      "error": "ValueError",
+      "explicit_vertices": true,
+      "message": "BRepBuilderAPI_EdgeError.BRepBuilderAPI_DifferentPointsOnClosedCurve",
+      "radius": 1e-06,
+      "sweep": 6.283185307079586
+    },
+    {
+      "chord": 1.0000003276697307e-15,
+      "curve": "GeomAbs_CurveType.GeomAbs_Circle",
+      "end": [
+        1e-06,
+        0.0,
+        0.0
+      ],
+      "explicit_vertices": false,
+      "length": 6.2831853061795855e-06,
+      "orientation": "TopAbs_Orientation.TopAbs_FORWARD",
+      "parameters": [
+        0.0,
+        6.283185306179586
+      ],
+      "radius": 1e-06,
+      "start": [
+        1e-06,
+        0.0,
+        0.0
+      ],
+      "sweep": 6.283185306179586,
+      "valid": true,
+      "vertices_same": true
+    },
+    {
+      "chord": 1.0000003276697307e-15,
+      "error": "ValueError",
+      "explicit_vertices": true,
+      "message": "BRepBuilderAPI_EdgeError.BRepBuilderAPI_DifferentPointsOnClosedCurve",
+      "radius": 1e-06,
+      "sweep": 6.283185306179586
+    },
+    {
+      "chord": 1.000000018415465e-14,
+      "curve": "GeomAbs_CurveType.GeomAbs_Circle",
+      "end": [
+        1e-06,
+        0.0,
+        0.0
+      ],
+      "explicit_vertices": false,
+      "length": 6.283185297179586e-06,
+      "orientation": "TopAbs_Orientation.TopAbs_FORWARD",
+      "parameters": [
+        0.0,
+        6.283185297179586
+      ],
+      "radius": 1e-06,
+      "start": [
+        1e-06,
+        0.0,
+        0.0
+      ],
+      "sweep": 6.283185297179586,
+      "valid": true,
+      "vertices_same": true
+    },
+    {
+      "chord": 1.000000018415465e-14,
+      "error": "ValueError",
+      "explicit_vertices": true,
+      "message": "BRepBuilderAPI_EdgeError.BRepBuilderAPI_DifferentPointsOnClosedCurve",
+      "radius": 1e-06,
+      "sweep": 6.283185297179586
+    },
+    {
+      "chord": 1e-13,
+      "curve": "GeomAbs_CurveType.GeomAbs_Circle",
+      "end": [
+        0.001,
+        0.0,
+        0.0
+      ],
+      "explicit_vertices": false,
+      "length": 0.006283185307279587,
+      "orientation": "TopAbs_Orientation.TopAbs_FORWARD",
+      "parameters": [
+        0.0,
+        6.283185307279586
+      ],
+      "radius": 0.001,
+      "start": [
+        0.001,
+        0.0,
+        0.0
+      ],
+      "sweep": 1e-10,
+      "valid": true,
+      "vertices_same": true
+    },
+    {
+      "chord": 1e-13,
+      "error": "ValueError",
+      "explicit_vertices": true,
+      "message": "BRepBuilderAPI_EdgeError.BRepBuilderAPI_DifferentPointsOnClosedCurve",
+      "radius": 0.001,
+      "sweep": 1e-10
+    },
+    {
+      "chord": 9.989999999999999e-13,
+      "curve": "GeomAbs_CurveType.GeomAbs_Circle",
+      "end": [
+        0.001,
+        0.0,
+        0.0
+      ],
+      "explicit_vertices": false,
+      "length": 0.006283185308178586,
+      "orientation": "TopAbs_Orientation.TopAbs_FORWARD",
+      "parameters": [
+        0.0,
+        6.283185308178586
+      ],
+      "radius": 0.001,
+      "start": [
+        0.001,
+        0.0,
+        0.0
+      ],
+      "sweep": 9.99e-10,
+      "valid": true,
+      "vertices_same": true
+    },
+    {
+      "chord": 9.989999999999999e-13,
+      "error": "ValueError",
+      "explicit_vertices": true,
+      "message": "BRepBuilderAPI_EdgeError.BRepBuilderAPI_DifferentPointsOnClosedCurve",
+      "radius": 0.001,
+      "sweep": 9.99e-10
+    },
+    {
+      "chord": 1.0000000000000002e-12,
+      "curve": "GeomAbs_CurveType.GeomAbs_Circle",
+      "end": [
+        0.001,
+        0.0,
+        0.0
+      ],
+      "explicit_vertices": false,
+      "length": 1.0000000000000002e-12,
+      "orientation": "TopAbs_Orientation.TopAbs_FORWARD",
+      "parameters": [
+        0.0,
+        1e-09
+      ],
+      "radius": 0.001,
+      "start": [
+        0.001,
+        0.0,
+        0.0
+      ],
+      "sweep": 1e-09,
+      "valid": true,
+      "vertices_same": true
+    },
+    {
+      "chord": 1.0000000000000002e-12,
+      "error": "ValueError",
+      "explicit_vertices": true,
+      "message": "BRepBuilderAPI_EdgeError.BRepBuilderAPI_DifferentPointsOnClosedCurve",
+      "radius": 0.001,
+      "sweep": 1e-09
+    },
+    {
+      "chord": 1.001e-12,
+      "curve": "GeomAbs_CurveType.GeomAbs_Circle",
+      "end": [
+        0.001,
+        0.0,
+        0.0
+      ],
+      "explicit_vertices": false,
+      "length": 1.001e-12,
+      "orientation": "TopAbs_Orientation.TopAbs_FORWARD",
+      "parameters": [
+        0.0,
+        1.001e-09
+      ],
+      "radius": 0.001,
+      "start": [
+        0.001,
+        0.0,
+        0.0
+      ],
+      "sweep": 1.001e-09,
+      "valid": true,
+      "vertices_same": true
+    },
+    {
+      "chord": 1.001e-12,
+      "error": "ValueError",
+      "explicit_vertices": true,
+      "message": "BRepBuilderAPI_EdgeError.BRepBuilderAPI_DifferentPointsOnClosedCurve",
+      "radius": 0.001,
+      "sweep": 1.001e-09
+    },
+    {
+      "chord": 1.0000000000000001e-11,
+      "curve": "GeomAbs_CurveType.GeomAbs_Circle",
+      "end": [
+        0.001,
+        0.0,
+        0.0
+      ],
+      "explicit_vertices": false,
+      "length": 1.0000000000000001e-11,
+      "orientation": "TopAbs_Orientation.TopAbs_FORWARD",
+      "parameters": [
+        0.0,
+        1e-08
+      ],
+      "radius": 0.001,
+      "start": [
+        0.001,
+        0.0,
+        0.0
+      ],
+      "sweep": 1e-08,
+      "valid": true,
+      "vertices_same": true
+    },
+    {
+      "chord": 1.0000000000000001e-11,
+      "error": "ValueError",
+      "explicit_vertices": true,
+      "message": "BRepBuilderAPI_EdgeError.BRepBuilderAPI_DifferentPointsOnClosedCurve",
+      "radius": 0.001,
+      "sweep": 1e-08
+    },
+    {
+      "chord": 9.999999999999585e-10,
+      "curve": "GeomAbs_CurveType.GeomAbs_Circle",
+      "end": [
+        0.001,
+        0.0,
+        0.0
+      ],
+      "explicit_vertices": false,
+      "length": 1.0000000000000003e-09,
+      "orientation": "TopAbs_Orientation.TopAbs_FORWARD",
+      "parameters": [
+        0.0,
+        1.0000000000000002e-06
+      ],
+      "radius": 0.001,
+      "start": [
+        0.001,
+        0.0,
+        0.0
+      ],
+      "sweep": 1e-06,
+      "valid": true,
+      "vertices_same": true
+    },
+    {
+      "chord": 9.999999999999585e-10,
+      "error": "ValueError",
+      "explicit_vertices": true,
+      "message": "BRepBuilderAPI_EdgeError.BRepBuilderAPI_DifferentPointsOnClosedCurve",
+      "radius": 0.001,
+      "sweep": 1e-06
+    },
+    {
+      "chord": 1.0000025320339693e-13,
+      "curve": "GeomAbs_CurveType.GeomAbs_Circle",
+      "end": [
+        0.001,
+        0.0,
+        0.0
+      ],
+      "explicit_vertices": false,
+      "length": 0.006283185307079587,
+      "orientation": "TopAbs_Orientation.TopAbs_FORWARD",
+      "parameters": [
+        0.0,
+        6.283185307079586
+      ],
+      "radius": 0.001,
+      "start": [
+        0.001,
+        0.0,
+        0.0
+      ],
+      "sweep": 6.283185307079586,
+      "valid": true,
+      "vertices_same": true
+    },
+    {
+      "chord": 1.0000025320339693e-13,
+      "error": "ValueError",
+      "explicit_vertices": true,
+      "message": "BRepBuilderAPI_EdgeError.BRepBuilderAPI_DifferentPointsOnClosedCurve",
+      "radius": 0.001,
+      "sweep": 6.283185307079586
+    },
+    {
+      "chord": 1.0000003276697308e-12,
+      "curve": "GeomAbs_CurveType.GeomAbs_Circle",
+      "end": [
+        0.001,
+        0.0,
+        0.0
+      ],
+      "explicit_vertices": false,
+      "length": 0.006283185306179586,
+      "orientation": "TopAbs_Orientation.TopAbs_FORWARD",
+      "parameters": [
+        0.0,
+        6.283185306179586
+      ],
+      "radius": 0.001,
+      "start": [
+        0.001,
+        0.0,
+        0.0
+      ],
+      "sweep": 6.283185306179586,
+      "valid": true,
+      "vertices_same": true
+    },
+    {
+      "chord": 1.0000003276697308e-12,
+      "error": "ValueError",
+      "explicit_vertices": true,
+      "message": "BRepBuilderAPI_EdgeError.BRepBuilderAPI_DifferentPointsOnClosedCurve",
+      "radius": 0.001,
+      "sweep": 6.283185306179586
+    },
+    {
+      "chord": 1.0000000184154649e-11,
+      "curve": "GeomAbs_CurveType.GeomAbs_Circle",
+      "end": [
+        0.001,
+        0.0,
+        0.0
+      ],
+      "explicit_vertices": false,
+      "length": 0.006283185297179587,
+      "orientation": "TopAbs_Orientation.TopAbs_FORWARD",
+      "parameters": [
+        0.0,
+        6.283185297179586
+      ],
+      "radius": 0.001,
+      "start": [
+        0.001,
+        0.0,
+        0.0
+      ],
+      "sweep": 6.283185297179586,
+      "valid": true,
+      "vertices_same": true
+    },
+    {
+      "chord": 1.0000000184154649e-11,
+      "error": "ValueError",
+      "explicit_vertices": true,
+      "message": "BRepBuilderAPI_EdgeError.BRepBuilderAPI_DifferentPointsOnClosedCurve",
+      "radius": 0.001,
+      "sweep": 6.283185297179586
+    },
+    {
+      "chord": 1e-10,
+      "curve": "GeomAbs_CurveType.GeomAbs_Circle",
+      "end": [
+        1.0,
+        0.0,
+        0.0
+      ],
+      "explicit_vertices": false,
+      "length": 6.283185307279586,
+      "orientation": "TopAbs_Orientation.TopAbs_FORWARD",
+      "parameters": [
+        0.0,
+        6.283185307279586
+      ],
+      "radius": 1.0,
+      "start": [
+        1.0,
+        0.0,
+        0.0
+      ],
+      "sweep": 1e-10,
+      "valid": true,
+      "vertices_same": true
+    },
+    {
+      "chord": 1e-10,
+      "error": "ValueError",
+      "explicit_vertices": true,
+      "message": "BRepBuilderAPI_EdgeError.BRepBuilderAPI_DifferentPointsOnClosedCurve",
+      "radius": 1.0,
+      "sweep": 1e-10
+    },
+    {
+      "chord": 9.99e-10,
+      "curve": "GeomAbs_CurveType.GeomAbs_Circle",
+      "end": [
+        1.0,
+        0.0,
+        0.0
+      ],
+      "explicit_vertices": false,
+      "length": 6.283185308178586,
+      "orientation": "TopAbs_Orientation.TopAbs_FORWARD",
+      "parameters": [
+        0.0,
+        6.283185308178586
+      ],
+      "radius": 1.0,
+      "start": [
+        1.0,
+        0.0,
+        0.0
+      ],
+      "sweep": 9.99e-10,
+      "valid": true,
+      "vertices_same": true
+    },
+    {
+      "chord": 9.99e-10,
+      "error": "ValueError",
+      "explicit_vertices": true,
+      "message": "BRepBuilderAPI_EdgeError.BRepBuilderAPI_DifferentPointsOnClosedCurve",
+      "radius": 1.0,
+      "sweep": 9.99e-10
+    },
+    {
+      "chord": 1e-09,
+      "curve": "GeomAbs_CurveType.GeomAbs_Circle",
+      "end": [
+        1.0,
+        0.0,
+        0.0
+      ],
+      "explicit_vertices": false,
+      "length": 1e-09,
+      "orientation": "TopAbs_Orientation.TopAbs_FORWARD",
+      "parameters": [
+        0.0,
+        1e-09
+      ],
+      "radius": 1.0,
+      "start": [
+        1.0,
+        0.0,
+        0.0
+      ],
+      "sweep": 1e-09,
+      "valid": true,
+      "vertices_same": true
+    },
+    {
+      "chord": 1e-09,
+      "error": "ValueError",
+      "explicit_vertices": true,
+      "message": "BRepBuilderAPI_EdgeError.BRepBuilderAPI_DifferentPointsOnClosedCurve",
+      "radius": 1.0,
+      "sweep": 1e-09
+    },
+    {
+      "chord": 1.001e-09,
+      "curve": "GeomAbs_CurveType.GeomAbs_Circle",
+      "end": [
+        1.0,
+        0.0,
+        0.0
+      ],
+      "explicit_vertices": false,
+      "length": 1.001e-09,
+      "orientation": "TopAbs_Orientation.TopAbs_FORWARD",
+      "parameters": [
+        0.0,
+        1.001e-09
+      ],
+      "radius": 1.0,
+      "start": [
+        1.0,
+        0.0,
+        0.0
+      ],
+      "sweep": 1.001e-09,
+      "valid": true,
+      "vertices_same": true
+    },
+    {
+      "chord": 1.001e-09,
+      "error": "ValueError",
+      "explicit_vertices": true,
+      "message": "BRepBuilderAPI_EdgeError.BRepBuilderAPI_DifferentPointsOnClosedCurve",
+      "radius": 1.0,
+      "sweep": 1.001e-09
+    },
+    {
+      "chord": 1e-08,
+      "curve": "GeomAbs_CurveType.GeomAbs_Circle",
+      "end": [
+        1.0,
+        0.0,
+        0.0
+      ],
+      "explicit_vertices": false,
+      "length": 1e-08,
+      "orientation": "TopAbs_Orientation.TopAbs_FORWARD",
+      "parameters": [
+        0.0,
+        1e-08
+      ],
+      "radius": 1.0,
+      "start": [
+        1.0,
+        0.0,
+        0.0
+      ],
+      "sweep": 1e-08,
+      "valid": true,
+      "vertices_same": true
+    },
+    {
+      "chord": 1e-08,
+      "error": "ValueError",
+      "explicit_vertices": true,
+      "message": "BRepBuilderAPI_EdgeError.BRepBuilderAPI_DifferentPointsOnClosedCurve",
+      "radius": 1.0,
+      "sweep": 1e-08
+    },
+    {
+      "chord": 9.999999999999582e-07,
+      "curve": "GeomAbs_CurveType.GeomAbs_Circle",
+      "end": [
+        0.9999999999995,
+        9.999999999998333e-07,
+        0.0
+      ],
+      "explicit_vertices": false,
+      "length": 1e-06,
+      "orientation": "TopAbs_Orientation.TopAbs_FORWARD",
+      "parameters": [
+        0.0,
+        1e-06
+      ],
+      "radius": 1.0,
+      "start": [
+        1.0,
+        0.0,
+        0.0
+      ],
+      "sweep": 1e-06,
+      "valid": true,
+      "vertices_same": false
+    },
+    {
+      "chord": 9.999999999999582e-07,
+      "curve": "GeomAbs_CurveType.GeomAbs_Circle",
+      "end": [
+        0.9999999999995,
+        9.999999999998333e-07,
+        0.0
+      ],
+      "explicit_vertices": true,
+      "length": 1e-06,
+      "orientation": "TopAbs_Orientation.TopAbs_FORWARD",
+      "parameters": [
+        0.0,
+        1e-06
+      ],
+      "radius": 1.0,
+      "start": [
+        1.0,
+        0.0,
+        0.0
+      ],
+      "sweep": 1e-06,
+      "valid": true,
+      "vertices_same": false
+    },
+    {
+      "chord": 1.0000025320339693e-10,
+      "curve": "GeomAbs_CurveType.GeomAbs_Circle",
+      "end": [
+        1.0,
+        0.0,
+        0.0
+      ],
+      "explicit_vertices": false,
+      "length": 6.283185307079585,
+      "orientation": "TopAbs_Orientation.TopAbs_FORWARD",
+      "parameters": [
+        0.0,
+        6.283185307079586
+      ],
+      "radius": 1.0,
+      "start": [
+        1.0,
+        0.0,
+        0.0
+      ],
+      "sweep": 6.283185307079586,
+      "valid": true,
+      "vertices_same": true
+    },
+    {
+      "chord": 1.0000025320339693e-10,
+      "error": "ValueError",
+      "explicit_vertices": true,
+      "message": "BRepBuilderAPI_EdgeError.BRepBuilderAPI_DifferentPointsOnClosedCurve",
+      "radius": 1.0,
+      "sweep": 6.283185307079586
+    },
+    {
+      "chord": 1.0000003276697308e-09,
+      "curve": "GeomAbs_CurveType.GeomAbs_Circle",
+      "end": [
+        1.0,
+        0.0,
+        0.0
+      ],
+      "explicit_vertices": false,
+      "length": 6.283185306179586,
+      "orientation": "TopAbs_Orientation.TopAbs_FORWARD",
+      "parameters": [
+        0.0,
+        6.283185306179586
+      ],
+      "radius": 1.0,
+      "start": [
+        1.0,
+        0.0,
+        0.0
+      ],
+      "sweep": 6.283185306179586,
+      "valid": true,
+      "vertices_same": true
+    },
+    {
+      "chord": 1.0000003276697308e-09,
+      "error": "ValueError",
+      "explicit_vertices": true,
+      "message": "BRepBuilderAPI_EdgeError.BRepBuilderAPI_DifferentPointsOnClosedCurve",
+      "radius": 1.0,
+      "sweep": 6.283185306179586
+    },
+    {
+      "chord": 1.000000018415465e-08,
+      "curve": "GeomAbs_CurveType.GeomAbs_Circle",
+      "end": [
+        1.0,
+        0.0,
+        0.0
+      ],
+      "explicit_vertices": false,
+      "length": 6.283185297179586,
+      "orientation": "TopAbs_Orientation.TopAbs_FORWARD",
+      "parameters": [
+        0.0,
+        6.283185297179586
+      ],
+      "radius": 1.0,
+      "start": [
+        1.0,
+        0.0,
+        0.0
+      ],
+      "sweep": 6.283185297179586,
+      "valid": true,
+      "vertices_same": true
+    },
+    {
+      "chord": 1.000000018415465e-08,
+      "error": "ValueError",
+      "explicit_vertices": true,
+      "message": "BRepBuilderAPI_EdgeError.BRepBuilderAPI_DifferentPointsOnClosedCurve",
+      "radius": 1.0,
+      "sweep": 6.283185297179586
+    },
+    {
+      "chord": 1e-09,
+      "curve": "GeomAbs_CurveType.GeomAbs_Circle",
+      "end": [
+        10.0,
+        0.0,
+        0.0
+      ],
+      "explicit_vertices": false,
+      "length": 62.831853072795866,
+      "orientation": "TopAbs_Orientation.TopAbs_FORWARD",
+      "parameters": [
+        0.0,
+        6.283185307279586
+      ],
+      "radius": 10.0,
+      "start": [
+        10.0,
+        0.0,
+        0.0
+      ],
+      "sweep": 1e-10,
+      "valid": true,
+      "vertices_same": true
+    },
+    {
+      "chord": 1e-09,
+      "error": "ValueError",
+      "explicit_vertices": true,
+      "message": "BRepBuilderAPI_EdgeError.BRepBuilderAPI_DifferentPointsOnClosedCurve",
+      "radius": 10.0,
+      "sweep": 1e-10
+    },
+    {
+      "chord": 9.989999999999999e-09,
+      "curve": "GeomAbs_CurveType.GeomAbs_Circle",
+      "end": [
+        10.0,
+        0.0,
+        0.0
+      ],
+      "explicit_vertices": false,
+      "length": 62.831853081785866,
+      "orientation": "TopAbs_Orientation.TopAbs_FORWARD",
+      "parameters": [
+        0.0,
+        6.283185308178586
+      ],
+      "radius": 10.0,
+      "start": [
+        10.0,
+        0.0,
+        0.0
+      ],
+      "sweep": 9.99e-10,
+      "valid": true,
+      "vertices_same": true
+    },
+    {
+      "chord": 9.989999999999999e-09,
+      "error": "ValueError",
+      "explicit_vertices": true,
+      "message": "BRepBuilderAPI_EdgeError.BRepBuilderAPI_DifferentPointsOnClosedCurve",
+      "radius": 10.0,
+      "sweep": 9.99e-10
+    },
+    {
+      "chord": 1e-08,
+      "curve": "GeomAbs_CurveType.GeomAbs_Circle",
+      "end": [
+        10.0,
+        0.0,
+        0.0
+      ],
+      "explicit_vertices": false,
+      "length": 1e-08,
+      "orientation": "TopAbs_Orientation.TopAbs_FORWARD",
+      "parameters": [
+        0.0,
+        1e-09
+      ],
+      "radius": 10.0,
+      "start": [
+        10.0,
+        0.0,
+        0.0
+      ],
+      "sweep": 1e-09,
+      "valid": true,
+      "vertices_same": true
+    },
+    {
+      "chord": 1e-08,
+      "error": "ValueError",
+      "explicit_vertices": true,
+      "message": "BRepBuilderAPI_EdgeError.BRepBuilderAPI_DifferentPointsOnClosedCurve",
+      "radius": 10.0,
+      "sweep": 1e-09
+    },
+    {
+      "chord": 1.001e-08,
+      "curve": "GeomAbs_CurveType.GeomAbs_Circle",
+      "end": [
+        10.0,
+        0.0,
+        0.0
+      ],
+      "explicit_vertices": false,
+      "length": 1.001e-08,
+      "orientation": "TopAbs_Orientation.TopAbs_FORWARD",
+      "parameters": [
+        0.0,
+        1.001e-09
+      ],
+      "radius": 10.0,
+      "start": [
+        10.0,
+        0.0,
+        0.0
+      ],
+      "sweep": 1.001e-09,
+      "valid": true,
+      "vertices_same": true
+    },
+    {
+      "chord": 1.001e-08,
+      "error": "ValueError",
+      "explicit_vertices": true,
+      "message": "BRepBuilderAPI_EdgeError.BRepBuilderAPI_DifferentPointsOnClosedCurve",
+      "radius": 10.0,
+      "sweep": 1.001e-09
+    },
+    {
+      "chord": 1e-07,
+      "curve": "GeomAbs_CurveType.GeomAbs_Circle",
+      "end": [
+        10.0,
+        0.0,
+        0.0
+      ],
+      "explicit_vertices": false,
+      "length": 9.999999999999998e-08,
+      "orientation": "TopAbs_Orientation.TopAbs_FORWARD",
+      "parameters": [
+        0.0,
+        9.999999999999999e-09
+      ],
+      "radius": 10.0,
+      "start": [
+        10.0,
+        0.0,
+        0.0
+      ],
+      "sweep": 1e-08,
+      "valid": true,
+      "vertices_same": true
+    },
+    {
+      "chord": 1e-07,
+      "error": "ValueError",
+      "explicit_vertices": true,
+      "message": "BRepBuilderAPI_EdgeError.BRepBuilderAPI_DifferentPointsOnClosedCurve",
+      "radius": 10.0,
+      "sweep": 1e-08
+    },
+    {
+      "chord": 9.999999999999582e-06,
+      "curve": "GeomAbs_CurveType.GeomAbs_Circle",
+      "end": [
+        9.999999999995,
+        9.999999999998332e-06,
+        0.0
+      ],
+      "explicit_vertices": false,
+      "length": 9.999999999999999e-06,
+      "orientation": "TopAbs_Orientation.TopAbs_FORWARD",
+      "parameters": [
+        0.0,
+        1e-06
+      ],
+      "radius": 10.0,
+      "start": [
+        10.0,
+        0.0,
+        0.0
+      ],
+      "sweep": 1e-06,
+      "valid": true,
+      "vertices_same": false
+    },
+    {
+      "chord": 9.999999999999582e-06,
+      "curve": "GeomAbs_CurveType.GeomAbs_Circle",
+      "end": [
+        9.999999999995,
+        9.999999999998332e-06,
+        0.0
+      ],
+      "explicit_vertices": true,
+      "length": 9.999999999999999e-06,
+      "orientation": "TopAbs_Orientation.TopAbs_FORWARD",
+      "parameters": [
+        0.0,
+        1e-06
+      ],
+      "radius": 10.0,
+      "start": [
+        10.0,
+        0.0,
+        0.0
+      ],
+      "sweep": 1e-06,
+      "valid": true,
+      "vertices_same": false
+    },
+    {
+      "chord": 1.0000025320339693e-09,
+      "curve": "GeomAbs_CurveType.GeomAbs_Circle",
+      "end": [
+        10.0,
+        0.0,
+        0.0
+      ],
+      "explicit_vertices": false,
+      "length": 62.83185307079586,
+      "orientation": "TopAbs_Orientation.TopAbs_FORWARD",
+      "parameters": [
+        0.0,
+        6.283185307079586
+      ],
+      "radius": 10.0,
+      "start": [
+        10.0,
+        0.0,
+        0.0
+      ],
+      "sweep": 6.283185307079586,
+      "valid": true,
+      "vertices_same": true
+    },
+    {
+      "chord": 1.0000025320339693e-09,
+      "error": "ValueError",
+      "explicit_vertices": true,
+      "message": "BRepBuilderAPI_EdgeError.BRepBuilderAPI_DifferentPointsOnClosedCurve",
+      "radius": 10.0,
+      "sweep": 6.283185307079586
+    },
+    {
+      "chord": 1.0000003276697308e-08,
+      "curve": "GeomAbs_CurveType.GeomAbs_Circle",
+      "end": [
+        10.0,
+        0.0,
+        0.0
+      ],
+      "explicit_vertices": false,
+      "length": 62.83185306179586,
+      "orientation": "TopAbs_Orientation.TopAbs_FORWARD",
+      "parameters": [
+        0.0,
+        6.283185306179586
+      ],
+      "radius": 10.0,
+      "start": [
+        10.0,
+        0.0,
+        0.0
+      ],
+      "sweep": 6.283185306179586,
+      "valid": true,
+      "vertices_same": true
+    },
+    {
+      "chord": 1.0000003276697308e-08,
+      "error": "ValueError",
+      "explicit_vertices": true,
+      "message": "BRepBuilderAPI_EdgeError.BRepBuilderAPI_DifferentPointsOnClosedCurve",
+      "radius": 10.0,
+      "sweep": 6.283185306179586
+    },
+    {
+      "chord": 1.0000000184154649e-07,
+      "curve": "GeomAbs_CurveType.GeomAbs_Circle",
+      "end": [
+        10.0,
+        -1.0000000184154649e-07,
+        0.0
+      ],
+      "explicit_vertices": false,
+      "length": 62.83185297179586,
+      "orientation": "TopAbs_Orientation.TopAbs_FORWARD",
+      "parameters": [
+        0.0,
+        6.283185297179586
+      ],
+      "radius": 10.0,
+      "start": [
+        10.0,
+        0.0,
+        0.0
+      ],
+      "sweep": 6.283185297179586,
+      "valid": true,
+      "vertices_same": false
+    },
+    {
+      "chord": 1.0000000184154649e-07,
+      "curve": "GeomAbs_CurveType.GeomAbs_Circle",
+      "end": [
+        10.0,
+        -1.0000000184154649e-07,
+        0.0
+      ],
+      "explicit_vertices": true,
+      "length": 62.83185297179586,
+      "orientation": "TopAbs_Orientation.TopAbs_FORWARD",
+      "parameters": [
+        0.0,
+        6.283185297179586
+      ],
+      "radius": 10.0,
+      "start": [
+        10.0,
+        0.0,
+        0.0
+      ],
+      "sweep": 6.283185297179586,
+      "valid": true,
+      "vertices_same": false
+    },
+    {
+      "chord": 1.0000000000000001e-07,
+      "curve": "GeomAbs_CurveType.GeomAbs_Circle",
+      "end": [
+        1000.0,
+        0.0,
+        0.0
+      ],
+      "explicit_vertices": false,
+      "length": 6283.185307279586,
+      "orientation": "TopAbs_Orientation.TopAbs_FORWARD",
+      "parameters": [
+        0.0,
+        6.283185307279586
+      ],
+      "radius": 1000.0,
+      "start": [
+        1000.0,
+        0.0,
+        0.0
+      ],
+      "sweep": 1e-10,
+      "valid": true,
+      "vertices_same": true
+    },
+    {
+      "chord": 1.0000000000000001e-07,
+      "error": "ValueError",
+      "explicit_vertices": true,
+      "message": "BRepBuilderAPI_EdgeError.BRepBuilderAPI_DifferentPointsOnClosedCurve",
+      "radius": 1000.0,
+      "sweep": 1e-10
+    },
+    {
+      "chord": 9.989999999999999e-07,
+      "curve": "GeomAbs_CurveType.GeomAbs_Circle",
+      "end": [
+        1000.0,
+        9.98999748910429e-07,
+        0.0
+      ],
+      "explicit_vertices": false,
+      "length": 6283.185308178587,
+      "orientation": "TopAbs_Orientation.TopAbs_FORWARD",
+      "parameters": [
+        0.0,
+        6.283185308178586
+      ],
+      "radius": 1000.0,
+      "start": [
+        1000.0,
+        0.0,
+        0.0
+      ],
+      "sweep": 9.99e-10,
+      "valid": true,
+      "vertices_same": false
+    },
+    {
+      "chord": 9.989999999999999e-07,
+      "curve": "GeomAbs_CurveType.GeomAbs_Circle",
+      "end": [
+        1000.0,
+        9.989999999999999e-07,
+        0.0
+      ],
+      "explicit_vertices": true,
+      "length": 6283.185308178587,
+      "orientation": "TopAbs_Orientation.TopAbs_FORWARD",
+      "parameters": [
+        0.0,
+        6.283185308178586
+      ],
+      "radius": 1000.0,
+      "start": [
+        1000.0,
+        0.0,
+        0.0
+      ],
+      "sweep": 9.99e-10,
+      "valid": true,
+      "vertices_same": false
+    },
+    {
+      "chord": 1.0000000000000002e-06,
+      "curve": "GeomAbs_CurveType.GeomAbs_Circle",
+      "end": [
+        1000.0,
+        1.0000000000000002e-06,
+        0.0
+      ],
+      "explicit_vertices": false,
+      "length": 1.0000000000000002e-06,
+      "orientation": "TopAbs_Orientation.TopAbs_FORWARD",
+      "parameters": [
+        0.0,
+        1.0000000000000003e-09
+      ],
+      "radius": 1000.0,
+      "start": [
+        1000.0,
+        0.0,
+        0.0
+      ],
+      "sweep": 1e-09,
+      "valid": true,
+      "vertices_same": false
+    },
+    {
+      "chord": 1.0000000000000002e-06,
+      "curve": "GeomAbs_CurveType.GeomAbs_Circle",
+      "end": [
+        1000.0,
+        1.0000000000000002e-06,
+        0.0
+      ],
+      "explicit_vertices": true,
+      "length": 1.0000000000000002e-06,
+      "orientation": "TopAbs_Orientation.TopAbs_FORWARD",
+      "parameters": [
+        0.0,
+        1.0000000000000003e-09
+      ],
+      "radius": 1000.0,
+      "start": [
+        1000.0,
+        0.0,
+        0.0
+      ],
+      "sweep": 1e-09,
+      "valid": true,
+      "vertices_same": false
+    },
+    {
+      "chord": 1.001e-06,
+      "curve": "GeomAbs_CurveType.GeomAbs_Circle",
+      "end": [
+        1000.0,
+        1.001e-06,
+        0.0
+      ],
+      "explicit_vertices": false,
+      "length": 1.0009999999999998e-06,
+      "orientation": "TopAbs_Orientation.TopAbs_FORWARD",
+      "parameters": [
+        0.0,
+        1.001e-09
+      ],
+      "radius": 1000.0,
+      "start": [
+        1000.0,
+        0.0,
+        0.0
+      ],
+      "sweep": 1.001e-09,
+      "valid": true,
+      "vertices_same": false
+    },
+    {
+      "chord": 1.001e-06,
+      "curve": "GeomAbs_CurveType.GeomAbs_Circle",
+      "end": [
+        1000.0,
+        1.001e-06,
+        0.0
+      ],
+      "explicit_vertices": true,
+      "length": 1.0009999999999998e-06,
+      "orientation": "TopAbs_Orientation.TopAbs_FORWARD",
+      "parameters": [
+        0.0,
+        1.001e-09
+      ],
+      "radius": 1000.0,
+      "start": [
+        1000.0,
+        0.0,
+        0.0
+      ],
+      "sweep": 1.001e-09,
+      "valid": true,
+      "vertices_same": false
+    },
+    {
+      "chord": 1e-05,
+      "curve": "GeomAbs_CurveType.GeomAbs_Circle",
+      "end": [
+        1000.0,
+        1e-05,
+        0.0
+      ],
+      "explicit_vertices": false,
+      "length": 9.999999999999999e-06,
+      "orientation": "TopAbs_Orientation.TopAbs_FORWARD",
+      "parameters": [
+        0.0,
+        1e-08
+      ],
+      "radius": 1000.0,
+      "start": [
+        1000.0,
+        0.0,
+        0.0
+      ],
+      "sweep": 1e-08,
+      "valid": true,
+      "vertices_same": false
+    },
+    {
+      "chord": 1e-05,
+      "curve": "GeomAbs_CurveType.GeomAbs_Circle",
+      "end": [
+        1000.0,
+        1e-05,
+        0.0
+      ],
+      "explicit_vertices": true,
+      "length": 9.999999999999999e-06,
+      "orientation": "TopAbs_Orientation.TopAbs_FORWARD",
+      "parameters": [
+        0.0,
+        1e-08
+      ],
+      "radius": 1000.0,
+      "start": [
+        1000.0,
+        0.0,
+        0.0
+      ],
+      "sweep": 1e-08,
+      "valid": true,
+      "vertices_same": false
+    },
+    {
+      "chord": 0.0009999999999999582,
+      "curve": "GeomAbs_CurveType.GeomAbs_Circle",
+      "end": [
+        999.9999999995,
+        0.0009999999999998333,
+        0.0
+      ],
+      "explicit_vertices": false,
+      "length": 0.0009999999999999998,
+      "orientation": "TopAbs_Orientation.TopAbs_FORWARD",
+      "parameters": [
+        0.0,
+        1e-06
+      ],
+      "radius": 1000.0,
+      "start": [
+        1000.0,
+        0.0,
+        0.0
+      ],
+      "sweep": 1e-06,
+      "valid": true,
+      "vertices_same": false
+    },
+    {
+      "chord": 0.0009999999999999582,
+      "curve": "GeomAbs_CurveType.GeomAbs_Circle",
+      "end": [
+        999.9999999995,
+        0.0009999999999998333,
+        0.0
+      ],
+      "explicit_vertices": true,
+      "length": 0.0009999999999999998,
+      "orientation": "TopAbs_Orientation.TopAbs_FORWARD",
+      "parameters": [
+        0.0,
+        1e-06
+      ],
+      "radius": 1000.0,
+      "start": [
+        1000.0,
+        0.0,
+        0.0
+      ],
+      "sweep": 1e-06,
+      "valid": true,
+      "vertices_same": false
+    },
+    {
+      "chord": 1.0000025320339692e-07,
+      "curve": "GeomAbs_CurveType.GeomAbs_Circle",
+      "end": [
+        1000.0,
+        -1.0000025320339692e-07,
+        0.0
+      ],
+      "explicit_vertices": false,
+      "length": 6283.185307079586,
+      "orientation": "TopAbs_Orientation.TopAbs_FORWARD",
+      "parameters": [
+        0.0,
+        6.283185307079586
+      ],
+      "radius": 1000.0,
+      "start": [
+        1000.0,
+        0.0,
+        0.0
+      ],
+      "sweep": 6.283185307079586,
+      "valid": true,
+      "vertices_same": false
+    },
+    {
+      "chord": 1.0000025320339692e-07,
+      "curve": "GeomAbs_CurveType.GeomAbs_Circle",
+      "end": [
+        1000.0,
+        -1.0000025320339692e-07,
+        0.0
+      ],
+      "explicit_vertices": true,
+      "length": 6283.185307079586,
+      "orientation": "TopAbs_Orientation.TopAbs_FORWARD",
+      "parameters": [
+        0.0,
+        6.283185307079586
+      ],
+      "radius": 1000.0,
+      "start": [
+        1000.0,
+        0.0,
+        0.0
+      ],
+      "sweep": 6.283185307079586,
+      "valid": true,
+      "vertices_same": false
+    },
+    {
+      "chord": 1.0000003276697307e-06,
+      "curve": "GeomAbs_CurveType.GeomAbs_Circle",
+      "end": [
+        1000.0,
+        -1.0000003276697307e-06,
+        0.0
+      ],
+      "explicit_vertices": false,
+      "length": 6283.185306179587,
+      "orientation": "TopAbs_Orientation.TopAbs_FORWARD",
+      "parameters": [
+        0.0,
+        6.283185306179586
+      ],
+      "radius": 1000.0,
+      "start": [
+        1000.0,
+        0.0,
+        0.0
+      ],
+      "sweep": 6.283185306179586,
+      "valid": true,
+      "vertices_same": false
+    },
+    {
+      "chord": 1.0000003276697307e-06,
+      "curve": "GeomAbs_CurveType.GeomAbs_Circle",
+      "end": [
+        1000.0,
+        -1.0000003276697307e-06,
+        0.0
+      ],
+      "explicit_vertices": true,
+      "length": 6283.185306179587,
+      "orientation": "TopAbs_Orientation.TopAbs_FORWARD",
+      "parameters": [
+        0.0,
+        6.283185306179586
+      ],
+      "radius": 1000.0,
+      "start": [
+        1000.0,
+        0.0,
+        0.0
+      ],
+      "sweep": 6.283185306179586,
+      "valid": true,
+      "vertices_same": false
+    },
+    {
+      "chord": 1.0000000184154649e-05,
+      "curve": "GeomAbs_CurveType.GeomAbs_Circle",
+      "end": [
+        1000.0,
+        -1.0000000184154649e-05,
+        0.0
+      ],
+      "explicit_vertices": false,
+      "length": 6283.185297179585,
+      "orientation": "TopAbs_Orientation.TopAbs_FORWARD",
+      "parameters": [
+        0.0,
+        6.283185297179586
+      ],
+      "radius": 1000.0,
+      "start": [
+        1000.0,
+        0.0,
+        0.0
+      ],
+      "sweep": 6.283185297179586,
+      "valid": true,
+      "vertices_same": false
+    },
+    {
+      "chord": 1.0000000184154649e-05,
+      "curve": "GeomAbs_CurveType.GeomAbs_Circle",
+      "end": [
+        1000.0,
+        -1.0000000184154649e-05,
+        0.0
+      ],
+      "explicit_vertices": true,
+      "length": 6283.185297179585,
+      "orientation": "TopAbs_Orientation.TopAbs_FORWARD",
+      "parameters": [
+        0.0,
+        6.283185297179586
+      ],
+      "radius": 1000.0,
+      "start": [
+        1000.0,
+        0.0,
+        0.0
+      ],
+      "sweep": 6.283185297179586,
+      "valid": true,
+      "vertices_same": false
+    },
+    {
+      "chord": 0.0001,
+      "curve": "GeomAbs_CurveType.GeomAbs_Circle",
+      "end": [
+        1000000.0,
+        9.999976334467727e-05,
+        0.0
+      ],
+      "explicit_vertices": false,
+      "length": 6283185.307279586,
+      "orientation": "TopAbs_Orientation.TopAbs_FORWARD",
+      "parameters": [
+        0.0,
+        6.283185307279586
+      ],
+      "radius": 1000000.0,
+      "start": [
+        1000000.0,
+        0.0,
+        0.0
+      ],
+      "sweep": 1e-10,
+      "valid": true,
+      "vertices_same": false
+    },
+    {
+      "chord": 0.0001,
+      "curve": "GeomAbs_CurveType.GeomAbs_Circle",
+      "end": [
+        1000000.0,
+        0.0001,
+        0.0
+      ],
+      "explicit_vertices": true,
+      "length": 6283185.307279586,
+      "orientation": "TopAbs_Orientation.TopAbs_FORWARD",
+      "parameters": [
+        0.0,
+        6.283185307279586
+      ],
+      "radius": 1000000.0,
+      "start": [
+        1000000.0,
+        0.0,
+        0.0
+      ],
+      "sweep": 1e-10,
+      "valid": true,
+      "vertices_same": false
+    },
+    {
+      "chord": 0.0009989999999999999,
+      "curve": "GeomAbs_CurveType.GeomAbs_Circle",
+      "end": [
+        1000000.0,
+        0.0009989997489104289,
+        0.0
+      ],
+      "explicit_vertices": false,
+      "length": 6283185.308178586,
+      "orientation": "TopAbs_Orientation.TopAbs_FORWARD",
+      "parameters": [
+        0.0,
+        6.283185308178586
+      ],
+      "radius": 1000000.0,
+      "start": [
+        1000000.0,
+        0.0,
+        0.0
+      ],
+      "sweep": 9.99e-10,
+      "valid": true,
+      "vertices_same": false
+    },
+    {
+      "chord": 0.0009989999999999999,
+      "curve": "GeomAbs_CurveType.GeomAbs_Circle",
+      "end": [
+        1000000.0,
+        0.0009989999999999999,
+        0.0
+      ],
+      "explicit_vertices": true,
+      "length": 6283185.308178586,
+      "orientation": "TopAbs_Orientation.TopAbs_FORWARD",
+      "parameters": [
+        0.0,
+        6.283185308178586
+      ],
+      "radius": 1000000.0,
+      "start": [
+        1000000.0,
+        0.0,
+        0.0
+      ],
+      "sweep": 9.99e-10,
+      "valid": true,
+      "vertices_same": false
+    },
+    {
+      "chord": 0.001,
+      "curve": "GeomAbs_CurveType.GeomAbs_Circle",
+      "end": [
+        1000000.0,
+        0.001,
+        0.0
+      ],
+      "explicit_vertices": false,
+      "length": 0.001,
+      "orientation": "TopAbs_Orientation.TopAbs_FORWARD",
+      "parameters": [
+        0.0,
+        1e-09
+      ],
+      "radius": 1000000.0,
+      "start": [
+        1000000.0,
+        0.0,
+        0.0
+      ],
+      "sweep": 1e-09,
+      "valid": true,
+      "vertices_same": false
+    },
+    {
+      "chord": 0.001,
+      "curve": "GeomAbs_CurveType.GeomAbs_Circle",
+      "end": [
+        1000000.0,
+        0.001,
+        0.0
+      ],
+      "explicit_vertices": true,
+      "length": 0.001,
+      "orientation": "TopAbs_Orientation.TopAbs_FORWARD",
+      "parameters": [
+        0.0,
+        1e-09
+      ],
+      "radius": 1000000.0,
+      "start": [
+        1000000.0,
+        0.0,
+        0.0
+      ],
+      "sweep": 1e-09,
+      "valid": true,
+      "vertices_same": false
+    },
+    {
+      "chord": 0.001001,
+      "curve": "GeomAbs_CurveType.GeomAbs_Circle",
+      "end": [
+        1000000.0,
+        0.001001,
+        0.0
+      ],
+      "explicit_vertices": false,
+      "length": 0.001001,
+      "orientation": "TopAbs_Orientation.TopAbs_FORWARD",
+      "parameters": [
+        0.0,
+        1.001e-09
+      ],
+      "radius": 1000000.0,
+      "start": [
+        1000000.0,
+        0.0,
+        0.0
+      ],
+      "sweep": 1.001e-09,
+      "valid": true,
+      "vertices_same": false
+    },
+    {
+      "chord": 0.001001,
+      "curve": "GeomAbs_CurveType.GeomAbs_Circle",
+      "end": [
+        1000000.0,
+        0.001001,
+        0.0
+      ],
+      "explicit_vertices": true,
+      "length": 0.001001,
+      "orientation": "TopAbs_Orientation.TopAbs_FORWARD",
+      "parameters": [
+        0.0,
+        1.001e-09
+      ],
+      "radius": 1000000.0,
+      "start": [
+        1000000.0,
+        0.0,
+        0.0
+      ],
+      "sweep": 1.001e-09,
+      "valid": true,
+      "vertices_same": false
+    },
+    {
+      "chord": 0.01,
+      "curve": "GeomAbs_CurveType.GeomAbs_Circle",
+      "end": [
+        1000000.0,
+        0.01,
+        0.0
+      ],
+      "explicit_vertices": false,
+      "length": 0.01,
+      "orientation": "TopAbs_Orientation.TopAbs_FORWARD",
+      "parameters": [
+        0.0,
+        1e-08
+      ],
+      "radius": 1000000.0,
+      "start": [
+        1000000.0,
+        0.0,
+        0.0
+      ],
+      "sweep": 1e-08,
+      "valid": true,
+      "vertices_same": false
+    },
+    {
+      "chord": 0.01,
+      "curve": "GeomAbs_CurveType.GeomAbs_Circle",
+      "end": [
+        1000000.0,
+        0.01,
+        0.0
+      ],
+      "explicit_vertices": true,
+      "length": 0.01,
+      "orientation": "TopAbs_Orientation.TopAbs_FORWARD",
+      "parameters": [
+        0.0,
+        1e-08
+      ],
+      "radius": 1000000.0,
+      "start": [
+        1000000.0,
+        0.0,
+        0.0
+      ],
+      "sweep": 1e-08,
+      "valid": true,
+      "vertices_same": false
+    },
+    {
+      "chord": 0.9999999999999584,
+      "curve": "GeomAbs_CurveType.GeomAbs_Circle",
+      "end": [
+        999999.9999995,
+        0.9999999999998334,
+        0.0
+      ],
+      "explicit_vertices": false,
+      "length": 1.0,
+      "orientation": "TopAbs_Orientation.TopAbs_FORWARD",
+      "parameters": [
+        0.0,
+        1e-06
+      ],
+      "radius": 1000000.0,
+      "start": [
+        1000000.0,
+        0.0,
+        0.0
+      ],
+      "sweep": 1e-06,
+      "valid": true,
+      "vertices_same": false
+    },
+    {
+      "chord": 0.9999999999999584,
+      "curve": "GeomAbs_CurveType.GeomAbs_Circle",
+      "end": [
+        999999.9999995,
+        0.9999999999998334,
+        0.0
+      ],
+      "explicit_vertices": true,
+      "length": 1.0,
+      "orientation": "TopAbs_Orientation.TopAbs_FORWARD",
+      "parameters": [
+        0.0,
+        1e-06
+      ],
+      "radius": 1000000.0,
+      "start": [
+        1000000.0,
+        0.0,
+        0.0
+      ],
+      "sweep": 1e-06,
+      "valid": true,
+      "vertices_same": false
+    },
+    {
+      "chord": 0.00010000025320339693,
+      "curve": "GeomAbs_CurveType.GeomAbs_Circle",
+      "end": [
+        1000000.0,
+        -0.00010000025320339693,
+        0.0
+      ],
+      "explicit_vertices": false,
+      "length": 6283185.307079586,
+      "orientation": "TopAbs_Orientation.TopAbs_FORWARD",
+      "parameters": [
+        0.0,
+        6.283185307079586
+      ],
+      "radius": 1000000.0,
+      "start": [
+        1000000.0,
+        0.0,
+        0.0
+      ],
+      "sweep": 6.283185307079586,
+      "valid": true,
+      "vertices_same": false
+    },
+    {
+      "chord": 0.00010000025320339693,
+      "curve": "GeomAbs_CurveType.GeomAbs_Circle",
+      "end": [
+        1000000.0,
+        -0.00010000025320339693,
+        0.0
+      ],
+      "explicit_vertices": true,
+      "length": 6283185.307079586,
+      "orientation": "TopAbs_Orientation.TopAbs_FORWARD",
+      "parameters": [
+        0.0,
+        6.283185307079586
+      ],
+      "radius": 1000000.0,
+      "start": [
+        1000000.0,
+        0.0,
+        0.0
+      ],
+      "sweep": 6.283185307079586,
+      "valid": true,
+      "vertices_same": false
+    },
+    {
+      "chord": 0.0010000003276697308,
+      "curve": "GeomAbs_CurveType.GeomAbs_Circle",
+      "end": [
+        1000000.0,
+        -0.0010000003276697308,
+        0.0
+      ],
+      "explicit_vertices": false,
+      "length": 6283185.306179586,
+      "orientation": "TopAbs_Orientation.TopAbs_FORWARD",
+      "parameters": [
+        0.0,
+        6.283185306179586
+      ],
+      "radius": 1000000.0,
+      "start": [
+        1000000.0,
+        0.0,
+        0.0
+      ],
+      "sweep": 6.283185306179586,
+      "valid": true,
+      "vertices_same": false
+    },
+    {
+      "chord": 0.0010000003276697308,
+      "curve": "GeomAbs_CurveType.GeomAbs_Circle",
+      "end": [
+        1000000.0,
+        -0.0010000003276697308,
+        0.0
+      ],
+      "explicit_vertices": true,
+      "length": 6283185.306179586,
+      "orientation": "TopAbs_Orientation.TopAbs_FORWARD",
+      "parameters": [
+        0.0,
+        6.283185306179586
+      ],
+      "radius": 1000000.0,
+      "start": [
+        1000000.0,
+        0.0,
+        0.0
+      ],
+      "sweep": 6.283185306179586,
+      "valid": true,
+      "vertices_same": false
+    },
+    {
+      "chord": 0.01000000018415465,
+      "curve": "GeomAbs_CurveType.GeomAbs_Circle",
+      "end": [
+        1000000.0,
+        -0.01000000018415465,
+        0.0
+      ],
+      "explicit_vertices": false,
+      "length": 6283185.297179586,
+      "orientation": "TopAbs_Orientation.TopAbs_FORWARD",
+      "parameters": [
+        0.0,
+        6.283185297179586
+      ],
+      "radius": 1000000.0,
+      "start": [
+        1000000.0,
+        0.0,
+        0.0
+      ],
+      "sweep": 6.283185297179586,
+      "valid": true,
+      "vertices_same": false
+    },
+    {
+      "chord": 0.01000000018415465,
+      "curve": "GeomAbs_CurveType.GeomAbs_Circle",
+      "end": [
+        1000000.0,
+        -0.01000000018415465,
+        0.0
+      ],
+      "explicit_vertices": true,
+      "length": 6283185.297179586,
+      "orientation": "TopAbs_Orientation.TopAbs_FORWARD",
+      "parameters": [
+        0.0,
+        6.283185297179586
+      ],
+      "radius": 1000000.0,
+      "start": [
+        1000000.0,
+        0.0,
+        0.0
+      ],
+      "sweep": 6.283185297179586,
+      "valid": true,
+      "vertices_same": false
+    }
+  ],
+  "raw_wire_history": {
+    "generated_inserted_arc": 1,
+    "generated_inserted_line": 1,
+    "generated_raw_arc": 1,
+    "generated_raw_line": 0,
+    "raw_arc_is_inserted": true,
+    "raw_line_is_inserted": false,
+    "unique_vertices": 2
+  }
+}

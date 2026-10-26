@@ -1,0 +1,400 @@
+{
+  "added": {
+    "blender_addon/mechanical_cad_blender/windows_cache.py": {
+      "bytes": 49746,
+      "sha256": "c6a1ba162b155262ef8a3df02a5fe89e04c41086d1321dc12f9d852ecf9b0424"
+    },
+    "tests/unit/test_windows_cache.py": {
+      "bytes": 55294,
+      "sha256": "30890c8b031f0e6b7e7ee238ae59272813d1c689ababaf71f1c41f81e3093e6b"
+    },
+    "tests/unit/test_windows_cache_preparation.py": {
+      "bytes": 12487,
+      "sha256": "21b6bc6c13878b52d1d9090a869e063338139df85efcb31dacac98a112f8cc3d"
+    }
+  },
+  "base_commit": "6f08ea8ef45051a2430d4010ba7935e578337667",
+  "changed": {
+    "blender_addon/mechanical_cad_blender/registration.py": {
+      "hunks": [
+        {
+          "new_end": 271,
+          "new_start": 260,
+          "original": "",
+          "replacement": "import sys\n"
+        },
+        {
+          "new_end": 2404,
+          "new_start": 2209,
+          "original": "",
+          "replacement": "        return\n    if sys.platform == \"win32\":\n        backend_runtime.fail_bundled_setup(\n            \"Windows bundled backend setup remains unavailable pending native qualification.\"\n        )\n"
+        }
+      ],
+      "original_bytes": 16998,
+      "original_sha256": "26109bdec35fc858d65430a5d2d58d754d0d90661a051000fd3067ce1722f024",
+      "reviewed_bytes": 17204,
+      "reviewed_sha256": "90cfa1462da7d68c6958c2c050988b625278addcdd98b66478150aaffdb7d816"
+    },
+    "blender_addon/mechanical_cad_blender/runtime_bundle_materialize.py": {
+      "hunks": [
+        {
+          "new_end": 1578,
+          "new_start": 1510,
+          "original": "",
+          "replacement": "from .windows_cache import WindowsCacheCancelled, WindowsCacheOwner\n"
+        },
+        {
+          "new_end": 4493,
+          "new_start": 4397,
+          "original": "def _documents(package_root, release_data, expected_platform, limits):\n",
+          "replacement": "def _documents(package_root, release_data, expected_platform, limits, *, windows_storage=None):\n"
+        },
+        {
+          "new_end": 4883,
+          "new_start": 4610,
+          "original": "",
+          "replacement": "    if windows_storage is not None:\n        if type(windows_storage) is not WindowsCacheOwner or expected_platform != \"windows-x64\":\n            raise BundleError(\"Invalid concrete Windows cache owner.\")\n        windows_storage.check_installed_paths(package_root, release)\n"
+        },
+        {
+          "new_end": 5165,
+          "new_start": 4969,
+          "original": "    return release, parse_bundle_manifest(data, release, limits=limits)\n",
+          "replacement": "    manifest = parse_bundle_manifest(data, release, limits=limits)\n    if windows_storage is not None:\n        windows_storage.check_manifest_paths(release, manifest)\n    return release, manifest\n"
+        },
+        {
+          "new_end": 7394,
+          "new_start": 7301,
+          "original": "def _inventory(root, manifest, release, limits, checkpoint, *, ready):\n",
+          "replacement": "def _inventory(root, manifest, release, limits, checkpoint, *, ready, windows_storage=None):\n"
+        },
+        {
+          "new_end": 7873,
+          "new_start": 7480,
+          "original": "",
+          "replacement": "    if windows_storage is not None:\n        if (\n            type(windows_storage) is not WindowsCacheOwner\n            or release.platform != \"windows-x64\"\n            or windows_storage.release != release\n        ):\n            raise BundleError(\"Invalid concrete Windows cache owner.\")\n        windows_storage.assert_held()\n        windows_storage.check_private_entry(root, directory=True)\n"
+        },
+        {
+          "new_end": 8960,
+          "new_start": 8811,
+          "original": "",
+          "replacement": "                    if windows_storage is not None:\n                        windows_storage.check_private_entry(parent / entry.name, directory=True)\n"
+        },
+        {
+          "new_end": 9736,
+          "new_start": 9089,
+          "original": "                if not stat.S_ISREG(info.st_mode) or info.st_nlink != 1:\n                    raise BundleError(\"Runtime inventory requires independent regular files.\")\n",
+          "replacement": "                if windows_storage is None:\n                    if not stat.S_ISREG(info.st_mode) or info.st_nlink != 1:\n                        raise BundleError(\"Runtime inventory requires independent regular files.\")\n                else:\n                    if not stat.S_ISREG(info.st_mode):\n                        raise BundleError(\"Runtime inventory requires independent regular files.\")\n                    # Windows DirEntry.stat reports zero links. The original\n                    # retained handle must prove exactly one, including marker.\n                    windows_storage.check_private_entry(parent / entry.name, directory=False)\n"
+        },
+        {
+          "new_end": 11416,
+          "new_start": 11390,
+          "original": "",
+          "replacement": "    windows_storage=None,\n"
+        },
+        {
+          "new_end": 12471,
+          "new_start": 11673,
+          "original": "",
+          "replacement": "    if windows_storage is not None:\n        if (\n            type(windows_storage) is not WindowsCacheOwner\n            or expected_platform != \"windows-x64\"\n            or windows_storage.expected_platform != expected_platform\n            or type(cache_root) is not str\n            or cache_root != windows_storage.cache_root\n        ):\n            raise BundleError(\"Invalid concrete Windows cache owner.\")\n        # Validate the original immutable binding and DOS budgets before either\n        # existing _safe_path call may inspect a root.\n        captured_release = parse_release_manifest(\n            release_data, expected_platform=expected_platform, limits=limits\n        )\n        windows_storage.check_installed_paths(package_root, captured_release)\n        windows_storage.assert_held()\n"
+        },
+        {
+          "new_end": 12688,
+          "new_start": 12551,
+          "original": "    release, manifest = _documents(package_root, release_data, expected_platform, limits)\n",
+          "replacement": "    release, manifest = _documents(\n        package_root, release_data, expected_platform, limits, windows_storage=windows_storage\n    )\n"
+        },
+        {
+          "new_end": 12994,
+          "new_start": 12826,
+          "original": "    _inventory(root, manifest, release, limits, checkpoint, ready=True)\n",
+          "replacement": "    _inventory(\n        root,\n        manifest,\n        release,\n        limits,\n        checkpoint,\n        ready=True,\n        windows_storage=windows_storage,\n    )\n"
+        },
+        {
+          "new_end": 13243,
+          "new_start": 13217,
+          "original": "",
+          "replacement": "    windows_storage=None,\n"
+        },
+        {
+          "new_end": 14543,
+          "new_start": 13681,
+          "original": "",
+          "replacement": "        if windows_storage is not None:\n            if (\n                type(windows_storage) is not WindowsCacheOwner\n                or expected_platform != \"windows-x64\"\n                or windows_storage.expected_platform != expected_platform\n                or type(cache_root) is not str\n                or cache_root != windows_storage.cache_root\n            ):\n                raise BundleError(\"Invalid concrete Windows cache owner.\")\n            # Validate the original immutable binding and DOS budgets before either\n            # existing _safe_path call may inspect a root.\n            captured_release = parse_release_manifest(\n                release_data, expected_platform=expected_platform, limits=limits\n            )\n            windows_storage.check_installed_paths(package_root, captured_release)\n            windows_storage.assert_held()\n"
+        },
+        {
+          "new_end": 15022,
+          "new_start": 14873,
+          "original": "        release, manifest = _documents(package_root, release_data, expected_platform, limits)\n",
+          "replacement": "        release, manifest = _documents(\n            package_root, release_data, expected_platform, limits, windows_storage=windows_storage\n        )\n"
+        },
+        {
+          "new_end": 15983,
+          "new_start": 15706,
+          "original": "                _inventory(final, manifest, release, limits, checkpoint, ready=True)\n",
+          "replacement": "                _inventory(\n                    final,\n                    manifest,\n                    release,\n                    limits,\n                    checkpoint,\n                    ready=True,\n                    windows_storage=windows_storage,\n                )\n"
+        },
+        {
+          "new_end": 18004,
+          "new_start": 17615,
+          "original": "                stage = Path(\n                    tempfile.mkdtemp(prefix=f\".stage-{release.bundle_id}-\", dir=cache_root)\n                )\n",
+          "replacement": "                if windows_storage is None:\n                    stage = Path(\n                        tempfile.mkdtemp(prefix=f\".stage-{release.bundle_id}-\", dir=cache_root)\n                    )\n                else:\n                    stage = Path(windows_storage.create_stage(release, manifest))\n                    windows_storage.check_manifest_paths(release, manifest, stage=stage)\n"
+        },
+        {
+          "new_end": 19129,
+          "new_start": 18923,
+          "original": "        _inventory(stage, manifest, release, limits, checkpoint, ready=False)\n",
+          "replacement": "        _inventory(\n            stage,\n            manifest,\n            release,\n            limits,\n            checkpoint,\n            ready=False,\n            windows_storage=windows_storage,\n        )\n"
+        },
+        {
+          "new_end": 19494,
+          "new_start": 19289,
+          "original": "        _inventory(stage, manifest, release, limits, checkpoint, ready=True)\n",
+          "replacement": "        _inventory(\n            stage,\n            manifest,\n            release,\n            limits,\n            checkpoint,\n            ready=True,\n            windows_storage=windows_storage,\n        )\n"
+        },
+        {
+          "new_end": 19952,
+          "new_start": 19711,
+          "original": "            _inventory(final, manifest, release, limits, checkpoint, ready=True)\n",
+          "replacement": "            _inventory(\n                final,\n                manifest,\n                release,\n                limits,\n                checkpoint,\n                ready=True,\n                windows_storage=windows_storage,\n            )\n"
+        },
+        {
+          "new_end": 20076,
+          "new_start": 19966,
+          "original": "",
+          "replacement": "            if windows_storage is not None:\n                windows_storage.before_stage_rename(stage, final)\n"
+        },
+        {
+          "new_end": 20419,
+          "new_start": 20112,
+          "original": "        _inventory(final, manifest, release, limits, checkpoint, ready=True)\n",
+          "replacement": "            if windows_storage is not None:\n                windows_storage.after_stage_rename(final)\n        _inventory(\n            final,\n            manifest,\n            release,\n            limits,\n            checkpoint,\n            ready=True,\n            windows_storage=windows_storage,\n        )\n"
+        },
+        {
+          "new_end": 20778,
+          "new_start": 20493,
+          "original": "    except BundleCancelled as exc:\n        exc.staging_path = str(stage) if stage is not None and stage.exists() else None\n",
+          "replacement": "    except (BundleCancelled, WindowsCacheCancelled) as exc:\n        if type(windows_storage) is WindowsCacheOwner:\n            exc.staging_path = windows_storage.owned_stage_path\n        else:\n            exc.staging_path = str(stage) if stage is not None and stage.exists() else None\n"
+        },
+        {
+          "new_end": 21257,
+          "new_start": 20890,
+          "original": "        retained = str(stage) if stage is not None and stage.exists() else None\n",
+          "replacement": "        if type(windows_storage) is WindowsCacheOwner:\n            # Creation ownership is already known even if create_stage failed\n            # before assignment. No diagnostic I/O may mask the original cause.\n            retained = windows_storage.owned_stage_path\n        else:\n            retained = str(stage) if stage is not None and stage.exists() else None\n"
+        }
+      ],
+      "original_bytes": 16234,
+      "original_sha256": "fabae21b35107bc225bbe527d65a58f60bf884107d70e6379f3dd563af425d3a",
+      "reviewed_bytes": 21323,
+      "reviewed_sha256": "5d5e0060ae534d971b3c40b22192c81a47218c4e4f36a6414a40081568ec44a2"
+    },
+    "blender_addon/mechanical_cad_blender/runtime_bundle_prepare.py": {
+      "hunks": [
+        {
+          "new_end": 1345,
+          "new_start": 1331,
+          "original": "",
+          "replacement": "import ntpath\n"
+        },
+        {
+          "new_end": 1905,
+          "new_start": 1779,
+          "original": "",
+          "replacement": ")\nfrom .windows_cache import (\n    WindowsCacheCancelled,\n    WindowsCacheLocation,\n    WindowsCacheOwner,\n    _windows_path,\n"
+        },
+        {
+          "new_end": 4607,
+          "new_start": 4579,
+          "original": "",
+          "replacement": "        windows_cache=None,\n"
+        },
+        {
+          "new_end": 6043,
+          "new_start": 5306,
+          "original": "        self._package_root, self._cache_root = _root(package_root), _root(cache_root)\n",
+          "replacement": "        if windows_cache is None:\n            self._package_root, self._cache_root = _root(package_root), _root(cache_root)\n        else:\n            if (\n                type(windows_cache) is not WindowsCacheLocation\n                or expected_platform != \"windows-x64\"\n                or type(cache_root) is not str\n                or cache_root != windows_cache.cache_root\n            ):\n                raise BundlePreparationJobError(\"invalid_windows_cache\")\n            self._package_root = _windows_path(package_root, directory=True)\n            self._cache_root = _windows_path(cache_root, directory=True)\n        self._windows_cache = None if windows_cache is None else replace(windows_cache)\n        self._cache_owner = None\n"
+        },
+        {
+          "new_end": 7088,
+          "new_start": 6447,
+          "original": "",
+          "replacement": "\n    @classmethod\n    def for_windows_qualification(\n        cls, package_root, location, release_data, *, limits, pin_timeout=30.0\n    ):\n        \"\"\"Dormant fixed-cache setup on this same worker; no runtime admission.\"\"\"\n        if cls is not BundlePreparationJob or type(location) is not WindowsCacheLocation:\n            raise BundlePreparationJobError(\"invalid_windows_cache\")\n        return cls(\n            package_root,\n            location.cache_root,\n            release_data,\n            expected_platform=\"windows-x64\",\n            limits=limits,\n            pin_timeout=pin_timeout,\n            windows_cache=location,\n        )\n"
+        },
+        {
+          "new_end": 11588,
+          "new_start": 11100,
+          "original": "",
+          "replacement": "            if self._windows_cache is not None:\n                self._cache_owner = WindowsCacheOwner(\n                    self._windows_cache,\n                    package_root=self._package_root,\n                    expected_platform=self._platform,\n                    release=release,\n                )\n                self._cache_owner.acquire(cancelled=self._cancelled)\n                if self._cancelled():\n                    raise BundleCancelled(\"Bundle preparation cancelled.\")\n"
+        },
+        {
+          "new_end": 13474,
+          "new_start": 12238,
+          "original": "            descriptor = materialize_bundle(\n                self._package_root,\n                self._cache_root,\n                self._release_data,\n                expected_platform=self._platform,\n                limits=self._limits,\n                pin=pin,\n                cancelled=self._cancelled,\n            )\n",
+          "replacement": "            if self._cache_owner is None:\n                descriptor = materialize_bundle(\n                    self._package_root,\n                    self._cache_root,\n                    self._release_data,\n                    expected_platform=self._platform,\n                    limits=self._limits,\n                    pin=pin,\n                    cancelled=self._cancelled,\n                )\n            else:\n                self._cache_owner.assert_held()\n                self._cache_owner.check_private_entry(\n                    ntpath.join(self._cache_root, \".bundle-pins\"), directory=True\n                )\n                self._cache_owner.check_private_entry(\n                    ntpath.join(self._cache_root, \".bundle-pins\", release.bundle_id + \".lock\"),\n                    directory=False,\n                )\n                descriptor = materialize_bundle(\n                    self._package_root,\n                    self._cache_root,\n                    self._release_data,\n                    expected_platform=self._platform,\n                    limits=self._limits,\n                    pin=pin,\n                    cancelled=self._cancelled,\n                    windows_storage=self._cache_owner,\n                )\n"
+        },
+        {
+          "new_end": 14175,
+          "new_start": 14081,
+          "original": "            if isinstance(exc, (BundleCancelled, BundlePinCancelled)):\n",
+          "replacement": "            if isinstance(exc, (BundleCancelled, BundlePinCancelled, WindowsCacheCancelled)):\n"
+        },
+        {
+          "new_end": 14747,
+          "new_start": 14437,
+          "original": "",
+          "replacement": "            if self._cache_owner is not None and error.staging_path is None:\n                # Preserve known creation even for an unexpected helper failure\n                # outside the materializer's fixed exception tuple. No path I/O.\n                error.staging_path = self._cache_owner.owned_stage_path\n"
+        },
+        {
+          "new_end": 15601,
+          "new_start": 14764,
+          "original": "            if pin is not None:\n",
+          "replacement": "            # Keep the exclusive pin until every added cache resource is clean.\n            # An uncertain pin acquisition already owns failed cleanup; retain\n            # both original objects without retrying either resource owner.\n            if self._cache_owner is not None and not blocked:\n                try:\n                    self._cache_owner.close()\n                except BaseException as exc:\n                    blocked = True\n                    cleanup = _failure(\"cleanup_blocked\", exc)\n                    cleanup.staging_path = (\n                        error.staging_path if error is not None else None\n                    ) or self._cache_owner.owned_stage_path\n                    error = cleanup\n                else:\n                    self._cache_owner = None\n            if pin is not None and not blocked:\n"
+        }
+      ],
+      "original_bytes": 12926,
+      "original_sha256": "3eb36b9271c269b59e03a00b092bfada69947a3d7b3eae0c6f6859cfbbe20a6d",
+      "reviewed_bytes": 16928,
+      "reviewed_sha256": "9bc1afaf007839edc0f4edad8c9a1af5c5a726a2cb1ac261b334beb8b81f1188"
+    },
+    "tests/unit/test_bundled_registration.py": {
+      "hunks": [
+        {
+          "new_end": 6991,
+          "new_start": 6935,
+          "original": "",
+          "replacement": "        \"sys\": types.SimpleNamespace(platform=\"linux\"),\n"
+        },
+        {
+          "new_end": 13957,
+          "new_start": 12690,
+          "original": "",
+          "replacement": "\n\ndef test_windows_extension_guard_precedes_all_setup_io_and_timer_work():\n    n, events, callbacks, _module = setup_fixture()\n    n[\"sys\"].platform = \"win32\"\n\n    def forbidden(*args, **kwargs):\n        pytest.fail(\"closed Windows registration touched setup paths or timers\")\n\n    n[\"Path\"] = forbidden\n    n[\"importlib\"].import_module = forbidden\n    n[\"bpy\"].utils.extension_path_user = forbidden\n    n[\"backend_runtime\"].begin_bundled_setup = forbidden\n    n[\"bpy\"].app.timers.is_registered = forbidden\n    n[\"bpy\"].app.timers.register = forbidden\n    n[\"_start_bundle_setup\"]()\n    assert len(events) == 1 and events[0][0] == \"failure\"\n    assert \"pending native qualification\" in events[0][1]\n    assert not callbacks\n\n\ndef test_windows_non_extension_preserves_original_no_setup_return():\n    n, events, callbacks, _module = setup_fixture(\"mechanical_cad_blender\")\n    n[\"sys\"].platform = \"win32\"\n    n[\"_start_bundle_setup\"]()\n    assert events == [] and not callbacks\n\n\ndef test_other_non_windows_platform_keeps_original_setup_sequence():\n    n, events, callbacks, _module = setup_fixture()\n    n[\"sys\"].platform = \"darwin\"\n    n[\"_start_bundle_setup\"]()\n    assert [event[0] for event in events] == [\"import\", \"cache\", \"begin\", \"timer\"]\n    assert callbacks\n"
+        }
+      ],
+      "original_bytes": 12634,
+      "original_sha256": "257377b861ac25b55d86c684aacd342358545baa29016709e71450b0f8665818",
+      "reviewed_bytes": 13957,
+      "reviewed_sha256": "1b3f5398665b4f7fe7d53ffe89e9565e554dbd6dc7dd38b6933a7b2322c1ecd9"
+    },
+    "tests/unit/test_runtime_bundle_materialize.py": {
+      "hunks": [
+        {
+          "new_end": 18177,
+          "new_start": 17836,
+          "original": "                assert node.module in allowed\n",
+          "replacement": "                if node.module == \"windows_cache\":\n                    assert path == Path(u.__file__)\n                    assert ast.unparse(node) == (\n                        \"from .windows_cache import WindowsCacheCancelled, WindowsCacheOwner\"\n                    )\n                else:\n                    assert node.module in allowed\n"
+        },
+        {
+          "new_end": 35814,
+          "new_start": 24392,
+          "original": "",
+          "replacement": "\n\n# These inert POSIX fixtures instrument named methods on the concrete owner.\n# Literal DOS strings name ordinary temporary POSIX directories here; they do\n# not model Windows path resolution, DACL inheritance or native sharing/rename.\n# The existing extractor, payload hashes, inventory, marker and rename stay real.\ndef windows_hook_fixture(tmp_path, monkeypatch):\n    c = importlib.import_module(PACKAGE + \".windows_cache\")\n    f = Fixture(tmp_path, \"windows-x64\")\n    package_text = r\"C:\\extension\"\n    known = r\"C:\\Users\\Alice\\AppData\\Local\"\n    cache_text = known + r\"\\MechanicalCAD\\r\"\n    package, cache = tmp_path / package_text, tmp_path / cache_text\n    f.package.rename(package)\n    f.cache.rename(cache)\n    f.package, f.cache = package, cache\n    monkeypatch.chdir(tmp_path)\n    release = m.parse_release_manifest(\n        encode(f.release), expected_platform=\"windows-x64\", limits=LIMITS\n    )\n    owner = c.WindowsCacheOwner(\n        c.WindowsCacheLocation(known, cache_text),\n        package_root=package_text,\n        expected_platform=\"windows-x64\",\n        release=release,\n    )\n    state = types.SimpleNamespace(\n        owner=owner,\n        stage=None,\n        events=[],\n        fail_stage=None,\n        fail_entry=None,\n        fail_before=None,\n        fail_after=None,\n        c=c,\n        f=f,\n    )\n\n    def installed(actual, package_root, value):\n        assert actual is owner and value == release\n        assert str(package_root) in {package_text, str(package)}\n        state.events.append(\"installed\")\n\n    def paths(actual, value, manifest, stage=None):\n        assert actual is owner and value == release and manifest.bundle_id == release.bundle_id\n        state.events.append((\"paths\", None if stage is None else str(stage)))\n\n    def create(actual, value, manifest):\n        assert actual is owner and value == release\n        stage = cache / (\".stage-\" + release.bundle_id + \"-01234567\")\n        stage.mkdir(mode=0o700)\n        state.stage = str(stage)\n        state.events.append(\"created_stage\")\n        if state.fail_stage:\n            raise state.fail_stage\n        return str(stage)\n\n    def private(actual, path, *, directory):\n        assert actual is owner\n        state.events.append((\"private\", str(path), directory))\n        if state.fail_entry and state.fail_entry(Path(path), directory):\n            raise m.BundleError(\"injected private-entry rejection\")\n\n    def before(actual, stage, final):\n        assert actual is owner and str(stage) == state.stage\n        state.events.append(\"before_rename\")\n        if state.fail_before:\n            raise state.fail_before\n\n    def after(actual, final):\n        assert actual is owner and final == f.final\n        state.events.append(\"after_rename\")\n        if state.fail_after:\n            raise state.fail_after\n\n    monkeypatch.setattr(c.WindowsCacheOwner, \"check_installed_paths\", installed)\n    monkeypatch.setattr(c.WindowsCacheOwner, \"check_manifest_paths\", paths)\n    monkeypatch.setattr(\n        c.WindowsCacheOwner, \"assert_held\", lambda actual: state.events.append(\"held\")\n    )\n    monkeypatch.setattr(c.WindowsCacheOwner, \"create_stage\", create)\n    monkeypatch.setattr(c.WindowsCacheOwner, \"check_private_entry\", private)\n    monkeypatch.setattr(c.WindowsCacheOwner, \"before_stage_rename\", before)\n    monkeypatch.setattr(c.WindowsCacheOwner, \"after_stage_rename\", after)\n    monkeypatch.setattr(\n        c.WindowsCacheOwner, \"owned_stage_path\", property(lambda actual: state.stage)\n    )\n\n    def run(**kwargs):\n        return u.materialize_bundle(\n            package_text,\n            cache_text,\n            encode(f.release),\n            expected_platform=\"windows-x64\",\n            limits=LIMITS,\n            pin=f.pin,\n            windows_storage=owner,\n            **kwargs,\n        )\n\n    def recheck():\n        return u.verify_cached_bundle(\n            package_text,\n            cache_text,\n            encode(f.release),\n            expected_platform=\"windows-x64\",\n            limits=LIMITS,\n            pin=f.pin,\n            windows_storage=owner,\n        )\n\n    state.run, state.recheck = run, recheck\n    return state\n\n\ndef test_windows_concrete_hooks_keep_real_extraction_hash_inventory_and_rename(\n    tmp_path, monkeypatch\n):\n    state = windows_hook_fixture(tmp_path, monkeypatch)\n    result = state.run()\n    assert result.root == str(state.f.final)\n    assert state.events.index(\"before_rename\") < state.events.index(\"after_rename\")\n    private = [\n        entry for entry in state.events if isinstance(entry, tuple) and entry[0] == \"private\"\n    ]\n    assert any(Path(entry[1]).name == \".bundle-ready.json\" and not entry[2] for entry in private)\n    assert state.recheck() == result\n    assert state.events.count(\"created_stage\") == 1\n    for name, value in state.f.contents.items():\n        assert (state.f.final / name).read_bytes() == value\n    target = state.f.final / \"bootstrap.py\"\n    target.write_bytes(b\"x\" * target.stat().st_size)\n    with pytest.raises(m.BundleError, match=\"digest mismatch\"):\n        state.recheck()\n    with pytest.raises(u.BundlePreparationError, match=\"digest mismatch\"):\n        state.run()\n    assert target.read_bytes().startswith(b\"x\")\n\n\ndef test_windows_zero_direntry_links_require_concrete_proof_even_for_marker(tmp_path, monkeypatch):\n    state = windows_hook_fixture(tmp_path, monkeypatch)\n    original = os.scandir\n\n    class Scan:\n        def __init__(self, path):\n            self.scan = original(path)\n\n        def __enter__(self):\n            return self\n\n        def __exit__(self, *args):\n            self.scan.close()\n\n        def __iter__(self):\n            for entry in self.scan:\n\n                def observe(*, follow_symlinks, entry=entry):\n                    info = entry.stat(follow_symlinks=follow_symlinks)\n                    return types.SimpleNamespace(\n                        st_mode=info.st_mode,\n                        st_size=info.st_size,\n                        st_nlink=0,\n                        st_file_attributes=0,\n                    )\n\n                yield types.SimpleNamespace(name=entry.name, stat=observe)\n\n    monkeypatch.setattr(u.os, \"scandir\", Scan)\n    assert state.run().root == str(state.f.final)\n    original_read = u._read_bounded\n\n    def marker_read(path, maximum):\n        if Path(path).name == \".bundle-ready.json\":\n            pytest.fail(\"marker was read before rejecting missing private one-link proof\")\n        return original_read(path, maximum)\n\n    state.fail_entry = lambda path, directory: path.name == \".bundle-ready.json\"\n    monkeypatch.setattr(u, \"_read_bounded\", marker_read)\n    with pytest.raises(m.BundleError, match=\"private-entry rejection\"):\n        state.recheck()\n\n\n@pytest.mark.parametrize(\"failure\", [\"error\", \"cancelled\", \"windows_cancelled\"])\ndef test_windows_created_stage_failure_retains_original_error_without_exists(\n    tmp_path,\n    monkeypatch,\n    failure,\n):\n    state = windows_hook_fixture(tmp_path, monkeypatch)\n    classes = {\n        \"error\": RuntimeError,\n        \"cancelled\": u.BundleCancelled,\n        \"windows_cancelled\": state.c.WindowsCacheCancelled,\n    }\n    original = (\n        classes[failure]()\n        if failure == \"windows_cancelled\"\n        else classes[failure](\"original_stage_failure\")\n    )\n    state.fail_stage = original\n\n    def forbidden(*args, **kwargs):\n        pytest.fail(\"Windows diagnostic recovery called exists()\")\n\n    monkeypatch.setattr(Path, \"exists\", forbidden)\n    if failure == \"error\":\n        with pytest.raises(u.BundlePreparationError) as raised:\n            state.run()\n        assert raised.value.__cause__ is original\n        assert str(raised.value) == \"original_stage_failure\"\n    else:\n        with pytest.raises(classes[failure]) as raised:\n            state.run()\n        assert raised.value is original\n    assert raised.value.staging_path == state.stage\n    assert state.stage is not None and \"before_rename\" not in state.events\n\n\n@pytest.mark.parametrize(\"phase\", [\"entry\", \"before\", \"after\"])\ndef test_windows_stage_record_survives_later_failures_and_renamed_path(\n    tmp_path, monkeypatch, phase\n):\n    state = windows_hook_fixture(tmp_path, monkeypatch)\n    if phase == \"entry\":\n        state.fail_entry = lambda path, directory: path.name == \"bootstrap.py\"\n    elif phase == \"before\":\n        state.fail_before = RuntimeError(\"original before failure\")\n    else:\n        state.fail_after = RuntimeError(\"original after failure\")\n\n    def forbidden(*args, **kwargs):\n        pytest.fail(\"Windows error diagnostic attempted exists()\")\n\n    monkeypatch.setattr(Path, \"exists\", forbidden)\n    with pytest.raises(u.BundlePreparationError) as raised:\n        state.run()\n    assert raised.value.staging_path == state.stage\n    assert raised.value.__cause__ is not None\n    if phase == \"after\":\n        assert not os.path.lexists(state.stage) and os.path.lexists(state.f.final)\n    else:\n        assert os.path.lexists(state.stage) and not os.path.lexists(state.f.final)\n\n\ndef test_windows_unrelated_final_at_publication_keeps_stage_and_skips_stage_identity_compare(\n    tmp_path,\n    monkeypatch,\n):\n    import shutil\n\n    state = windows_hook_fixture(tmp_path, monkeypatch)\n    original = os.path.lexists\n    calls = []\n\n    def appears(path):\n        calls.append(str(path))\n        if len(calls) == 2:\n            shutil.copytree(state.stage, state.f.final)\n        return original(path)\n\n    monkeypatch.setattr(u.os.path, \"lexists\", appears)\n    assert state.run().root == str(state.f.final)\n    assert Path(state.stage).is_dir()\n    assert \"before_rename\" not in state.events and \"after_rename\" not in state.events\n\n\n@pytest.mark.parametrize(\"function\", [\"materialize_bundle\", \"verify_cached_bundle\"])\n@pytest.mark.parametrize(\n    \"owner_kind\", [\"callback\", \"subclass\", \"other_cache\", \"other_package\", \"other_release\"]\n)\ndef test_windows_storage_binding_rejects_before_safe_root_io(\n    tmp_path,\n    monkeypatch,\n    function,\n    owner_kind,\n):\n    c = importlib.import_module(PACKAGE + \".windows_cache\")\n    f = Fixture(tmp_path, \"windows-x64\")\n    release = m.parse_release_manifest(\n        encode(f.release), expected_platform=\"windows-x64\", limits=LIMITS\n    )\n    known = r\"C:\\Users\\Alice\\AppData\\Local\"\n    cache = known + r\"\\MechanicalCAD\\r\"\n    owner = c.WindowsCacheOwner(\n        c.WindowsCacheLocation(known, cache),\n        package_root=r\"C:\\extension\",\n        expected_platform=\"windows-x64\",\n        release=release,\n    )\n    package = r\"C:\\extension\"\n    incoming_release = encode(f.release)\n    if owner_kind == \"callback\":\n\n        def owner():\n            return None\n    elif owner_kind == \"subclass\":\n\n        class Subclass(c.WindowsCacheOwner):\n            pass\n\n        owner = object.__new__(Subclass)\n    elif owner_kind == \"other_cache\":\n        cache = r\"C:\\other\"\n    elif owner_kind == \"other_release\":\n        incoming_release = encode(dict(f.release, manifest_sha256=\"e\" * 64))\n    else:\n        package = r\"C:\\other\"\n\n    def forbidden(*args, **kwargs):\n        pytest.fail(\"invalid Windows storage binding reached root I/O\")\n\n    monkeypatch.setattr(u, \"_safe_path\", forbidden)\n    with pytest.raises(m.BundleError):\n        getattr(u, function)(\n            package,\n            cache,\n            incoming_release,\n            expected_platform=\"windows-x64\",\n            limits=LIMITS,\n            pin=f.pin,\n            windows_storage=owner,\n        )\n"
+        }
+      ],
+      "original_bytes": 24097,
+      "original_sha256": "08b2d74010fe254157518fac2af8f56991201876ed055b7c1e1a99bad92fb812",
+      "reviewed_bytes": 35814,
+      "reviewed_sha256": "95e1591ba6cc0cab40f5a97685cc79173140f8bcbd150869bde3ac503230b514"
+    },
+    "tests/unit/test_runtime_bundle_prepare.py": {
+      "hunks": [
+        {
+          "new_end": 24612,
+          "new_start": 24594,
+          "original": "",
+          "replacement": "        \"ntpath\",\n"
+        },
+        {
+          "new_end": 24817,
+          "new_start": 24792,
+          "original": "",
+          "replacement": "        \"windows_cache\",\n"
+        },
+        {
+          "new_end": 25031,
+          "new_start": 24823,
+          "original": "",
+          "replacement": "    allowed_path_joins = {\n        \"ntpath.join(self._cache_root, '.bundle-pins')\",\n        \"ntpath.join(self._cache_root, '.bundle-pins', release.bundle_id + '.lock')\",\n    }\n    observed_path_joins = set()\n"
+        },
+        {
+          "new_end": 25637,
+          "new_start": 25478,
+          "original": "",
+          "replacement": "            if name == \"join\" and ast.unparse(node) in allowed_path_joins:\n                observed_path_joins.add(ast.unparse(node))\n                continue\n"
+        },
+        {
+          "new_end": 25731,
+          "new_start": 25678,
+          "original": "",
+          "replacement": "    assert observed_path_joins == allowed_path_joins\n"
+        }
+      ],
+      "original_bytes": 27099,
+      "original_sha256": "d3e95518e8ba7e36debc65734f3030c6acce2960d6f813c2440e5162d25e58fe",
+      "reviewed_bytes": 27562,
+      "reviewed_sha256": "f523d17ad41af83d0db8228232cef4ecfe18b02e012af6aca8292f578fd650de"
+    },
+    "tests/unit/test_windows_admission.py": {
+      "hunks": [
+        {
+          "new_end": 409,
+          "new_start": 317,
+          "original": "Registration intentionally retains its existing resolve/cache-create calls.\n",
+          "replacement": "Registration rejects Windows before any generated import, package/cache path or timer work.\n"
+        },
+        {
+          "new_end": 11726,
+          "new_start": 11650,
+          "original": "def test_a04_registration_preserves_resolve_and_cache_create_before_rejection(monkeypatch):\n    fixture = Fixture()\n    events = []\n",
+          "replacement": "def test_a04_registration_rejects_windows_before_any_setup_io(monkeypatch):\n"
+        },
+        {
+          "new_end": 11810,
+          "new_start": 11810,
+          "original": "\n    class RegistrationPath:\n        def __init__(self, value):\n            assert value == str(source)\n\n        def resolve(self):\n            events.append((\"resolve\", str(source)))\n            return types.SimpleNamespace(parent=fixture.package)\n\n    def cache(package, **kwargs):\n        events.append((\"cache\", package, kwargs))\n        return fixture.cache\n\n    generated = types.SimpleNamespace(**fixture.constants)\n    names = {\"_start_bundle_setup\", \"_poll_bundle_setup\"}\n",
+          "replacement": ""
+        },
+        {
+          "new_end": 11919,
+          "new_start": 11864,
+          "original": "        names,\n",
+          "replacement": "        {\"_start_bundle_setup\", \"_poll_bundle_setup\"},\n"
+        },
+        {
+          "new_end": 12144,
+          "new_start": 12029,
+          "original": "            Path=RegistrationPath,\n",
+          "replacement": "            sys=types.SimpleNamespace(platform=\"win32\"),\n            Path=forbidden(side_effects, \"package path\"),\n"
+        },
+        {
+          "new_end": 12388,
+          "new_start": 12247,
+          "original": "            importlib=types.SimpleNamespace(import_module=lambda name: generated),\n",
+          "replacement": "            importlib=types.SimpleNamespace(\n                import_module=forbidden(side_effects, \"generated module import\")\n            ),\n"
+        },
+        {
+          "new_end": 12574,
+          "new_start": 12427,
+          "original": "                utils=types.SimpleNamespace(extension_path_user=cache),\n",
+          "replacement": "                utils=types.SimpleNamespace(\n                    extension_path_user=forbidden(side_effects, \"extension cache\")\n                ),\n"
+        },
+        {
+          "new_end": 12937,
+          "new_start": 12937,
+          "original": "    assert events == [\n        (\"resolve\", str(source)),\n        (\n            \"cache\",\n            \"bl_ext.user_default.mechanical_cad\",\n            {\"path\": \"backend_runtime\", \"create\": True},\n        ),\n    ]\n",
+          "replacement": ""
+        },
+        {
+          "new_end": 13059,
+          "new_start": 12987,
+          "original": "",
+          "replacement": "    assert \"pending native qualification\" in runtime.bundle_status()[1]\n"
+        }
+      ],
+      "original_bytes": 25982,
+      "original_sha256": "e1d0f3e5e85d509cf132a1b0e2c25610c7a928df65f8f1ab18b6745089b65185",
+      "reviewed_bytes": 25574,
+      "reviewed_sha256": "9f0745e86c94c8cb859fe43f61453104667a926459f8dd6990a40a1d0c884f3f"
+    }
+  },
+  "schema": "windows-cache-python-boundary-v1"
+}

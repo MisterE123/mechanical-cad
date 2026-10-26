@@ -1,0 +1,237 @@
+"""Pure exact-current-pose Assembly STEP request and receipt validation.
+
+The complete nested check retains the ordinary Assembly evidence contract. This
+module only returns detached JSON; it never creates display/publication authority,
+imports the native core, chooses a destination, or performs a file write.
+"""
+
+from __future__ import annotations
+
+from pathlib import Path
+
+from . import assembly_bridge, bridge, part_snapshot_bridge, request_contracts, result_v3
+from .assembly_validation_common import _keys, _require, _text, fingerprint
+
+ACTION = "assembly_export_step"
+_REQUEST_FIELDS = {
+    "protocol_version",
+    "kind",
+    "assembly_protocol_version",
+    "assembly",
+    "action",
+    "path",
+    "result_version",
+}
+_RESPONSE_FIELDS = {
+    "protocol_version",
+    "kind",
+    "assembly_protocol_version",
+    "action",
+    "result_version",
+    "input_fingerprint",
+    "ok",
+    "error",
+    "result",
+    "export",
+}
+_EXPORT_FIELDS = {
+    "format",
+    "units",
+    "path",
+    "atomic_write",
+    "bytes_written",
+    "definition_count",
+    "instance_count",
+    "assembly_digest",
+    "pose_digest",
+    "preset_id",
+    "request_fingerprint",
+    "report_fingerprint",
+}
+
+
+def result_version_for(assembly):
+    """Select via canonical-source leaves, including every unused source.
+
+    Keep dependencies below operation dispatch. Canonical capture already owns
+    the bounded sector-solid policy; ordinary graph validation also preserves
+    preflight rejection of malformed legacy sources without a second policy.
+    """
+    candidate = request_contracts.snapshot_request(assembly)
+    _require(
+        candidate.get("kind") == "assembly"
+        and type(candidate.get("assembly_schema_version")) is int
+        and candidate["assembly_schema_version"] == 1
+        and type(candidate.get("part_sources")) is list,
+        "unsupported Assembly source envelope",
+    )
+    selected = 2
+    for source in candidate["part_sources"]:
+        _require(type(source) is dict and "document" in source, "missing Assembly Part source")
+        document = source["document"]
+        canonical = part_snapshot_bridge._expected_document(document)
+        result_v3._graph(canonical, replay=True)
+        if part_snapshot_bridge._uses_schema3(document):
+            selected = 3
+    return selected
+
+
+def _path(value):
+    _require(
+        type(value) is str
+        and bool(value.strip())
+        and "\0" not in value
+        and Path(value).is_absolute()
+        and Path(value).name not in {"", ".", ".."}
+        and not value.endswith(("/", "/.", "/..")),
+        "Assembly STEP export requires an explicit absolute file path.",
+    )
+
+
+def validate_request(request):
+    """Bound and detach the exact, override-free request without normalizing it."""
+    try:
+        request = request_contracts.snapshot_request(request)
+        _keys(request, _REQUEST_FIELDS)
+        _require(
+            type(request["protocol_version"]) is int
+            and request["protocol_version"] == 1
+            and request["kind"] == "assembly"
+            and type(request["assembly_protocol_version"]) is int
+            and request["assembly_protocol_version"] == 1
+            and request["action"] == ACTION,
+            "Assembly STEP request protocol/action mismatch.",
+        )
+        version = request["result_version"]
+        _require(
+            type(version) is int and version in (2, 3), "Explicit typed result 2 or 3 required."
+        )
+        _path(request["path"])
+        selected = result_version_for(request["assembly"])
+        _require(selected != 3 or version == 3, "Schema-3 Assembly sources require result 3.")
+        return request
+    except (KeyError, TypeError, ValueError, OverflowError, RecursionError) as exc:
+        raise bridge.BridgeError(f"Malformed Assembly STEP request: {exc}") from exc
+
+
+def build_request(assembly, path, *, result_version=None):
+    """Capture saved pose and active preset only; never accept ad-hoc overrides."""
+    return validate_request(
+        {
+            "protocol_version": 1,
+            "kind": "assembly",
+            "assembly_protocol_version": 1,
+            "assembly": assembly,
+            "action": ACTION,
+            "path": path,
+            "result_version": result_version_for(assembly)
+            if result_version is None
+            else result_version,
+        }
+    )
+
+
+def check_request(request):
+    """Derive the one deterministic ordinary check envelope, with no path."""
+    request = validate_request(request)
+    return {
+        **{key: value for key, value in request.items() if key != "path"},
+        "action": "assembly_check",
+    }
+
+
+def _success(check, exported, request):
+    report, result = check["report"], check["result"]
+    canonical = result["canonical_assembly"]
+    _require(
+        check["ok"] is True
+        and check["error"] is None
+        and report["complete"] is True
+        and (report["passed"] is True or report.get("policy_accepted") is True),
+        "Assembly STEP success requires a complete passed or explicitly policy-accepted current check.",
+    )
+    basis = report["verification_basis"]
+    preset_id = canonical["active_verification_preset"]
+    _require(
+        type(preset_id) is str
+        and basis["configured"] is True
+        and basis["preset_id"] == preset_id
+        and basis["preset"] is not None,
+        "Assembly STEP success requires the active canonical verification preset.",
+    )
+    _require(
+        len(report["poses"]) == 1
+        and fingerprint(report["poses"][0]["pose"]) == fingerprint(report["base_pose"]),
+        "Assembly STEP success requires exactly the saved current pose.",
+    )
+    _keys(exported, _EXPORT_FIELDS)
+    _require(
+        exported["format"] == "STEP"
+        and exported["units"] == "mm"
+        and exported["atomic_write"] is True,
+        "Invalid Assembly STEP export format, units or atomic-write receipt.",
+    )
+    _path(exported["path"])
+    _require(exported["path"] == request["path"], "Assembly STEP export destination changed.")
+    _require(
+        type(exported["bytes_written"]) is int and exported["bytes_written"] > 0,
+        "Assembly STEP export requires positive typed bytes_written.",
+    )
+    counts = {
+        "definition_count": len({row["part_id"] for row in canonical["instances"]}),
+        "instance_count": len(canonical["instances"]),
+    }
+    for key, expected in counts.items():
+        _require(
+            type(exported[key]) is int and exported[key] == expected, f"Export {key} mismatch."
+        )
+    bindings = {
+        "assembly_digest": result["assembly_digest"],
+        "pose_digest": report["base_pose"]["pose_digest"],
+        "preset_id": preset_id,
+        "request_fingerprint": check["request_fingerprint"],
+        "report_fingerprint": check["report_fingerprint"],
+    }
+    for key, expected in bindings.items():
+        _require(exported[key] == expected, f"Assembly STEP export {key} mismatch.")
+
+
+def validate_response(request, response):
+    """Validate outer receipt and unchanged complete nested check, returning JSON."""
+    request = validate_request(request)
+    try:
+        response = request_contracts.snapshot_request(
+            response,
+            max_bytes=request_contracts.MAX_RESPONSE_BYTES,
+            max_nodes=4_000_000,
+            max_depth=32,
+        )
+        _keys(response, _RESPONSE_FIELDS)
+        for key in ("protocol_version", "assembly_protocol_version", "result_version"):
+            _require(
+                type(response[key]) is int and response[key] == request[key],
+                f"Assembly STEP response {key} mismatch.",
+            )
+        _require(
+            response["kind"] == "assembly" and response["action"] == ACTION,
+            "Assembly STEP response kind/action mismatch.",
+        )
+        _require(type(response["ok"]) is bool, "Invalid Assembly STEP success flag.")
+        _require(
+            response["input_fingerprint"] == fingerprint(request),
+            "Stale or different Assembly STEP request fingerprint.",
+        )
+        # Do not trust any outer receipt instead of full source, geometry, pose,
+        # verification-intent and fingerprint checks owned by the old validator.
+        check = assembly_bridge.validate_response(check_request(request), response["result"])
+        if response["ok"]:
+            _require(response["error"] is None, "Successful Assembly STEP reply also has an error.")
+            _success(check, response["export"], request)
+        else:
+            _require(response["export"] is None, "Failed Assembly STEP reply contains an export.")
+            _keys(response["error"], {"code", "message"})
+            _text(response["error"]["code"], 128)
+            _text(response["error"]["message"], 100_000)
+        return response
+    except (KeyError, TypeError, ValueError, OverflowError, RecursionError) as exc:
+        raise bridge.BridgeError(f"Malformed Assembly STEP response: {exc}") from exc

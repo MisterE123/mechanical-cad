@@ -1,0 +1,305 @@
+"""Strict scene-only sketch annotation placement, separate from Part identity.
+
+This pure codec neither owns a scene slot nor changes a sketch. Callers publish
+the returned replacement only after success and retain original text on errors.
+No expression, solved coordinate, source hash, command or native handle is saved.
+"""
+
+from __future__ import annotations
+
+import copy
+from dataclasses import dataclass, field
+
+from .general_sketch_commands import _identifier, _json, _keys, _point, _require, parse_json
+from .reference_dimensions import is_reference, reference_status, validate_reference
+from .sketch_bridge import _normalized_sketch
+from .sketch_contracts_v3 import normalize_sketch_v3
+
+VERSION = 1
+RETIREMENT_VERSION = 2
+KIND = "sketch_annotation_layout"
+MAX_STORE_BYTES = 2 * 1024 * 1024
+MAX_DOCUMENTS = 128
+MAX_FEATURES_PER_DOCUMENT = 256
+MAX_FEATURES = 1024
+MAX_ANNOTATIONS_PER_FEATURE = 512
+MAX_ANNOTATIONS = 4096
+MAX_DOCUMENT_ID_CHARS = 128
+
+
+class AnnotationStoreError(ValueError):
+    """A recoverable layout error; the supplied saved text is never overwritten."""
+
+
+@dataclass(frozen=True)
+class AnnotationConflict:
+    """Unavailable binding with recoverable original placement, never rebound."""
+
+    state: str
+    _binding: dict = field(repr=False)
+
+    @property
+    def binding(self) -> dict:
+        return copy.deepcopy(self._binding)
+
+
+@dataclass(frozen=True)
+class AnnotationLookup:
+    """Frozen lookup result whose dictionary accessors return independent copies."""
+
+    _stored: dict = field(repr=False)
+    _states: tuple[tuple[str, str], ...] = field(repr=False)
+
+    @property
+    def annotations(self) -> dict:
+        """Only placements whose exact stable constraint signature is current."""
+        return {
+            identifier: copy.deepcopy(self._stored[identifier])
+            for identifier, state in self._states
+            if state == "available"
+        }
+
+    @property
+    def unavailable(self) -> dict[str, AnnotationConflict]:
+        return {
+            identifier: AnnotationConflict(state, copy.deepcopy(self._stored[identifier]))
+            for identifier, state in self._states
+            if state != "available"
+        }
+
+    @property
+    def all_annotations(self) -> dict:
+        """All original placements, including unavailable metadata, for retention."""
+        return copy.deepcopy(self._stored)
+
+
+def _document_id(identifier):
+    # Part IDs are text, unlike feature/entity IDs. Do not trim or ASCII-normalize.
+    _require(
+        type(identifier) is str and 0 < len(identifier) <= MAX_DOCUMENT_ID_CHARS,
+        "Document ID must be nonempty text up to 128 characters.",
+    )
+    identifier.encode("utf-8")
+
+
+def _claim_container(value, expected, seen, message):
+    _require(type(value) is expected, message)
+    _require(id(value) not in seen, "Cyclic or aliased annotation containers are unsupported.")
+    seen.add(id(value))
+
+
+def _annotations(annotations):
+    # Validate this fixed-depth schema before copying/encoding caller objects.
+    # Reject shared containers rather than expanding a potentially hostile DAG.
+    seen = set()
+    _claim_container(annotations, dict, seen, "Annotation placements must be an object.")
+    _require(
+        len(annotations) <= MAX_ANNOTATIONS_PER_FEATURE,
+        "Too many annotation placements for one sketch feature (maximum 512).",
+    )
+    result = {}
+    for identifier, binding in annotations.items():
+        _identifier(identifier)
+        _claim_container(binding, dict, seen, "An annotation binding must be an object.")
+        if "retirement" in binding:
+            from .annotation_retirement import validate_retirement
+
+            validate_retirement(identifier, binding)
+            for key, kind in (("refs", list), ("offset", list), ("retirement", dict)):
+                _claim_container(binding[key], kind, seen, "Invalid retired annotation container.")
+            result[identifier] = copy.deepcopy(binding)
+            continue
+        if is_reference(binding):
+            validate_reference(identifier, binding)
+            _claim_container(binding["refs"], list, seen, "Stored reference IDs must be an array.")
+            _claim_container(
+                binding["offset"], list, seen, "Stored reference offset must be an array."
+            )
+            result[identifier] = copy.deepcopy(binding)
+            continue
+        _require(len(binding) == 4, "Unknown or missing annotation binding fields.")
+        _keys(binding, {"kind", "refs", "display", "offset"})
+        kind, refs, offset = binding["kind"], binding["refs"], binding["offset"]
+        _require(
+            type(kind) is str and kind in {"distance", "radius", "angle"},
+            "Only distance, radius and angle annotation kinds are supported.",
+        )
+        _claim_container(refs, list, seen, "Stored annotation references must be an array.")
+        _require(
+            len(refs) == (2 if kind in {"distance", "angle"} else 1),
+            "Invalid annotation references.",
+        )
+        for reference in refs:
+            _identifier(reference)
+        _require(
+            len(set(refs)) == len(refs) and identifier not in refs,
+            "Annotation constraint and reference IDs must be distinct.",
+        )
+        _require(
+            type(binding["display"]) is str and (binding["display"] == kind or (kind == "radius" and binding["display"] == "diameter")),
+            "Annotation display must match its driving dimension kind.",
+        )
+        _claim_container(offset, list, seen, "Stored annotation offsets must be an array.")
+        result[identifier] = {
+            "kind": kind,
+            "refs": list(refs),
+            "display": binding["display"],
+            "offset": _point(offset),
+        }
+    return result
+
+
+def _store(envelope):
+    _require(type(envelope) is dict and len(envelope) == 3, "Unsupported layout store fields.")
+    _keys(envelope, {"schema_version", "kind", "documents"})
+    _require(
+        type(envelope["schema_version"]) is int
+        and envelope["schema_version"] in (VERSION, RETIREMENT_VERSION)
+        and type(envelope["kind"]) is str
+        and envelope["kind"] == KIND,
+        "Unsupported annotation layout kind/version.",
+    )
+    documents = envelope["documents"]
+    _require(
+        type(documents) is dict and len(documents) <= MAX_DOCUMENTS,
+        "Too many layout documents (maximum 128), or documents is not an object.",
+    )
+    feature_count = annotation_count = 0
+    validated = {}
+    for document_id, features in documents.items():
+        _document_id(document_id)
+        _require(
+            type(features) is dict and len(features) <= MAX_FEATURES_PER_DOCUMENT,
+            "Too many sketch features for one document (maximum 256), or invalid feature map.",
+        )
+        feature_count += len(features)
+        _require(feature_count <= MAX_FEATURES, "Too many layout features (maximum 1024).")
+        validated[document_id] = {}
+        for feature_id, placements in features.items():
+            _identifier(feature_id)
+            _require(type(placements) is dict, "Annotation placements must be an object.")
+            annotation_count += len(placements)
+            _require(
+                annotation_count <= MAX_ANNOTATIONS,
+                "Too many total annotation placements (maximum 4096).",
+            )
+            validated[document_id][feature_id] = _annotations(placements)
+    has_retirement = any("retirement" in binding for features in validated.values()
+                         for placements in features.values() for binding in placements.values())
+    _require(not has_retirement or envelope["schema_version"] == RETIREMENT_VERSION,
+             "Retirement metadata requires annotation layout version 2.")
+    return {"schema_version": envelope["schema_version"], "kind": KIND, "documents": validated}
+
+
+def _load(raw):
+    if type(raw) is str and raw == "":
+        return {"schema_version": VERSION, "kind": KIND, "documents": {}}
+    envelope = parse_json(raw, MAX_STORE_BYTES)
+    # The text parser catches literal invalid Unicode; the encoder additionally
+    # catches escaped lone surrogates anywhere, including unrecognized fields.
+    _json(envelope)
+    return _store(envelope)
+
+
+def validate(raw: str) -> None:
+    """Validate the complete saved store without requiring a sketch or mutation."""
+    try:
+        _load(raw)
+    except (ValueError, TypeError, KeyError, OverflowError, RecursionError) as exc:
+        raise AnnotationStoreError(
+            f"Cannot read sketch annotation layout; retain the original text: {exc}"
+        ) from exc
+
+
+def annotations_for(raw: str, document_id: str, feature_id: str, sketch: dict) -> AnnotationLookup:
+    """Read compatible placements and report retained missing/changed bindings.
+
+    ``sketch`` is the addressed feature's structural sketch definition, not a
+    solved result. Validation never interprets expressions or mutates geometry.
+    Callers must supply its canonical owning document/feature IDs explicitly.
+    """
+    try:
+        _document_id(document_id)
+        _identifier(feature_id)
+        envelope = _load(raw)
+        # Validate the exact source schema, never install its detached normal
+        # form or treat an annotation placement as geometric authority.
+        if (
+            type(sketch) is dict
+            and type(sketch.get("schema_version")) is int
+            and sketch["schema_version"] == 3
+        ):
+            normalize_sketch_v3(sketch)
+        else:
+            _normalized_sketch(sketch)
+        stored = envelope["documents"].get(document_id, {}).get(feature_id, {})
+        constraints = {record["id"]: record for record in sketch["constraints"]}
+        occupied = {
+            sketch["plane"]["id"],
+            *(
+                record["id"]
+                for name in ("points", "lines", "circles", "arcs")
+                for record in sketch.get(name, [])
+            ),
+        }
+        entities = {
+            record["id"]: kind
+            for kind in ("point", "line", "circle", "arc")
+            for record in sketch.get(kind + "s", [])
+        }
+        states = []
+        for identifier, binding in sorted(stored.items()):
+            if "retirement" in binding:
+                from .annotation_retirement import retired_status
+
+                states.append((identifier, retired_status(identifier, binding, occupied | set(constraints))))
+                continue
+            if is_reference(binding):
+                states.append((identifier, reference_status(binding, entities)))
+                continue
+            current = constraints.get(identifier)
+            if current is None:
+                state = "changed" if identifier in occupied else "missing"
+            elif current["kind"] != binding["kind"] or current["refs"] != binding["refs"]:
+                state = "changed"
+            else:
+                state = "available"
+            states.append((identifier, state))
+        return AnnotationLookup(stored, tuple(states))
+    except (ValueError, TypeError, KeyError, OverflowError, RecursionError) as exc:
+        raise AnnotationStoreError(
+            f"Cannot read sketch annotation layout; retain the original text: {exc}"
+        ) from exc
+
+
+def replace_annotations(raw: str, document_id: str, feature_id: str, annotations: dict) -> str:
+    """Return a validated serialized replacement for exactly one feature's map.
+
+    Replacement is explicit, including dropping unavailable entries or supplying
+    ``{}`` to remove this feature's placements. Merge with ``all_annotations`` to
+    retain unavailable records. Nothing is evicted to satisfy a resource limit.
+    """
+    try:
+        _document_id(document_id)
+        _identifier(feature_id)
+        envelope = _load(raw)
+        replacement = _annotations(annotations)
+        documents = envelope["documents"]
+        if replacement:
+            documents.setdefault(document_id, {})[feature_id] = replacement
+        elif document_id in documents:
+            documents[document_id].pop(feature_id, None)
+            if not documents[document_id]:
+                del documents[document_id]
+        if any("retirement" in binding for binding in replacement.values()):
+            envelope["schema_version"] = RETIREMENT_VERSION
+        serialized = _json(_store(envelope))
+        _require(
+            len(serialized.encode("utf-8")) <= MAX_STORE_BYTES,
+            "The annotation layout exceeds its 2 MiB byte limit; no records were evicted.",
+        )
+        return serialized
+    except (ValueError, TypeError, KeyError, OverflowError, RecursionError) as exc:
+        raise AnnotationStoreError(
+            f"Cannot save sketch annotation layout; retain the original text: {exc}"
+        ) from exc

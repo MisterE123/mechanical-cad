@@ -1,0 +1,98 @@
+{
+  "schema": 1,
+  "purpose": "Exact inverse of the separately reviewed advisory-only regularity metadata revision. The canonical-vertex inverse and all older byte guards retain their original hashes; no runtime uses this fixture.",
+  "files": {
+    "src/mechanical_cad/kernel_ocp.py": {
+      "historical_sha256": "03bbaa8bf8b15d17ca0b61922e56130fe688659f7098bf72cd76734cfba1d891",
+      "current_sha256": "77f3f3033f95cbe72a97dbdab70769f1f0c3d34604f2d2ac036d6e10f78224ac",
+      "hunks": [
+        {
+          "line": 708,
+          "current": "\ndef _curve_profile_regularity_type_record(value):\n    \"\"\"Read actual type metadata without invoking a foreign metaclass hook.\"\"\"\n    from .arc_profile_native_plan import _require\n\n    cls = type(value)\n    module = type.__dict__[\"__module__\"].__get__(cls)\n    name = type.__dict__[\"__qualname__\"].__get__(cls)\n    _require(\n        type(module) is str\n        and type(name) is str\n        and 1 <= len(module) <= 128\n        and 1 <= len(name) <= 128,\n        \"native_type_metadata_unavailable\",\n    )\n    return {\"module\": module, \"qualname\": name}\n\n\ndef _curve_profile_generated_regularity_record(\n    rep, owners, surfaces, item, records, *, event, label\n):\n    \"\"\"Collect only stored advisory metadata; never query a geometric range.\"\"\"\n    from .arc_profile_native_plan import _require\n\n    payload = {\n        \"surface1\": None,\n        \"surface2\": None,\n        \"location2\": None,\n        \"continuity_value\": None,\n        \"continuity_name\": None,\n        \"continuity_type\": None,\n    }\n    item[\"regularity\"] = payload\n    field = \"enum_type_binding\"\n    try:\n        from OCP.GeomAbs import GeomAbs_Shape\n\n        for name in (\"surface1\", \"surface2\"):\n            field = name\n            getter = rep.Surface if name == \"surface1\" else rep.Surface2\n            owner = getter()\n            slot = {\n                \"surface_index\": None,\n                \"owner_roles\": tuple(role for role, known in owners.items() if known is owner),\n                \"surface_fields\": None,\n            }\n            payload[name] = slot\n            field = f\"{name}.type\"\n            kind = None if owner is None else owner.DynamicType().Name()\n            slot[\"surface_fields\"] = {\"kind\": kind}\n            _require(\n                type(kind) is str and kind in (\"Geom_Plane\", \"Geom_CylindricalSurface\"),\n                \"unsupported_native_surface_metadata\",\n            )\n            field = f\"{name}.fields\"\n            slot[\"surface_fields\"] = _curve_profile_surface_record(owner)\n            matches = [index for index, known in enumerate(surfaces) if known is owner]\n            if not matches:\n                field = f\"{name}.surface_index\"\n                _require(len(surfaces) < 8, \"native_representation_limit\")\n                surfaces.append(owner)\n                matches = [len(surfaces) - 1]\n            slot[\"surface_index\"] = matches[0]\n        field = \"location2\"\n        payload[\"location2\"] = _curve_profile_location_record(rep.Location2())\n        field = \"continuity\"\n        continuity = rep.Continuity()\n        field = \"continuity_type\"\n        payload[\"continuity_type\"] = _curve_profile_regularity_type_record(continuity)\n        _require(type(continuity) is GeomAbs_Shape, \"invalid_native_regularity_enum\")\n        field = \"continuity_value\"\n        value = int(continuity)\n        payload[\"continuity_value\"] = value\n        names = (\n            \"GeomAbs_C0\",\n            \"GeomAbs_G1\",\n            \"GeomAbs_C1\",\n            \"GeomAbs_G2\",\n            \"GeomAbs_C2\",\n            \"GeomAbs_C3\",\n            \"GeomAbs_CN\",\n        )\n        _require(type(value) is int and 0 <= value < len(names), \"invalid_native_regularity_enum\")\n        payload[\"continuity_name\"] = names[value]\n    except Exception as exc:\n        event(\n            \"raw_generated_regularity_metadata_failure\",\n            {\n                \"role\": label,\n                \"unavailable_field\": field,\n                \"exception_type\": _curve_profile_regularity_type_record(exc),\n                \"representations\": tuple(records) + (item,),\n            },\n        )\n        raise\n    return payload\n\n\ndef _curve_profile_generated_inventory(edge, owners, *, event, label):\n",
+          "historical": "\ndef _curve_profile_generated_inventory(edge, owners, *, event, label):\n"
+        },
+        {
+          "line": 829,
+          "current": "            \"is_closed_surface\": closed,\n            \"is_regularity\": None,\n            \"regularity\": None,\n            \"surface_index\": None,\n",
+          "historical": "            \"is_closed_surface\": closed,\n            \"surface_index\": None,\n"
+        },
+        {
+          "line": 840,
+          "current": "        }\n        try:\n            item[\"is_regularity\"] = rep.IsRegularity()\n        except Exception as exc:\n            event(\n                \"raw_generated_regularity_metadata_failure\",\n                {\n                    \"role\": label,\n                    \"unavailable_field\": \"IsRegularity\",\n                    \"exception_type\": _curve_profile_regularity_type_record(exc),\n                    \"representations\": tuple(records) + (item,),\n                },\n            )\n            raise\n        regularity = item[\"is_regularity\"]\n        supported = (\n            type(kind) is str\n            and all(type(flag) is bool for flag in (is3d, on_surface, closed, regularity))\n            and (\n                is3d,\n                on_surface,\n                closed,\n                regularity,\n                kind,\n            )\n            in (\n                (True, False, False, False, \"BRep_Curve3D\"),\n                (False, True, False, False, \"BRep_CurveOnSurface\"),\n                (False, True, True, True, \"BRep_CurveOnClosedSurface\"),\n                (False, False, False, True, \"BRep_CurveOn2Surfaces\"),\n            )\n        )\n",
+          "historical": "        }\n        supported = (is3d, on_surface, closed, kind) in (\n            (True, False, False, \"BRep_Curve3D\"),\n            (False, True, False, \"BRep_CurveOnSurface\"),\n            (False, True, True, \"BRep_CurveOnClosedSurface\"),\n        )\n"
+        },
+        {
+          "line": 878,
+          "current": "            _require(False, \"unsupported_native_representation_metadata\")\n        if kind == \"BRep_CurveOn2Surfaces\":\n            _curve_profile_generated_regularity_record(\n                rep, owners, surfaces, item, records, event=event, label=label\n            )\n            records.append(item)\n            continue\n        parameters = tuple(rep.Range())\n",
+          "historical": "            _require(False, \"unsupported_native_representation_metadata\")\n        parameters = tuple(rep.Range())\n"
+        },
+        {
+          "line": 890,
+          "current": "            if not matches:\n                if len(surfaces) == 8:\n                    records.append(item)\n                    event(\n                        \"raw_generated_inventory_overflow\",\n                        {\"role\": label, \"representations\": tuple(records)},\n                    )\n                    _require(False, \"native_representation_limit\")\n                surfaces.append(owner)\n",
+          "historical": "            if not matches:\n                surfaces.append(owner)\n"
+        }
+      ]
+    },
+    "src/mechanical_cad/arc_profile_native_evidence.py": {
+      "historical_sha256": "4ea989b5aaf62b19eee00632119e8771f2d3055f3cd39f2cf681859bf1465dd3",
+      "current_sha256": "49a142f32239a03223a32d5fbdfaa7235bbc63a6be19bb336756e58e7af6a065",
+      "hunks": [
+        {
+          "line": 866,
+          "current": "\ndef _generated_regularity_grammar(item, surfaces, owner_roles):\n    \"\"\"Keep the exact two-owner advisory variant separate from geometric records.\"\"\"\n    _require(\n        item[\"range\"] == ()\n        and type(item[\"range\"]) is tuple\n        and item[\"curve3d\"] is None\n        and type(item[\"pcurves\"]) is tuple\n        and item[\"pcurves\"] == ()\n        and item[\"owner_roles\"] == ()\n        and item[\"surface_index\"] is None\n        and item[\"surface_fields\"] is None\n        and not item[\"surface_is_retained\"],\n        \"invalid_native_representation\",\n    )\n    record = item[\"regularity\"]\n    _keys(\n        record,\n        (\n            \"surface1\",\n            \"surface2\",\n            \"location2\",\n            \"continuity_value\",\n            \"continuity_name\",\n            \"continuity_type\",\n        ),\n    )\n    value, name = record[\"continuity_value\"], record[\"continuity_name\"]\n    names = (\n        \"GeomAbs_C0\",\n        \"GeomAbs_G1\",\n        \"GeomAbs_C1\",\n        \"GeomAbs_G2\",\n        \"GeomAbs_C2\",\n        \"GeomAbs_C3\",\n        \"GeomAbs_CN\",\n    )\n    _require(\n        type(value) is int\n        and 0 <= value < len(names)\n        and type(name) is str\n        and name == names[value],\n        \"invalid_native_regularity\",\n    )\n    native_type = record[\"continuity_type\"]\n    _keys(native_type, (\"module\", \"qualname\"))\n    _require(\n        all(type(text) is str and 1 <= len(text) <= 128 for text in native_type.values()),\n        \"invalid_native_regularity\",\n    )\n    for key in (\"surface1\", \"surface2\"):\n        slot = record[key]\n        _keys(slot, (\"surface_index\", \"owner_roles\", \"surface_fields\"))\n        owner, roles = slot[\"surface_index\"], slot[\"owner_roles\"]\n        _require(type(owner) is int and 0 <= owner < 8, \"invalid_native_representation\")\n        _require(\n            type(roles) is tuple\n            and len(roles) == 1\n            and type(roles[0]) is str\n            and roles[0] in owner_roles,\n            \"native_generated_owner_changed\",\n        )\n        _generated_surface_grammar(slot[\"surface_fields\"])\n        association = (roles, slot[\"surface_fields\"])\n        if owner in surfaces:\n            _require(surfaces[owner] == association, \"native_generated_owner_changed\")\n        else:\n            # Check before either slot is inserted, including malformed inputs.\n            _require(len(surfaces) < 8, \"native_representation_limit\")\n            _require(owner == len(surfaces), \"invalid_native_representation\")\n            surfaces[owner] = association\n    _require(\n        record[\"surface1\"][\"surface_index\"] != record[\"surface2\"][\"surface_index\"]\n        and record[\"surface1\"][\"owner_roles\"] != record[\"surface2\"][\"owner_roles\"],\n        \"native_generated_owner_changed\",\n    )\n\n\ndef _generated_regularity_placement(c, item, edge, faces, radial_roles):\n    \"\"\"Match both actual incident planes without making a continuity claim.\n\n    The five decodes, five zero comparisons, two compositions and two paired\n    comparisons fit the 372-tick conservative supplementary schedule. Identity\n    data make the accepted-path cost smaller; all arithmetic uses the continuing\n    context. No coplanarity, straightness, root or trigonometric gate is added.\n    \"\"\"\n    record = item[\"regularity\"]\n    slots = tuple(record[key] for key in (\"surface1\", \"surface2\"))\n    roles = tuple(slot[\"owner_roles\"][0] for slot in slots)\n    _require(set(roles) == set(radial_roles), \"native_generated_owner_changed\")\n    paired = tuple(faces[role] for role in roles)\n    for slot, face in zip(slots, paired, strict=True):\n        _require(\n            slot[\"surface_fields\"][\"kind\"] == \"Geom_Plane\"\n            and slot[\"surface_fields\"] == face[\"surface_fields\"]\n            and sum(occurrence[\"edge_role\"] == edge[\"role\"] for occurrence in face[\"occurrences\"])\n            == 1,\n            \"native_generated_owner_changed\",\n        )\n    locations = (\n        edge[\"location\"],\n        item[\"location\"],\n        record[\"location2\"],\n        paired[0][\"surface_location\"],\n        paired[1][\"surface_location\"],\n    )\n    translations = []\n    zero = (Dyadic(0, 0),) * 3\n    for location in locations:\n        _keys(location, (\"identity\", \"matrix\"))\n        _yes(location[\"identity\"], \"native_generated_location_changed\")\n        translation = _generated_location(c, location)\n        _generated_equal(c, translation, zero, \"native_generated_location_changed\")\n        translations.append(translation)\n    edge_placement, first, second, face_first, face_second = translations\n    for placement, actual_face in ((first, face_first), (second, face_second)):\n        _generated_equal(\n            c,\n            _generated_add(c, edge_placement, placement),\n            actual_face,\n            \"native_generated_location_changed\",\n        )\n\n\ndef _generated_inventory(c, edge, owner_roles):\n",
+          "historical": "\ndef _generated_inventory(c, edge, owner_roles):\n"
+        },
+        {
+          "line": 993,
+          "current": "    _require(type(entries) is tuple and 1 <= len(entries) <= 8, \"native_representation_limit\")\n    surfaces, curves, observed, metadata = {}, [], [], []\n    edge_location = _generated_location(c, edge[\"location\"])\n",
+          "historical": "    _require(type(entries) is tuple and 1 <= len(entries) <= 8, \"native_representation_limit\")\n    surfaces, curves, observed = {}, [], []\n    edge_location = _generated_location(c, edge[\"location\"])\n"
+        },
+        {
+          "line": 1004,
+          "current": "                \"is_closed_surface\",\n                \"is_regularity\",\n                \"regularity\",\n                \"surface_index\",\n",
+          "historical": "                \"is_closed_surface\",\n                \"surface_index\",\n"
+        },
+        {
+          "line": 1026,
+          "current": "                    \"is_closed_surface\",\n                    \"is_regularity\",\n                    \"surface_is_retained\",\n",
+          "historical": "                    \"is_closed_surface\",\n                    \"surface_is_retained\",\n"
+        },
+        {
+          "line": 1038,
+          "current": "                item[\"is_closed_surface\"],\n                item[\"is_regularity\"],\n                item[\"representation_type\"],\n",
+          "historical": "                item[\"is_closed_surface\"],\n                item[\"representation_type\"],\n"
+        },
+        {
+          "line": 1042,
+          "current": "            in (\n                (True, False, False, False, \"BRep_Curve3D\"),\n                (False, True, False, False, \"BRep_CurveOnSurface\"),\n                (False, True, True, True, \"BRep_CurveOnClosedSurface\"),\n                (False, False, False, True, \"BRep_CurveOn2Surfaces\"),\n            ),\n",
+          "historical": "            in (\n                (True, False, False, \"BRep_Curve3D\"),\n                (False, True, False, \"BRep_CurveOnSurface\"),\n                (False, True, True, \"BRep_CurveOnClosedSurface\"),\n            ),\n"
+        },
+        {
+          "line": 1061,
+          "current": "        )\n        if item[\"representation_type\"] == \"BRep_CurveOn2Surfaces\":\n            _require(not metadata, \"native_generated_regularity_ambiguous\")\n            _generated_regularity_grammar(item, surfaces, owner_roles)\n            metadata.append(item)\n            # Advisory metadata contributes no support, branch, range or pcurve\n            # candidate. Its two placements are checked after all old geometry.\n            continue\n        _require(item[\"regularity\"] is None, \"invalid_native_representation\")\n        location = _generated_location(c, item[\"location\"])\n",
+          "historical": "        )\n        location = _generated_location(c, item[\"location\"])\n"
+        },
+        {
+          "line": 1112,
+          "current": "    _require(len(curves) == 1, \"native_generated_curve_ambiguous\")\n    for item in metadata:\n        for key in (\"surface1\", \"surface2\"):\n            slot = item[\"regularity\"][key]\n            role = slot[\"owner_roles\"][0]\n            _require(\n                all(\n                    role not in association[0] or owner == slot[\"surface_index\"]\n                    for owner, association in surfaces.items()\n                ),\n                \"native_generated_owner_changed\",\n            )\n    return curves[0], tuple(observed), tuple(metadata)\n\n",
+          "historical": "    _require(len(curves) == 1, \"native_generated_curve_ambiguous\")\n    return curves[0], tuple(observed)\n\n"
+        },
+        {
+          "line": 1253,
+          "current": "    lines = {f\"line.{line.entity_id}\": line for line in plan.accepted_support.lines}\n    supports, inventory, edges, regularities = {}, {}, {}, []\n    for item, role in zip(raw_edges, edge_roles, strict=True):\n",
+          "historical": "    lines = {f\"line.{line.entity_id}\": line for line in plan.accepted_support.lines}\n    supports, inventory, edges = {}, {}, {}\n    for item, role in zip(raw_edges, edge_roles, strict=True):\n"
+        },
+        {
+          "line": 1316,
+          "current": "        )\n        (curve_item, composed), entries, metadata = _generated_inventory(\n            c, item, (*side_roles, \"retained_profile_plane\")\n        )\n        regularities.extend((role, entry) for entry in metadata)\n        _require(len(regularities) <= 1, \"native_generated_regularity_ambiguous\")\n        _generated_equal(c, composed, offset, \"native_generated_location_changed\")\n",
+          "historical": "        )\n        (curve_item, composed), entries = _generated_inventory(\n            c, item, (*side_roles, \"retained_profile_plane\")\n        )\n        _generated_equal(c, composed, offset, \"native_generated_location_changed\")\n"
+        },
+        {
+          "line": 1631,
+          "current": "    )\n    for role, item in regularities:\n        _require(role == f\"vertical.{arc.center_id}\", \"native_generated_regularity_edge_changed\")\n        radial_roles = tuple(\n            f\"side.line.{use.entity_id}\"\n            for use in plan.source.boundary\n            if use.kind == \"line\" and arc.center_id in (use.start_id, use.end_id)\n        )\n        _require(len(radial_roles) == 2, \"native_generated_owner_changed\")\n        _generated_regularity_placement(\n            c, item, edges[role], {face[\"role\"]: face for face in raw_faces}, radial_roles\n        )\n    _require(c.operations - start <= 32768, \"native_generated_trace_operation_limit\")\n",
+          "historical": "    )\n    _require(c.operations - start <= 32768, \"native_generated_trace_operation_limit\")\n"
+        }
+      ]
+    }
+  }
+}

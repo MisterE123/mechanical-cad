@@ -1,0 +1,72 @@
+{
+  "active_feature": "placement",
+  "features": [
+    {
+      "id": "section",
+      "inputs": {},
+      "kind": "sketch_rectangle",
+      "label": "Sleeve section",
+      "params": {
+        "height": "height",
+        "width": "wall",
+        "x": "inner_radius",
+        "y": 0,
+        "z": 0
+      }
+    },
+    {
+      "id": "sleeve",
+      "inputs": {
+        "profile": "section"
+      },
+      "kind": "revolve",
+      "label": "Full sleeve",
+      "params": {
+        "angle": 360,
+        "axis_x": 0,
+        "axis_y": 1,
+        "axis_z": 0,
+        "x": 0,
+        "y": 0,
+        "z": 0
+      }
+    },
+    {
+      "id": "edges",
+      "inputs": {
+        "base": "sleeve"
+      },
+      "kind": "chamfer",
+      "label": "Break all edges",
+      "params": {
+        "distance": "edge_break"
+      }
+    },
+    {
+      "id": "placement",
+      "inputs": {
+        "base": "edges"
+      },
+      "kind": "transform",
+      "label": "Stand upright",
+      "params": {
+        "rx": 90,
+        "ry": 0,
+        "rz": 0,
+        "x": 0,
+        "y": 0,
+        "z": 0
+      }
+    }
+  ],
+  "id": "revolved_sleeve",
+  "name": "Revolved chamfered sleeve",
+  "parameters": {
+    "edge_break": 0.5,
+    "height": 30,
+    "inner_radius": 10,
+    "wall": 3
+  },
+  "schema_version": 1,
+  "units": "mm"
+}

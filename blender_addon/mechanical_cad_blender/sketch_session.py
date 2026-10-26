@@ -1,0 +1,470 @@
+"""Shared single-owner sketch lifecycle, independent of sketch shape/editor kind.
+
+Pure codec dispatch owns serialization. This module alone owns active registry,
+original-scene checkpoint CAS, history tombstones, and transient recovery maps.
+"""
+
+import uuid
+import weakref
+
+import bpy
+
+from . import draft_dispatch, draft_store, general_draft_store
+from .common import _state
+from .sketch_draft import DraftError
+
+_ACTIVE = None
+_INTERACTION_REVISION = 0
+_HISTORY_DRAFTS = {}
+_RECOVERY_DRAFTS = {}
+_UNENCODED_DRAFTS = {}
+# Reserve recovery capacity before accepting a new draft. A weak reservation
+# cannot leak when an unstarted subclass constructor fails; active owners and
+# retained copies have their own strong references. No retained copy is evicted.
+_RECOVERY_RESERVATIONS = weakref.WeakValueDictionary()
+MAX_RECOVERY_SESSIONS = 16
+CAPACITY_MESSAGE = (
+    "Sketch recovery capacity reached (16 interrupted sessions). Existing copies "
+    "are retained; a new sketch cannot start safely. Do not close Blender before "
+    "recovering this session's unsaved intent."
+)
+
+
+def _require_recovery_capacity(session_id=None):
+    occupied = set(_RECOVERY_DRAFTS) | set(_UNENCODED_DRAFTS) | set(_RECOVERY_RESERVATIONS)
+    occupied.discard(session_id)
+    if len(occupied) >= MAX_RECOVERY_SESSIONS:
+        raise DraftError(CAPACITY_MESSAGE)
+
+
+def active_session(context=None):
+    if _ACTIVE is None or not _ACTIVE.alive:
+        return None
+    try:
+        if context is not None and (
+            context.window != _ACTIVE.window or context.scene != _ACTIVE.scene
+        ):
+            return None
+    except (ReferenceError, AttributeError):
+        return None
+    return _ACTIVE
+
+
+def interaction_revision():
+    """Runtime-only admission stamp, including owners since closed/cancelled."""
+    return _INTERACTION_REVISION
+
+
+def cancel_active(reason="Sketch cancelled", context=None):
+    session = active_session(context)
+    if session:
+        session.discard(f"Sketch draft discarded: {reason}. No draft changes were committed.")
+        return True
+    return False
+
+
+def editor_operator(kind, version):
+    """Exact supported UI routes, not an extensible codec/lifecycle registry."""
+    if type(kind) is not str or type(version) is not int:
+        return None
+    if kind == draft_dispatch.RECTANGLE and version == 1:
+        return "mcad.rectangle_sketch"
+    if kind == draft_dispatch.GENERAL and version in (1, 2, 3):
+        return "mcad.general_sketch"
+    return None
+
+
+def editor_available(kind, version):
+    identifier = editor_operator(kind, version)
+    if identifier is None:
+        return False
+    namespace, name = identifier.split(".", 1)
+    try:
+        getattr(getattr(bpy.ops, namespace), name).get_rna_type()
+    except (AttributeError, KeyError):
+        return False
+    return True
+
+
+def suspended_draft(context):
+    """Read-only exact-codec status; unknown bytes stay untouched."""
+    state = _state(context)
+    serialized = state.sketch_draft_json
+    empty = {
+        "present": False,
+        "compatible": False,
+        "message": "",
+        "feature_id": "",
+        "phase": "",
+        "kind": "",
+        "editor_available": False,
+        "schema_version": None,
+    }
+    if not serialized:
+        return empty
+    try:
+        info = draft_dispatch.inspect(serialized)
+        compatible = info.is_current(state.document_json)
+        available = editor_available(info.kind, info.schema_version)
+        stale = (
+            draft_store.STALE_MESSAGE
+            if info.kind == draft_dispatch.RECTANGLE
+            else general_draft_store.STALE_MESSAGE
+        )
+        return {
+            "present": True,
+            "compatible": compatible,
+            "message": (
+                stale
+                if not compatible
+                else (
+                    "This sketch draft is retained, but its matching viewport editor is not available in this build."
+                    if not available
+                    else "Sketch draft suspended. Resume to continue; preview and DoF need fresh validation."
+                )
+            ),
+            "feature_id": info.feature_id,
+            "phase": info.phase,
+            "kind": info.kind,
+            "editor_available": available,
+            "schema_version": info.schema_version,
+        }
+    except draft_dispatch.SnapshotError as exc:
+        return {**empty, "present": True, "message": str(exc)}
+
+
+def draft_recovery_notice():
+    """Missing scenes are never guessed from names or transferred to another scene."""
+    retained = set(_RECOVERY_DRAFTS) | set(_UNENCODED_DRAFTS)
+    if len(retained) >= MAX_RECOVERY_SESSIONS:
+        return CAPACITY_MESSAGE
+    available = {scene.session_uid for scene in bpy.data.scenes}
+    missing = [
+        record["name"]
+        for key, record in _HISTORY_DRAFTS.items()
+        if key not in available and (record["snapshot"] or record.get("draft") is not None)
+    ]
+    unencoded = [record["name"] for record in _UNENCODED_DRAFTS.values()]
+    if unencoded:
+        return (
+            "A sketch draft could not be encoded: "
+            + ", ".join(unencoded)
+            + ". Its pure intent is retained separately in memory for this Blender session; no saved draft was overwritten. This recovery copy is not a durable backup."
+        )
+    conflicts = [
+        record
+        for record in _RECOVERY_DRAFTS.values()
+        if record.get("reason") != "missing_scene" or record.get("previous_file")
+    ]
+    if conflicts:
+        return "Interrupted sketch copies are retained separately in memory for this Blender session. No external saved draft was overwritten. These recovery copies are not durable backups."
+    if not missing:
+        return ""
+    return (
+        "A sketch draft is unavailable because its original scene was removed: "
+        + ", ".join(missing)
+        + ". Restore that scene with Undo/Redo to recover it. This recovery copy lasts only for this Blender session."
+    )
+
+
+def suspend_active(reason="Leaving Sketch", context=None):
+    session = active_session(context)
+    if session:
+        return session.suspend(reason)
+    return False
+
+
+def checkpoint_active():
+    session = active_session()
+    if session:
+        session.checkpoint()
+
+
+def before_history_change():
+    """Keep UI authoring intent outside canonical Undo; release modal ownership."""
+    suspend_active("Undo/Redo")
+    for scene in bpy.data.scenes:
+        serialized = scene.mechanical_cad.sketch_draft_json
+        # Empty slots are intentional tombstones too: canonical Undo must not
+        # resurrect a draft explicitly finished or discarded in the UI.
+        _HISTORY_DRAFTS[scene.session_uid] = {"name": scene.name, "snapshot": serialized}
+
+
+def after_history_change():
+    for scene in bpy.data.scenes:
+        record = _HISTORY_DRAFTS.get(scene.session_uid)
+        if record:
+            scene.mechanical_cad.sketch_draft_json = record["snapshot"]
+            if record["snapshot"]:
+                scene.mechanical_cad.sketch_notice = "Sketch draft retained across Undo/Redo. Resume checks its exact original document revision."
+            else:
+                scene.mechanical_cad.sketch_notice = ""
+            # A missing-scene backup may be released only after exact bytes
+            # have been restored into its original scene's persistent slot.
+            for key, held in list(_RECOVERY_DRAFTS.items()):
+                if (
+                    held.get("reason") == "missing_scene"
+                    and not held["previous_file"]
+                    and held["scene_uid"] == scene.session_uid
+                    and held["snapshot"] == record["snapshot"]
+                ):
+                    del _RECOVERY_DRAFTS[key]
+
+
+def after_file_load():
+    # Runtime scene identities belong to the old .blend, never to the loaded file.
+    _HISTORY_DRAFTS.clear()
+    # Conflicted and unencoded copies have no safe new-file scene identity.
+    # Retain their pure data in quarantine, without automatic scene rebinding.
+    for record in _RECOVERY_DRAFTS.values():
+        record["previous_file"] = True
+    # Unencoded intent is pure data and has no safe new-file scene identity.
+    # Retain it in quarantine; never rebind it to a loaded scene by UID/name.
+    for record in _UNENCODED_DRAFTS.values():
+        record["previous_file"] = True
+    for scene in bpy.data.scenes:
+        state = scene.mechanical_cad
+        if state.sketch_draft_json:
+            state.sketch_notice = "Saved sketch draft is suspended. Resume checks its original document; preview and DoF are unverified."
+
+
+def _discard_stored(scene):
+    scene.mechanical_cad.sketch_draft_json = ""
+    _HISTORY_DRAFTS.pop(scene.session_uid, None)
+
+
+def _tag_redraw(session):
+    try:
+        for area in session.window.screen.areas:
+            area.tag_redraw()
+    except (ReferenceError, AttributeError):
+        pass
+
+
+class SketchSession:
+    """One original-scene owner for pure intent and disposable viewport resources.
+
+    Subclasses supply rendering, geometry operations and `_detach_input`. That
+    hook must invalidate edit/acceptance tokens before touching native resources.
+    It is called once while the owner is already retired, including partial start.
+    """
+
+    def __init__(self, context, draft, *, restored=False):
+        from . import staged_edit_store
+
+        staged_edit_store.require_none(context)
+        _require_recovery_capacity()
+        if active_session() is not None:
+            raise DraftError("Finish, suspend or cancel the active sketch before starting another.")
+        if not restored and _state(context).sketch_draft_json:
+            raise DraftError(
+                "A sketch draft is already saved in this scene. Resume or Discard it before starting another."
+            )
+        self.window = context.window
+        self.area = context.area
+        self.region = next(region for region in self.area.regions if region.type == "WINDOW")
+        self.rv3d = self.area.spaces.active.region_3d
+        self.scene = context.scene
+        self.scene_uid = self.scene.session_uid
+        self.session_id = uuid.uuid4().hex
+        self.scene_name = self.scene.name
+        self.workspace = context.workspace
+        self.manager = context.window_manager
+        self.draft = draft
+        self.alive = True
+        self.command = ""
+        self.handles = []
+        self.timer = None
+        self.navigation = False
+        self.cleanup_errors = []
+        self._cursor_owned = False
+        self._status_owned = False
+        self.stored_snapshot = _state(context).sketch_draft_json
+        if not self.scene.mechanical_cad.sketch_draft_scene_id:
+            self.scene.mechanical_cad.sketch_draft_scene_id = uuid.uuid4().hex
+        _RECOVERY_RESERVATIONS[self.session_id] = self
+
+    def start_resources(self, callbacks, status_text):
+        global _ACTIVE, _INTERACTION_REVISION
+        if not self.alive or active_session() is not None:
+            raise DraftError("Another sketch owner is active, or this owner was retired.")
+        try:
+            _require_recovery_capacity(self.session_id)
+        except DraftError:
+            self.cleanup()
+            raise
+        _ACTIVE = self
+        _INTERACTION_REVISION += 1
+        try:
+            self.scene.mechanical_cad.sketch_notice = ""
+            for callback, stage in callbacks:
+                self.handles.append(
+                    bpy.types.SpaceView3D.draw_handler_add(callback, (self,), "WINDOW", stage)
+                )
+            self.timer = self.manager.event_timer_add(0.1, window=self.window)
+            self.window.cursor_modal_set("CROSSHAIR")
+            self._cursor_owned = True
+            self.workspace.status_text_set(status_text)
+            self._status_owned = True
+            _tag_redraw(self)
+        except Exception:
+            self.cleanup()
+            raise
+
+    @property
+    def can_finish(self):
+        return False
+
+    @property
+    def can_edit_dimensions(self):
+        return False
+
+    def valid_context(self):
+        if not self.alive:
+            return False
+        try:
+            active_object = self.window.view_layer.objects.active
+            return (
+                self.alive
+                and (active_object is None or active_object.mode == "OBJECT")
+                and self.window.scene == self.scene
+                and self.window.workspace == self.workspace
+                and any(area == self.area for area in self.window.screen.areas)
+                and self.area.type == "VIEW_3D"
+                and self.scene.mechanical_cad.document_json == self.draft.document_json
+            )
+        except (ReferenceError, AttributeError):
+            return False
+
+    def checkpoint(self):
+        """Compare-and-swap the reserved slot; never clobber another saved draft."""
+        state = self.scene.mechanical_cad
+        if state.sketch_draft_json != self.stored_snapshot:
+            raise DraftError(
+                "The scene's saved draft changed externally. Its snapshot was not overwritten."
+            )
+        serialized = draft_dispatch.dumps(self.draft)
+        state.sketch_draft_json = serialized
+        self.stored_snapshot = serialized
+        return serialized
+
+    def suspend(self, reason="Leaving Sketch"):
+        if not self.alive:
+            return False
+        try:
+            try:
+                self.checkpoint()
+            except Exception as exc:
+                # Never overwrite another scene or an externally changed slot.
+                # A pure recovery record stays bound to the original runtime ID.
+                record = {
+                    "name": self.scene_name,
+                    "snapshot": "",
+                    "scene_uid": self.scene_uid,
+                    "previous_file": False,
+                    "session_id": self.session_id,
+                    "reason": "slot_conflict",
+                }
+                try:
+                    record["snapshot"] = draft_dispatch.dumps(self.draft)
+                except Exception as snapshot_exc:
+                    record["error"] = str(snapshot_exc)
+                    # Keep the pure draft object in memory when even snapshot
+                    # encoding fails; it owns no native resources or callbacks.
+                    record["draft"] = self.draft
+                    record["scene_uid"] = self.scene_uid
+                    record["previous_file"] = False
+                    _UNENCODED_DRAFTS[self.session_id] = record
+                alive_ids = {scene.session_uid for scene in bpy.data.scenes}
+                if record["snapshot"]:
+                    if self.scene_uid not in alive_ids:
+                        record["reason"] = "missing_scene"
+                        # This is only an automatic Undo restoration index;
+                        # the independent per-session copy survives file load.
+                        _HISTORY_DRAFTS[self.scene_uid] = record
+                    _RECOVERY_DRAFTS[self.session_id] = record
+                try:
+                    self.scene.mechanical_cad.sketch_notice = (
+                        "Draft suspension needs recovery: " + str(exc)
+                    )
+                except (ReferenceError, AttributeError):
+                    pass
+                return False
+            notice = (
+                f"Sketch draft suspended: {reason}. No draft changes were committed. "
+                "Resume or Discard in its original scene."
+            )
+            self.scene.mechanical_cad.sketch_notice = notice
+            # Preserve the existing navigation explanation in the destination.
+            # Only this transient notice crosses scenes; no document or draft
+            # slot, evidence, cache, feature selection, or geometry is touched.
+            try:
+                if self.window.scene != self.scene:
+                    self.window.scene.mechanical_cad.sketch_notice = notice
+            except (ReferenceError, AttributeError):
+                pass
+            return True
+        finally:
+            self.cleanup()
+
+    def discard(self, notice="Sketch draft cancelled. No draft changes were committed."):
+        if not self.alive:
+            return
+        try:
+            try:
+                if self.scene.mechanical_cad.sketch_draft_json == self.stored_snapshot:
+                    _discard_stored(self.scene)
+            except ReferenceError:
+                _HISTORY_DRAFTS.pop(self.scene_uid, None)
+            scenes = [self.scene]
+            try:
+                scenes.append(self.window.scene)
+            except (ReferenceError, AttributeError):
+                pass
+            for scene in scenes:
+                try:
+                    scene.mechanical_cad.sketch_notice = notice
+                except (ReferenceError, AttributeError):
+                    pass
+        finally:
+            self.cleanup()
+
+    def _detach_input(self):
+        """Kind-specific editor lease teardown; no work after it is detached."""
+
+    def cleanup(self):
+        global _ACTIVE
+        if not self.alive:
+            return
+        self.alive = False
+        _RECOVERY_RESERVATIONS.pop(self.session_id, None)
+        if _ACTIVE is self:
+            _ACTIVE = None
+
+        def attempt(label, callback):
+            try:
+                callback()
+            except Exception as exc:
+                self.cleanup_errors.append(f"{label}: {exc}")
+
+        # Retire ownership before callbacks can reenter it, then invalidate the
+        # input lease before resource removal or later RNA/class teardown.
+        attempt("input", self._detach_input)
+        handles, self.handles = self.handles, []
+        for handle in handles:
+            attempt(
+                "draw handler",
+                lambda handle=handle: bpy.types.SpaceView3D.draw_handler_remove(handle, "WINDOW"),
+            )
+        timer, self.timer = self.timer, None
+        if timer is not None:
+            attempt("event timer", lambda: self.manager.event_timer_remove(timer))
+        cursor_owned, self._cursor_owned = self._cursor_owned, False
+        status_owned, self._status_owned = self._status_owned, False
+        if cursor_owned:
+            attempt("cursor", lambda: self.window.cursor_modal_restore())
+        if status_owned:
+            attempt("status", lambda: self.workspace.status_text_set(None))
+        attempt("redraw", lambda: _tag_redraw(self))
+        if self.cleanup_errors:
+            print("Mechanical CAD sketch cleanup:", "; ".join(self.cleanup_errors))

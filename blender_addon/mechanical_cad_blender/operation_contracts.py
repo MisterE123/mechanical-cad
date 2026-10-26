@@ -1,0 +1,183 @@
+"""Pure action/version policy over the existing strict operation validators.
+
+General and Part owners explicitly select from their exact candidate. Data
+validation does not mint guarded evidence, publish geometry, or normalize intent.
+Legacy Part validators and non-capable owners retain their v2 boundaries.
+"""
+
+from __future__ import annotations
+
+from . import geometry_result_v3, part_contracts, result_v3
+from .request_contracts import snapshot_request
+from .sketch_bridge import _require
+from .sketch_contracts_v3 import normalize_sketch_v3
+
+_PART_ACTIONS = frozenset(
+    {
+        "edge_catalog",
+        "solve_sketch",
+        "replay",
+        "canonical_snapshot",
+        "check_geometry",
+        "export_step",
+        "export_stl",
+    }
+)
+_ASSEMBLY_ACTIONS = frozenset({"assembly_replay", "assembly_check", "assembly_sample"})
+_ASSEMBLY_EXPORT_ACTIONS = frozenset({"assembly_export_step"})
+_OWNER_ROLES = frozenset({"part", "general", "rectangle"})
+
+
+def _authoring_subset(sketch):
+    # Draft completeness is not profile readiness. The strict sketch schema
+    # admits editable line/circle/arc graphs; solved output validates closure.
+    return None
+
+
+def validate_authoring_sketch(sketch):
+    """Validate the bounded draft subset and return detached, unchanged intent.
+
+    An incomplete arc need not be a ready profile. Equal-radius solved geometry
+    and native eligibility are separate contracts, never inferred here.
+    """
+    original = snapshot_request(sketch)
+    _require(type(original) is dict, "sketch must be an object")
+    version = original.get("schema_version")
+    _require(type(version) is int and version in (1, 2, 3), "unsupported sketch schema")
+    if version == 3:
+        normalized = normalize_sketch_v3(original)
+    else:
+        normalized = snapshot_request(original)
+        part_contracts._normalize_sketch(normalized)
+    _authoring_subset(normalized)
+    return original
+
+
+def validate_authoring_candidate(document):
+    """Validate the complete candidate graph without changing any authored bytes.
+
+    Reuse the qualified replay request contract for graph/schema admission. Its
+    result version here is only a validation envelope, never a selected launch.
+    Arc-empty schema3 and legacy candidates keep their normal graph semantics.
+    """
+    request = result_v3.validate_request(
+        {"protocol_version": 1, "result_version": 3, "document": document}
+    )
+    candidate = request["document"]
+    for feature in candidate["features"]:
+        if feature["kind"] == "sketch_constrained":
+            _authoring_subset(feature["sketch"])
+    return candidate
+
+
+def result_version_for(document, *, action="replay", owner_role="part"):
+    """Select one exact contract from the whole candidate, never from UI state.
+
+    Snapshots return None only for their own action. Unsupported action/source
+    combinations fail before a caller launches or mutates current state.
+    """
+    _require(type(action) is str and action in _PART_ACTIONS, "unsupported Part action")
+    _require(type(owner_role) is str and owner_role in _OWNER_ROLES, "unsupported owner role")
+    candidate = validate_authoring_candidate(document)
+    has_schema3 = any(
+        feature["kind"] == "sketch_constrained" and feature["sketch"]["schema_version"] == 3
+        for feature in candidate["features"]
+    )
+    if has_schema3:
+        _require(owner_role != "rectangle", "Rectangle authoring requires result version 2.")
+        if action in geometry_result_v3.GEOMETRY_ACTIONS | {"canonical_snapshot"}:
+            _require(owner_role == "part", "Sector geometry output requires the Part owner.")
+            geometry_result_v3.validate_source(candidate)
+            return None if action == "canonical_snapshot" else 3
+        _require(
+            action in {"solve_sketch", "replay", "edge_catalog"},
+            f"Schema-3 sources do not support {action} in the bounded arc preview.",
+        )
+        return 3
+    return None if action == "canonical_snapshot" else 2
+
+
+def result_version_for_assembly(assembly, *, action="assembly_replay"):
+    """Select from every embedded source, including unused sources.
+
+    This is source/version admission; the existing Assembly validator continues
+    to own the complete Assembly schema and action-specific evidence contract.
+    """
+    _require(type(action) is str and action in _ASSEMBLY_ACTIONS, "unsupported Assembly action")
+    candidate = snapshot_request(assembly)
+    _require(
+        type(candidate) is dict
+        and candidate.get("kind") == "assembly"
+        and type(candidate.get("assembly_schema_version")) is int
+        and candidate["assembly_schema_version"] == 1
+        and type(candidate.get("part_sources")) is list,
+        "unsupported Assembly source envelope",
+    )
+    selected = (
+        3
+        if any(
+            "support_face" in frame
+            for part in candidate.get("parts", [])
+            for frame in part.get("mate_frames", [])
+        )
+        else 2
+    )
+    for source in candidate["part_sources"]:
+        _require(type(source) is dict and "document" in source, "missing Assembly Part source")
+        # Capture is the structural source boundary, not a native readiness or
+        # solver gate. It rejects schema-3 profiles and unsupported whole graphs.
+        result_version_for(source["document"], action="canonical_snapshot")
+        if result_version_for(source["document"]) == 3 or any(
+            ("support_face" in feature or "projections" in feature or "end_face" in feature)
+            for feature in source["document"]["features"]
+        ):
+            selected = 3
+    return selected
+
+
+def validate_response(operation, response):
+    """Dispatch explicit O to exactly one strict validator, with no fallback.
+
+    Unlike production selection, the qualified low-level v3 contract may accept
+    a legacy-shaped candidate explicitly requested as v3. This data-only return
+    never changes a receiving owner's expected result version or authority.
+    """
+    request = snapshot_request(operation)
+    _require(type(request) is dict, "operation must be an object")
+    action = request.get("action", "replay")
+    _require(
+        type(action) is str
+        and action in _PART_ACTIONS | _ASSEMBLY_ACTIONS | _ASSEMBLY_EXPORT_ACTIONS,
+        "unsupported operation action",
+    )
+    if action == "edge_catalog":
+        from .edge_catalog_bridge import validate_response as validate_catalog
+
+        return validate_catalog(request, response)
+    if action == "canonical_snapshot":
+        from .part_snapshot_bridge import validate_response as validate_snapshot
+
+        _require("result_version" not in request, "Snapshots have no result-version argument.")
+        return validate_snapshot(request, response)
+    version = request.get("result_version")
+    _require(type(version) is int and version in (2, 3), "explicit typed result 2 or 3 required")
+    if action in _ASSEMBLY_EXPORT_ACTIONS:
+        from .assembly_export_bridge import validate_response as validate_assembly_export
+
+        return validate_assembly_export(request, response)
+    if action in _ASSEMBLY_ACTIONS:
+        from .assembly_bridge import validate_response as validate_assembly
+
+        return validate_assembly(request, response)
+    if version == 3:
+        if action in geometry_result_v3.GEOMETRY_ACTIONS:
+            return geometry_result_v3.validate_response(request, response)
+        _require(action in {"solve_sketch", "replay"}, "unsupported result-3 action")
+        return result_v3.validate_response(request, response)
+    if action == "solve_sketch":
+        from .sketch_action_bridge import validate_solve_response
+
+        return validate_solve_response(response, request)
+    from .part_result_bridge import validate_response as validate_part
+
+    return validate_part(request, response)

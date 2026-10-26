@@ -1,0 +1,238 @@
+{
+  "base_commit": "75c37688d146983d0b9599a750821b02412d48b3",
+  "changed": {
+    "tests/unit/test_arc_profile_incidence.py": {
+      "hunks": [
+        {
+          "new_end": 31148,
+          "new_start": 30992,
+          "original": "",
+          "replacement": "            \"ASSEMBLY_SOURCE_FIXTURE\",\n            \"ASSEMBLY_SOURCE_SHA256\",\n            \"ASSEMBLY_HARNESS_FIXTURE\",\n            \"ASSEMBLY_HARNESS_SHA256\",\n"
+        },
+        {
+          "new_end": 32844,
+          "new_start": 32807,
+          "original": "",
+          "replacement": "            \"ASSEMBLY_SOURCE_ADDED\",\n"
+        },
+        {
+          "new_end": 33409,
+          "new_start": 33326,
+          "original": "",
+          "replacement": "            \"ASSEMBLY_SOURCE_ORIGINALS\",\n            \"ASSEMBLY_HARNESS_ORIGINALS\",\n"
+        },
+        {
+          "new_end": 34151,
+          "new_start": 34068,
+          "original": "",
+          "replacement": "            \"assembly_source_originals\",\n            \"assembly_harness_originals\",\n"
+        }
+      ],
+      "original_bytes": 49595,
+      "original_sha256": "09afce10d188ad0a4462abd60c717670a3cd03f8f0009fc60793c7851d6e6646",
+      "reviewed_bytes": 49954,
+      "reviewed_sha256": "c3eea8bae4dcc5b08ebb69e200d3789d7cc4aeba7066299872f06baeb7025c44"
+    },
+    "tests/unit/test_arc_profile_native_end_cap.py": {
+      "hunks": [
+        {
+          "new_end": 50337,
+          "new_start": 42773,
+          "original": "",
+          "replacement": "ASSEMBLY_SOURCE_FIXTURE = \"tests/fixtures/assembly_v3/source_75c3768.json\"\nASSEMBLY_SOURCE_SHA256 = \"697e7c9cd6e084a4d58e81228ac92a569138f28d8d1a25193d3a59344e5e27b2\"\nASSEMBLY_SOURCE_ADDED = frozenset(\n    {\n        \"tests/blender_sector_assembly_workflow_smoke.py\",\n        \"tests/integration/test_sector_assembly_workflow.py\",\n        \"tests/unit/test_assembly_bridge_v3.py\",\n        \"tests/unit/test_assembly_sector_service_v3.py\",\n        \"tests/unit/test_assembly_workflow_ui.py\",\n    }\n)\nASSEMBLY_SOURCE_ORIGINALS = {\n    \"blender_addon/mechanical_cad_blender/assembly_bridge.py\": (\n        19166,\n        \"a464afa6b5a368b33c47ec8416965e39788243d522ddfa9dd96f7b9b868180b9\",\n    ),\n    \"blender_addon/mechanical_cad_blender/assembly_display.py\": (\n        22154,\n        \"923f8af188aeb10aa97c3af49645593abe8cb16257dc06b7a3ed9c3797b906c8\",\n    ),\n    \"blender_addon/mechanical_cad_blender/assembly_operators.py\": (\n        21135,\n        \"e2ca275d965cfa448520a6b206bc381cd780f292046e3a6ac6747c09de6b7492\",\n    ),\n    \"blender_addon/mechanical_cad_blender/assembly_state.py\": (\n        32722,\n        \"d3223cdaed9b2178167142ca3b4022f2d17da0e4fbcbfa2db4600f5a2e7637fb\",\n    ),\n    \"blender_addon/mechanical_cad_blender/assembly_ui.py\": (\n        12670,\n        \"3efb15a5057a4205cd19f67c33f3109478b8a6dd1a709786c3e685717d24c1ba\",\n    ),\n    \"blender_addon/mechanical_cad_blender/assembly_validation_model.py\": (\n        22857,\n        \"138716801be2e29ea0bb7d25c7eafc9d1c292822356aada9e3b9b29f45a3285f\",\n    ),\n    \"blender_addon/mechanical_cad_blender/guarded_operations.py\": (\n        2558,\n        \"5aa3ef7c5295038b38f80d4fe0a995c996eec3d5bfb7478a3140c8dbd4ce11f6\",\n    ),\n    \"blender_addon/mechanical_cad_blender/help_topics.py\": (\n        22231,\n        \"06851f5cb15e468e8674d4b2a19dfe3851dbe967cb000fa97ae55e9e9ec6912b\",\n    ),\n    \"blender_addon/mechanical_cad_blender/operation_contracts.py\": (\n        6768,\n        \"decc1b4ac93f3704c29cb98f9b02a8dfa6e1b2610277803c576901153395d222\",\n    ),\n    \"blender_addon/mechanical_cad_blender/part_snapshot_bridge.py\": (\n        6362,\n        \"447d4bf193c3cd7f8a3cd59c20a58c3ec3ea18630cf2b2db1c23dea8ad39bdc2\",\n    ),\n    \"src/mechanical_cad/assembly_protocol.py\": (\n        1995,\n        \"e2f15eb9838dfc3e5362e378c243c9906c45b5b403d71cd0e6901d2f867b36c8\",\n    ),\n    \"src/mechanical_cad/assembly_service.py\": (\n        16619,\n        \"2ab6263757abb12a878b124d81de01eae7dd969ea47dd20a35bc08b243b4b4c3\",\n    ),\n    \"src/mechanical_cad/backend_contract.py\": (\n        21646,\n        \"6415ac0685f1910c6cb17861c49c1e43d448ff752ab19ccb89daaba4dfb29ceb\",\n    ),\n    \"src/mechanical_cad/part_snapshot.py\": (\n        5057,\n        \"767845d5b05659a25af27f96f5670c1292211eb56d3b4f144bbaf0d8b8ecabcd\",\n    ),\n    \"src/mechanical_cad/sidecar.py\": (\n        10526,\n        \"f127e0b1afbeac17a75785d5e563046ed8d0804829562434b143b563351de5c4\",\n    ),\n    \"tests/blender_arc_owner_smoke.py\": (\n        18835,\n        \"a78ec7e3dfa86312f29eb45031e4dce5d792e59f7329056cb001306381c1945e\",\n    ),\n    \"tests/integration/test_assembly_result_v2.py\": (\n        14268,\n        \"91d2a09b06f0e9c240fc8de30f4c980c11d534f121ecba4cc20d126dad9e1c86\",\n    ),\n    \"tests/unit/test_arc_downstream_barriers.py\": (\n        24407,\n        \"ad4b02f3635ee60c46c84163442cdd486ae2b31f4580711170f3c56cf0a6f253\",\n    ),\n    \"tests/unit/test_arc_live_owner_boundary.py\": (\n        17801,\n        \"fe140a97bf5968a2a801da23e7a442a904225b57c296c56a3fa68190ddf37e66\",\n    ),\n    \"tests/unit/test_arc_operation_contracts.py\": (\n        10217,\n        \"869c27b1e0f996904fd7c817e63cf9c6e799536c4d1f5ed079bc69b23df98bab\",\n    ),\n    \"tests/unit/test_arc_part_owners.py\": (\n        25881,\n        \"6d9467426750df34cd764aa61394b0ea62a0a68d9d9dc19682ff438fa4ca9cc1\",\n    ),\n    \"tests/unit/test_assembly_bridge_v2.py\": (\n        20472,\n        \"a6851617beff8c5523db09ad35bd45c00a85b3bf15d807cec15a4c034b36de6c\",\n    ),\n    \"tests/unit/test_assembly_publication_binding.py\": (\n        6378,\n        \"5441d89c9e88cc6ff477202accdbc7210476867d75c224287a02dd978c86cffd\",\n    ),\n    \"tests/unit/test_backend_contract_server.py\": (\n        27054,\n        \"63e4046d513c97a95b1a825f2b77e923e84209655a7c41db715d993b532ec4f4\",\n    ),\n}\nASSEMBLY_HARNESS_FIXTURE = \"tests/fixtures/assembly_v3/harness_75c3768.json\"\nASSEMBLY_HARNESS_SHA256 = \"0000000000000000000000000000000000000000000000000000000000000000\"\nASSEMBLY_HARNESS_ORIGINALS = {\n    \"tests/unit/test_arc_profile_incidence.py\": (\n        49595,\n        \"09afce10d188ad0a4462abd60c717670a3cd03f8f0009fc60793c7851d6e6646\",\n    ),\n    \"tests/unit/test_arc_profile_native_end_cap.py\": (\n        163016,\n        \"6972167871875728c2cb60a2ec5e0ca0fb35abe669f5a22877e05848dbab7b89\",\n    ),\n    \"tests/unit/test_arc_sector_native_boundary_mutations.py\": (\n        39450,\n        \"35b1c5a7e762dd218e3f4eae48452247eabf93609e0228ab9f23ced051a7ad6c\",\n    ),\n    \"tests/unit/test_result_v3_dependency_boundary.py\": (\n        19034,\n        \"d894454076b2a17755717c54936dcbea69975cdf05573d344e8eb30558da1594\",\n    ),\n    \"tests/unit/test_standalone_runtime_boundary.py\": (\n        114041,\n        \"22701544a5058a03991887a3a03c17c81cbde073d19cd2148a070ceac0aceaf5\",\n    ),\n}\n\n\ndef assembly_source_originals(root):\n    \"\"\"Undo only the integrated Assembly source/test delta to exact 75c3768.\"\"\"\n    raw = (root / ASSEMBLY_SOURCE_FIXTURE).read_bytes()\n    assert hashlib.sha256(raw).hexdigest() == ASSEMBLY_SOURCE_SHA256\n    revision = json.loads(raw)\n    assert set(revision) == {\"schema\", \"base_commit\", \"added\", \"changed\"}\n    assert revision[\"schema\"] == \"assembly-v3-source-boundary-v1\"\n    assert revision[\"base_commit\"] == \"75c37688d146983d0b9599a750821b02412d48b3\"\n    assert set(revision[\"added\"]) == ASSEMBLY_SOURCE_ADDED\n    assert set(revision[\"changed\"]) == set(ASSEMBLY_SOURCE_ORIGINALS)\n    assert not ASSEMBLY_SOURCE_ADDED & ASSEMBLY_SOURCE_ORIGINALS.keys()\n    for name, entry in revision[\"added\"].items():\n        assert set(entry) == {\"bytes\", \"sha256\"}\n        assert type(entry[\"bytes\"]) is int and entry[\"bytes\"] > 0\n        data = (root / name).read_bytes()\n        assert len(data) == entry[\"bytes\"]\n        assert hashlib.sha256(data).hexdigest() == entry[\"sha256\"]\n    return ASSEMBLY_SOURCE_ADDED, {\n        name: _integration_restore_entry(\n            (root / name).read_bytes(), entry, ASSEMBLY_SOURCE_ORIGINALS[name]\n        )\n        for name, entry in revision[\"changed\"].items()\n    }\n\n\ndef assembly_harness_originals(root):\n    \"\"\"Restore five exact 75c3768 guards; normalize only this fixture's digest.\"\"\"\n    raw = (root / ASSEMBLY_HARNESS_FIXTURE).read_bytes()\n    assert hashlib.sha256(raw).hexdigest() == ASSEMBLY_HARNESS_SHA256\n    revision = json.loads(raw)\n    assert set(revision) == {\"schema\", \"base_commit\", \"changed\"}\n    assert revision[\"schema\"] == \"assembly-v3-harness-boundary-v1\"\n    assert revision[\"base_commit\"] == \"75c37688d146983d0b9599a750821b02412d48b3\"\n    assert set(revision[\"changed\"]) == set(ASSEMBLY_HARNESS_ORIGINALS)\n    restored = {}\n    for name, entry in revision[\"changed\"].items():\n        data = (root / name).read_bytes()\n        if name == \"tests/unit/test_arc_profile_native_end_cap.py\":\n            label = b\"ASSEMBLY_HARNESS_\" + b'SHA256 = \"'\n            slot = label + ASSEMBLY_HARNESS_SHA256.encode(\"ascii\") + b'\"'\n            assert data.count(label) == data.count(slot) == 1\n            data = data.replace(slot, label + b\"0\" * 64 + b'\"')\n        restored[name] = _integration_restore_entry(data, entry, ASSEMBLY_HARNESS_ORIGINALS[name])\n    return restored\n\n\n"
+        },
+        {
+          "new_end": 54638,
+          "new_start": 54590,
+          "original": "",
+          "replacement": "    _, before = assembly_source_originals(root)\n"
+        },
+        {
+          "new_end": 55718,
+          "new_start": 55617,
+          "original": "            (root / name).read_bytes(), entry, GATE_C_OWNER_SOURCE_ORIGINALS[name]\n",
+          "replacement": "            before.get(name, (root / name).read_bytes()), entry, GATE_C_OWNER_SOURCE_ORIGINALS[name]\n"
+        },
+        {
+          "new_end": 56167,
+          "new_start": 56121,
+          "original": "",
+          "replacement": "    before = assembly_harness_originals(root)\n"
+        },
+        {
+          "new_end": 56720,
+          "new_start": 56692,
+          "original": "        data = (root / name).read_bytes()\n",
+          "replacement": "        data = before[name]\n"
+        },
+        {
+          "new_end": 67807,
+          "new_start": 67750,
+          "original": "",
+          "replacement": "    _, assembly_before = assembly_source_originals(root)\n"
+        },
+        {
+          "new_end": 67897,
+          "new_start": 67859,
+          "original": "",
+          "replacement": "    before = assembly_before | before\n"
+        },
+        {
+          "new_end": 72280,
+          "new_start": 72223,
+          "original": "",
+          "replacement": "    _, assembly_before = assembly_source_originals(root)\n"
+        },
+        {
+          "new_end": 72370,
+          "new_start": 72332,
+          "original": "",
+          "replacement": "    before = assembly_before | before\n"
+        },
+        {
+          "new_end": 108029,
+          "new_start": 107969,
+          "original": "",
+          "replacement": "    _, assembly_originals = assembly_source_originals(root)\n"
+        },
+        {
+          "new_end": 108448,
+          "new_start": 108394,
+          "original": "        gate_c_originals\n",
+          "replacement": "        assembly_originals\n        | gate_c_originals\n"
+        },
+        {
+          "new_end": 111595,
+          "new_start": 111460,
+          "original": "        gate_c_originals | integration_originals | redundant_solve_source_originals(root)\n",
+          "replacement": "        assembly_originals\n        | gate_c_originals\n        | integration_originals\n        | redundant_solve_source_originals(root)\n"
+        },
+        {
+          "new_end": 112619,
+          "new_start": 112559,
+          "original": "",
+          "replacement": "    _, assembly_originals = assembly_source_originals(root)\n"
+        },
+        {
+          "new_end": 113795,
+          "new_start": 113546,
+          "original": "    restored = geometry_originals | harness_originals | live_originals\n    before = gate_c_originals | restored\n",
+          "replacement": "    restored = assembly_originals | geometry_originals | harness_originals | live_originals\n    before = (\n        assembly_originals\n        | gate_c_originals\n        | geometry_originals\n        | harness_originals\n        | live_originals\n    )\n"
+        },
+        {
+          "new_end": 119397,
+          "new_start": 119341,
+          "original": "",
+          "replacement": "    assembly_added, _ = assembly_source_originals(root)\n"
+        },
+        {
+          "new_end": 121232,
+          "new_start": 121141,
+          "original": "        not in excluded | service_added | standalone_added | gate_c_added\n",
+          "replacement": "        not in excluded | service_added | standalone_added | gate_c_added | assembly_added\n"
+        },
+        {
+          "new_end": 122887,
+          "new_start": 122820,
+          "original": "",
+          "replacement": "        ASSEMBLY_SOURCE_FIXTURE,\n        ASSEMBLY_HARNESS_FIXTURE,\n"
+        },
+        {
+          "new_end": 165420,
+          "new_start": 165268,
+          "original": "",
+          "replacement": "    outer_before = (\n        assembly_source_originals(tmp_path)[1]\n        if kind == \"source\"\n        else assembly_harness_originals(tmp_path)\n    )\n"
+        },
+        {
+          "new_end": 167308,
+          "new_start": 167235,
+          "original": "        current = (tmp_path / name).read_bytes()\n",
+          "replacement": "        current = outer_before.get(name, (tmp_path / name).read_bytes())\n"
+        },
+        {
+          "new_end": 168205,
+          "new_start": 168065,
+          "original": "        guard = tmp_path / \"tests/unit/test_arc_profile_native_end_cap.py\"\n        data, old = guard.read_bytes(), GATE_C_OWNER_HARNESS_SHA256.encode()\n",
+          "replacement": "        name = \"tests/unit/test_arc_profile_native_end_cap.py\"\n        data, old = outer_before[name], GATE_C_OWNER_HARNESS_SHA256.encode()\n"
+        },
+        {
+          "new_end": 168402,
+          "new_start": 168241,
+          "original": "        guard.write_bytes(data.replace(old, digest.encode()))\n",
+          "replacement": "        outer_before[name] = data.replace(old, digest.encode())\n        monkeypatch.setitem(globals(), \"assembly_harness_originals\", lambda _root: outer_before)\n"
+        },
+        {
+          "new_end": 175067,
+          "new_start": 171602,
+          "original": "",
+          "replacement": "\n\ndef test_assembly_integration_restores_exact_parent_and_all_historical_guards():\n    added, source = assembly_source_originals(ROOT)\n    harness = assembly_harness_originals(ROOT)\n    assert added == ASSEMBLY_SOURCE_ADDED\n    assert all(name.startswith(\"tests/\") for name in added)\n    assert not added & (source.keys() | harness.keys())\n    assert set(source) == set(ASSEMBLY_SOURCE_ORIGINALS)\n    assert set(harness) == set(ASSEMBLY_HARNESS_ORIGINALS)\n    for name, data in (source | harness).items():\n        assert (len(data), hashlib.sha256(data).hexdigest()) == (\n            ASSEMBLY_SOURCE_ORIGINALS | ASSEMBLY_HARNESS_ORIGINALS\n        )[name]\n    test_gate_c_owner_restores_exact_de70a45_then_every_unchanged_historical_layer()\n\n\ndef test_assembly_integration_rejects_every_changed_added_guard_and_fixture_byte(monkeypatch):\n    \"\"\"Mutate read observations, avoiding a full tree copy for each finite path.\"\"\"\n    read = Path.read_bytes\n    for names, function in (\n        (\n            ASSEMBLY_SOURCE_ADDED | ASSEMBLY_SOURCE_ORIGINALS.keys() | {ASSEMBLY_SOURCE_FIXTURE},\n            assembly_source_originals,\n        ),\n        (\n            ASSEMBLY_HARNESS_ORIGINALS.keys() | {ASSEMBLY_HARNESS_FIXTURE},\n            assembly_harness_originals,\n        ),\n    ):\n        for name in sorted(names):\n            target = ROOT / name\n            with monkeypatch.context() as patch:\n                patch.setattr(\n                    Path,\n                    \"read_bytes\",\n                    lambda path, target=target: read(path) + (b\"\\n\" if path == target else b\"\"),\n                )\n                with pytest.raises(AssertionError):\n                    function(ROOT)\n\n\n@pytest.mark.parametrize(\"kind\", [\"source\", \"harness\"])\n@pytest.mark.parametrize(\"mutation\", [\"equivalent\", \"schema\", \"path\", \"original\", \"hunk\"])\ndef test_assembly_integration_inner_controls_keep_independent_before_pins(\n    monkeypatch, kind, mutation\n):\n    function = globals()[\"assembly_\" + kind + \"_originals\"]\n    prefix = \"ASSEMBLY_\" + kind.upper()\n    expected = function(ROOT)\n    fixture = ROOT / globals()[prefix + \"_FIXTURE\"]\n    read = Path.read_bytes\n    original_raw = read(fixture)\n    revision = json.loads(original_raw)\n    name = next(iter(revision[\"changed\"]))\n    if mutation == \"schema\":\n        revision[\"schema\"] = \"unreviewed\"\n    elif mutation == \"path\":\n        revision[\"changed\"][\"src/mechanical_cad/kernel_ocp.py\"] = revision[\"changed\"].pop(name)\n    elif mutation == \"original\":\n        revision[\"changed\"][name][\"original_sha256\"] = \"f\" * 64\n    elif mutation == \"hunk\":\n        revision[\"changed\"][name][\"hunks\"][0][\"new_start\"] = True\n    raw = (json.dumps(revision, sort_keys=True) + \"\\n\").encode()\n    assert raw != original_raw\n    old = globals()[prefix + \"_SHA256\"]\n    digest = hashlib.sha256(raw).hexdigest()\n    guard = ROOT / \"tests/unit/test_arc_profile_native_end_cap.py\"\n\n    def observed(path):\n        if path == fixture:\n            return raw\n        data = read(path)\n        if kind == \"harness\" and path == guard:\n            assert data.count(old.encode()) == 1\n            return data.replace(old.encode(), digest.encode())\n        return data\n\n    monkeypatch.setattr(Path, \"read_bytes\", observed)\n    monkeypatch.setitem(globals(), prefix + \"_SHA256\", digest)\n    if mutation == \"equivalent\":\n        assert function(ROOT) == expected\n    else:\n        with pytest.raises(AssertionError):\n            function(ROOT)\n"
+        }
+      ],
+      "original_bytes": 163016,
+      "original_sha256": "6972167871875728c2cb60a2ec5e0ca0fb35abe669f5a22877e05848dbab7b89",
+      "reviewed_bytes": 175067,
+      "reviewed_sha256": "e44a23f85d247543ce155aa26f6bd8ce6f6dca29e5fb19bbb28c7f72f0ff78ff"
+    },
+    "tests/unit/test_arc_sector_native_boundary_mutations.py": {
+      "hunks": [
+        {
+          "new_end": 25925,
+          "new_start": 25808,
+          "original": "",
+          "replacement": "        \"tests/fixtures/assembly_v3/source_75c3768.json\",\n        \"tests/fixtures/assembly_v3/harness_75c3768.json\",\n"
+        }
+      ],
+      "original_bytes": 39450,
+      "original_sha256": "35b1c5a7e762dd218e3f4eae48452247eabf93609e0228ab9f23ced051a7ad6c",
+      "reviewed_bytes": 39567,
+      "reviewed_sha256": "df849ca558ce40780862524f08bb37068ce178a573bf3f745d4548a4744ceed0"
+    },
+    "tests/unit/test_result_v3_dependency_boundary.py": {
+      "hunks": [
+        {
+          "new_end": 2163,
+          "new_start": 2115,
+          "original": "",
+          "replacement": "    \"assembly_validation_model\": {\"result_v3\"},\n"
+        },
+        {
+          "new_end": 2927,
+          "new_start": 2876,
+          "original": "",
+          "replacement": "    \"part_snapshot_bridge\": {\"part_contracts_v3\"},\n"
+        }
+      ],
+      "original_bytes": 19034,
+      "original_sha256": "d894454076b2a17755717c54936dcbea69975cdf05573d344e8eb30558da1594",
+      "reviewed_bytes": 19133,
+      "reviewed_sha256": "42d8be8c72092c2b4ae471a3416597ff4872935e7241ee645ea085f818a99d56"
+    },
+    "tests/unit/test_standalone_runtime_boundary.py": {
+      "hunks": [
+        {
+          "new_end": 4256,
+          "new_start": 3933,
+          "original": "",
+          "replacement": "        \"ASSEMBLY_SOURCE_FIXTURE\",\n        \"ASSEMBLY_SOURCE_SHA256\",\n        \"ASSEMBLY_SOURCE_ADDED\",\n        \"ASSEMBLY_SOURCE_ORIGINALS\",\n        \"ASSEMBLY_HARNESS_FIXTURE\",\n        \"ASSEMBLY_HARNESS_SHA256\",\n        \"ASSEMBLY_HARNESS_ORIGINALS\",\n        \"assembly_source_originals\",\n        \"assembly_harness_originals\",\n"
+        },
+        {
+          "new_end": 19081,
+          "new_start": 19008,
+          "original": "",
+          "replacement": "    _, assembly_originals = namespace[\"assembly_source_originals\"](ROOT)\n"
+        },
+        {
+          "new_end": 19165,
+          "new_start": 19111,
+          "original": "        gate_c_originals\n",
+          "replacement": "        assembly_originals\n        | gate_c_originals\n"
+        }
+      ],
+      "original_bytes": 114041,
+      "original_sha256": "22701544a5058a03991887a3a03c17c81cbde073d19cd2148a070ceac0aceaf5",
+      "reviewed_bytes": 114466,
+      "reviewed_sha256": "0592651e2713e2c639e551e77ff8e64007afc7491372cfc716acb2c2d2d8637e"
+    }
+  },
+  "schema": "assembly-v3-harness-boundary-v1"
+}

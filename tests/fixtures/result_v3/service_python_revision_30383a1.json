@@ -1,0 +1,452 @@
+{
+  "schema": "result-v3-python-boundary-v1",
+  "base_commit": "30383a1bbaeae02b447bab2c37290d5f3927df8c",
+  "base_source_manifest_sha256": "75068763f9b7015183aff69202fba3db47c3beb1b18d4660bcc6744bca4f82f4",
+  "scope": "Exact reviewed21 additions and11 changed Python paths only; restore old bytes before the unchanged259-file historical digest. The digest test itself retains its original exclusion; all kernel/evidence span guards remain intact.",
+  "added": {
+    "blender_addon/mechanical_cad_blender/arc_geometry.py": {
+      "bytes": 4166,
+      "sha256": "b2017ca26300712cdaece7325fcd12fd1330d650896a5494dea56967fa1a82aa"
+    },
+    "blender_addon/mechanical_cad_blender/arc_profile_intervals.py": {
+      "bytes": 13370,
+      "sha256": "88facdee48d067c5096eab12e3195d7db57bfb831a3217a5c4a3630a29457849"
+    },
+    "blender_addon/mechanical_cad_blender/arc_profile_primitives.py": {
+      "bytes": 29605,
+      "sha256": "22994be172dae608d2f7334545c8b32a3b69e03d766d918ca6aab4361bfc81e0"
+    },
+    "blender_addon/mechanical_cad_blender/arc_profile_sector_policy.py": {
+      "bytes": 35974,
+      "sha256": "c360bd15d8949ae02b03651f933743bb34c3e52cae2acfdc70fedab8995ce429"
+    },
+    "blender_addon/mechanical_cad_blender/arc_profile_sector_source.py": {
+      "bytes": 16928,
+      "sha256": "f2eea6b9f16d5de8c6652c805847986952dc1c128353b1f2280e4f769492b6ff"
+    },
+    "blender_addon/mechanical_cad_blender/part_contracts_v3.py": {
+      "bytes": 4535,
+      "sha256": "bbb30e1d446751e4dad360d4a42a8b1fe1dddaf60eb33ee64eef6d370f9d8929"
+    },
+    "blender_addon/mechanical_cad_blender/result_v3.py": {
+      "bytes": 10912,
+      "sha256": "cf07a1c445e6b414ca8db5cb170dce62f5ebaf8e27c751289299920c5ccec59a"
+    },
+    "blender_addon/mechanical_cad_blender/sector_topology_v3.py": {
+      "bytes": 6320,
+      "sha256": "04f2e4445cce1b2a83c2e011ac191b5b2c3b8922da9adaababfeb9ab11988e72"
+    },
+    "blender_addon/mechanical_cad_blender/service_v3.py": {
+      "bytes": 5442,
+      "sha256": "43978fe53f9121777618ab094869d99f08562d304a610362fb31891d28391956"
+    },
+    "blender_addon/mechanical_cad_blender/sketch_contracts_v3.py": {
+      "bytes": 20060,
+      "sha256": "ebfb14a9823bed370df89b55d2528522b83a16e42e5d357d414551ed347e6806"
+    },
+    "src/mechanical_cad/profile_adapter_v3.py": {
+      "bytes": 5524,
+      "sha256": "ccba7aba5e733ec8c1d86f52e46dc09c9ccabdc1f82fbb3e3222f24b0e1c8606"
+    },
+    "src/mechanical_cad/result_policy_v3.py": {
+      "bytes": 2210,
+      "sha256": "f0f0e3d03af8379b78780d21279cc77a92d57e8d50e6eb2db98fec1d9722eacb"
+    },
+    "src/mechanical_cad/sketch_protocol_v3.py": {
+      "bytes": 3458,
+      "sha256": "041a028ab23f888dff5820e5bcccf16c19c30c9c236237bf153efad992d84197"
+    },
+    "src/mechanical_cad/sketch_service_v3.py": {
+      "bytes": 2120,
+      "sha256": "426b54c1e23154372a4388e9abc4003eb68754300db02f02df1f8342a421a11f"
+    },
+    "tests/integration/service_v3_owner_fakes.py": {
+      "bytes": 9386,
+      "sha256": "8aa1354b5326694c7da116937287123df3ca9244b8b258aaf5858dac60971d94"
+    },
+    "tests/integration/test_service_v3_owner_rejection.py": {
+      "bytes": 30168,
+      "sha256": "e1f14a1085c00128e0739262f90ca3c206acc056b4ad56d8d0c18ca59ad4448b"
+    },
+    "tests/unit/test_result_v3_client.py": {
+      "bytes": 27648,
+      "sha256": "f510c09ad8c0ca3a1e12c2f9c3fa3cf6fd61f0267535987fdf4ee85541b0daa8"
+    },
+    "tests/unit/test_result_v3_dependency_boundary.py": {
+      "bytes": 8228,
+      "sha256": "b2088b65fa43a562eeccb6011a1c8c04f7021824ab930ab0ce2851924de161c6"
+    },
+    "tests/unit/test_sector_dispatch_v3.py": {
+      "bytes": 25278,
+      "sha256": "8d1b88c5e268167032856b61c481534aaf909a05c2f3d584a89b49a14fb8caf3"
+    },
+    "tests/unit/test_sector_service_v3.py": {
+      "bytes": 20749,
+      "sha256": "010d1305fa1a4e04b3f8920cb4eecefec43fb615ce6e2539ea8de4474f757e6b"
+    },
+    "tests/unit/test_service_v3_lifecycle.py": {
+      "bytes": 18152,
+      "sha256": "53168254a8a4f4545911516ee763150cc49ac8ca6a99cccec15947c7ca88215f"
+    }
+  },
+  "changed": {
+    "src/mechanical_cad/backend_contract.py": {
+      "original_bytes": 17872,
+      "original_sha256": "93bf12633f57f21f0e94ba2f3ee10ed612c226dc168a00783a204e4a135ad22c",
+      "reviewed_bytes": 19017,
+      "reviewed_sha256": "d24a47c78d8e78b6ead6961d99bdba48719f48163c812066d9e2b4a19aa503ad",
+      "hunks": [
+        {
+          "new_start": 79,
+          "new_end": 398,
+          "original": "This module never imports an operation service or a native adapter. Its only\nsolver import is the pure, guard-owning module, after bounded request policy has\nselected a potentially solving action. Capabilities describe implementations,\nnot dependency availability, package versions, or authentication.\n",
+          "replacement": "This module never imports a native adapter. The legacy path imports only the\npure solver guard owner; exact result-3 solve/replay also checks the accepted\npure service marker owners. Imports follow bounded request policy. Capabilities\ndescribe implementations, not dependency availability, versions, or authentication.\n"
+        },
+        {
+          "new_start": 14830,
+          "new_end": 15736,
+          "original": "",
+          "replacement": "    if (\n        type(operation.get(\"result_version\")) is int\n        and operation[\"result_version\"] == 3\n        and operation.get(\"action\", \"replay\") in {\"solve_sketch\", \"replay\"}\n    ):\n        for name, capability in (\n            (\"profile_adapter_v3\", \"mcad.sketch-arcs/1\"),\n            (\"sketch_service_v3\", \"mcad.solve-result/3\"),\n            (\"sketch_protocol_v3\", \"mcad.part-result/3\"),\n        ):\n            try:\n                module = importlib.import_module(f\".{name}\", __package__)\n                origin = Path(_path(getattr(module, \"__file__\", None)))\n            except Exception:\n                continue\n            if origin != core / f\"{name}.py\":\n                mismatch = True\n                continue\n            marker = getattr(module, \"BACKEND_CAPABILITIES\", None)\n            if type(marker) is frozenset and capability in marker:\n                supported.add(capability)\n"
+        },
+        {
+          "new_start": 16613,
+          "new_end": 16691,
+          "original": "    \"\"\"Match the old main() common failure, including its ordinary v2 stamp.\"\"\"\n",
+          "replacement": "    \"\"\"Match main() common failure, retaining exact explicit v2/v3 stamps.\"\"\"\n"
+        },
+        {
+          "new_start": 17019,
+          "new_end": 17138,
+          "original": "        if operation[\"result_version\"] == 2:\n            response[\"result_version\"] = 2\n",
+          "replacement": "        if operation[\"result_version\"] in (2, 3):\n            response[\"result_version\"] = operation[\"result_version\"]\n"
+        },
+        {
+          "new_start": 18361,
+          "new_end": 18554,
+          "original": "",
+          "replacement": "        elif (\n            type(prepared.operation.get(\"result_version\")) is int\n            and prepared.operation[\"result_version\"] == 3\n        ):\n            response[\"result_version\"] = 3\n"
+        }
+      ]
+    },
+    "src/mechanical_cad/engine.py": {
+      "original_bytes": 10179,
+      "original_sha256": "319cd0f39d0b8571ae762b96627c4189beffe6e21d65198cd59833bd5e300dcf",
+      "reviewed_bytes": 14546,
+      "reviewed_sha256": "0628f2cc84c35fa2d7198da747e3265df21d8fb0a2e7820d3115d5e4f2cc33ab",
+      "hunks": [
+        {
+          "new_start": 1390,
+          "new_end": 1514,
+          "original": "",
+          "replacement": "    def sector_profile(self, sketch: Any) -> Any: ...\n    def extrude_sector(self, profile: Any, length: float) -> Any: ...\n"
+        },
+        {
+          "new_start": 4897,
+          "new_end": 7854,
+          "original": "",
+          "replacement": "def _sketch_output_v3(feature, values, kernel, item):\n    from .profile_adapter_v3 import sketch_output_v3\n\n    return sketch_output_v3(feature, values, kernel, item, legacy_output=_sketch_output)\n\n\ndef _extrude_output_v3(output, profile, length, kernel):\n    if (\n        isinstance(output, SketchOutput)\n        and isinstance(output.profile, AvailableProfile)\n        and output.profile.region_kind == \"curve_loop\"\n    ):\n        from .profile_adapter_v3 import sector_native_call\n\n        return sector_native_call(kernel.extrude_sector, profile, length)\n    return kernel.extrude(profile, length)\n\n\ndef _is_curve_loop_output(output):\n    return (\n        isinstance(output, SketchOutput)\n        and isinstance(output.profile, AvailableProfile)\n        and output.profile.region_kind == \"curve_loop\"\n    )\n\n\ndef _finalize_sector_meshes_v3(pending, kernel, linear_deflection, results, shapes, outputs):\n    \"\"\"Display only after the retained checked sector continuation has finished.\"\"\"\n    for feature_id, shape in pending:\n        item = results[feature_id]\n        if item[\"status\"] != \"ok\":\n            continue\n        try:\n            item[\"mesh\"] = kernel.tessellate(shape, linear_deflection=linear_deflection)\n        except Exception as exc:\n            item.update(status=\"failed\", stats=None, mesh=None, topology=[], output=None)\n            if isinstance(exc, CADException) and exc.code == \"profile_unavailable\":\n                item[\"status\"] = \"blocked\"\n            item[\"error\"] = (\n                exc.to_dict()\n                if isinstance(exc, CADException)\n                else {\n                    \"code\": \"kernel_error\",\n                    \"message\": f\"{feature_id}: {type(exc).__name__}: {exc}\",\n                }\n            )\n            shapes.pop(feature_id, None)\n            outputs.pop(feature_id, None)\n            # The admitted arc graph has only this profile and at most one\n            # direct solid. Walk topological insertion order so no provisional\n            # descendant remains usable after an upstream display failure.\n            for descendant in results.values():\n                blocked_by = [\n                    target\n                    for target in descendant[\"inputs\"].values()\n                    if results[target][\"status\"] != \"ok\"\n                ]\n                if blocked_by:\n                    descendant.update(\n                        status=\"blocked\",\n                        stats=None,\n                        mesh=None,\n                        topology=[],\n                        output=None,\n                        resolved_params={},\n                        error={\n                            \"code\": \"upstream_failed\",\n                            \"message\": f\"Waiting for valid input: {', '.join(blocked_by)}.\",\n                        },\n                    )\n                    shapes.pop(descendant[\"id\"], None)\n                    outputs.pop(descendant[\"id\"], None)\n\n\n"
+        },
+        {
+          "new_start": 8349,
+          "new_end": 8606,
+          "original": "    validate_result_version(document, result_version)\n",
+          "replacement": "    is_v3 = type(result_version) is int and result_version == 3\n    if is_v3:\n        from .result_policy_v3 import validate_replay_v3\n\n        validate_replay_v3(document, result_version)\n    else:\n        validate_result_version(document, result_version)\n"
+        },
+        {
+          "new_start": 9074,
+          "new_end": 9106,
+          "original": "",
+          "replacement": "    deferred_sector_meshes = []\n"
+        },
+        {
+          "new_start": 9500,
+          "new_end": 9541,
+          "original": "        if result_version == 2:\n",
+          "replacement": "        if result_version == 2 or is_v3:\n"
+        },
+        {
+          "new_start": 10655,
+          "new_end": 10872,
+          "original": "                evaluated = _sketch_output(feature, values, kernel, item)\n",
+          "replacement": "                evaluated = (\n                    _sketch_output_v3(feature, values, kernel, item)\n                    if is_v3\n                    else _sketch_output(feature, values, kernel, item)\n                )\n"
+        },
+        {
+          "new_start": 11172,
+          "new_end": 11561,
+          "original": "                shape = kernel.extrude(inputs[\"profile\"], params[\"length\"])\n",
+          "replacement": "                shape = (\n                    _extrude_output_v3(\n                        outputs[feature.inputs[\"profile\"]],\n                        inputs[\"profile\"],\n                        params[\"length\"],\n                        kernel,\n                    )\n                    if is_v3\n                    else kernel.extrude(inputs[\"profile\"], params[\"length\"])\n                )\n"
+        },
+        {
+          "new_start": 12449,
+          "new_end": 12928,
+          "original": "            item[\"mesh\"] = kernel.tessellate(shape, linear_deflection=linear_deflection)\n",
+          "replacement": "            if is_v3 and (\n                (feature.kind == \"sketch_constrained\" and _is_curve_loop_output(evaluated))\n                or (\n                    feature.kind == \"extrude\"\n                    and _is_curve_loop_output(outputs[feature.inputs[\"profile\"]])\n                )\n            ):\n                deferred_sector_meshes.append((feature.id, shape))\n            else:\n                item[\"mesh\"] = kernel.tessellate(shape, linear_deflection=linear_deflection)\n"
+        },
+        {
+          "new_start": 13257,
+          "new_end": 13302,
+          "original": "            if result_version == 2:\n",
+          "replacement": "            if result_version == 2 or is_v3:\n"
+        },
+        {
+          "new_start": 13856,
+          "new_end": 14021,
+          "original": "",
+          "replacement": "    if deferred_sector_meshes:\n        _finalize_sector_meshes_v3(\n            deferred_sector_meshes, kernel, linear_deflection, results, shapes, outputs\n        )\n"
+        },
+        {
+          "new_start": 14416,
+          "new_end": 14503,
+          "original": "    if result_version == 2:\n        result[\"result_version\"] = 2\n",
+          "replacement": "    if result_version == 2 or is_v3:\n        result[\"result_version\"] = result_version\n"
+        }
+      ]
+    },
+    "src/mechanical_cad/sidecar.py": {
+      "original_bytes": 9317,
+      "original_sha256": "89df8ba643ee609a51f2c237889699c59cdf3f18bad12626866b6addbd0f89ac",
+      "reviewed_bytes": 10301,
+      "reviewed_sha256": "ae6180f7ff15efe54cb8a50db1e80349a58f940f7a00d3aa51dcd0c1e12d91e3",
+      "hunks": [
+        {
+          "new_start": 1673,
+          "new_end": 2362,
+          "original": "",
+          "replacement": "    if (\n        \"kind\" not in request\n        and type(request.get(\"result_version\")) is int\n        and request[\"result_version\"] == 3\n    ):\n        action = request.get(\"action\", \"replay\")\n        if type(action) is not str or action not in {\"solve_sketch\", \"replay\"} or \"kind\" in request:\n            raise CADException(\n                \"invalid_action\", \"Result 3 supports only Solve Sketch and Part replay.\"\n            )\n        from .sketch_protocol_v3 import process_replay_request_v3, process_sketch_request_v3\n\n        return (\n            process_sketch_request_v3(request)\n            if action == \"solve_sketch\"\n            else process_replay_request_v3(request)\n        )\n"
+        },
+        {
+          "new_start": 8276,
+          "new_end": 8513,
+          "original": "                if needs_numeric_policy(request):\n",
+          "replacement": "                if (\n                    \"kind\" not in request\n                    and type(request.get(\"result_version\")) is int\n                    and request[\"result_version\"] == 3\n                ) or needs_numeric_policy(request):\n"
+        },
+        {
+          "new_start": 9905,
+          "new_end": 10099,
+          "original": "        if request[\"result_version\"] == 2:\n            response[\"result_version\"] = 2\n",
+          "replacement": "        if request[\"result_version\"] == 2 or (\n            request[\"result_version\"] == 3 and \"kind\" not in request\n        ):\n            response[\"result_version\"] = request[\"result_version\"]\n"
+        }
+      ]
+    },
+    "tests/integration/test_backend_contract_process.py": {
+      "original_bytes": 17529,
+      "original_sha256": "29e81c35339a1886b82187eaee9f29534e1edde581776c64d04c3ede2b95076c",
+      "reviewed_bytes": 20314,
+      "reviewed_sha256": "a0e243eca2971e51ce48709709b1c36ef3113d9d78c96c356ae92848d0dfa292",
+      "hunks": [
+        {
+          "new_start": 17529,
+          "new_end": 20314,
+          "original": "",
+          "replacement": "\n\ndef sector_pre_service_fixtures():\n    \"\"\"Exact captures from the committed, Git-free pre-service source/runtime.\"\"\"\n    directory = ROOT / \"tests/fixtures/result_v3/legacy_30383a1\"\n    raw = (directory / \"manifest.json\").read_bytes()\n    assert (\n        hashlib.sha256(raw).hexdigest()\n        == \"d75cc45cb7010dfcea4cae6b06ce77bd8e983bc4f474b83d8388b414d390a50d\"\n    )\n    return directory, json.loads(raw)\n\n\ndef sector_pre_service_script(directory, manifest):\n    \"\"\"Reuse this differential harness with both frozen dispatch-owning modules.\n\n    Restoring only the sidecar would accidentally compare two callers of the\n    changed engine. The unchanged mathematical/native leaves remain protected\n    separately by exact-source guards; no source Git is needed in an archive.\n    \"\"\"\n    sources = {}\n    for name, entry in manifest[\"sources\"].items():\n        raw = (directory / entry[\"fixture\"]).read_bytes()\n        assert hashlib.sha256(raw).hexdigest() == entry[\"sha256\"]\n        sources[name] = raw.decode(\"utf-8\")\n    return (\n        \"import sys, types\\n\"\n        \"engine = types.ModuleType('mechanical_cad.engine')\\n\"\n        \"engine.__package__ = 'mechanical_cad'\\n\"\n        \"sys.modules[engine.__name__] = engine\\n\"\n        f\"exec(compile({sources['engine']!r}, 'pre_service_engine.py', 'exec'), engine.__dict__)\\n\"\n        \"__package__ = 'mechanical_cad'\\n\"\n        f\"exec(compile({sources['sidecar']!r}, 'pre_service_sidecar.py', 'exec'))\\n\"\n    )\n\n\n@pytest.mark.parametrize(\n    \"case\",\n    [\n        pytest.param(\n            case,\n            id=case[\"name\"],\n            marks=() if case[\"no_site\"] else (pytest.mark.kernel,),\n        )\n        for case in sector_pre_service_fixtures()[1][\"cases\"]\n    ],\n)\ndef test_exact_pre_service_request_stdout_exit_and_source_differential(case):\n    directory, manifest = sector_pre_service_fixtures()\n    stored = (directory / (case[\"name\"] + \".request.txt\")).read_bytes()\n    assert hashlib.sha256(stored).hexdigest() == case[\"stored_request_sha256\"]\n    raw = stored + b\" \" * case[\"trailing_spaces\"]\n    assert len(raw) == case[\"request_bytes\"]\n    assert hashlib.sha256(raw).hexdigest() == case[\"request_sha256\"]\n    expected = (directory / (case[\"name\"] + \".stdout.txt\")).read_bytes()\n    assert hashlib.sha256(expected).hexdigest() == case[\"stdout_sha256\"]\n    if not case[\"no_site\"]:\n        pytest.importorskip(\"OCP\")\n        pytest.importorskip(\"slvs\")\n    current, _ = run(raw=raw.decode(\"utf-8\"), no_site=case[\"no_site\"])\n    original, _ = run(\n        raw=raw.decode(\"utf-8\"),\n        no_site=case[\"no_site\"],\n        script=sector_pre_service_script(directory, manifest),\n    )\n    assert current.returncode == original.returncode == case[\"returncode\"]\n    assert current.stdout == original.stdout == expected\n"
+        }
+      ]
+    },
+    "tests/integration/test_versioned_sketch_service.py": {
+      "original_bytes": 17862,
+      "original_sha256": "c56d10b93a30f8b5663e0cdea81f961d0a400cd5133d10b30355b8b065b3be00",
+      "reviewed_bytes": 18812,
+      "reviewed_sha256": "9611a396a5ba1176da5249e68264e9d366cc097b7940956763fe691e7dfc4128",
+      "hunks": [
+        {
+          "new_start": 8386,
+          "new_end": 8462,
+          "original": "@pytest.mark.parametrize(\"version\", [None, False, True, 0, 3, \"2\", [], {}])\n",
+          "replacement": "@pytest.mark.parametrize(\"version\", [None, False, True, 0, 4, \"2\", [], {}])\n"
+        },
+        {
+          "new_start": 8767,
+          "new_end": 9717,
+          "original": "",
+          "replacement": "\n\ndef test_explicit_three_replays_the_same_existing_typed_document():\n    candidate = document()\n    before = candidate.to_json()\n    req = {\"protocol_version\": 1, \"document\": candidate.to_dict(), \"result_version\": 3}\n    original = copy.deepcopy(req)\n    response = process_request(req)\n    assert response[\"ok\"] and response[\"result_version\"] == 3\n    assert response[\"input_fingerprint\"] == input_fingerprint(req)\n    assert response[\"result\"][\"result_version\"] == 3\n    feature = response[\"result\"][\"features\"][0]\n    assert feature[\"status\"] == \"ok\"\n    assert feature[\"sketch\"][\"status\"] == \"okay\"\n    assert feature[\"sketch\"][\"solved\"][\"schema_version\"] == 2\n    assert feature[\"sketch\"][\"dimensions\"] == {\"size\": 7.5}\n    assert feature[\"output\"][\"profile\"] == {\"state\": \"available\", \"region_kind\": \"circle\"}\n    assert feature[\"mesh\"][\"vertices\"] and feature[\"mesh\"][\"triangles\"]\n    assert candidate.to_json() == before and req == original\n"
+        }
+      ]
+    },
+    "tests/unit/test_arc_profile_arc_membership.py": {
+      "original_bytes": 30175,
+      "original_sha256": "e7a0d76e32496e81bbd5c6825f2c3e30b375c0fb339c79b89d67fa64d9af9e2d",
+      "reviewed_bytes": 31095,
+      "reviewed_sha256": "075dad85633893ddf9baa1982fb13d7e40cc40c1fa1e46b5b96dc2cd779362ef",
+      "hunks": [
+        {
+          "new_start": 24342,
+          "new_end": 24505,
+          "original": "    # Reviewed exact-path extension for the bounded native adapter only.\n    # Every other classifier/service/runtime consumer and every add-on stay closed.\n",
+          "replacement": "    # Reviewed exact paths: native adapter, new pure v3 adapter and dormant\n    # client math/validation leaves. All existing runtime/owner importers stay closed.\n"
+        },
+        {
+          "new_start": 26153,
+          "new_end": 26924,
+          "original": "",
+          "replacement": "        },\n        ROOT / \"src/mechanical_cad/profile_adapter_v3.py\": {\"arc_profile_sector\"},\n        ROOT / \"blender_addon/mechanical_cad_blender/arc_profile_intervals.py\": {\n            \"arc_profile_primitives\"\n        },\n        ROOT / \"blender_addon/mechanical_cad_blender/arc_profile_sector_source.py\": {\n            \"arc_profile_primitives\"\n        },\n        ROOT / \"blender_addon/mechanical_cad_blender/arc_profile_sector_policy.py\": {\n            \"arc_profile_primitives\",\n            \"arc_profile_intervals\",\n            \"arc_profile_sector_source\",\n        },\n        ROOT / \"blender_addon/mechanical_cad_blender/sketch_contracts_v3.py\": {\n            \"arc_profile_primitives\",\n            \"arc_profile_sector_source\",\n            \"arc_profile_sector_policy\",\n"
+        },
+        {
+          "new_start": 29747,
+          "new_end": 29984,
+          "original": "                if source in {ROOT / \"src/mechanical_cad\" / f\"{leaf}.py\" for leaf in leaves}:\n",
+          "replacement": "                if source in {\n                    ROOT / package / f\"{leaf}.py\"\n                    for package in (\"src/mechanical_cad\", \"blender_addon/mechanical_cad_blender\")\n                    for leaf in leaves\n                }:\n"
+        }
+      ]
+    },
+    "tests/unit/test_arc_profile_incidence.py": {
+      "original_bytes": 43004,
+      "original_sha256": "654787a7e007ecccbf6e2de006b185460f319375397a5bd229a2a0a1b17bf824",
+      "reviewed_bytes": 43865,
+      "reviewed_sha256": "103193a9998fe4efacee886935a2855a6474abf6ef2ad81e30a07ae9420f6510",
+      "hunks": [
+        {
+          "new_start": 41572,
+          "new_end": 42364,
+          "original": "",
+          "replacement": "    # Gate4 adds only the exact independently reviewed service-dispatch delta.\n    # Its companion boundary test reverses every pinned hunk to the original\n    # bytes. No canonical, solver, native-policy or live-owner exception exists.\n    dispatch_raw = (ROOT / \"tests/fixtures/result_v3/dispatch_extension_30383a1.json\").read_bytes()\n    assert (\n        hashlib.sha256(dispatch_raw).hexdigest()\n        == \"4eed9a50153d2c4b3d0ea8fda5e48cd378e050287ca374241b56ee0481b497c8\"\n    )\n    dispatch = json.loads(dispatch_raw)[\"files\"]\n    assert set(dispatch) == {\n        \"src/mechanical_cad/engine.py\",\n        \"src/mechanical_cad/sidecar.py\",\n        \"src/mechanical_cad/backend_contract.py\",\n    }\n    assert all(hashes[path] == entry[\"original_sha256\"] for path, entry in dispatch.items())\n"
+        },
+        {
+          "new_start": 42380,
+          "new_end": 42524,
+          "original": "        hashlib.sha256((ROOT / path).read_bytes()).hexdigest() == expected\n",
+          "replacement": "        hashlib.sha256((ROOT / path).read_bytes()).hexdigest()\n        == (dispatch[path][\"reviewed_sha256\"] if path in dispatch else expected)\n"
+        }
+      ]
+    },
+    "tests/unit/test_arc_profile_primitives.py": {
+      "original_bytes": 27989,
+      "original_sha256": "36a0aea1b261028dcd888c29da49192f323829c936577b2c33d8a189ecf8ad6f",
+      "reviewed_bytes": 28909,
+      "reviewed_sha256": "e814a6fa98c41dc541ed33c64767a6c8b50483a50597e88e92f6649f6e4f9e56",
+      "hunks": [
+        {
+          "new_start": 21104,
+          "new_end": 21267,
+          "original": "    # Reviewed exact-path extension for the bounded native adapter only.\n    # Every other classifier/service/runtime consumer and every add-on stay closed.\n",
+          "replacement": "    # Reviewed exact paths: native adapter, new pure v3 adapter and dormant\n    # client math/validation leaves. All existing runtime/owner importers stay closed.\n"
+        },
+        {
+          "new_start": 22915,
+          "new_end": 23686,
+          "original": "",
+          "replacement": "        },\n        ROOT / \"src/mechanical_cad/profile_adapter_v3.py\": {\"arc_profile_sector\"},\n        ROOT / \"blender_addon/mechanical_cad_blender/arc_profile_intervals.py\": {\n            \"arc_profile_primitives\"\n        },\n        ROOT / \"blender_addon/mechanical_cad_blender/arc_profile_sector_source.py\": {\n            \"arc_profile_primitives\"\n        },\n        ROOT / \"blender_addon/mechanical_cad_blender/arc_profile_sector_policy.py\": {\n            \"arc_profile_primitives\",\n            \"arc_profile_intervals\",\n            \"arc_profile_sector_source\",\n        },\n        ROOT / \"blender_addon/mechanical_cad_blender/sketch_contracts_v3.py\": {\n            \"arc_profile_primitives\",\n            \"arc_profile_sector_source\",\n            \"arc_profile_sector_policy\",\n"
+        },
+        {
+          "new_start": 26509,
+          "new_end": 26746,
+          "original": "                if source in {ROOT / \"src/mechanical_cad\" / f\"{leaf}.py\" for leaf in leaves}:\n",
+          "replacement": "                if source in {\n                    ROOT / package / f\"{leaf}.py\"\n                    for package in (\"src/mechanical_cad\", \"blender_addon/mechanical_cad_blender\")\n                    for leaf in leaves\n                }:\n"
+        }
+      ]
+    },
+    "tests/unit/test_arc_sector_dependency_boundary.py": {
+      "original_bytes": 4667,
+      "original_sha256": "1d5e0f2fb33592859ddf3183400b674a26b0c3d79e29f4a54946666989ac12dd",
+      "reviewed_bytes": 6249,
+      "reviewed_sha256": "7b2db041ec0ebdb42bb91b97189ff22a40d074d5d2f8f139b7ee4011442095b5",
+      "hunks": [
+        {
+          "new_start": 0,
+          "new_end": 78,
+          "original": "\"\"\"Exact-path dependency guards for the isolated pure sector milestone.\"\"\"\n",
+          "replacement": "\"\"\"Exact-path guards for native sectors and the dormant v3 leaf extension.\"\"\"\n"
+        },
+        {
+          "new_start": 2432,
+          "new_end": 3215,
+          "original": "",
+          "replacement": "        \"src/mechanical_cad/profile_adapter_v3.py\": \"from .arc_profile_sector import classify_sector\\n\",\n        \"blender_addon/mechanical_cad_blender/arc_profile_intervals.py\": (\n            \"from .arc_profile_primitives import Dyadic\\n\"\n        ),\n        \"blender_addon/mechanical_cad_blender/arc_profile_sector_source.py\": (\n            \"from .arc_profile_primitives import Dyadic\\n\"\n        ),\n        \"blender_addon/mechanical_cad_blender/arc_profile_sector_policy.py\": (\n            \"from . import arc_profile_primitives, arc_profile_intervals, arc_profile_sector_source\\n\"\n        ),\n        \"blender_addon/mechanical_cad_blender/sketch_contracts_v3.py\": (\n            \"from . import arc_profile_primitives, arc_profile_sector_source, arc_profile_sector_policy\\n\"\n        ),\n"
+        },
+        {
+          "new_start": 3260,
+          "new_end": 3388,
+          "original": "        (guarded_root / name).write_text(source)\n",
+          "replacement": "        target = guarded_root / name\n        target.parent.mkdir(parents=True, exist_ok=True)\n        target.write_text(source)\n"
+        },
+        {
+          "new_start": 5279,
+          "new_end": 5925,
+          "original": "",
+          "replacement": "        (\"src/mechanical_cad/profile_adapter_v3.py\", \"arc_profile_native_plan\"),\n        (\"src/mechanical_cad/profile_adapter_v3.py\", \"arc_profile_native_evidence\"),\n        (\"blender_addon/mechanical_cad_blender/sketch_contracts_v3.py\", \"arc_profile_incidence\"),\n        (\"blender_addon/mechanical_cad_blender/sketch_contracts_v3.py\", \"arc_profile_native_plan\"),\n        (\n            \"blender_addon/mechanical_cad_blender/sketch_contracts_v3.py\",\n            \"arc_profile_native_evidence\",\n        ),\n        (\n            \"blender_addon/mechanical_cad_blender/arc_profile_sector_source.py\",\n            \"arc_profile_sector_policy\",\n        ),\n"
+        },
+        {
+          "new_start": 6034,
+          "new_end": 6169,
+          "original": "    (guarded_root / path).write_text(f\"from . import {leaf}\\n\")\n",
+          "replacement": "    target = guarded_root / path\n    target.parent.mkdir(parents=True, exist_ok=True)\n    target.write_text(f\"from . import {leaf}\\n\")\n"
+        }
+      ]
+    },
+    "tests/unit/test_arc_sector_native_boundary_mutations.py": {
+      "original_bytes": 29162,
+      "original_sha256": "642b8e809fd1f1eadace0d143eac095dd925759f16ce2577ca1c5b26e27ef2df",
+      "reviewed_bytes": 30549,
+      "reviewed_sha256": "47e7bc77dd7096cbfc6cc669a8287d274a56ac8b0531f908f609e985fd3ddca4",
+      "hunks": [
+        {
+          "new_start": 22519,
+          "new_end": 23013,
+          "original": "",
+          "replacement": "    dispatch_path = \"tests/fixtures/result_v3/dispatch_extension_30383a1.json\"\n    dispatch_bytes = (ROOT / dispatch_path).read_bytes()\n    assert hashlib.sha256(dispatch_bytes).hexdigest() == (\n        \"4eed9a50153d2c4b3d0ea8fda5e48cd378e050287ca374241b56ee0481b497c8\"\n    )\n    dispatch = json.loads(dispatch_bytes)[\"files\"]\n    assert set(dispatch) == {\n        \"src/mechanical_cad/engine.py\",\n        \"src/mechanical_cad/sidecar.py\",\n        \"src/mechanical_cad/backend_contract.py\",\n    }\n"
+        },
+        {
+          "new_start": 23307,
+          "new_end": 23895,
+          "original": "        assert hashlib.sha256(data).hexdigest() == expected\n",
+          "replacement": "        original = data\n        if relative in dispatch:\n            entry = dispatch[relative]\n            assert hashlib.sha256(data).hexdigest() == entry[\"reviewed_sha256\"]\n            for hunk in reversed(entry[\"hunks\"]):\n                start, end = hunk[\"new_start\"], hunk[\"new_end\"]\n                assert original[start:end] == hunk[\"replacement\"].encode(\"utf-8\")\n                original = original[:start] + hunk[\"original\"].encode(\"utf-8\") + original[end:]\n            assert entry[\"original_sha256\"] == expected\n        assert hashlib.sha256(original).hexdigest() == expected\n"
+        },
+        {
+          "new_start": 23997,
+          "new_end": 24038,
+          "original": "",
+          "replacement": "        (dispatch_path, dispatch_bytes),\n"
+        },
+        {
+          "new_start": 24455,
+          "new_end": 24779,
+          "original": "",
+          "replacement": "    # A mutation rejection is meaningful only if this exact clean fixture is\n    # first admitted. Keep all original 104 per-file mutation assertions below.\n    _extract_function(\n        \"test_arc_profile_incidence.py\",\n        INCIDENCE_GUARD,\n        {\"ROOT\": root, \"ast\": ast, \"hashlib\": hashlib, \"json\": json},\n    )()\n"
+        }
+      ]
+    },
+    "tests/unit/test_backend_contract_server.py": {
+      "original_bytes": 25854,
+      "original_sha256": "dbf64e462aca88ccd2f72e5bf365f377acc2e8a1f67e687d934fb4495d2c4548",
+      "reviewed_bytes": 26791,
+      "reviewed_sha256": "659dbd6f823e48b9d3dab03fa92d338180bac9d80aa16b0ad835c24cfd66e7a7",
+      "hunks": [
+        {
+          "new_start": 7219,
+          "new_end": 7308,
+          "original": "def test_arc_family_minimum_is_explicit_and_never_advertised(action):\n",
+          "replacement": "def test_arc_family_minimum_admits_only_complete_supported_actions(action, monkeypatch):\n"
+        },
+        {
+          "new_start": 8517,
+          "new_end": 8657,
+          "original": "",
+          "replacement": "    calls = []\n    monkeypatch.setattr(\n        sidecar, \"_process_legacy_request\", lambda value: calls.append(value) or {\"ok\": True}\n    )\n"
+        },
+        {
+          "new_start": 8705,
+          "new_end": 9320,
+          "original": "    assert response[\"error\"][\"code\"] == \"backend_capability_missing\"\n    assert set(response[\"backend_receipt\"][\"confirmed_capabilities\"]) == expected & {\n        BASELINE,\n        GUARD,\n    }\n    assert response[\"backend_receipt\"][\"phase\"] == \"rejected_before_dispatch\"\n",
+          "replacement": "    if action in {\"solve_sketch\", \"replay\"}:\n        assert calls == [operation]\n        assert response[\"backend_receipt\"][\"phase\"] == \"dispatched\"\n        assert set(response[\"backend_receipt\"][\"confirmed_capabilities\"]) == expected\n        assert response[\"result_version\"] == 3\n    else:\n        assert calls == []\n        assert response[\"error\"][\"code\"] == \"backend_capability_missing\"\n        assert set(response[\"backend_receipt\"][\"confirmed_capabilities\"]) == expected & {\n            BASELINE,\n            GUARD,\n        }\n        assert response[\"backend_receipt\"][\"phase\"] == \"rejected_before_dispatch\"\n"
+        },
+        {
+          "new_start": 24961,
+          "new_end": 25057,
+          "original": "def test_primitive_result_three_still_requires_complete_arc_result_family(action):\n",
+          "replacement": "def test_primitive_result_three_still_requires_complete_arc_result_family(action, monkeypatch):\n"
+        },
+        {
+          "new_start": 25575,
+          "new_end": 25715,
+          "original": "",
+          "replacement": "    calls = []\n    monkeypatch.setattr(\n        sidecar, \"_process_legacy_request\", lambda value: calls.append(value) or {\"ok\": True}\n    )\n"
+        },
+        {
+          "new_start": 25763,
+          "new_end": 26200,
+          "original": "    assert response[\"error\"][\"code\"] == \"backend_capability_missing\"\n    assert response[\"backend_receipt\"][\"confirmed_capabilities\"] == [BASELINE, GUARD]\n",
+          "replacement": "    if action in {\"solve_sketch\", \"replay\"}:\n        assert calls == [operation]\n        assert response[\"backend_receipt\"][\"phase\"] == \"dispatched\"\n        assert response[\"backend_receipt\"][\"confirmed_capabilities\"] == sorted(minimum)\n    else:\n        assert calls == []\n        assert response[\"error\"][\"code\"] == \"backend_capability_missing\"\n        assert response[\"backend_receipt\"][\"confirmed_capabilities\"] == [BASELINE, GUARD]\n"
+        }
+      ]
+    }
+  }
+}

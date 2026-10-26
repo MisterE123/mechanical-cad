@@ -1,0 +1,9 @@
+{
+  "baseline_commit": "a05626ef841478bbdaabe5ac3c58e7795a6be375",
+  "source_path": "src/mechanical_cad/arc_profile_primitives.py",
+  "fixture": "arc_profile_primitives-a05626e.py.txt",
+  "source_command": "git show a05626ef841478bbdaabe5ac3c58e7795a6be375:src/mechanical_cad/arc_profile_primitives.py",
+  "sha256": "ebd60e4dd35c98459dd6d688e81322f88adcb1766c0864e16d10b9defea738bd",
+  "size_bytes": 29558,
+  "purpose": "Byte-exact qualified primitive source for the sealed hard-ceiling/default-only resource revision. Never imported or executed."
+}

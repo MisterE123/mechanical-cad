@@ -1,0 +1,1 @@
+{"protocol_version":1,"kind":"assembly","assembly_protocol_version":1,"action":"assembly_check","result_version":2,"assembly":null,"coordinates":{},"requirements":[]}

@@ -1,0 +1,81 @@
+{
+  "error": {
+    "message": "successful solve reports failed constraints",
+    "type": "ValueError"
+  },
+  "modules": {
+    "_gate_bound_geometry_client.arc_geometry": {
+      "origin": "/workspace/scratch/e704d81da019/recovery_20261019/sector_service_source_cc130e6/source/blender_addon/mechanical_cad_blender/arc_geometry.py",
+      "sha256": "b2017ca26300712cdaece7325fcd12fd1330d650896a5494dea56967fa1a82aa"
+    },
+    "_gate_bound_geometry_client.arc_profile_intervals": {
+      "origin": "/workspace/scratch/e704d81da019/recovery_20261019/sector_service_source_cc130e6/source/blender_addon/mechanical_cad_blender/arc_profile_intervals.py",
+      "sha256": "88facdee48d067c5096eab12e3195d7db57bfb831a3217a5c4a3630a29457849"
+    },
+    "_gate_bound_geometry_client.arc_profile_primitives": {
+      "origin": "/workspace/scratch/e704d81da019/recovery_20261019/sector_service_source_cc130e6/source/blender_addon/mechanical_cad_blender/arc_profile_primitives.py",
+      "sha256": "22994be172dae608d2f7334545c8b32a3b69e03d766d918ca6aab4361bfc81e0"
+    },
+    "_gate_bound_geometry_client.arc_profile_sector_policy": {
+      "origin": "/workspace/scratch/e704d81da019/recovery_20261019/sector_service_source_cc130e6/source/blender_addon/mechanical_cad_blender/arc_profile_sector_policy.py",
+      "sha256": "c360bd15d8949ae02b03651f933743bb34c3e52cae2acfdc70fedab8995ce429"
+    },
+    "_gate_bound_geometry_client.arc_profile_sector_source": {
+      "origin": "/workspace/scratch/e704d81da019/recovery_20261019/sector_service_source_cc130e6/source/blender_addon/mechanical_cad_blender/arc_profile_sector_source.py",
+      "sha256": "f2eea6b9f16d5de8c6652c805847986952dc1c128353b1f2280e4f769492b6ff"
+    },
+    "_gate_bound_geometry_client.geometry_evidence": {
+      "origin": "/workspace/scratch/e704d81da019/recovery_20261019/sector_service_source_cc130e6/source/blender_addon/mechanical_cad_blender/geometry_evidence.py",
+      "sha256": "7b9899f7df573a7e3e2380fdc5ff786abfd4da89679d5c6e4e0088f14453d5f9"
+    },
+    "_gate_bound_geometry_client.geometry_result_v3": {
+      "origin": "/workspace/scratch/e704d81da019/recovery_20261019/sector_service_source_cc130e6/source/blender_addon/mechanical_cad_blender/geometry_result_v3.py",
+      "sha256": "eaa59c6be82fce7561792e412160306852f9de8e882d661f2d21b567c10760fd"
+    },
+    "_gate_bound_geometry_client.part_contracts": {
+      "origin": "/workspace/scratch/e704d81da019/recovery_20261019/sector_service_source_cc130e6/source/blender_addon/mechanical_cad_blender/part_contracts.py",
+      "sha256": "f5d15902d89e27b4a4c6badf2cc48bd5a1b55372ea3bf157f70584eb67aa1846"
+    },
+    "_gate_bound_geometry_client.part_contracts_v3": {
+      "origin": "/workspace/scratch/e704d81da019/recovery_20261019/sector_service_source_cc130e6/source/blender_addon/mechanical_cad_blender/part_contracts_v3.py",
+      "sha256": "bbb30e1d446751e4dad360d4a42a8b1fe1dddaf60eb33ee64eef6d370f9d8929"
+    },
+    "_gate_bound_geometry_client.part_geometry_evidence": {
+      "origin": "/workspace/scratch/e704d81da019/recovery_20261019/sector_service_source_cc130e6/source/blender_addon/mechanical_cad_blender/part_geometry_evidence.py",
+      "sha256": "ccc30750a87f6b428eef12d81aaa1313e7a5c5cd6b992a1ff925ad59bb705db5"
+    },
+    "_gate_bound_geometry_client.part_result_bridge": {
+      "origin": "/workspace/scratch/e704d81da019/recovery_20261019/sector_service_source_cc130e6/source/blender_addon/mechanical_cad_blender/part_result_bridge.py",
+      "sha256": "ed2a69e70912e5d8809f1a46738884a49f9e622d9fb5236521ffb80be4a632dc"
+    },
+    "_gate_bound_geometry_client.request_contracts": {
+      "origin": "/workspace/scratch/e704d81da019/recovery_20261019/sector_service_source_cc130e6/source/blender_addon/mechanical_cad_blender/request_contracts.py",
+      "sha256": "4da30e95c5d81631396d23cc52cd787d3811e8143f4da1272c1becd367d0d3e5"
+    },
+    "_gate_bound_geometry_client.result_v3": {
+      "origin": "/workspace/scratch/e704d81da019/recovery_20261019/sector_service_source_cc130e6/source/blender_addon/mechanical_cad_blender/result_v3.py",
+      "sha256": "ee2fc66acb3d93a267d1cd4e89f3c5059855689ee371aeb4b9094ecdbc18f509"
+    },
+    "_gate_bound_geometry_client.sector_topology_v3": {
+      "origin": "/workspace/scratch/e704d81da019/recovery_20261019/sector_service_source_cc130e6/source/blender_addon/mechanical_cad_blender/sector_topology_v3.py",
+      "sha256": "04f2e4445cce1b2a83c2e011ac191b5b2c3b8922da9adaababfeb9ab11988e72"
+    },
+    "_gate_bound_geometry_client.sketch_action_bridge": {
+      "origin": "/workspace/scratch/e704d81da019/recovery_20261019/sector_service_source_cc130e6/source/blender_addon/mechanical_cad_blender/sketch_action_bridge.py",
+      "sha256": "2530bfbb350bb37af949ca01a342584f13a4eb25907c5d04f5aa29d9700d8e5a"
+    },
+    "_gate_bound_geometry_client.sketch_bridge": {
+      "origin": "/workspace/scratch/e704d81da019/recovery_20261019/sector_service_source_cc130e6/source/blender_addon/mechanical_cad_blender/sketch_bridge.py",
+      "sha256": "8a3cd726283617be294abb1e932d9f48f9a9e867621297f3de04b9ac7131b31f"
+    },
+    "_gate_bound_geometry_client.sketch_contracts_v3": {
+      "origin": "/workspace/scratch/e704d81da019/recovery_20261019/sector_service_source_cc130e6/source/blender_addon/mechanical_cad_blender/sketch_contracts_v3.py",
+      "sha256": "ebfb14a9823bed370df89b55d2528522b83a16e42e5d357d414551ed347e6806"
+    },
+    "_gate_bound_geometry_client.topology_evidence": {
+      "origin": "/workspace/scratch/e704d81da019/recovery_20261019/sector_service_source_cc130e6/source/blender_addon/mechanical_cad_blender/topology_evidence.py",
+      "sha256": "b5a0c6e861f5eac6d9a338eb6c628a85e7db6631694ef319bc9335af8f48b7eb"
+    }
+  },
+  "verified": false
+}

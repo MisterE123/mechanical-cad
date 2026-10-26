@@ -1,0 +1,698 @@
+{
+  "schema": "release-070-metadata-equivalence-v1",
+  "base_commit": "eb9b51caab77c94e92c32a2d75042f756ab83012",
+  "changed": {
+    "blender_addon/mechanical_cad_blender/__init__.py": {
+      "reviewed_bytes": 1649,
+      "reviewed_sha256": "cee489002997dbf54467c9fd12e4785c84e7190765f1a4ef2e83e929b0c35966",
+      "original_bytes": 1649,
+      "original_sha256": "7dff1a887faecedbebd8d123eb5b65a6903f8149e0f6a510dc54158c2e2ac0e0",
+      "hunks": [
+        {
+          "new_start": 433,
+          "new_end": 459,
+          "original": "    \"version\": (0, 6, 0),\n",
+          "replacement": "    \"version\": (0, 7, 0),\n"
+        }
+      ]
+    },
+    "blender_addon/mechanical_cad_blender/properties.py": {
+      "reviewed_bytes": 6563,
+      "reviewed_sha256": "278593a3e4f0cf05adea8a0c086c919e0035e0759223a7d1196106eb36cb9339",
+      "original_bytes": 5798,
+      "original_sha256": "07f56a4d15a85a53331b63b2bb317e6aca7c15f35cfd731b33b1654d064a5f19",
+      "hunks": [
+        {
+          "new_start": 5798,
+          "new_end": 6563,
+          "original": "",
+          "replacement": "        credits = layout.box()\n        credits.label(text=\"Copyright (c) 2026 Mechanical CAD contributors. GPL-3.0-or-later.\")\n        for line in wrap(\n            \"This software contains paintlib code. paintlib is copyright (c) 1996-2002 \"\n            \"Ulrich von Zadow and other contributors.\",\n            width=72,\n        ):\n            credits.label(text=line)\n        credits.label(text=\"Uses FreeImage and Open CASCADE Technology (LGPL-2.1 + exception).\")\n        credits.label(text=\"OCCT: copyright OPEN CASCADE SAS and contributors; see licenses/occt/.\")\n        credits.label(text=\"LibRaw: Copyright (C) 2008-2018 LibRaw LLC; LGPL-2.1, see licenses/.\")\n        credits.label(text=\"Licenses and source: MATERIALS.md, licenses/ and sources/ in the ZIP.\")\n"
+        }
+      ]
+    },
+    "scripts/standalone_child_bootstrap.py": {
+      "reviewed_bytes": 22806,
+      "reviewed_sha256": "c6e78a4568c2e12af0a130c039bea3cae4f47ea329d33b1479bf2e3b9c1da26d",
+      "original_bytes": 22806,
+      "original_sha256": "df85aeb34905ca1e18f34610ecbf74b8c00fa26738f520e65f9bc278b058188c",
+      "hunks": [
+        {
+          "new_start": 15286,
+          "new_end": 15332,
+          "original": "            or package.__version__ != \"0.6.0\"\n",
+          "replacement": "            or package.__version__ != \"0.7.0\"\n"
+        }
+      ]
+    },
+    "scripts/tests/test_standalone_package_materials.py": {
+      "reviewed_bytes": 43054,
+      "reviewed_sha256": "d28a8227430b0e5282541f6271b67ce141fd8711fa5b7eec67d766bf6fea0155",
+      "original_bytes": 42798,
+      "original_sha256": "9123e993462b4e346bb1962f2325b7d8c18f258d2607078c7d2e425fcf525649",
+      "hunks": [
+        {
+          "new_start": 2589,
+          "new_end": 2654,
+          "original": "            \"pyproject.toml\": b'[project]\\nversion = \"0.6.0\"\\n',\n",
+          "replacement": "            \"pyproject.toml\": b'[project]\\nversion = \"0.7.0\"\\n',\n"
+        },
+        {
+          "new_start": 42149,
+          "new_end": 42467,
+          "original": "        assert digest((ROOT / path).read_bytes()) == expected\n",
+          "replacement": "        data = (ROOT / path).read_bytes()\n        if path == \"scripts/standalone_child_bootstrap.py\":\n            current = b'package.__version__ != \"0.7.0\"'\n            assert data.count(current) == 1\n            data = data.replace(current, b'package.__version__ != \"0.6.0\"')\n        assert digest(data) == expected\n"
+        }
+      ]
+    },
+    "scripts/verify_sidecar_install.py": {
+      "reviewed_bytes": 3372,
+      "reviewed_sha256": "772f23f455cf7192774c9502004210078513dba21ade0d7aa6078de10e238c62",
+      "original_bytes": 3372,
+      "original_sha256": "971cbe0a910737bec4194fdd6ed6118368fe366b21eb9b6e3814974cae93ffc2",
+      "hunks": [
+        {
+          "new_start": 23,
+          "new_end": 105,
+          "original": "\"\"\"Verify the 0.6.0 source root and interpreter intended for Blender preferences.\n",
+          "replacement": "\"\"\"Verify the 0.7.0 source root and interpreter intended for Blender preferences.\n"
+        },
+        {
+          "new_start": 397,
+          "new_end": 424,
+          "original": "EXPECTED_VERSION = \"0.6.0\"\n",
+          "replacement": "EXPECTED_VERSION = \"0.7.0\"\n"
+        }
+      ]
+    },
+    "src/mechanical_cad/__init__.py": {
+      "reviewed_bytes": 111,
+      "reviewed_sha256": "e2227a7c7dbab3abefa11ef43fffcfa573caee943cce27daa07baf44ee1fc277",
+      "original_bytes": 111,
+      "original_sha256": "98040c3b58fb78f42db9a75fae4d962e5dea5313f34d8baf339b3fa3f55bea02",
+      "hunks": [
+        {
+          "new_start": 89,
+          "new_end": 111,
+          "original": "__version__ = \"0.6.0\"\n",
+          "replacement": "__version__ = \"0.7.0\"\n"
+        }
+      ]
+    },
+    "tests/integration/test_sidecar_install_verifier.py": {
+      "reviewed_bytes": 1833,
+      "reviewed_sha256": "d614524b94a7c754ee384e46974993a07f60cf8021dcff4321a62b7191136c32",
+      "original_bytes": 1833,
+      "original_sha256": "b5bcd87f15a71a6e22a3ffebac9901aec6e9431731c6731927c3d82acaa7612d",
+      "hunks": [
+        {
+          "new_start": 706,
+          "new_end": 768,
+          "original": "    assert result[\"ok\"] and result[\"core_version\"] == \"0.6.0\"\n",
+          "replacement": "    assert result[\"ok\"] and result[\"core_version\"] == \"0.7.0\"\n"
+        },
+        {
+          "new_start": 1744,
+          "new_end": 1833,
+          "original": "    assert not result[\"ok\"] and result[\"error\"] == \"Expected core 0.6.0; imported 0.5.0\"\n",
+          "replacement": "    assert not result[\"ok\"] and result[\"error\"] == \"Expected core 0.7.0; imported 0.5.0\"\n"
+        }
+      ]
+    },
+    "tests/unit/test_arc_guarded_evidence.py": {
+      "reviewed_bytes": 29590,
+      "reviewed_sha256": "b133fcd30ed721b9e903685bb73174e5d500b840aef0d3d5ef9f2881db77c143",
+      "original_bytes": 23753,
+      "original_sha256": "51961b68752ec16a2c61078d9665db7369d44f94b5003bb160c1c561e23d52c5",
+      "hunks": [
+        {
+          "new_start": 15252,
+          "new_end": 18662,
+          "original": "",
+          "replacement": "ASSEMBLY_VERSION_PROVENANCE = {\n    \"assembly_state.py\": {\n        \"_projection\": (\n            {\n                \"prepared\": \"snapshot.get('prepared')\",\n                \"operation\": \"prepared.operation_request()\",\n                \"result_version\": \"_preflight_assembly(operation.get('assembly'), operation.get('action'))\",\n            },\n            \"validate(_current_selection(context, snapshot), owner_token=snapshot['owner_token'], \"\n            \"expected_action=actions, expected_result_version=result_version, require_success=success)\",\n        ),\n        \"report_is_current\": (\n            {\n                \"result_version\": \"_preflight_assembly(read_assembly(state), evidence.operation_request().get('action'))\",\n            },\n            \"evidence.revalidate(backend_runtime.capture(_backend_context(context)), \"\n            \"owner_token=runtime.get('report_owner_token'), \"\n            \"expected_action={'assembly_check', 'assembly_sample'}, expected_result_version=result_version)\",\n        ),\n    },\n    \"assembly_display.py\": {\n        \"_validated\": (\n            {\n                \"operation\": \"evidence.operation_request()\",\n                \"result_version\": \"operation_contracts.result_version_for_assembly(operation.get('assembly'), action=operation.get('action'))\",\n            },\n            \"validate(current_selection(), owner_token=owner_token, \"\n            \"expected_action=assembly_bridge.ACTIONS, expected_result_version=result_version, \"\n            \"require_success=True)\",\n        ),\n    },\n}\n\n\ndef verify_assembly_version_provenance(tree, filename):\n    \"\"\"Allow only three exact sinks with a single source-policy-derived version.\"\"\"\n    allowed = set()\n    for name, (assignments, validation) in ASSEMBLY_VERSION_PROVENANCE[filename].items():\n        functions = [\n            node for node in tree.body if isinstance(node, ast.FunctionDef) and node.name == name\n        ]\n        assert len(functions) == 1\n        function = functions[0]\n        calls = [\n            node\n            for node in ast.walk(function)\n            if isinstance(node, ast.Call)\n            and any(keyword.arg == \"expected_result_version\" for keyword in node.keywords)\n        ]\n        assert len(calls) == 1\n        call = calls[0]\n        assert ast.dump(call, include_attributes=False) == ast.dump(\n            ast.parse(validation, mode=\"eval\").body, include_attributes=False\n        )\n        for variable, expression in assignments.items():\n            assert all(\n                argument.arg != variable\n                for argument in ast.walk(function.args)\n                if isinstance(argument, ast.arg)\n            )\n            stores = [\n                node\n                for node in ast.walk(function)\n                if isinstance(node, ast.Name)\n                and isinstance(node.ctx, ast.Store)\n                and node.id == variable\n            ]\n            assert len(stores) == 1\n            writes = [\n                node\n                for node in ast.walk(function)\n                if isinstance(node, ast.Assign) and node.targets == [stores[0]]\n            ]\n            assert len(writes) == 1 and writes[0].lineno < call.lineno\n            assert ast.dump(writes[0].value, include_attributes=False) == ast.dump(\n                ast.parse(expression, mode=\"eval\").body, include_attributes=False\n            )\n        allowed.add(call)\n    return allowed\n\n\n"
+        },
+        {
+          "new_start": 19138,
+          "new_end": 19318,
+          "original": "",
+          "replacement": "        assembly_calls = (\n            verify_assembly_version_provenance(tree, path.name)\n            if path.name in ASSEMBLY_VERSION_PROVENANCE\n            else set()\n        )\n"
+        },
+        {
+          "new_start": 20977,
+          "new_end": 21098,
+          "original": "",
+          "replacement": "                    elif path.name in ASSEMBLY_VERSION_PROVENANCE:\n                        assert node in assembly_calls\n"
+        },
+        {
+          "new_start": 21324,
+          "new_end": 21411,
+          "original": "    assert capable | plumbing | snapshots <= seen\n",
+          "replacement": "    assert capable | plumbing | snapshots | ASSEMBLY_VERSION_PROVENANCE.keys() <= seen\n"
+        },
+        {
+          "new_start": 26291,
+          "new_end": 28380,
+          "original": "",
+          "replacement": "@pytest.mark.parametrize(\n    \"filename,function_name\",\n    [\n        (\"assembly_state.py\", \"_projection\"),\n        (\"assembly_state.py\", \"report_is_current\"),\n        (\"assembly_display.py\", \"_validated\"),\n    ],\n)\n@pytest.mark.parametrize(\n    \"mutation\",\n    [\n        \"wrong_version\",\n        \"unbound_version\",\n        \"supplied_version\",\n        \"reassigned_version\",\n        \"extra_callsite\",\n    ],\n)\ndef test_assembly_allowance_rejects_wrong_unbound_or_extra_calls(filename, function_name, mutation):\n    sources = {path.name: path.read_text() for path in ADDON.glob(\"*.py\")}\n    tree = ast.parse(sources[filename])\n    function = next(\n        node\n        for node in tree.body\n        if isinstance(node, ast.FunctionDef) and node.name == function_name\n    )\n    if mutation == \"wrong_version\":\n        keyword = next(\n            node\n            for node in ast.walk(function)\n            if isinstance(node, ast.keyword) and node.arg == \"expected_result_version\"\n        )\n        keyword.value = ast.Constant(3)\n    elif mutation in {\"unbound_version\", \"supplied_version\"}:\n        assignment = next(\n            node\n            for node in ast.walk(function)\n            if isinstance(node, ast.Assign)\n            and any(\n                isinstance(target, ast.Name) and target.id == \"result_version\"\n                for target in node.targets\n            )\n        )\n        assignment.value = ast.parse(\n            \"3\"\n            if mutation == \"unbound_version\"\n            else \"evidence.operation_request().get('result_version')\",\n            mode=\"eval\",\n        ).body\n    elif mutation == \"reassigned_version\":\n        function.body.extend(ast.parse(\"result_version = 3\").body)\n    else:\n        tree.body.extend(\n            ast.parse(\n                \"def forbidden(evidence, selection):\\n\"\n                \"    return evidence.revalidate(selection, expected_result_version=3)\\n\"\n            ).body\n        )\n    sources[filename] = ast.unparse(ast.fix_missing_locations(tree))\n    with pytest.raises(AssertionError):\n        check_capable_calls(sources)\n\n\n"
+        }
+      ]
+    },
+    "tests/unit/test_arc_profile_incidence.py": {
+      "reviewed_bytes": 50094,
+      "reviewed_sha256": "f6ca211a3e2be29682f2ffaf2251d30b3e2f143b1f66c6897a6c149001bbf375",
+      "original_bytes": 49954,
+      "original_sha256": "c3eea8bae4dcc5b08ebb69e200d3789d7cc4aeba7066299872f06baeb7025c44",
+      "hunks": [
+        {
+          "new_start": 30992,
+          "new_end": 31061,
+          "original": "",
+          "replacement": "            \"RELEASE_070_FIXTURE\",\n            \"RELEASE_070_SHA256\",\n"
+        },
+        {
+          "new_start": 33395,
+          "new_end": 33432,
+          "original": "",
+          "replacement": "            \"RELEASE_070_ORIGINALS\",\n"
+        },
+        {
+          "new_start": 34174,
+          "new_end": 34208,
+          "original": "",
+          "replacement": "            \"_release_070_bytes\",\n"
+        }
+      ]
+    },
+    "tests/unit/test_arc_profile_native_end_cap.py": {
+      "reviewed_bytes": 183038,
+      "reviewed_sha256": "04b09620aac5466536948afcaa16c2044be721c9d735fb273c1a88ba66c0bc7e",
+      "original_bytes": 175067,
+      "original_sha256": "63c8e455687a5524eabef0e84b4b900396d5bdfeac4bafa5573984622bd885a1",
+      "hunks": [
+        {
+          "new_start": 42773,
+          "new_end": 47597,
+          "original": "",
+          "replacement": "RELEASE_070_FIXTURE = \"tests/fixtures/release_070/metadata_eb9b51c.json\"\nRELEASE_070_SHA256 = \"0000000000000000000000000000000000000000000000000000000000000000\"\nRELEASE_070_ORIGINALS = {\n    \"blender_addon/mechanical_cad_blender/__init__.py\": (\n        1649,\n        \"7dff1a887faecedbebd8d123eb5b65a6903f8149e0f6a510dc54158c2e2ac0e0\",\n    ),\n    \"blender_addon/mechanical_cad_blender/properties.py\": (\n        5798,\n        \"07f56a4d15a85a53331b63b2bb317e6aca7c15f35cfd731b33b1654d064a5f19\",\n    ),\n    \"scripts/standalone_child_bootstrap.py\": (\n        22806,\n        \"df85aeb34905ca1e18f34610ecbf74b8c00fa26738f520e65f9bc278b058188c\",\n    ),\n    \"scripts/tests/test_standalone_package_materials.py\": (\n        42798,\n        \"9123e993462b4e346bb1962f2325b7d8c18f258d2607078c7d2e425fcf525649\",\n    ),\n    \"scripts/verify_sidecar_install.py\": (\n        3372,\n        \"971cbe0a910737bec4194fdd6ed6118368fe366b21eb9b6e3814974cae93ffc2\",\n    ),\n    \"src/mechanical_cad/__init__.py\": (\n        111,\n        \"98040c3b58fb78f42db9a75fae4d962e5dea5313f34d8baf339b3fa3f55bea02\",\n    ),\n    \"tests/integration/test_sidecar_install_verifier.py\": (\n        1833,\n        \"b5bcd87f15a71a6e22a3ffebac9901aec6e9431731c6731927c3d82acaa7612d\",\n    ),\n    \"tests/unit/test_arc_guarded_evidence.py\": (\n        23753,\n        \"51961b68752ec16a2c61078d9665db7369d44f94b5003bb160c1c561e23d52c5\",\n    ),\n    \"tests/unit/test_arc_profile_incidence.py\": (\n        49954,\n        \"c3eea8bae4dcc5b08ebb69e200d3789d7cc4aeba7066299872f06baeb7025c44\",\n    ),\n    \"tests/unit/test_arc_profile_native_end_cap.py\": (\n        175067,\n        \"63c8e455687a5524eabef0e84b4b900396d5bdfeac4bafa5573984622bd885a1\",\n    ),\n    \"tests/unit/test_arc_sector_native_boundary_mutations.py\": (\n        39567,\n        \"df849ca558ce40780862524f08bb37068ce178a573bf3f745d4548a4744ceed0\",\n    ),\n    \"tests/unit/test_arc_ui_availability.py\": (\n        38188,\n        \"4f8f59047b14497df6d950867017c77e67ed8ac1b780b6a0137e105cb6abe998\",\n    ),\n    \"tests/unit/test_assembly_pending_admission_order.py\": (\n        6287,\n        \"e726e15f6e24b1c6579e7c5796e198ce39eef5c26f5208b3d6d15301fdcfb079\",\n    ),\n    \"tests/unit/test_backend_contract_server.py\": (\n        26402,\n        \"828b185dcbe3fad52c02dce547ce23fe70791c5087317dc030420a60bb25064c\",\n    ),\n    \"tests/unit/test_bundled_registration.py\": (\n        13957,\n        \"1b3f5398665b4f7fe7d53ffe89e9565e554dbd6dc7dd38b6933a7b2322c1ecd9\",\n    ),\n    \"tests/unit/test_bundled_status_ui.py\": (\n        13187,\n        \"3a4062b2ffae18ba9bea06a6a7a5b73261814c7c4f208539ce8628ce10827a7b\",\n    ),\n    \"tests/unit/test_geometry3_dispatch.py\": (\n        16949,\n        \"7003ef4a609ea412df3e20e21d5088454b7ca761075919bd04a9089cdcdd4504\",\n    ),\n    \"tests/unit/test_pure_bridge_contracts.py\": (\n        4207,\n        \"10d8a6052d4abc4f56dbe78422cffc680667dcb6f37d7535e03b79a45cea41c2\",\n    ),\n    \"tests/unit/test_sector_dispatch_v3.py\": (\n        25403,\n        \"4d3f5dea45d048644269bd4493a2dcaa4d3a26e90c792552f8169a041352ecb7\",\n    ),\n    \"tests/unit/test_standalone_child_bootstrap.py\": (\n        40818,\n        \"419329545f682755f2441163692b492f0bd995573a8e5d93c2a685ff55831e11\",\n    ),\n    \"tests/unit/test_standalone_extension_builder.py\": (\n        35259,\n        \"85f64586b0327e2a2f9b55073c77655b2c209b1e8daaf379f4bda4347c3118c6\",\n    ),\n    \"tests/unit/test_standalone_runtime_boundary.py\": (\n        114466,\n        \"0592651e2713e2c639e551e77ff8e64007afc7491372cfc716acb2c2d2d8637e\",\n    ),\n}\n\n\ndef _release_070_bytes(root, name):\n    \"\"\"Undo only sealed 0.7 metadata/test edits; keep all historical guards exact.\n\n    The trusted validator accepts the exact eb9b51c bytes or this finite reviewed\n    successor. Copied helpers are data only; no arbitrary version substitution.\n    \"\"\"\n    data = (root / name).read_bytes()\n    if name not in RELEASE_070_ORIGINALS:\n        return data\n    raw = (root / RELEASE_070_FIXTURE).read_bytes()\n    assert hashlib.sha256(raw).hexdigest() == RELEASE_070_SHA256\n    revision = json.loads(raw)\n    assert set(revision) == {\"schema\", \"base_commit\", \"changed\"}\n    assert revision[\"schema\"] == \"release-070-metadata-equivalence-v1\"\n    assert revision[\"base_commit\"] == \"eb9b51caab77c94e92c32a2d75042f756ab83012\"\n    assert set(revision[\"changed\"]) == set(RELEASE_070_ORIGINALS)\n    expected = RELEASE_070_ORIGINALS[name]\n    if (len(data), hashlib.sha256(data).hexdigest()) == expected:\n        return data\n    if name == \"tests/unit/test_arc_profile_native_end_cap.py\":\n        label = b\"RELEASE_070_\" + b'SHA256 = \"'\n        slot = label + RELEASE_070_SHA256.encode(\"ascii\") + b'\"'\n        assert data.count(label) == data.count(slot) == 1\n        data = data.replace(slot, label + b\"0\" * 64 + b'\"')\n    return _integration_restore_entry(data, revision[\"changed\"][name], expected)\n\n\n"
+        },
+        {
+          "new_start": 53658,
+          "new_end": 53704,
+          "original": "        data = (root / name).read_bytes()\n",
+          "replacement": "        data = _release_070_bytes(root, name)\n"
+        },
+        {
+          "new_start": 53892,
+          "new_end": 53975,
+          "original": "            (root / name).read_bytes(), entry, ASSEMBLY_SOURCE_ORIGINALS[name]\n",
+          "replacement": "            _release_070_bytes(root, name), entry, ASSEMBLY_SOURCE_ORIGINALS[name]\n"
+        },
+        {
+          "new_start": 54681,
+          "new_end": 54727,
+          "original": "        data = (root / name).read_bytes()\n",
+          "replacement": "        data = _release_070_bytes(root, name)\n"
+        },
+        {
+          "new_start": 60453,
+          "new_end": 60583,
+          "original": "            before.get(name, (root / name).read_bytes()), entry, GATE_C_OWNER_SOURCE_ORIGINALS[name]\n",
+          "replacement": "            before.get(name, _release_070_bytes(root, name)),\n            entry,\n            GATE_C_OWNER_SOURCE_ORIGINALS[name],\n"
+        },
+        {
+          "new_start": 73825,
+          "new_end": 73954,
+          "original": "            before.get(name, (root / name).read_bytes()), entry, INTEGRATION_SOURCE_ORIGINALS[name]\n",
+          "replacement": "            before.get(name, _release_070_bytes(root, name)),\n            entry,\n            INTEGRATION_SOURCE_ORIGINALS[name],\n"
+        },
+        {
+          "new_start": 78705,
+          "new_end": 78771,
+          "original": "            else before.get(name, (root / name).read_bytes())\n",
+          "replacement": "            else before.get(name, _release_070_bytes(root, name))\n"
+        },
+        {
+          "new_start": 96579,
+          "new_end": 96654,
+          "original": "        data = runtime_originals.get(name, (root / name).read_bytes())\n",
+          "replacement": "        data = runtime_originals.get(name, _release_070_bytes(root, name))\n"
+        },
+        {
+          "new_start": 104349,
+          "new_end": 104449,
+          "original": "        data = cache_originals.get(name, (root / name).read_bytes())\n",
+          "replacement": "        data = cache_originals[name] if name in cache_originals else _release_070_bytes(root, name)\n"
+        },
+        {
+          "new_start": 105011,
+          "new_end": 105111,
+          "original": "        data = cache_originals.get(name, (root / name).read_bytes())\n",
+          "replacement": "        data = cache_originals[name] if name in cache_originals else _release_070_bytes(root, name)\n"
+        },
+        {
+          "new_start": 108907,
+          "new_end": 109035,
+          "original": "        data = transport_harness.get(name, (root / name).read_bytes())\n",
+          "replacement": "        data = (\n            transport_harness[name] if name in transport_harness else _release_070_bytes(root, name)\n        )\n"
+        },
+        {
+          "new_start": 114362,
+          "new_end": 114490,
+          "original": "        data = harness_originals.get(name, (root / name).read_bytes())\n",
+          "replacement": "        data = (\n            harness_originals[name] if name in harness_originals else _release_070_bytes(root, name)\n        )\n"
+        },
+        {
+          "new_start": 115052,
+          "new_end": 115180,
+          "original": "        data = harness_originals.get(name, (root / name).read_bytes())\n",
+          "replacement": "        data = (\n            harness_originals[name] if name in harness_originals else _release_070_bytes(root, name)\n        )\n"
+        },
+        {
+          "new_start": 116812,
+          "new_end": 117036,
+          "original": "        data = restored.get(name, integration_originals.get(name, (root / name).read_bytes()))\n",
+          "replacement": "        data = (\n            restored[name]\n            if name in restored\n            else integration_originals[name]\n            if name in integration_originals\n            else _release_070_bytes(root, name)\n        )\n"
+        },
+        {
+          "new_start": 119097,
+          "new_end": 119179,
+          "original": "        data = before.get(name, (root / name).read_bytes())\n",
+          "replacement": "        data = before[name] if name in before else _release_070_bytes(root, name)\n"
+        },
+        {
+          "new_start": 119329,
+          "new_end": 119411,
+          "original": "        data = before.get(name, (root / name).read_bytes())\n",
+          "replacement": "        data = before[name] if name in before else _release_070_bytes(root, name)\n"
+        },
+        {
+          "new_start": 124406,
+          "new_end": 124504,
+          "original": "        data = live_originals.get(name, (root / name).read_bytes())\n",
+          "replacement": "        data = live_originals[name] if name in live_originals else _release_070_bytes(root, name)\n"
+        },
+        {
+          "new_start": 126701,
+          "new_end": 126934,
+          "original": "            name.encode() + b\"\\0\" + service_originals.get(name, path.read_bytes()) + b\"\\0\"\n",
+          "replacement": "            name.encode()\n            + b\"\\0\"\n            + (\n                service_originals[name]\n                if name in service_originals\n                else _release_070_bytes(root, name)\n            )\n            + b\"\\0\"\n"
+        },
+        {
+          "new_start": 128300,
+          "new_end": 128329,
+          "original": "",
+          "replacement": "        RELEASE_070_FIXTURE,\n"
+        },
+        {
+          "new_start": 180303,
+          "new_end": 180844,
+          "original": "",
+          "replacement": "    # Exercise the original inner assertions after this metadata-only outer layer.\n    metadata_before = _release_070_bytes(ROOT, \"tests/unit/test_arc_profile_native_end_cap.py\")\n    metadata_read = _release_070_bytes\n    monkeypatch.setitem(\n        globals(),\n        \"_release_070_bytes\",\n        lambda root, path: (\n            metadata_before.replace(old.encode(), digest.encode())\n            if kind == \"harness\" and path == \"tests/unit/test_arc_profile_native_end_cap.py\"\n            else metadata_read(root, path)\n        ),\n    )\n"
+        },
+        {
+          "new_start": 181117,
+          "new_end": 183038,
+          "original": "",
+          "replacement": "\n\ndef test_release_070_metadata_restores_exact_eb9b51c_bytes():\n    for name, expected in RELEASE_070_ORIGINALS.items():\n        data = _release_070_bytes(ROOT, name)\n        assert (len(data), hashlib.sha256(data).hexdigest()) == expected\n\n\n@pytest.mark.parametrize(\"name\", sorted(RELEASE_070_ORIGINALS))\ndef test_release_070_metadata_never_exempts_other_bytes(tmp_path, name):\n    fixture = tmp_path / RELEASE_070_FIXTURE\n    fixture.parent.mkdir(parents=True)\n    fixture.write_bytes((ROOT / RELEASE_070_FIXTURE).read_bytes())\n    path = tmp_path / name\n    path.parent.mkdir(parents=True, exist_ok=True)\n    path.write_bytes((ROOT / name).read_bytes() + b\"\\n# Unreviewed metadata mutation.\\n\")\n    with pytest.raises(AssertionError):\n        _release_070_bytes(tmp_path, name)\n\n\n@pytest.mark.parametrize(\"mutation\", [\"fixture\", \"slot\", \"helper\", \"coordinated\"])\ndef test_release_070_fixture_and_copied_validator_cannot_replace_trusted_guard(tmp_path, mutation):\n    fixture = tmp_path / RELEASE_070_FIXTURE\n    fixture.parent.mkdir(parents=True)\n    fixture.write_bytes((ROOT / RELEASE_070_FIXTURE).read_bytes())\n    name = \"tests/unit/test_arc_profile_native_end_cap.py\"\n    path = tmp_path / name\n    path.parent.mkdir(parents=True)\n    data = (ROOT / name).read_bytes()\n    if mutation in {\"fixture\", \"coordinated\"}:\n        fixture.write_bytes(fixture.read_bytes() + b\"\\n\")\n    if mutation in {\"slot\", \"coordinated\"}:\n        replacement = hashlib.sha256(fixture.read_bytes()).hexdigest()\n        if mutation == \"slot\":\n            replacement = \"f\" * 64\n        data = data.replace(RELEASE_070_SHA256.encode(), replacement.encode())\n    if mutation == \"helper\":\n        data = data.replace(\n            b\"def _release_070_bytes(root, name):\", b\"def _release_070_bytes(root, name): # changed\"\n        )\n    path.write_bytes(data)\n    with pytest.raises(AssertionError):\n        _release_070_bytes(tmp_path, name)\n"
+        }
+      ]
+    },
+    "tests/unit/test_arc_sector_native_boundary_mutations.py": {
+      "reviewed_bytes": 39627,
+      "reviewed_sha256": "0aa50e1e4fe9f5b4fdb541f4ab2a6cdf18af4c4ce0f5bcb43edc971e18c47568",
+      "original_bytes": 39567,
+      "original_sha256": "df849ca558ce40780862524f08bb37068ce178a573bf3f745d4548a4744ceed0",
+      "hunks": [
+        {
+          "new_start": 25808,
+          "new_end": 25868,
+          "original": "",
+          "replacement": "        \"tests/fixtures/release_070/metadata_eb9b51c.json\",\n"
+        }
+      ]
+    },
+    "tests/unit/test_arc_ui_availability.py": {
+      "reviewed_bytes": 41391,
+      "reviewed_sha256": "9ec7d95d169f0fc9383a29fdec6115d206e9ba47da88cc6ab81a27839b6e9503",
+      "original_bytes": 38188,
+      "original_sha256": "4f8f59047b14497df6d950867017c77e67ed8ac1b780b6a0137e105cb6abe998",
+      "hunks": [
+        {
+          "new_start": 9719,
+          "new_end": 9910,
+          "original": "def test_assembly_capture_direct_calls_reject_but_existing_definition_insert_does_not_capture(\n    ui, monkeypatch\n",
+          "replacement": "@pytest.mark.parametrize(\"variant\", [{\"extruded\": False}, {\"empty\": True}])\ndef test_unsupported_capture_rejects_but_existing_definition_insert_does_not_capture(\n    ui, monkeypatch, variant\n"
+        },
+        {
+          "new_start": 9913,
+          "new_end": 10020,
+          "original": "    ctx = context(ui, sector())\n",
+          "replacement": "    ctx = context(ui, sector(**variant))\n    assert ui.assembly_operators.working_part_capture_reason(ctx)\n"
+        },
+        {
+          "new_start": 10110,
+          "new_end": 10204,
+          "original": "        lambda *_: pytest.fail(\"No capture for schema3 or existing definitions\"),\n",
+          "replacement": "        lambda *_: pytest.fail(\"No capture for unsupported sources or existing definitions\"),\n"
+        },
+        {
+          "new_start": 10367,
+          "new_end": 10394,
+          "original": "",
+          "replacement": "        op.grounded = True\n"
+        },
+        {
+          "new_start": 11193,
+          "new_end": 13371,
+          "original": "",
+          "replacement": "\n\n@pytest.mark.parametrize(\"operation\", [\"new\", \"insert\", \"update_source\"])\ndef test_supported_sector_capture_actions_reach_explicit_capture_and_apply(\n    ui, monkeypatch, operation\n):\n    ctx = context(ui, sector())\n    before = ctx.scene.mechanical_cad.document_json\n    assert not ui.assembly_operators.working_part_capture_reason(ctx)\n    calls = []\n    captured, candidate = object(), object()\n    monkeypatch.setattr(\n        ui.assembly_operators,\n        \"canonical_working_part\",\n        lambda context: calls.append((\"capture\", context)) or captured,\n    )\n\n    def source_edit(*args, **_kwargs):\n        assert args[-1] is captured\n        calls.append((\"edit\", operation))\n        return candidate if operation == \"new\" else (candidate, \"sector\")\n\n    edit_name = {\"new\": \"new_from_part\", \"insert\": \"capture_definition\"}.get(\n        operation, \"update_source\"\n    )\n    monkeypatch.setattr(ui.assembly_operators.edit, edit_name, source_edit)\n\n    def insert(actual, part_id, **_kwargs):\n        assert actual is candidate and part_id == \"sector\"\n        calls.append((\"insert\", part_id))\n        return candidate\n\n    monkeypatch.setattr(ui.assembly_operators.edit, \"insert_instance\", insert)\n    monkeypatch.setattr(ui.assembly_operators, \"activate_assembly_workspace\", lambda *_: None)\n    cls = getattr(ui.assembly_operators, \"MCAD_OT_assembly_\" + operation)\n    assert cls.poll(ctx)\n    op = cls()\n    op.grounded, op.use_working_part, op.use_limits = True, True, False\n    op.name, op.instance_name, op.joint_name = \"Sector\", \"Base\", \"Joint\"\n    op.part_id, op.kind = \"existing\", \"fixed\"\n    op.parent, op.parent_frame, op.child_frame = \"root\", \"parent\", \"child\"\n    op.report = lambda *_: None\n\n    def apply(context, actual):\n        assert context is ctx and actual is candidate\n        calls.append((\"apply\", operation))\n        return {\"FINISHED\"}\n\n    op.apply = apply\n    assert op.execute(ctx) == {\"FINISHED\"}\n    assert calls == [\n        (\"capture\", ctx),\n        (\"edit\", operation),\n        *([(\"insert\", \"sector\")] if operation == \"insert\" else []),\n        (\"apply\", operation),\n    ]\n    assert ctx.scene.mechanical_cad.document_json == before\n"
+        },
+        {
+          "new_start": 34100,
+          "new_end": 34336,
+          "original": "def test_insert_dialog_can_leave_retained_capture_mode_for_existing_v2_definition(ui, monkeypatch):\n    ctx = context(ui, sector())\n",
+          "replacement": "@pytest.mark.parametrize(\"variant\", [{\"extruded\": False}, {\"empty\": True}, {}])\ndef test_insert_dialog_can_leave_retained_capture_mode_for_existing_v2_definition(\n    ui, monkeypatch, variant\n):\n    ctx = context(ui, sector(**variant))\n"
+        },
+        {
+          "new_start": 34810,
+          "new_end": 34892,
+          "original": "    assert (\"prop\", (\"use_working_part\", False)) in op.layout.entries\n",
+          "replacement": "    assert (\"prop\", (\"use_working_part\", not bool(variant))) in op.layout.entries\n"
+        },
+        {
+          "new_start": 35798,
+          "new_end": 35908,
+          "original": "def test_sector_output_visibility_is_separate_from_snapshot_and_assembly_limits(ui, monkeypatch):\n",
+          "replacement": "def test_supported_sector_outputs_and_assembly_capture_are_available_without_mutation(\n    ui, monkeypatch\n):\n"
+        },
+        {
+          "new_start": 36530,
+          "new_end": 37235,
+          "original": "    assert \"Geometry Check and STEP/STL are available\" in labels(limits)\n",
+          "replacement": "    assert labels(limits) == \"\"\n    assert not ui.operators.part_action_reason(ctx, \"canonical_snapshot\")\n    assert not ui.assembly_operators.working_part_capture_reason(ctx)\n    assert ui.assembly_operators.MCAD_OT_assembly_new.poll(ctx)\n    assert ui.assembly_operators.MCAD_OT_assembly_update_source.poll(ctx)\n    assert vars(ctx.scene.mechanical_cad) == before\n\n\n@pytest.mark.parametrize(\"variant\", [{\"extruded\": False}, {\"empty\": True}])\ndef test_unsupported_sector_limits_explain_capture_and_geometry_rejections(ui, variant):\n    ctx = context(ui, sector(**variant))\n    before = copy.deepcopy(vars(ctx.scene.mechanical_cad))\n    limits = Layout()\n    ui.workspace_ui.draw_part_limits(limits, ctx)\n"
+        },
+        {
+          "new_start": 37320,
+          "new_end": 37395,
+          "original": "",
+          "replacement": "    assert \"Geometry Check and STEP/STL are unavailable\" in labels(limits)\n"
+        }
+      ]
+    },
+    "tests/unit/test_assembly_pending_admission_order.py": {
+      "reviewed_bytes": 7157,
+      "reviewed_sha256": "1163173079a837a36be13d8456f5b620ca181a0b6d55256f4245e8fabb59a759",
+      "original_bytes": 6287,
+      "original_sha256": "e726e15f6e24b1c6579e7c5796e198ce39eef5c26f5208b3d6d15301fdcfb079",
+      "hunks": [
+        {
+          "new_start": 3230,
+          "new_end": 3301,
+          "original": "@pytest.mark.parametrize(\"empty_arcs\", [False, True])\n",
+          "replacement": "@pytest.mark.parametrize(\"unsupported\", [\"profile_only\", \"arc_empty\"])\n"
+        },
+        {
+          "new_start": 3362,
+          "new_end": 3408,
+          "original": "    harness, monkeypatch, action, empty_arcs\n",
+          "replacement": "    harness, monkeypatch, action, unsupported\n"
+        },
+        {
+          "new_start": 3563,
+          "new_end": 3598,
+          "original": "    if empty_arcs:\n",
+          "replacement": "    if unsupported == \"arc_empty\":\n"
+        },
+        {
+          "new_start": 3715,
+          "new_end": 3975,
+          "original": "",
+          "replacement": "        reason = \"one schema-3 arc and exactly two radial lines\"\n    else:\n        document[\"features\"] = document[\"features\"][:1]\n        document[\"active_feature\"] = document[\"features\"][0][\"id\"]\n        reason = \"one sector sketch and one direct extrusion\"\n"
+        },
+        {
+          "new_start": 4134,
+          "new_end": 4184,
+          "original": "    with pytest.raises(ValueError, match=\"do not support schema-3\"):\n",
+          "replacement": "    with pytest.raises(ValueError, match=reason):\n"
+        },
+        {
+          "new_start": 5271,
+          "new_end": 5530,
+          "original": "def test_free_valid_v2_acquires_once_and_releases_if_transaction_capture_fails(\n    harness, monkeypatch\n",
+          "replacement": "@pytest.mark.parametrize(\"action\", [\"assembly_check\", \"assembly_sample\"])\n@pytest.mark.parametrize(\"source\", [\"legacy\", \"sector\"])\ndef test_free_supported_sources_acquire_once_and_release_if_transaction_capture_fails(\n    harness, monkeypatch, source, action\n"
+        },
+        {
+          "new_start": 5533,
+          "new_end": 5933,
+          "original": "",
+          "replacement": "    if source == \"sector\":\n        path = ROOT / \"tests/fixtures/arc_authoring_evidence/radius_edit_5_0_replay.operation.json\"\n        harness.candidate[\"part_sources\"][0][\"document\"] = json.loads(path.read_text())[\"document\"]\n    assert policy.result_version_for_assembly(harness.candidate, action=action) == (\n        3 if source == \"sector\" else 2\n    )\n    before = json.dumps(harness.candidate)\n"
+        },
+        {
+          "new_start": 6747,
+          "new_end": 6818,
+          "original": "        harness.prepare(types.SimpleNamespace(scene=object()), \"assembly_check\")\n",
+          "replacement": "        harness.prepare(types.SimpleNamespace(scene=object()), action)\n"
+        },
+        {
+          "new_start": 7106,
+          "new_end": 7157,
+          "original": "",
+          "replacement": "    assert json.dumps(harness.candidate) == before\n"
+        }
+      ]
+    },
+    "tests/unit/test_backend_contract_server.py": {
+      "reviewed_bytes": 26402,
+      "reviewed_sha256": "9489bf21f8d894ef89f5f811e373aa4208b1e5638b6a6d1bd623366565a20589",
+      "original_bytes": 26402,
+      "original_sha256": "828b185dcbe3fad52c02dce547ce23fe70791c5087317dc030420a60bb25064c",
+      "hunks": [
+        {
+          "new_start": 12794,
+          "new_end": 12827,
+          "original": "        \"core_version\": \"0.6.0\",\n",
+          "replacement": "        \"core_version\": \"0.7.0\",\n"
+        }
+      ]
+    },
+    "tests/unit/test_bundled_registration.py": {
+      "reviewed_bytes": 14489,
+      "reviewed_sha256": "e662304dce3b310be85640360ce0f238c7eca15003093c1dc13349fe1de25514",
+      "original_bytes": 13957,
+      "original_sha256": "1b3f5398665b4f7fe7d53ffe89e9565e554dbd6dc7dd38b6933a7b2322c1ecd9",
+      "hunks": [
+        {
+          "new_start": 10174,
+          "new_end": 10294,
+          "original": "",
+          "replacement": "    credit_labels = []\n    credits = types.SimpleNamespace(label=lambda **kwargs: credit_labels.append(kwargs[\"text\"]))\n"
+        },
+        {
+          "new_start": 10330,
+          "new_end": 10429,
+          "original": "        prop=lambda obj, key: called.append(key), label=lambda **kwargs: None\n",
+          "replacement": "        prop=lambda obj, key: called.append(key), label=lambda **kwargs: None, box=lambda: credits\n"
+        },
+        {
+          "new_start": 10555,
+          "new_end": 10876,
+          "original": "",
+          "replacement": "    assert (\n        \"This software contains paintlib code. paintlib is copyright (c) 1996-2002 \"\n        \"Ulrich von Zadow and other contributors.\"\n    ) in \" \".join(credit_labels)\n    assert \"Licenses and source: MATERIALS.md, licenses/ and sources/ in the ZIP.\" in credit_labels\n    bundled_credits = credit_labels[:]\n"
+        },
+        {
+          "new_start": 10895,
+          "new_end": 10921,
+          "original": "",
+          "replacement": "    credit_labels.clear()\n"
+        },
+        {
+          "new_start": 11119,
+          "new_end": 11163,
+          "original": "",
+          "replacement": "    assert credit_labels == bundled_credits\n"
+        }
+      ]
+    },
+    "tests/unit/test_bundled_status_ui.py": {
+      "reviewed_bytes": 14747,
+      "reviewed_sha256": "6d70073b4940bc986bb015ed7f61ded598a19003e555415f613f3306f2a63278",
+      "original_bytes": 13187,
+      "original_sha256": "3a4062b2ffae18ba9bea06a6a7a5b73261814c7c4f208539ce8628ce10827a7b",
+      "hunks": [
+        {
+          "new_start": 8295,
+          "new_end": 9855,
+          "original": "",
+          "replacement": "def test_preferences_retains_exact_copyright_acknowledgements_without_setup_or_io(bundled):\n    namespace = {\n        \"backend_runtime\": types.SimpleNamespace(\n            bundled_mode=lambda: bundled, bundle_status=lambda: (\"ready\", \"Bundled backend ready.\")\n        ),\n        \"assembly_job_ui\": types.SimpleNamespace(draw_backend_failure=lambda *_: False),\n        \"wrap\": wrap,\n        \"open\": forbidden,\n        \"__builtins__\": {\"open\": forbidden},\n    }\n    layout = Layout()\n    draw_method(\"properties\", \"MCAD_Preferences\", namespace)(\n        types.SimpleNamespace(layout=layout), None\n    )\n    text = \" \".join(event[1][\"text\"] for event in layout.events if event[0] == \"label\")\n    assert \"Copyright (c) 2026 Mechanical CAD contributors. GPL-3.0-or-later.\" in text\n    assert (\n        \"contains paintlib code. paintlib is copyright (c) 1996-2002 \"\n        \"Ulrich von Zadow and other contributors.\"\n    ) in text\n    assert \"FreeImage\" in text and \"Open CASCADE Technology (LGPL-2.1 + exception)\" in text\n    assert \"copyright OPEN CASCADE SAS and contributors; see licenses/occt/\" in text\n    assert \"Copyright (C) 2008-2018 LibRaw LLC; LGPL-2.1\" in text\n    assert \"MATERIALS.md, licenses/ and sources/ in the ZIP\" in text\n    assert not any(event[0] in {\"operator\", \"menu\"} for event in layout.events)\n    assert [event[1] for event in layout.events if event[0] == \"prop\"] == (\n        [] if bundled else [\"project_root\", \"python_executable\"]\n    ) + [\"timeout_seconds\", \"linear_deflection\"]\n\n\n@pytest.mark.parametrize(\"bundled\", [False, True])\n"
+        }
+      ]
+    },
+    "tests/unit/test_geometry3_dispatch.py": {
+      "reviewed_bytes": 17833,
+      "reviewed_sha256": "8e283962b98090c32762f9e2679cd3a091148e0128d24b69617e2dba44691128",
+      "original_bytes": 16949,
+      "original_sha256": "7003ef4a609ea412df3e20e21d5088454b7ca761075919bd04a9089cdcdd4504",
+      "hunks": [
+        {
+          "new_start": 16794,
+          "new_end": 17537,
+          "original": "    _, supported, _ = backend_contract.observe_backend(\n        {\"action\": action, \"result_version\": version}\n",
+          "replacement": "    request = {\"action\": action, \"result_version\": version}\n    if action == \"canonical_snapshot\":\n        with pytest.raises(CADException, match=\"no result-version argument\") as exc:\n            backend_contract.observe_backend(request)\n        assert exc.value.code == \"backend_contract_invalid\"\n        return\n    _, supported, _ = backend_contract.observe_backend(request)\n    assert CAPABILITY not in supported\n\n\n@pytest.mark.parametrize(\"legacy\", [False, True])\ndef test_snapshot_observation_uses_source_schema_without_geometry_owner(legacy, monkeypatch):\n    monkeypatch.chdir(ROOT)\n    monkeypatch.setattr(\n        backend_contract,\n        \"_observe_geometry_v3\",\n        lambda *_: pytest.fail(\"snapshot observed a geometry owner\"),\n"
+        },
+        {
+          "new_start": 17543,
+          "new_end": 17833,
+          "original": "    assert CAPABILITY not in supported\n",
+          "replacement": "    request = operation(\"canonical_snapshot\", legacy=legacy)\n    del request[\"result_version\"]\n    _, supported, mismatch = backend_contract.observe_backend(request)\n    assert not mismatch and CAPABILITY not in supported\n    assert (\"mcad.snapshot-sketch3/1\" in supported) is (not legacy)\n"
+        }
+      ]
+    },
+    "tests/unit/test_pure_bridge_contracts.py": {
+      "reviewed_bytes": 6660,
+      "reviewed_sha256": "46ee850815224ed92a7dfa22d68a4df3a3f6f2534ce0ea0ef345b448bbca69b6",
+      "original_bytes": 4207,
+      "original_sha256": "10d8a6052d4abc4f56dbe78422cffc680667dcb6f37d7535e03b79a45cea41c2",
+      "hunks": [
+        {
+          "new_start": 86,
+          "new_end": 98,
+          "original": "",
+          "replacement": "import copy\n"
+        },
+        {
+          "new_start": 1970,
+          "new_end": 1970,
+          "original": "        \"canonical_equivalent\",\n",
+          "replacement": ""
+        },
+        {
+          "new_start": 2565,
+          "new_end": 5038,
+          "original": "",
+          "replacement": "    assert snapshot.contracts is contracts\n    assert snapshot.canonical_equivalent(raw, canonical)\n    assert contracts.canonical_equivalent(raw, canonical)\n    changed = copy.deepcopy(canonical)\n    changed[\"features\"][1][\"params\"][\"length\"] += 1\n    assert not snapshot.canonical_equivalent(raw, changed)\n    assert not contracts.canonical_equivalent(raw, changed)\n\n\ndef test_legacy_equivalence_dispatches_to_the_identical_leaf_implementation(package, monkeypatch):\n    contracts = importlib.import_module(package + \".part_contracts\")\n    snapshot = importlib.import_module(package + \".part_snapshot_bridge\")\n    raw, canonical = document(), contracts._expected_document(document())\n    calls, sentinel = [], object()\n\n    def leaf(actual_raw, actual_canonical):\n        assert actual_raw is raw and actual_canonical is canonical\n        calls.append((actual_raw, actual_canonical))\n        return sentinel\n\n    monkeypatch.setattr(contracts, \"canonical_equivalent\", leaf)\n    assert snapshot.canonical_equivalent(raw, canonical) is sentinel\n    assert calls == [(raw, canonical)]\n\n\ndef test_sector_equivalence_is_bounded_and_keeps_legacy_leaf_schema_limit(package):\n    contracts = importlib.import_module(package + \".part_contracts\")\n    snapshot = importlib.import_module(package + \".part_snapshot_bridge\")\n    path = (\n        ADDON.parents[1]\n        / \"tests/fixtures/arc_authoring_evidence/radius_edit_5_0_replay.operation.json\"\n    )\n    raw = json.loads(path.read_text())[\"document\"]\n    raw[\"features\"][0][\"sketch\"][\"points\"].reverse()\n    before = copy.deepcopy(raw)\n    canonical = snapshot._expected_document(raw)\n    assert snapshot.canonical_equivalent(raw, canonical)\n    assert raw == before\n    assert not contracts.canonical_equivalent(raw, canonical)\n    with pytest.raises(ValueError):\n        contracts._expected_document(raw)\n    changed = copy.deepcopy(canonical)\n    changed[\"parameters\"][\"radius\"] += 1\n    assert not snapshot.canonical_equivalent(raw, changed)\n    for unsupported in (\"profile_only\", \"arc_empty\"):\n        candidate = copy.deepcopy(raw)\n        if unsupported == \"profile_only\":\n            candidate[\"features\"] = candidate[\"features\"][:1]\n            candidate[\"active_feature\"] = candidate[\"features\"][0][\"id\"]\n        else:\n            candidate[\"features\"][0][\"sketch\"][\"arcs\"] = []\n            candidate[\"features\"][0][\"sketch\"][\"constraints\"] = []\n        assert not snapshot.canonical_equivalent(candidate, candidate)\n"
+        }
+      ]
+    },
+    "tests/unit/test_sector_dispatch_v3.py": {
+      "reviewed_bytes": 27166,
+      "reviewed_sha256": "6af1e6c6c55406d7eda2d3b303d594883296c7abcea315b3f8725428d0bbf236",
+      "original_bytes": 25403,
+      "original_sha256": "4d3f5dea45d048644269bd4493a2dcaa4d3a26e90c792552f8169a041352ecb7",
+      "hunks": [
+        {
+          "new_start": 249,
+          "new_end": 322,
+          "original": "",
+          "replacement": "from test_assembly_bridge_v3 import make as make_assembly3  # noqa: F401\n"
+        },
+        {
+          "new_start": 9698,
+          "new_end": 10047,
+          "original": "    _, supported, _ = bc.observe_backend({\"result_version\": version, \"action\": action})\n",
+          "replacement": "    request = {\"result_version\": version, \"action\": action}\n    if action == \"canonical_snapshot\":\n        with pytest.raises(CADException, match=\"no result-version argument\") as exc:\n            bc.observe_backend(request)\n        assert exc.value.code == \"backend_contract_invalid\"\n        return\n    _, supported, _ = bc.observe_backend(request)\n"
+        },
+        {
+          "new_start": 23341,
+          "new_end": 23439,
+          "original": "def test_assembly_three_preserves_bound_old_wire_without_native_or_evaluation(action):\n",
+          "replacement": "def test_unsupported_assembly_four_preserves_bound_old_wire_without_native_or_evaluation(action):\n"
+        },
+        {
+          "new_start": 23788,
+          "new_end": 23817,
+          "original": "        \"result_version\": 3,\n",
+          "replacement": "        \"result_version\": 4,\n"
+        },
+        {
+          "new_start": 24508,
+          "new_end": 24566,
+          "original": "        assert response[\"request\"][\"result_version\"] == 3\n",
+          "replacement": "        assert response[\"request\"][\"result_version\"] == 4\n"
+        },
+        {
+          "new_start": 24906,
+          "new_end": 26324,
+          "original": "",
+          "replacement": "\n\n@pytest.mark.parametrize(\"action\", [\"assembly_replay\", \"assembly_check\", \"assembly_sample\"])\ndef test_supported_assembly_three_accepts_recorded_full_source_replays(\n    action,\n    make_assembly3,  # noqa: F811\n):\n    from test_assembly_bridge_v3 import bridge\n\n    # Genuine retained replay-3 packets, synthetic pose/query ports. This\n    # exercises strict transport validation, not fresh native qualification.\n    request, response, calls = make_assembly3(\n        action,\n        requirements=None if action == \"assembly_replay\" else [],\n        coordinates={\"slide_a\": 100, \"slide_b\": 100},\n        samples={\"joint_id\": \"slide_a\", \"values\": [100, 200]}\n        if action == \"assembly_sample\"\n        else None,\n    )\n    accepted = bridge.validate_response(request, response)\n    assert response[\"ok\"], response[\"error\"]\n    assert accepted == response and accepted is not response\n    assert response[\"result_version\"] == response[\"request\"][\"result_version\"] == 3\n    assert calls == [\n        (source[\"source_document_id\"], 3) for source in request[\"assembly\"][\"part_sources\"]\n    ]\n    for row in response[\"result\"][\"source_replays\"]:\n        assert row[\"replay\"] == make_assembly3.replays[row[\"source_document_id\"]]\n        assert row[\"replay\"][\"result_version\"] == 3\n    assert len(response[\"result\"][\"parts\"]) == 2\n    assert len(response[\"report\"][\"poses\"]) == (2 if action == \"assembly_sample\" else 1)\n"
+        }
+      ]
+    },
+    "tests/unit/test_standalone_child_bootstrap.py": {
+      "reviewed_bytes": 40818,
+      "reviewed_sha256": "29239254714781dfcd3c3f7f3d4cda3c11cd31c9f91cdf36983d37d7b4d6b0bc",
+      "original_bytes": 40818,
+      "original_sha256": "419329545f682755f2441163692b492f0bd995573a8e5d93c2a685ff55831e11",
+      "hunks": [
+        {
+          "new_start": 6758,
+          "new_end": 6787,
+          "original": "        __version__=\"0.6.0\",\n",
+          "replacement": "        __version__=\"0.7.0\",\n"
+        }
+      ]
+    },
+    "tests/unit/test_standalone_extension_builder.py": {
+      "reviewed_bytes": 37158,
+      "reviewed_sha256": "029e6c8097ae680339122b711aa7ef024623521598c6875181e43e7109a17d01",
+      "original_bytes": 35259,
+      "original_sha256": "85f64586b0327e2a2f9b55073c77655b2c209b1e8daaf379f4bda4347c3118c6",
+      "hunks": [
+        {
+          "new_start": 1252,
+          "new_end": 1317,
+          "original": "            \"pyproject.toml\": b'[project]\\nversion = \"0.6.0\"\\n',\n",
+          "replacement": "            \"pyproject.toml\": b'[project]\\nversion = \"0.7.0\"\\n',\n"
+        },
+        {
+          "new_start": 1586,
+          "new_end": 1663,
+          "original": "            builder.CORE_PREFIX + \"__init__.py\": b'__version__ = \"0.6.0\"\\n',\n",
+          "replacement": "            builder.CORE_PREFIX + \"__init__.py\": b'__version__ = \"0.7.0\"\\n',\n"
+        },
+        {
+          "new_start": 3541,
+          "new_end": 3587,
+          "original": "        assert manifest[\"version\"] == \"0.6.0\"\n",
+          "replacement": "        assert manifest[\"version\"] == \"0.7.0\"\n"
+        },
+        {
+          "new_start": 35259,
+          "new_end": 37158,
+          "original": "",
+          "replacement": "\n\ndef test_candidate_version_is_consistent_across_core_addon_and_launch_gates():\n    version = tomllib.loads((ROOT / \"pyproject.toml\").read_text())[\"project\"][\"version\"]\n    assert version == \"0.7.0\"\n    core = ast.parse((ROOT / \"src/mechanical_cad/__init__.py\").read_text())\n    assert (\n        next(\n            ast.literal_eval(node.value)\n            for node in core.body\n            if isinstance(node, ast.Assign)\n            and any(\n                isinstance(target, ast.Name) and target.id == \"__version__\"\n                for target in node.targets\n            )\n        )\n        == version\n    )\n    addon = ast.parse((ROOT / \"blender_addon/mechanical_cad_blender/__init__.py\").read_text())\n    assert next(\n        ast.literal_eval(node.value)[\"version\"]\n        for node in addon.body\n        if isinstance(node, ast.Assign)\n        and any(isinstance(target, ast.Name) and target.id == \"bl_info\" for target in node.targets)\n    ) == tuple(int(component) for component in version.split(\".\"))\n    verifier = ast.parse((ROOT / \"scripts/verify_sidecar_install.py\").read_text())\n    assert (\n        next(\n            ast.literal_eval(node.value)\n            for node in verifier.body\n            if isinstance(node, ast.Assign)\n            and any(\n                isinstance(target, ast.Name) and target.id == \"EXPECTED_VERSION\"\n                for target in node.targets\n            )\n        )\n        == version\n    )\n    bootstrap = ast.parse((ROOT / \"scripts/standalone_child_bootstrap.py\").read_text())\n    gates = [\n        node\n        for node in ast.walk(bootstrap)\n        if isinstance(node, ast.Compare)\n        and isinstance(node.left, ast.Attribute)\n        and node.left.attr == \"__version__\"\n    ]\n    assert len(gates) == 1 and len(gates[0].ops) == 1\n    assert isinstance(gates[0].ops[0], ast.NotEq)\n    assert ast.literal_eval(gates[0].comparators[0]) == version\n"
+        }
+      ]
+    },
+    "tests/unit/test_standalone_runtime_boundary.py": {
+      "reviewed_bytes": 114742,
+      "reviewed_sha256": "1fc13f40ccc5524e1eff39cd09f80b0f4f1519ed7851354ae0da0c0913368feb",
+      "original_bytes": 114466,
+      "original_sha256": "0592651e2713e2c639e551e77ff8e64007afc7491372cfc716acb2c2d2d8637e",
+      "hunks": [
+        {
+          "new_start": 3933,
+          "new_end": 4057,
+          "original": "",
+          "replacement": "        \"RELEASE_070_FIXTURE\",\n        \"RELEASE_070_SHA256\",\n        \"RELEASE_070_ORIGINALS\",\n        \"_release_070_bytes\",\n"
+        },
+        {
+          "new_start": 19433,
+          "new_end": 19567,
+          "original": "        data = restored.get(path, integration_originals.get(path, (ROOT / path).read_bytes()))\n",
+          "replacement": "        data = restored.get(\n            path, integration_originals.get(path, namespace[\"_release_070_bytes\"](ROOT, path))\n        )\n"
+        },
+        {
+          "new_start": 19951,
+          "new_end": 20137,
+          "original": "                        path, integration_originals.get(path, (ROOT / path).read_bytes())\n",
+          "replacement": "                        path,\n                        integration_originals.get(\n                            path, namespace[\"_release_070_bytes\"](ROOT, path)\n                        ),\n"
+        },
+        {
+          "new_start": 21126,
+          "new_end": 21205,
+          "original": "        data = restored.get(path, (ROOT / path).read_bytes())\n",
+          "replacement": "        data = restored.get(path, namespace[\"_release_070_bytes\"](ROOT, path))\n"
+        }
+      ]
+    }
+  }
+}

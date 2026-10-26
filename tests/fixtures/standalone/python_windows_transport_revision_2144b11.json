@@ -1,0 +1,472 @@
+{
+  "added": {
+    "blender_addon/mechanical_cad_blender/windows_runtime.py": {
+      "bytes": 28626,
+      "sha256": "ac4d070a8172c6f717dbffcf0064807467bc42cf459d237dc7ca2f663d672267"
+    },
+    "tests/unit/test_windows_admission.py": {
+      "bytes": 25982,
+      "sha256": "e1d0f3e5e85d509cf132a1b0e2c25610c7a928df65f8f1ab18b6745089b65185"
+    },
+    "tests/unit/test_windows_runtime.py": {
+      "bytes": 25833,
+      "sha256": "3d2e23c85e66229cedfea20bb014b0aa290ca5242150f5a3df48000a3d41f6e2"
+    },
+    "tests/unit/test_windows_transport.py": {
+      "bytes": 19644,
+      "sha256": "82bfd7b84e94f54f8d128d5e34843fe90718dafccf430fea1a18503cb625777e"
+    }
+  },
+  "base_commit": "2144b11eb6abe3a011ad1858ab683189e352311f",
+  "changed": {
+    "blender_addon/mechanical_cad_blender/backend_selection.py": {
+      "hunks": [
+        {
+          "new_end": 382,
+          "new_start": 368,
+          "original": "",
+          "replacement": "import ntpath\n"
+        },
+        {
+          "new_end": 576,
+          "new_start": 506,
+          "original": "from .runtime_bundle_launch import BundledLaunchPolicy\n",
+          "replacement": "from .runtime_bundle_launch import BundledLaunchPolicy, _windows_path\n"
+        },
+        {
+          "new_end": 2842,
+          "new_start": 2627,
+          "original": "        if sys.platform != \"linux\":\n",
+          "replacement": "        windows = (\n            type(self.bundled_policy) is BundledLaunchPolicy\n            and self.bundled_policy.constants.PLATFORM == \"windows-x64\"\n        )\n        if not windows and sys.platform != \"linux\":\n"
+        },
+        {
+          "new_end": 3382,
+          "new_start": 3082,
+          "original": "            if not os.path.isabs(value) or os.path.normpath(value) != value:\n",
+          "replacement": "            if windows:\n                try:\n                    _windows_path(value)\n                except ValueError as exc:\n                    raise SelectionError(\"Invalid Windows bundled selection path.\") from exc\n            elif not os.path.isabs(value) or os.path.normpath(value) != value:\n"
+        },
+        {
+          "new_end": 6129,
+          "new_start": 5993,
+          "original": "",
+          "replacement": "        if sys.platform != \"linux\":\n            raise SelectionError(\"Guarded sidecar identity is currently qualified for Linux only.\")\n"
+        },
+        {
+          "new_end": 8955,
+          "new_start": 8811,
+          "original": "",
+          "replacement": "        if sys.platform != \"linux\" or os.name != \"posix\":\n            raise SelectionError(\"Bundled public selection is currently Linux only.\")\n"
+        },
+        {
+          "new_end": 9241,
+          "new_start": 9102,
+          "original": "",
+          "replacement": "        if policy.constants.PLATFORM != \"linux-x64\":\n            raise SelectionError(\"Bundled public selection is currently Linux only.\")\n"
+        },
+        {
+          "new_end": 10997,
+          "new_start": 9947,
+          "original": "",
+          "replacement": "    @classmethod\n    def _capture_windows_bundled_transport(cls, policy, timeout=60.0, *, generation, lifetime_id):\n        \"\"\"Dormant qualification seam; no production caller or currentness authority.\"\"\"\n        if type(policy) is not BundledLaunchPolicy or policy.constants.PLATFORM != \"windows-x64\":\n            raise SelectionError(\"Windows transport requires its exact bundled policy.\")\n        try:\n            if type(timeout) is bool:\n                raise ValueError(\"boolean timeout\")\n            seconds = float(timeout)\n            if not math.isfinite(seconds):\n                raise ValueError(\"non-finite timeout\")\n        except (TypeError, ValueError, OverflowError) as exc:\n            raise SelectionError(\"Backend timeout must be finite.\") from exc\n        return cls(\n            policy.descriptor.root,\n            policy.descriptor.python_path,\n            policy.descriptor.python_path,\n            max(1.0, min(seconds, 300.0)),\n            generation,\n            lifetime_id,\n            (),\n            policy,\n        )\n\n"
+        },
+        {
+          "new_end": 11260,
+          "new_start": 11045,
+          "original": "",
+          "replacement": "        if (\n            self.bundled_policy is not None\n            and self.bundled_policy.constants.PLATFORM == \"windows-x64\"\n        ):\n            return ntpath.join(self.project_root, \"src\", \"mechanical_cad\")\n"
+        }
+      ],
+      "original_bytes": 9736,
+      "original_sha256": "82e6659b1c0afa7ffb07f5fc30ab47c91867718a6c7899cc03514f5dcb3a5840",
+      "reviewed_bytes": 11851,
+      "reviewed_sha256": "90d984ad7d1c6c64507403d390b58880a0ff319a7228529510c62ebd07e0445a"
+    },
+    "blender_addon/mechanical_cad_blender/bridge.py": {
+      "hunks": [
+        {
+          "new_end": 326,
+          "new_start": 315,
+          "original": "",
+          "replacement": "import sys\n"
+        },
+        {
+          "new_end": 9775,
+          "new_start": 9647,
+          "original": "",
+          "replacement": "    if sys.platform == \"win32\" or os.name == \"nt\":\n        raise BridgeError(\"Windows backend execution is not yet qualified.\")\n"
+        }
+      ],
+      "original_bytes": 22690,
+      "original_sha256": "f34122b50b77aa15ba5570bfa8e42290f7044a467b253c240bce1bc29e178896",
+      "reviewed_bytes": 22829,
+      "reviewed_sha256": "58512fa61fdc5fc0ddd45c18e2dc8d40070a78c2965335ffa3f35d832bfa824d"
+    },
+    "blender_addon/mechanical_cad_blender/runtime_bundle_launch.py": {
+      "hunks": [
+        {
+          "new_end": 567,
+          "new_start": 553,
+          "original": "",
+          "replacement": "import ntpath\n"
+        },
+        {
+          "new_end": 965,
+          "new_start": 946,
+          "original": "",
+          "replacement": "    validate_path,\n"
+        },
+        {
+          "new_end": 2988,
+          "new_start": 1876,
+          "original": "",
+          "replacement": "def _windows_path(value, *, directory=False):\n    \"\"\"Ordinary exact DOS spelling only; no aliases or long-path opt-in.\"\"\"\n    if type(value) is not str or not value or \"\\0\" in value:\n        raise BundleLaunchError(\"Unsupported Windows runtime path.\")\n    drive, tail = ntpath.splitdrive(value)\n    if (\n        len(drive) != 2\n        or drive[1] != \":\"\n        or drive[0] not in \"ABCDEFGHIJKLMNOPQRSTUVWXYZ\"\n        or not tail.startswith(\"\\\\\")\n        or \"/\" in value\n        or \"%\" in value\n        or ntpath.normpath(value) != value\n    ):\n        raise BundleLaunchError(\"Unsupported Windows runtime path.\")\n    try:\n        if len(value.encode(\"utf-16-le\", \"strict\")) // 2 >= (248 if directory else 260):\n            raise BundleLaunchError(\"Windows runtime path exceeds the short-path limit.\")\n        if tail != \"\\\\\":\n            validate_path(\n                tail[1:].replace(\"\\\\\", \"/\"), BundleLimits(max_path_bytes=4096, max_path_depth=128)\n            )\n    except (UnicodeError, BundleError) as exc:\n        raise BundleLaunchError(\"Unsupported Windows runtime path.\") from exc\n    return value\n\n\n"
+        },
+        {
+          "new_end": 3942,
+          "new_start": 3634,
+          "original": "",
+          "replacement": "        if type(self.PLATFORM) is not str or self.PLATFORM not in {\"linux-x64\", \"windows-x64\"}:\n            raise BundleLaunchError(\"Unsupported trusted bundled launch profile.\")\n        python_path = (\n            \"python/python.exe\" if self.PLATFORM == \"windows-x64\" else \"python/bin/python3.12\"\n        )\n"
+        },
+        {
+          "new_end": 4072,
+          "new_start": 4072,
+          "original": "            (\"PLATFORM\", \"linux-x64\"),\n",
+          "replacement": ""
+        },
+        {
+          "new_end": 4246,
+          "new_start": 4204,
+          "original": "            (\"PYTHON_PATH\", \"python/bin/python3.12\"),\n",
+          "replacement": "            (\"PYTHON_PATH\", python_path),\n"
+        },
+        {
+          "new_end": 6672,
+          "new_start": 6672,
+          "original": "        if sys.platform != \"linux\" or os.name != \"posix\":\n            raise BundleLaunchError(\"Bundled live selection is currently Linux only.\")\n",
+          "replacement": ""
+        },
+        {
+          "new_end": 8022,
+          "new_start": 6964,
+          "original": "        package, cache = Path(_path(self.package_root)), Path(_path(self.cache_root))\n        if package == cache or package in cache.parents or cache in package.parents:\n",
+          "replacement": "        windows = c.PLATFORM == \"windows-x64\"\n        if windows:\n            package = _windows_path(self.package_root, directory=True)\n            cache = _windows_path(self.cache_root, directory=True)\n            # Case-insensitive overlap rejects aliases; it never establishes identity equality.\n            left, right = ntpath.normcase(package), ntpath.normcase(cache)\n            overlap = (\n                left == right\n                or left.startswith(right.rstrip(\"\\\\\") + \"\\\\\")\n                or right.startswith(left.rstrip(\"\\\\\") + \"\\\\\")\n            )\n            path_join, check_path = ntpath.join, _windows_path\n        else:\n            if sys.platform != \"linux\" or os.name != \"posix\":\n                raise BundleLaunchError(\"Bundled live selection is currently Linux only.\")\n            package, cache = Path(_path(self.package_root)), Path(_path(self.cache_root))\n            overlap = package == cache or package in cache.parents or cache in package.parents\n            path_join, check_path = os.path.join, _path\n        if overlap:\n"
+        },
+        {
+          "new_end": 8416,
+          "new_start": 8374,
+          "original": "            expected_platform=\"linux-x64\",\n",
+          "replacement": "            expected_platform=c.PLATFORM,\n"
+        },
+        {
+          "new_end": 8552,
+          "new_start": 8493,
+          "original": "        expected_root = str(cache / c.BUNDLE_ID)\n",
+          "replacement": "        expected_root = path_join(str(cache), c.BUNDLE_ID)\n"
+        },
+        {
+          "new_end": 9286,
+          "new_start": 9128,
+          "original": "            (\"python_path\", str(Path(expected_root) / c.PYTHON_PATH)),\n            (\"bootstrap_path\", str(Path(expected_root) / c.BOOTSTRAP_PATH)),\n",
+          "replacement": "            (\"python_path\", path_join(expected_root, *c.PYTHON_PATH.split(\"/\"))),\n            (\"bootstrap_path\", path_join(expected_root, c.BOOTSTRAP_PATH)),\n"
+        },
+        {
+          "new_end": 9354,
+          "new_start": 9297,
+          "original": "            if _path(getattr(d, name)) != expected:\n",
+          "replacement": "            if check_path(getattr(d, name)) != expected:\n"
+        },
+        {
+          "new_end": 9632,
+          "new_start": 9571,
+          "original": "        if \":\" in native or \"$\" in native:\n",
+          "replacement": "        if not windows and (\":\" in native or \"$\" in native):\n"
+        },
+        {
+          "new_end": 10440,
+          "new_start": 10281,
+          "original": "",
+          "replacement": "        if self.constants.PLATFORM == \"windows-x64\":\n            # SystemRoot and per-operation TEMP are captured by the Windows worker.\n            return {}\n"
+        }
+      ],
+      "original_bytes": 14215,
+      "original_sha256": "534667990b67a57e1afac814c2db9d305d9f195540b5b8959c1ca7d2e2cbab00",
+      "reviewed_bytes": 16560,
+      "reviewed_sha256": "c7e828980ceb73ad339388e08ac78704ebe59fab9c2bdbfb9189dafcaf74eca6"
+    },
+    "blender_addon/mechanical_cad_blender/sidecar_job.py": {
+      "hunks": [
+        {
+          "new_end": 1384,
+          "new_start": 1373,
+          "original": "",
+          "replacement": "import sys\n"
+        },
+        {
+          "new_end": 3435,
+          "new_start": 3292,
+          "original": "",
+          "replacement": "        if sys.platform == \"win32\" or os.name == \"nt\":\n            raise bridge.BridgeError(\"Windows backend execution is not yet qualified.\")\n"
+        },
+        {
+          "new_end": 13017,
+          "new_start": 12673,
+          "original": "",
+          "replacement": "\n        def read_diagnostics():\n            stderr.seek(0)\n            return stderr.read(MAX_STDERR_BYTES + 1)\n\n        return self._decode_response(process.returncode, raw, read_diagnostics)\n\n    def _decode_response(self, returncode, raw, read_diagnostics):\n        \"\"\"The existing common envelope rules, shared by both byte transports.\"\"\"\n"
+        },
+        {
+          "new_end": 13279,
+          "new_start": 13234,
+          "original": "            stderr.seek(0)\n            diagnostics = stderr.read(MAX_STDERR_BYTES + 1)\n",
+          "replacement": "            diagnostics = read_diagnostics()\n"
+        },
+        {
+          "new_end": 13819,
+          "new_start": 13740,
+          "original": "                f\"Sidecar returned invalid JSON (exit {process.returncode}). {detail}\"\n",
+          "replacement": "                f\"Sidecar returned invalid JSON (exit {returncode}). {detail}\"\n"
+        },
+        {
+          "new_end": 14416,
+          "new_start": 14374,
+          "original": "        if process.returncode and response[\"ok\"]:\n",
+          "replacement": "        if returncode and response[\"ok\"]:\n"
+        },
+        {
+          "new_end": 14543,
+          "new_start": 14457,
+          "original": "                f\"Sidecar exited with status {process.returncode} despite reporting success.\"\n",
+          "replacement": "                f\"Sidecar exited with status {returncode} despite reporting success.\"\n"
+        },
+        {
+          "new_end": 17695,
+          "new_start": 16724,
+          "original": "",
+          "replacement": "    def _exchange_windows(self):\n        from .windows_runtime import WindowsOperationOwner\n\n        owner = self._bundle_owner = WindowsOperationOwner(self._bundled_policy, self._payload)\n        try:\n            owner.acquire(timeout=self._timeout, cancelled=self._cancel_requested.is_set)\n            return owner.exchange(\n                lambda code, raw, diagnostics: self._decode_response(code, raw, lambda: diagnostics)\n            )\n        except Exception:\n            if owner.failure_code == \"timeout\":\n                raise self._transport_error(\n                    \"CAD operation timed out; the sidecar was stopped. Reduce model \"\n                    \"complexity or increase the timeout in preferences.\"\n                ) from None\n            raise\n        finally:\n            self._launched = owner.attempted_start\n            try:\n                owner.cleanup()\n            finally:\n                self._cleanup_uncertain = owner.cleanup_uncertain\n\n"
+        },
+        {
+          "new_end": 17917,
+          "new_start": 17804,
+          "original": "",
+          "replacement": "        if self._bundled_policy.constants.PLATFORM == \"windows-x64\":\n            return self._exchange_windows()\n"
+        }
+      ],
+      "original_bytes": 22200,
+      "original_sha256": "b776757f5c60c01736a4052c58a0ed16081c1070ffecc829770171dfa4d1987f",
+      "reviewed_bytes": 23716,
+      "reviewed_sha256": "cdbeea1345b92dadea8d8e754f7d9f6ec7a4c639cd27647ccb1640b675b7465f"
+    },
+    "blender_addon/mechanical_cad_blender/windows_process.py": {
+      "hunks": [
+        {
+          "new_end": 1056,
+          "new_start": 1044,
+          "original": "",
+          "replacement": "import math\n"
+        },
+        {
+          "new_end": 6073,
+          "new_start": 6001,
+          "original": "",
+          "replacement": "        deadline: float | None = None,\n        cleanup_checkpoint=None,\n"
+        },
+        {
+          "new_end": 7166,
+          "new_start": 6656,
+          "original": "",
+          "replacement": "        if cleanup_checkpoint is not None and not callable(cleanup_checkpoint):\n            raise ProcessError(\"invalid_process_contract\")\n        if deadline is not None:\n            try:\n                finite = type(deadline) in (int, float) and math.isfinite(deadline)\n            except OverflowError:\n                finite = False\n            if not finite:\n                raise ProcessError(\"invalid_process_deadline\")\n            if deadline <= clock():\n                raise ProcessError(\"timeout\")\n"
+        },
+        {
+          "new_end": 7593,
+          "new_start": 7461,
+          "original": "",
+          "replacement": "        self._cleanup_checkpoint = cleanup_checkpoint\n        self._cleanup_started_at = None\n        self._cleanup_stopped = False\n"
+        },
+        {
+          "new_end": 7908,
+          "new_start": 7874,
+          "original": "        self._deadline = None\n",
+          "replacement": "        self._deadline = deadline\n"
+        },
+        {
+          "new_end": 10396,
+          "new_start": 8409,
+          "original": "",
+          "replacement": "    @property\n    def tree_quiescent(self):\n        \"\"\"Original root termination plus zero owned-job active processes.\"\"\"\n        return self._quiescent\n\n    @property\n    def cleanup_uncertain(self):\n        \"\"\"An ambiguous close or rejected cleanup checkpoint prevents completion.\"\"\"\n        return self._poisoned\n\n    @property\n    def cleanup_started_at(self):\n        \"\"\"Original tracked cleanup start, never renewed by later observations.\"\"\"\n        return self._cleanup_started_at\n\n    def _stop_cleanup(self):\n        self._cleanup_stopped = self._poisoned = True\n        self.cleanup_error = ProcessError(\"cleanup_checkpoint_failed\")\n        if self.error is None:\n            self.error = ProcessError(\"cleanup_pending\")\n        self.state = \"cleanup_pending\"\n\n    def _begin_cleanup(self, started_at=None):\n        if self._cleanup_checkpoint is None or self._cleanup_started_at is not None:\n            return\n        if self._cleanup_stopped:\n            return\n        try:\n            started_at = self._clock() if started_at is None else started_at\n            if type(started_at) not in (int, float) or not math.isfinite(started_at):\n                raise ValueError\n            self._cleanup_started_at = started_at\n        except Exception:\n            self._stop_cleanup()\n\n    def _check_cleanup(self):\n        if self._cleanup_stopped:\n            return False\n        if self._cleanup_checkpoint is None or self._cleanup_started_at is None:\n            return True\n        try:\n            if self._cleanup_checkpoint(self._cleanup_started_at) is not None:\n                raise ValueError\n        except BaseException:\n            self._stop_cleanup()\n            return False\n        return True\n\n    def _cleanup_query(self, query, *args):\n        if not self._check_cleanup():\n            raise self.cleanup_error\n        try:\n            return query(*args)\n        finally:\n            if not self._check_cleanup():\n                raise self.cleanup_error\n\n"
+        },
+        {
+          "new_end": 10677,
+          "new_start": 10564,
+          "original": "    def _fail(self, code, exc=None):\n",
+          "replacement": "    def _fail(self, code, exc=None, *, cleanup_started_at=None):\n        self._begin_cleanup(cleanup_started_at)\n"
+        },
+        {
+          "new_end": 11695,
+          "new_start": 11640,
+          "original": "            self._pin.assert_held()\n",
+          "replacement": "            self._cleanup_query(self._pin.assert_held)\n"
+        },
+        {
+          "new_end": 12077,
+          "new_start": 12006,
+          "original": "            if self._api.file_size(file) > limit:\n",
+          "replacement": "            if self._cleanup_query(self._api.file_size, file) > limit:\n"
+        },
+        {
+          "new_end": 12455,
+          "new_start": 12348,
+          "original": "            self._deadline = self._clock() + self._spec.timeout\n",
+          "replacement": "            if self._deadline is None:\n                self._deadline = self._clock() + self._spec.timeout\n"
+        },
+        {
+          "new_end": 15911,
+          "new_start": 15656,
+          "original": "",
+          "replacement": "            if not self._check_cleanup():\n                return\n            started_at = (\n                self._clock()\n                if self._cleanup_checkpoint is not None and self._cleanup_started_at is None\n                else None\n            )\n"
+        },
+        {
+          "new_end": 16426,
+          "new_start": 16284,
+          "original": "                self._fail(\"cleanup_pending\")\n",
+          "replacement": "                self._fail(\"cleanup_pending\", cleanup_started_at=started_at)\n            if not self._check_cleanup():\n                return\n"
+        },
+        {
+          "new_end": 16666,
+          "new_start": 16613,
+          "original": "        if self._quiescent:\n",
+          "replacement": "        if self._quiescent or self._cleanup_stopped:\n"
+        },
+        {
+          "new_end": 17114,
+          "new_start": 17041,
+          "original": "",
+          "replacement": "                if not self._check_cleanup():\n                    return\n"
+        },
+        {
+          "new_end": 17496,
+          "new_start": 17423,
+          "original": "",
+          "replacement": "                if not self._check_cleanup():\n                    return\n"
+        },
+        {
+          "new_end": 17922,
+          "new_start": 17872,
+          "original": "        if self._closed:\n",
+          "replacement": "        if self._closed or self._cleanup_stopped:\n"
+        },
+        {
+          "new_end": 18620,
+          "new_start": 18544,
+          "original": "                status = self._api.wait(self._process)\n",
+          "replacement": "                status = self._cleanup_query(self._api.wait, self._process)\n"
+        },
+        {
+          "new_end": 18747,
+          "new_start": 18664,
+          "original": "                    code = self._api.exit_code(self._process)\n",
+          "replacement": "                    code = self._cleanup_query(self._api.exit_code, self._process)\n"
+        },
+        {
+          "new_end": 19217,
+          "new_start": 19041,
+          "original": "            active = self._api.active_processes(self._job) if self._job is not None else 0\n",
+          "replacement": "            active = (\n                self._cleanup_query(self._api.active_processes, self._job)\n                if self._job is not None\n                else 0\n            )\n"
+        },
+        {
+          "new_end": 21111,
+          "new_start": 20977,
+          "original": "            data = self._api.read_file(self._files[2 if stderr else 1], limit + 1)\n",
+          "replacement": "            data = self._cleanup_query(\n                self._api.read_file, self._files[2 if stderr else 1], limit + 1\n            )\n"
+        },
+        {
+          "new_end": 21609,
+          "new_start": 21520,
+          "original": "",
+          "replacement": "        self._begin_cleanup()\n        if self._cleanup_stopped:\n            return False\n"
+        },
+        {
+          "new_end": 21904,
+          "new_start": 21852,
+          "original": "",
+          "replacement": "        if self._poisoned:\n            return False\n"
+        }
+      ],
+      "original_bytes": 31457,
+      "original_sha256": "33ea86f75e825ae9f587eac52e134ce2b0f1f2100dcdcc3d8b00e83d2d40bc06",
+      "reviewed_bytes": 35199,
+      "reviewed_sha256": "87d748a04b7bfb733fe3f11576cba31d54cbae5e1f221e518aa8bb3325130e99"
+    },
+    "scripts/standalone_child_bootstrap.py": {
+      "hunks": [
+        {
+          "new_end": 14046,
+          "new_start": 13423,
+          "original": "",
+          "replacement": "def _restrict_windows_dll_search():\n    \"\"\"Child-only policy for later loads; initial Python PE loads need host evidence.\"\"\"\n    try:\n        import ctypes\n\n        kernel = ctypes.WinDLL(\"kernel32\", use_last_error=True)\n        configure = kernel.SetDefaultDllDirectories\n        configure.argtypes = [ctypes.c_uint32]\n        configure.restype = ctypes.c_int\n        # Application directory, System32 and explicitly registered user directories.\n        if not configure(0x00000200 | 0x00000800 | 0x00000400):\n            _fail(\"dll_search_policy_failed\")\n    except Exception:\n        _fail(\"dll_search_policy_failed\")\n\n\n"
+        },
+        {
+          "new_end": 14248,
+          "new_start": 14205,
+          "original": "",
+          "replacement": "            _restrict_windows_dll_search()\n"
+        },
+        {
+          "new_end": 14901,
+          "new_start": 14668,
+          "original": "                handles.append(operating_system.add_dll_directory(directory))\n",
+          "replacement": "                handle = operating_system.add_dll_directory(directory)\n                if not callable(getattr(handle, \"close\", None)):\n                    _fail(\"dll_directory_cookie_invalid\")\n                handles.append(handle)\n"
+        }
+      ],
+      "original_bytes": 21985,
+      "original_sha256": "1c0af71a0212436a2c833d8e5bea23e4180eaab5eadafc2d6d11201f1597e4c8",
+      "reviewed_bytes": 22806,
+      "reviewed_sha256": "df85aeb34905ca1e18f34610ecbf74b8c00fa26738f520e65f9bc278b058188c"
+    },
+    "tests/unit/test_standalone_child_bootstrap.py": {
+      "hunks": [
+        {
+          "new_end": 1793,
+          "new_start": 1575,
+          "original": "",
+          "replacement": "\n\nclass DLLPolicyFunction:\n    def __init__(self, events):\n        self.events = events\n        self.result = 1\n\n    def __call__(self, flags):\n        self.events.append((\"default\", flags))\n        return self.result\n"
+        },
+        {
+          "new_end": 6472,
+          "new_start": 6094,
+          "original": "",
+          "replacement": "    policy = DLLPolicyFunction(events)\n    if windows:\n        import ctypes\n\n        def load_kernel(name, *, use_last_error):\n            assert name == \"kernel32\" and use_last_error is True\n            events.append((\"bind\", name))\n            return SimpleNamespace(SetDefaultDllDirectories=policy)\n\n        monkeypatch.setattr(ctypes, \"WinDLL\", load_kernel, raising=False)\n"
+        },
+        {
+          "new_end": 7853,
+          "new_start": 7830,
+          "original": "",
+          "replacement": "        policy=policy,\n"
+        },
+        {
+          "new_end": 23078,
+          "new_start": 19509,
+          "original": "",
+          "replacement": "\n\ndef test_windows_default_dll_policy_precedes_exact_cookies_and_private_imports(\n    tmp_path, monkeypatch\n):\n    import ctypes\n\n    value = fixture(tmp_path, monkeypatch, windows=True)\n    original = value.importer\n    expected = [\n        str(value.prefix),\n        str(value.native),\n        str(value.root / \"packages/OCP\"),\n        str(value.root / \"packages/slvs\"),\n        str(value.root / \"packages/cadquery_ocp_novtk.libs\"),\n    ]\n\n    def importer(name):\n        assert value.events[:2] == [(\"bind\", \"kernel32\"), (\"default\", 0x200 | 0x800 | 0x400)]\n        assert [event[1] for event in value.events if event[0] == \"open\"] == expected\n        assert len(value.handles) == 5 and all(not handle.closed for handle in value.handles)\n        assert value.policy.argtypes == [ctypes.c_uint32]\n        assert value.policy.restype is ctypes.c_int\n        return original(name)\n\n    value.importer = importer\n    assert run(value) == 17\n    assert value.imported == [\"mechanical_cad\", \"mechanical_cad.sidecar\"]\n    assert value.events == (\n        [(\"bind\", \"kernel32\"), (\"default\", 0xE00)]\n        + [(\"open\", path) for path in expected]\n        + [(\"close\", path) for path in reversed(expected)]\n    )\n\n\n@pytest.mark.parametrize(\"failure\", [\"bind\", \"missing_api\", \"zero\", \"call\"])\ndef test_windows_default_dll_policy_failure_prevents_cookies_and_private_imports(\n    tmp_path, monkeypatch, failure\n):\n    import ctypes\n\n    value = fixture(tmp_path, monkeypatch, windows=True)\n    startup = list(value.system.path)\n\n    def fail(*args, **kwargs):\n        raise OSError(\"untrusted API exception details\")\n\n    if failure == \"bind\":\n        monkeypatch.setattr(ctypes, \"WinDLL\", fail)\n    elif failure == \"missing_api\":\n        monkeypatch.setattr(ctypes, \"WinDLL\", lambda *args, **kwargs: SimpleNamespace())\n    elif failure == \"zero\":\n        value.policy.result = 0\n    else:\n        monkeypatch.setattr(\n            ctypes, \"WinDLL\", lambda *args, **kwargs: SimpleNamespace(SetDefaultDllDirectories=fail)\n        )\n    with pytest.raises(bootstrap.BootstrapError, match=\"^dll_search_policy_failed$\"):\n        run(value)\n    assert value.handles == value.imported == []\n    assert value.system.path == startup\n    assert not any(event[0] == \"open\" for event in value.events)\n\n\n@pytest.mark.parametrize(\"failure_index\", range(5))\n@pytest.mark.parametrize(\"cookie\", [None, object(), SimpleNamespace(close=0)])\ndef test_invalid_windows_dll_cookie_fails_before_dispatch_and_closes_prior_cookies(\n    tmp_path, monkeypatch, failure_index, cookie\n):\n    value = fixture(tmp_path, monkeypatch, windows=True)\n    original = value.os.add_dll_directory\n\n    def add(path):\n        if len(value.handles) == failure_index:\n            return cookie\n        return original(path)\n\n    value.os.add_dll_directory = add\n    with pytest.raises(bootstrap.BootstrapError, match=\"^dll_directory_cookie_invalid$\"):\n        run(value)\n    assert value.imported == [] and len(value.handles) == failure_index\n    assert all(handle.closed for handle in value.handles)\n    assert [event[1] for event in value.events if event[0] == \"close\"] == [\n        handle.path for handle in reversed(value.handles)\n    ]\n\n\ndef test_linux_dispatch_never_binds_windows_dll_policy(tmp_path, monkeypatch):\n    import ctypes\n\n    value = fixture(tmp_path, monkeypatch)\n    monkeypatch.setattr(\n        ctypes,\n        \"WinDLL\",\n        lambda *args, **kwargs: pytest.fail(\"Windows API used on Linux\"),\n        raising=False,\n    )\n    assert run(value) == 17 and value.events == [] and value.handles == []\n"
+        }
+      ],
+      "original_bytes": 36630,
+      "original_sha256": "c590b1af81a9a6704fd7a21c4ddd53d1aadd6be37be152f8ace64230b6f684e1",
+      "reviewed_bytes": 40818,
+      "reviewed_sha256": "419329545f682755f2441163692b492f0bd995573a8e5d93c2a685ff55831e11"
+    },
+    "tests/unit/test_windows_process.py": {
+      "hunks": [
+        {
+          "new_end": 49955,
+          "new_start": 33281,
+          "original": "",
+          "replacement": "\n\ndef deadline_owner(deadline):\n    api = FakeAPI()\n    api.spec = spec()\n    pin = Pin(api)\n    validation = Validation(api, pin)\n    now = [10.0]\n    child = process.WindowsOwnedProcess(\n        api.spec, pin, validation, api=api, clock=lambda: now[0], deadline=deadline\n    )\n    return child, api, pin, validation, now\n\n\n@pytest.mark.parametrize(\n    \"deadline\",\n    [\n        True,\n        False,\n        \"20\",\n        b\"20\",\n        [],\n        {},\n        object(),\n        float(\"nan\"),\n        float(\"inf\"),\n        -float(\"inf\"),\n        10**1000,\n    ],\n)\ndef test_invalid_absolute_deadline_rejects_before_pin_or_api_acquisition(deadline, monkeypatch):\n    api = FakeAPI()\n    pin = Pin(api)\n    validation = Validation(api, pin)\n    monkeypatch.setattr(process, \"Win32API\", lambda: pytest.fail(\"acquired default API\"))\n    with pytest.raises(contracts.ProcessError, match=\"invalid_process_deadline\"):\n        process.WindowsOwnedProcess(spec(), pin, validation, clock=lambda: 10.0, deadline=deadline)\n    assert api.events == api.acquired == []\n    assert validation.closes == pin.releases == 0 and pin.held\n\n\n@pytest.mark.parametrize(\"deadline\", [-1.0, 9, 10.0])\ndef test_expired_absolute_deadline_remains_caller_owned_without_acquisition(deadline, monkeypatch):\n    api = FakeAPI()\n    pin = Pin(api)\n    validation = Validation(api, pin)\n    monkeypatch.setattr(process, \"Win32API\", lambda: pytest.fail(\"acquired default API\"))\n    with pytest.raises(contracts.ProcessError, match=\"timeout\"):\n        process.WindowsOwnedProcess(spec(), pin, validation, clock=lambda: 10.0, deadline=deadline)\n    assert api.events == api.acquired == []\n    assert validation.closes == pin.releases == 0 and pin.held\n\n\n@pytest.mark.parametrize(\"deadline\", [12, 12.5])\ndef test_supplied_deadline_is_never_renewed_by_delayed_start(deadline):\n    child, api, pin, validation, now = deadline_owner(deadline)\n    now[0] = 11.0\n    child.start()\n    assert child.state == \"running\" and child.error is None\n    assert child._deadline == deadline\n    now[0] = deadline\n    child.poll_exit()\n    assert child.error.code == \"timeout\" and \"kill_job\" in api.events\n    assert child._deadline == deadline\n    finish(child, api)\n    assert validation.closes == pin.releases == 1\n\n\ndef test_supplied_deadline_expiring_before_start_acquires_no_process_resources():\n    child, api, pin, validation, now = deadline_owner(12.0)\n    now[0] = 12.0\n    child.start()\n    assert child.error.code == \"timeout\" and not child.attempted_start\n    assert api.acquired == [] and child.cleanup_complete()\n    assert validation.closes == pin.releases == 1\n\n\ndef test_none_deadline_preserves_start_time_timeout_default():\n    child, api, _, _, now = deadline_owner(None)\n    assert child._deadline is None\n    now[0] = 100.0\n    child.start()\n    assert child._deadline == 110.0 and child.error is None\n    now[0] = 109.9\n    assert child.poll_exit() is None and child.error is None\n    now[0] = 110.0\n    child.poll_exit()\n    assert child.error.code == \"timeout\"\n    finish(child, api)\n\n\ndef test_quiescence_property_requires_root_and_job_and_is_read_only():\n    child, api, _, _, _, _ = owner()\n    assert child.tree_quiescent is False and child.cleanup_uncertain is False\n    for name in (\"tree_quiescent\", \"cleanup_uncertain\"):\n        with pytest.raises(AttributeError):\n            setattr(child, name, True)\n    child.start()\n    api.kill_completes = False\n    api.root_signaled, api.active = True, 1\n    assert child.poll_exit() == 0 and child.tree_quiescent is False\n    assert child.cleanup_uncertain is False\n    api.active = 0\n    child.poll_exit()\n    assert child.tree_quiescent is True and child.cleanup_uncertain is False\n    finish(child, api)\n    assert child.tree_quiescent is True and child.cleanup_uncertain is False\n\n\n@pytest.mark.parametrize(\n    \"fault\",\n    [\n        \"close_10\",\n        \"close_11\",\n        \"close_12\",\n        \"close_13\",\n        \"close_attributes\",\n        \"close_201\",\n        \"close_200\",\n        \"close_100\",\n        \"close_file0\",\n        \"close_file1\",\n        \"close_file2\",\n        \"close_file3\",\n    ],\n)\ndef test_uncertain_resource_close_retains_all_validation_anchors_and_pin(fault):\n    child, api, pin, validation, _, _ = owner()\n    api.fault = fault\n    child.start()\n    api.root_signaled, api.active = True, 0\n    assert child.close_after_cleanup() is False\n    assert child.tree_quiescent is True and child.cleanup_uncertain is True\n    assert child.cleanup_complete() is False\n    assert validation.closes == pin.releases == 0 and pin.held\n    assert \"validation_close\" not in api.events and \"pin_release\" not in api.events\n    assert Counter(api.close_calls) == Counter(api.acquired)\n    before = list(api.close_calls)\n    assert child.close_after_cleanup() is False\n    assert api.close_calls == before and validation.closes == pin.releases == 0\n\n\n@pytest.mark.parametrize(\"fault\", [\"wait\", \"exit_code\", \"active\", \"kill_job\"])\ndef test_recoverable_query_or_termination_failure_does_not_poison_cleanup(fault):\n    child, api, _, _, _, _ = owner()\n    child.start()\n    api.kill_completes = False\n    api.fault = fault\n    if fault == \"exit_code\":\n        api.root_signaled = True\n    if fault == \"kill_job\":\n        child.cancel_tree()\n    else:\n        child.poll_exit()\n    assert child.cleanup_error is not None and child.cleanup_uncertain is False\n    finish(child, api)\n    assert child.cleanup_uncertain is False\n\n\ndef cleanup_budget_owner(*, callback=None):\n    api = FakeAPI()\n    api.spec = spec()\n    pin = Pin(api)\n    validation = Validation(api, pin)\n    now, checkpoints = [10.0], []\n\n    def checkpoint(started_at):\n        checkpoints.append((started_at, now[0]))\n        api.events.append(\"cleanup_checkpoint\")\n        if callback is not None:\n            return callback(started_at)\n        if now[0] >= started_at + 5.0:\n            raise RuntimeError(\"untrusted cleanup deadline diagnostic\")\n\n    child = process.WindowsOwnedProcess(\n        api.spec,\n        pin,\n        validation,\n        api=api,\n        clock=lambda: now[0],\n        cleanup_checkpoint=checkpoint,\n    )\n    return child, api, pin, validation, now, checkpoints\n\n\ndef assert_cleanup_stays_stopped(child, api, checkpoints):\n    before = (list(api.events), list(api.close_calls), list(checkpoints))\n    child.poll_exit()\n    child.cancel_tree()\n    child.start()\n    assert child.close_after_cleanup() is False\n    assert not child.cleanup_complete() and child.cleanup_uncertain\n    assert before == (api.events, api.close_calls, checkpoints)\n\n\n@pytest.mark.parametrize(\"callback\", [False, 0, \"callable\", object()])\ndef test_invalid_cleanup_callback_rejects_before_ownership_transfer(callback):\n    api = FakeAPI()\n    pin = Pin(api)\n    validation = Validation(api, pin)\n    with pytest.raises(contracts.ProcessError, match=\"invalid_process_contract\"):\n        process.WindowsOwnedProcess(spec(), pin, validation, api=api, cleanup_checkpoint=callback)\n    assert api.events == [] and validation.closes == pin.releases == 0 and pin.held\n\n\ndef test_cleanup_none_preserves_no_timestamp_and_no_new_clock_calls_on_failure():\n    child, api, _, _, now, _ = owner()\n    child.start()\n    calls = []\n    child._clock = lambda: calls.append(now[0]) or now[0]\n    child.cancel_tree()\n    assert calls == [] and child.cleanup_started_at is None\n    finish(child, api)\n    assert child.cleanup_started_at is None\n\n\n@pytest.mark.parametrize(\"fault\", [\"open_file0\", \"initialize_file0\", \"set_job\"])\ndef test_cleanup_starts_at_early_failure_before_any_resource_retirement(fault):\n    child, api, pin, validation, _, checkpoints = cleanup_budget_owner()\n    api.fault = fault\n    child.start()\n    assert child.cleanup_started_at == 10.0\n    assert checkpoints and all(started == 10.0 for started, _ in checkpoints)\n    assert child.cleanup_complete() and validation.closes == pin.releases == 1\n    assert Counter(api.acquired) == Counter(api.closed)\n    for index, event in enumerate(api.events):\n        if event.startswith(\"close_\") or event in {\"validation_close\", \"pin_release\"}:\n            assert api.events[index - 1] == api.events[index + 1] == \"cleanup_checkpoint\"\n    with pytest.raises(AttributeError):\n        child.cleanup_started_at = 99.0\n\n\ndef test_failed_normal_transient_close_uses_call_entry_time_before_slow_return():\n    child, api, pin, validation, now, checkpoints = cleanup_budget_owner()\n    api.fault = \"close_attributes\"\n    api.hook = lambda event: now.__setitem__(0, 16.0) if event == \"close_attributes\" else None\n    child.start()\n    assert child.cleanup_started_at == 10.0 and checkpoints == [(10.0, 16.0)]\n    assert api.close_calls == [\"attributes\"]\n    assert not child._transient[-1].closed and child._transient[-1].attempted\n    assert all(not resource.attempted for resource in child._resources)\n    assert validation.closes == pin.releases == 0 and pin.held\n    assert \"kill_job\" not in api.events and \"kill_root\" not in api.events\n    assert_cleanup_stays_stopped(child, api, checkpoints)\n\n\ndef test_successful_normal_transient_closes_do_not_begin_terminal_cleanup_budget():\n    child, api, pin, validation, now, checkpoints = cleanup_budget_owner()\n    api.hook = lambda event: now.__setitem__(0, 16.0) if event == \"close_attributes\" else None\n    child.start()\n    assert child.state == \"running\" and child.cleanup_started_at is None and checkpoints == []\n    now[0] = 18.0\n    api.root_signaled, api.active = True, 0\n    finish(child, api)\n    assert child.cleanup_started_at == 18.0\n    assert all(started == 18.0 for started, _ in checkpoints)\n    assert validation.closes == pin.releases == 1\n\n\ndef test_failure_before_transient_cleanup_keeps_first_time_through_slow_close():\n    child, api, pin, validation, now, checkpoints = cleanup_budget_owner()\n    api.fault = \"set_job\"\n    api.hook = lambda event: now.__setitem__(0, 16.0) if event == \"close_attributes\" else None\n    child.start()\n    assert child.cleanup_started_at == 10.0\n    assert checkpoints == [(10.0, 10.0), (10.0, 16.0)]\n    assert child._transient[-1].closed and child._transient[-1].attempted\n    assert api.close_calls == [\"attributes\"] and validation.closes == pin.releases == 0\n    assert_cleanup_stays_stopped(child, api, checkpoints)\n\n\ndef test_cleanup_expired_precheck_leaves_next_resource_unattempted():\n    child, api, pin, validation, now, checkpoints = cleanup_budget_owner()\n    child.start()\n    api.root_signaled, api.active = True, 0\n    child.poll_exit()\n    original = child._cleanup_checkpoint\n\n    def expire_between_actions(started_at):\n        if api.events[-1] == \"cleanup_checkpoint\":\n            now[0] = started_at + 5.0\n        original(started_at)\n\n    child._cleanup_checkpoint = expire_between_actions\n    assert child.close_after_cleanup() is False\n    assert all(not resource.attempted for resource in child._resources)\n    assert validation.closes == pin.releases == 0 and pin.held\n    assert_cleanup_stays_stopped(child, api, checkpoints)\n\n\n@pytest.mark.parametrize(\n    \"barrier\",\n    [\n        \"close_201\",\n        \"close_200\",\n        \"close_100\",\n        \"close_file3\",\n        \"close_file2\",\n        \"close_file1\",\n        \"close_file0\",\n    ],\n)\ndef test_cleanup_late_successful_close_records_closed_and_stops_next_action(barrier):\n    child, api, pin, validation, now, checkpoints = cleanup_budget_owner()\n    child.start()\n    api.root_signaled, api.active = True, 0\n    api.hook = lambda event: now.__setitem__(0, 16.0) if event == barrier else None\n    assert child.close_after_cleanup() is False\n    resource = next(\n        resource for resource in child._resources if \"close_\" + str(resource.value) == barrier\n    )\n    assert resource.attempted and resource.closed\n    assert api.events[-2:] == [barrier, \"cleanup_checkpoint\"]\n    assert validation.closes == pin.releases == 0 and pin.held\n    assert child.cleanup_started_at == 10.0\n    assert_cleanup_stays_stopped(child, api, checkpoints)\n\n\n@pytest.mark.parametrize(\"barrier\", [\"validation_close\", \"pin_release\"])\ndef test_cleanup_late_validation_or_pin_return_is_recorded_but_never_completed(barrier):\n    child, api, pin, validation, now, checkpoints = cleanup_budget_owner()\n    child.start()\n    api.root_signaled, api.active = True, 0\n    api.hook = lambda event: now.__setitem__(0, 16.0) if event == barrier else None\n    assert child.close_after_cleanup() is False\n    assert child._validation_resource.closed and validation.closes == 1\n    assert pin.releases == (1 if barrier == \"pin_release\" else 0)\n    assert child._pin_resource.closed is (barrier == \"pin_release\")\n    assert pin.held is (barrier != \"pin_release\")\n    assert api.events[-2:] == [barrier, \"cleanup_checkpoint\"]\n    assert_cleanup_stays_stopped(child, api, checkpoints)\n\n\n@pytest.mark.parametrize(\"barrier\", [\"kill_job\", \"wait\", \"exit_code\", \"active\"])\ndef test_cleanup_late_termination_or_query_stops_all_later_owned_actions(barrier):\n    child, api, pin, validation, now, checkpoints = cleanup_budget_owner()\n    child.start()\n    api.hook = lambda event: now.__setitem__(0, 16.0) if event == barrier else None\n    child.cancel_tree()\n    child.poll_exit()\n    assert child.cleanup_started_at == 10.0\n    assert api.events[-2:] == [barrier, \"cleanup_checkpoint\"]\n    assert validation.closes == pin.releases == 0 and pin.held\n    if barrier == \"kill_job\":\n        assert child._job_terminated is True\n    assert_cleanup_stays_stopped(child, api, checkpoints)\n\n\ndef test_cleanup_late_defensive_root_termination_preserves_request_observation():\n    child, api, pin, validation, now, checkpoints = cleanup_budget_owner()\n    api.member = False\n    api.hook = lambda event: now.__setitem__(0, 16.0) if event == \"kill_root\" else None\n    child.start()\n    assert child.cleanup_started_at == 10.0 and child._root_terminated is True\n    assert api.events[-2:] == [\"kill_root\", \"cleanup_checkpoint\"]\n    assert validation.closes == pin.releases == 0 and pin.held\n    assert_cleanup_stays_stopped(child, api, checkpoints)\n\n\n@pytest.mark.parametrize(\"fault\", [\"wait\", \"exit_code\", \"active\", \"kill_job\"])\ndef test_cleanup_transient_failure_reobserves_only_with_same_first_deadline(fault):\n    child, api, _, _, now, checkpoints = cleanup_budget_owner()\n    child.start()\n    api.kill_completes = False\n    api.fault = fault\n    if fault == \"exit_code\":\n        api.root_signaled = True\n    if fault == \"kill_job\":\n        child.cancel_tree()\n    else:\n        child.poll_exit()\n    assert child.cleanup_started_at == 10.0 and not child.cleanup_uncertain\n    now[0] = 14.0\n    finish(child, api)\n    assert child.cleanup_started_at == 10.0\n    assert all(started == 10.0 for started, _ in checkpoints)\n\n\n@pytest.mark.parametrize(\n    \"outcome\",\n    [False, True, 1, object(), RuntimeError(\"private data\"), SystemExit(2), KeyboardInterrupt()],\n)\ndef test_cleanup_checkpoint_invalid_outcome_latches_once_and_keeps_original_ownership(outcome):\n    def fail(_started_at):\n        if isinstance(outcome, BaseException):\n            raise outcome\n        return outcome\n\n    child, api, pin, validation, _, checkpoints = cleanup_budget_owner(callback=fail)\n    api.fault = \"open_file0\"\n    child.start()\n    assert checkpoints == [(10.0, 10.0)]\n    assert child.cleanup_error.code == \"cleanup_checkpoint_failed\"\n    assert \"private\" not in str(child.cleanup_error)\n    assert validation.closes == pin.releases == 0 and pin.held\n    assert not child._validation_resource.attempted and not child._pin_resource.attempted\n    assert_cleanup_stays_stopped(child, api, checkpoints)\n\n\n@pytest.mark.parametrize(\"cancelled\", [False, True])\ndef test_every_tracked_cleanup_query_termination_and_close_is_bracketed(cancelled):\n    child, api, pin, validation, _, checkpoints = cleanup_budget_owner()\n    child.start()\n    api.events.clear()\n    if cancelled:\n        child.cancel_tree()\n    else:\n        api.root_signaled, api.active = True, 0\n    finish(child, api)\n    actions = [\n        (index, event) for index, event in enumerate(api.events) if event != \"cleanup_checkpoint\"\n    ]\n    assert len(checkpoints) == 2 * len(actions)\n    for index, event in actions:\n        assert event.startswith(\"close_\") or event in {\n            \"pin_check\",\n            \"size_file1\",\n            \"size_file2\",\n            \"kill_job\",\n            \"wait\",\n            \"exit_code\",\n            \"active\",\n            \"validation_close\",\n            \"pin_release\",\n        }\n        assert api.events[index - 1] == api.events[index + 1] == \"cleanup_checkpoint\"\n    assert validation.closes == pin.releases == 1\n    assert child.cleanup_started_at == 10.0\n    assert all(started == 10.0 for started, _ in checkpoints)\n"
+        }
+      ],
+      "original_bytes": 33281,
+      "original_sha256": "605216baf05793f3f46a87185044993a586b97e975da1ffc7f2d8be64e1e984e",
+      "reviewed_bytes": 49955,
+      "reviewed_sha256": "0d0f2521921e313683741371f00147b467605e179e3a0777b098d7ed77e0fc1f"
+    }
+  },
+  "schema": "windows-transport-python-boundary-v1"
+}

@@ -1,0 +1,1 @@
+{"protocol_version":1,"ok":false,"result":null,"error":{"code":"invalid_action","message":"Unsupported sidecar action."},"result_version":2}

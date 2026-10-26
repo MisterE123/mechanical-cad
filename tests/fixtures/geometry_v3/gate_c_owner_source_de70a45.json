@@ -1,0 +1,530 @@
+{
+  "added": {
+    "tests/blender_geometry3_owner_smoke.py": {
+      "bytes": 44671,
+      "sha256": "83ce64d5e43020c68468583a6d4c63526f3f6bf61c95e943ec0dbc70d892f68f"
+    },
+    "tests/blender_geometry3_persistence_smoke.py": {
+      "bytes": 15717,
+      "sha256": "e53596907016be4825b0ad166b564d7c1933418ebaf5c66c7e146c763b807954"
+    },
+    "tests/unit/test_geometry3_owner.py": {
+      "bytes": 42523,
+      "sha256": "a0dcb23dfdc7681f2fca8ef6ec50ae013c70e2c346df89c4d8b717487417b5a3"
+    }
+  },
+  "base_commit": "de70a45c2d34e74d61adb93e7f7db881bd6f8404",
+  "changed": {
+    "blender_addon/mechanical_cad_blender/geometry_operations.py": {
+      "hunks": [
+        {
+          "new_end": 1090,
+          "new_start": 980,
+          "original": "def _record_report(state, snapshot, response, *, status=None, extra=\"\"):\n    \"\"\"Persist full-precision numeric metadata, never the native or display mesh.\"\"\"\n",
+          "replacement": "def _report_metadata(response):\n    \"\"\"Detached historical facts; no saved value grants current authority.\"\"\"\n"
+        },
+        {
+          "new_end": 1848,
+          "new_start": 1400,
+          "original": "    if response.get(\"result_version\") == 2:\n        report[\"result_version\"] = 2\n    state.geometry_report_json = json.dumps(report, allow_nan=False)\n",
+          "replacement": "    version = response.get(\"result_version\")\n    if type(version) is int and version in (2, 3):\n        report[\"result_version\"] = version\n    return report\n\n\ndef _record_report(state, snapshot, response, *, status=None, extra=\"\"):\n    \"\"\"Persist full-precision numeric metadata, never the native or display mesh.\"\"\"\n    result = response.get(\"result\") or {}\n    state.geometry_report_json = json.dumps(_report_metadata(response), allow_nan=False)\n"
+        },
+        {
+          "new_end": 5013,
+          "new_start": 4969,
+          "original": "",
+          "replacement": "    version = binding.get(\"result_version\")\n"
+        },
+        {
+          "new_end": 5504,
+          "new_start": 5022,
+          "original": "        type(evidence) is not GuardedEvidence\n",
+          "replacement": "        type(prepared) is not backend_contracts.PreparedRequest\n        or type(version) is not int\n        or version not in (2, 3)\n        or prepared.operation_request().get(\"result_version\") != version\n        or prepared.action != action\n        or action not in {\"check_geometry\", \"export_step\", \"export_stl\"}\n        or binding.get(\"prepared\") != prepared\n        or binding.get(\"request_fingerprint\") != prepared.fingerprint\n        or type(evidence) is not GuardedEvidence\n"
+        },
+        {
+          "new_end": 5882,
+          "new_start": 5841,
+          "original": "        expected_result_version=2,\n",
+          "replacement": "        expected_result_version=version,\n"
+        },
+        {
+          "new_end": 6735,
+          "new_start": 6711,
+          "original": "",
+          "replacement": "        prepared = None\n"
+        },
+        {
+          "new_end": 6833,
+          "new_start": 6759,
+          "original": "",
+          "replacement": "        validated_completion = None\n        historical_report_json = None\n"
+        },
+        {
+          "new_end": 7027,
+          "new_start": 6859,
+          "original": "        document_state._RUNTIME.pop(document_state._scene_key(scene), None)\n        document_state._GEOMETRY_RUNTIME.pop(document_state._scene_key(scene), None)\n",
+          "replacement": "        scene_key = document_state._scene_key(scene)\n        document_state._RUNTIME.pop(scene_key, None)\n        document_state._GEOMETRY_RUNTIME.pop(scene_key, None)\n"
+        },
+        {
+          "new_end": 7758,
+          "new_start": 7404,
+          "original": "            binding[\"result_version\"] = 2\n",
+          "replacement": "            prepared_version = prepared.operation_request().get(\"result_version\")\n            if type(prepared_version) is not int or prepared_version != version:\n                raise bridge.BridgeError(\n                    \"Geometry operation differs from its selected result version.\"\n                )\n            binding[\"result_version\"] = version\n"
+        },
+        {
+          "new_end": 8548,
+          "new_start": 8277,
+          "original": "",
+          "replacement": "            validated_completion = evidence\n            if version == 3:\n                historical_report_json = json.dumps(\n                    _report_metadata({**response, \"requested_destination\": destination}),\n                    allow_nan=False,\n                )\n"
+        },
+        {
+          "new_end": 10094,
+          "new_start": 9773,
+          "original": "",
+          "replacement": "                    validated_completion = historical\n                    if version == 3:\n                        historical_report_json = json.dumps(\n                            _report_metadata({**response, \"requested_destination\": destination}),\n                            allow_nan=False,\n                        )\n"
+        },
+        {
+          "new_end": 12166,
+          "new_start": 10245,
+          "original": "",
+          "replacement": "            if version == 3:\n                # Revoke only this launch's authority before any fallible RNA or\n                # report/display write. The original scene key was captured live;\n                # a removed scene or a successor record must not widen cleanup.\n                if (\n                    prepared is not None\n                    and binding is not None\n                    and validated_completion is not None\n                ):\n                    for records in (document_state._RUNTIME, document_state._GEOMETRY_RUNTIME):\n                        record = records.get(scene_key)\n                        if (\n                            type(record) is dict\n                            and record.get(\"prepared\") == prepared\n                            and record.get(\"request_fingerprint\") == prepared.fingerprint\n                            and record.get(\"owner_token\") is binding[\"owner_token\"]\n                            and record.get(\"evidence\") is validated_completion\n                        ):\n                            same_scene = record.get(\"scene\") is scene\n                            if not same_scene:\n                                try:\n                                    # RNA may expose distinct wrappers for one scene.\n                                    # Do not reacquire a pointer during teardown.\n                                    same_scene = bool(record.get(\"scene\") == scene)\n                                except Exception:\n                                    same_scene = False\n                            if same_scene:\n                                records.pop(scene_key, None)\n                if validated_completion is not None:\n                    # Its exact historical response is already retained above.\n                    # Never cancel a substituted completion or a consumed claim.\n                    validated_completion.publication.cancel()\n"
+        },
+        {
+          "new_end": 14635,
+          "new_start": 12203,
+          "original": "                state.status = \"DIRTY\"\n                state.error = str(exc)\n                _hide_owned(scene)\n                _record_report(\n                    state,\n                    snapshot,\n                    {**response, \"requested_destination\": destination},\n                    status=\"OUTDATED\",\n                    extra=(\n                        \"Current CAD verification was rejected: \"\n                        + str(exc)\n                        + \" This report and any confirmed export belong to the earlier request; \"\n                        \"run the action again deliberately.\"\n                    ),\n                )\n",
+          "replacement": "                try:\n                    if version == 3:\n                        state.geometry_report_json = historical_report_json\n                        state.geometry_document_json = snapshot\n                        state.geometry_status = \"OUTDATED\"\n                    state.status = \"DIRTY\"\n                    state.error = str(exc)\n                    try:\n                        _hide_owned(scene)\n                        _record_report(\n                            state,\n                            snapshot,\n                            {**response, \"requested_destination\": destination},\n                            status=\"OUTDATED\",\n                            extra=(\n                                \"Current CAD verification was rejected: \"\n                                + str(exc)\n                                + \" This report and any confirmed export belong to the earlier request; \"\n                                \"run the action again deliberately.\"\n                            ),\n                        )\n                    finally:\n                        if version == 3:\n                            # Rendering may fail after partial report writes. Retain\n                            # the validated file fact, never a current success label.\n                            state.geometry_report_json = historical_report_json\n                            state.geometry_document_json = snapshot\n                            state.geometry_status = \"OUTDATED\"\n                except Exception as report_error:\n                    exported = (\n                        json.loads(historical_report_json).get(\"export\")\n                        if version == 3 and historical_report_json is not None\n                        else None\n                    )\n                    if exported and validated_completion is not None:\n                        raise guarded_transport.GuardedOperationError(\n                            f\"Confirmed {exported['format']} written: {exported['destination']}. \"\n                            \"Current CAD verification was rejected. Historical report storage or \"\n                            f\"rendering failed: {report_error}. The file is not undone; inspect it \"\n                            \"before deliberately running another export.\",\n                            historical_export=validated_completion,\n                        ) from report_error\n                    raise\n"
+        }
+      ],
+      "original_bytes": 15030,
+      "original_sha256": "7643ebd28b4b26f5d84981cce31d09d7d1645cc13f205d269c01ceb49ce48fe6",
+      "reviewed_bytes": 20486,
+      "reviewed_sha256": "f9acc8c153c93b38c1f219e03ede1b03e1df87c795d0ff1bfaf6818f816a1c26"
+    },
+    "blender_addon/mechanical_cad_blender/help_topics.py": {
+      "hunks": [
+        {
+          "new_end": 11291,
+          "new_start": 10873,
+          "original": "            \"The bounded Center Arc preview builds and saves one arc with two shared-ID radial lines and at most its sole extrusion. Schema-3 Geometry Check, STEP/STL, snapshots and Assembly capture/update are unavailable. Trim, extend, construction geometry, broader relation editing, multiple regions, holes, fillets and face attachment remain planned.\",\n",
+          "replacement": "            \"The bounded Center Arc preview builds and saves one arc with two shared-ID radial lines and at most its sole extrusion. Geometry Check and STEP/STL support its sole active bounded sector solid on exact global XY; snapshots and Assembly capture/update remain unavailable. Trim, extend, construction geometry, broader relation editing, multiple regions, holes, fillets and face attachment remain planned.\",\n"
+        },
+        {
+          "new_end": 12826,
+          "new_start": 12097,
+          "original": "        \"STEP preserves exact B-rep geometry. STL is checked binary triangles; select millimetres when importing it.\",\n",
+          "replacement": "        \"The bounded schema-3 output is one directed arc, two exact shared-ID radial lines and its sole active direct extrusion, with exact zero plane origin and identity quaternion. Radius and extrusion height must be 1\u20131000 mm after a fresh solve; nonzero freedom alone does not reject a valid solid.\",\n        \"Selected sketches, profile-only or broader arc graphs, arc-empty schema 3, snapshots and Assembly capture/update remain unavailable for schema-3 Parts.\",\n        \"STEP preserves exact B-rep geometry. STL is checked binary triangles; select millimetres when importing it. Float32 encoding must stay within min(0.00001 mm, 0.1 \u00d7 tessellation tolerance); a valid large solid can pass STEP and fail STL precision.\",\n"
+        },
+        {
+          "new_end": 13522,
+          "new_start": 12986,
+          "original": "        \"Failed geometry leaves the prior export untouched. If a process times out or its reply is lost, file replacement may already have happened: inspect the file before retrying.\",\n",
+          "replacement": "        \"Failed geometry leaves the prior export untouched. UNKNOWN means an export may already have replaced the file but its completion could not be validated. OUTDATED retains a confirmed earlier write after current CAD publication was rejected. Neither outcome retries automatically; inspect the file and deliberately run again if needed.\",\n        \"Saved reports are historical metadata. Reopening a scene, Undo/Redo or a changed backend requires fresh verification; an earlier successful replay is not a current Geometry Check.\",\n"
+        },
+        {
+          "new_end": 20170,
+          "new_start": 19670,
+          "original": "        \"Incomplete arcs stay suspendable drafts and cannot Finish. Arc-bearing Parts permit only the supported sector sketch and its sole extrusion. Primitives, a second extrusion and unrelated graph edits are blocked. Ordinary CAD JSON and Blender saving remain available, but schema-3 Geometry Check, STEP/STL, snapshots and Assembly capture/update are unavailable. Existing accepted v2 Assembly parts remain usable.\",\n",
+          "replacement": "        \"Incomplete arcs stay suspendable drafts and cannot Finish. Arc-bearing Parts permit only the supported sector sketch and its sole extrusion. Primitives, a second extrusion and unrelated graph edits are blocked. Ordinary CAD JSON and Blender saving remain available. Geometry Check and STEP/STL support the sole active bounded sector solid on exact global XY; profile-only output, snapshots and Assembly capture/update remain unavailable. Existing accepted v2 Assembly parts remain usable.\",\n"
+        }
+      ],
+      "original_bytes": 21131,
+      "original_sha256": "7a8add001d718862ca26f1f5ccd93bcb5253bdb6b0bacfc461549d8832154a4c",
+      "reviewed_bytes": 22231,
+      "reviewed_sha256": "06851f5cb15e468e8674d4b2a19dfe3851dbe967cb000fa97ae55e9e9ec6912b"
+    },
+    "blender_addon/mechanical_cad_blender/operation_contracts.py": {
+      "hunks": [
+        {
+          "new_end": 417,
+          "new_start": 357,
+          "original": "from . import part_contracts, result_v3\n",
+          "replacement": "from . import geometry_result_v3, part_contracts, result_v3\n"
+        },
+        {
+          "new_end": 3622,
+          "new_start": 3391,
+          "original": "",
+          "replacement": "        if action in geometry_result_v3.GEOMETRY_ACTIONS:\n            _require(owner_role == \"part\", \"Sector geometry output requires the Part owner.\")\n            geometry_result_v3.validate_source(candidate)\n            return 3\n"
+        },
+        {
+          "new_end": 6181,
+          "new_start": 6048,
+          "original": "",
+          "replacement": "        if action in geometry_result_v3.GEOMETRY_ACTIONS:\n            return geometry_result_v3.validate_response(request, response)\n"
+        }
+      ],
+      "original_bytes": 6384,
+      "original_sha256": "56fd489d36da312360274a1c35a85846f83ef3f495444a1e07e3d15bc37a3258",
+      "reviewed_bytes": 6768,
+      "reviewed_sha256": "decc1b4ac93f3704c29cb98f9b02a8dfa6e1b2610277803c576901153395d222"
+    },
+    "blender_addon/mechanical_cad_blender/workspace_ui.py": {
+      "hunks": [
+        {
+          "new_end": 10901,
+          "new_start": 10784,
+          "original": "            \"Geometry Check, STEP/STL and Assembly capture/update are unavailable for this Part. Ordinary Save remains available.\",\n",
+          "replacement": "            \"Snapshots and Assembly capture/update are unavailable for this Part. Ordinary Save remains available.\",\n"
+        },
+        {
+          "new_end": 11355,
+          "new_start": 10912,
+          "original": "",
+          "replacement": "            layout.label(text=line)\n        geometry_reason = operators.part_action_reason(context, \"check_geometry\")\n        message = (\n            \"Geometry Check and STEP/STL are unavailable: \" + geometry_reason\n            if geometry_reason\n            else \"Geometry Check and STEP/STL are available for this bounded sector solid; each action solves and rebuilds it afresh.\"\n        )\n        for line in _panel_wrap(context, message):\n"
+        },
+        {
+          "new_end": 36366,
+          "new_start": 35946,
+          "original": "                        for line in _panel_wrap(\n                            context, \"Conflict candidates: \" + \", \".join(failed)\n                        ):\n                            layout.label(text=line, icon=\"ERROR\")\n",
+          "replacement": "                        is_redundant = report.get(\"status\") == \"redundant_okay\"\n                        prefix = (\n                            \"Redundancy candidates: \" if is_redundant else \"Conflict candidates: \"\n                        )\n                        for line in _panel_wrap(context, prefix + \", \".join(failed)):\n                            layout.label(text=line, icon=\"INFO\" if is_redundant else \"ERROR\")\n"
+        }
+      ],
+      "original_bytes": 41686,
+      "original_sha256": "5aed3a04330dbc87cb6c0b206df9def26a62da587341d9f65551e078cb1e1ba9",
+      "reviewed_bytes": 42311,
+      "reviewed_sha256": "a541a0fc35a466aa359b0e0e18f4029e0d3f3933cffd399e94f85baf32042f0a"
+    },
+    "src/mechanical_cad/actions.py": {
+      "hunks": [
+        {
+          "new_end": 920,
+          "new_start": 859,
+          "original": "BACKEND_CAPABILITIES = frozenset()\n",
+          "replacement": "BACKEND_CAPABILITIES = frozenset({\"mcad.geometry-result/3\"})\n"
+        }
+      ],
+      "original_bytes": 9159,
+      "original_sha256": "23f7bb6c3de3c09b6bcc513a55c4b40659bdd8bbcd3e73a35473cb571acb8420",
+      "reviewed_bytes": 9185,
+      "reviewed_sha256": "8af07706509e50d3f334c7b1b8be2ccc60de8f6b07d4024e04ba661aa9d9f099"
+    },
+    "src/mechanical_cad/backend_contract.py": {
+      "hunks": [
+        {
+          "new_end": 12958,
+          "new_start": 12902,
+          "original": "    This helper is deliberately not called by observe_backend until the guarded\n    owner activation milestone. A marker on an importing/re-exporting module cannot\n",
+          "replacement": "    A marker on an importing/re-exporting module cannot\n"
+        },
+        {
+          "new_end": 18365,
+          "new_start": 18006,
+          "original": "",
+          "replacement": "    if (\n        type(operation.get(\"result_version\")) is int\n        and operation[\"result_version\"] == 3\n        and operation.get(\"action\") in {\"check_geometry\", \"export_step\", \"export_stl\"}\n    ):\n        geometry_supported, geometry_mismatch = _observe_geometry_v3(core)\n        supported.update(geometry_supported)\n        mismatch |= geometry_mismatch\n"
+        }
+      ],
+      "original_bytes": 21395,
+      "original_sha256": "904ce69d50d80d07093496b717e78a37789b46d17baaa5cd081cecbe8f5ce52b",
+      "reviewed_bytes": 21646,
+      "reviewed_sha256": "6415ac0685f1910c6cb17861c49c1e43d448ff752ab19ccb89daaba4dfb29ceb"
+    },
+    "src/mechanical_cad/geometry_protocol_v3.py": {
+      "hunks": [
+        {
+          "new_end": 726,
+          "new_start": 665,
+          "original": "BACKEND_CAPABILITIES = frozenset()\n",
+          "replacement": "BACKEND_CAPABILITIES = frozenset({\"mcad.geometry-result/3\"})\n"
+        }
+      ],
+      "original_bytes": 3246,
+      "original_sha256": "cbec5f30417c52ae704533da7bb290c434e57897866bbc3fb4b57b2a66b419e0",
+      "reviewed_bytes": 3272,
+      "reviewed_sha256": "11743fd852ecd73b663b61f0f3aef3dad7066c6ec7a0f2c32a133e4839621de2"
+    },
+    "tests/blender_arc_editor_smoke.py": {
+      "hunks": [
+        {
+          "new_end": 9805,
+          "new_start": 9612,
+          "original": "    check(not workspace_ui.available(context, \"EXPORT\"), \"Schema3 export is visibly unavailable\")\n    check(not bpy.ops.mcad.check_geometry.poll(), \"Dedicated Geometry Check is visibly unavailable\")\n",
+          "replacement": "    check(workspace_ui.available(context, \"EXPORT\"), \"Eligible sector export is visibly available\")\n    check(bpy.ops.mcad.check_geometry.poll(), \"Eligible sector Geometry Check is available\")\n"
+        }
+      ],
+      "original_bytes": 11797,
+      "original_sha256": "6c64c0abb2470882e9883c88fbd060966b5b4d53722fa3481fea8428ebaf4231",
+      "reviewed_bytes": 11791,
+      "reviewed_sha256": "9146eddfb24e6987cbd87547b226ba86852cd8c54ff558c93f7364f435ac8974"
+    },
+    "tests/blender_arc_owner_smoke.py": {
+      "hunks": [
+        {
+          "new_end": 8312,
+          "new_start": 8121,
+          "original": "            rejects(\n                lambda action=action: geometry_operations.run_geometry_action(\n                    context,\n                    action,\n                    destination=\"/never-written/arc-owner-negative.step\"\n                    if action != \"check_geometry\"\n                    else None,\n                ),\n                \"Schema3 \" + action + \" rejects before work\",\n",
+          "replacement": "            check(\n                doc._result_version(doc._read_document(state), action=action) == 3,\n                \"Eligible sector \" + action + \" selects explicit result3 without work\",\n"
+        },
+        {
+          "new_end": 8466,
+          "new_start": 8400,
+          "original": "                \"Rejected geometry action preserves all Part fields\",\n",
+          "replacement": "                \"Geometry eligibility preserves all Part fields\",\n"
+        },
+        {
+          "new_end": 8649,
+          "new_start": 8568,
+          "original": "                \"Rejected geometry action preserves current association\",\n",
+          "replacement": "                \"Geometry eligibility preserves the current replay association\",\n"
+        },
+        {
+          "new_end": 8822,
+          "new_start": 8663,
+          "original": "",
+          "replacement": "        check(\n            not doc.geometry_report_is_current(context),\n            \"Eligibility never upgrades replay to Geometry Check authority\",\n        )\n"
+        }
+      ],
+      "original_bytes": 18874,
+      "original_sha256": "62c098a5b03fb801d7d750c5dc545318bd4a89c84be905a4cf13e078fdd930f3",
+      "reviewed_bytes": 18835,
+      "reviewed_sha256": "a78ec7e3dfa86312f29eb45031e4dce5d792e59f7329056cb001306381c1945e"
+    },
+    "tests/unit/test_arc_downstream_barriers.py": {
+      "hunks": [
+        {
+          "new_end": 1077,
+          "new_start": 901,
+          "original": "",
+          "replacement": "    if kind in {\"profile\", \"selected\"}:\n        document[\"active_feature\"] = document[\"features\"][0][\"id\"]\n        if kind == \"profile\":\n            document[\"features\"].pop()\n"
+        },
+        {
+          "new_end": 5402,
+          "new_start": 5323,
+          "original": "@pytest.mark.parametrize(\"kind\", [\"sector\", \"empty\", \"inactive\"])\n",
+          "replacement": "@pytest.mark.parametrize(\"kind\", [\"profile\", \"selected\", \"empty\", \"inactive\"])\n"
+        },
+        {
+          "new_end": 16117,
+          "new_start": 16038,
+          "original": "@pytest.mark.parametrize(\"kind\", [\"sector\", \"empty\", \"inactive\"])\n",
+          "replacement": "@pytest.mark.parametrize(\"kind\", [\"profile\", \"selected\", \"empty\", \"inactive\"])\n"
+        },
+        {
+          "new_end": 24407,
+          "new_start": 23484,
+          "original": "",
+          "replacement": "\n\ndef test_eligible_sector_geometry_poll_and_export_selector_are_available(owners, monkeypatch):\n    ctx = context(owners, source3())\n    before = copy.deepcopy(vars(ctx.scene.mechanical_cad))\n    assert owners.geometry_operations.MCAD_OT_check_geometry.poll(ctx)\n    invoked = []\n    monkeypatch.setattr(\n        owners.geometry_operations.ExportHelper,\n        \"invoke\",\n        lambda op, context, event: invoked.append(op.filepath) or {\"RUNNING_MODAL\"},\n        raising=False,\n    )\n    for cls in (\n        owners.geometry_operations.MCAD_OT_export_step,\n        owners.geometry_operations.MCAD_OT_export_stl,\n    ):\n        assert cls.poll(ctx)\n        operator = cls()\n        operator.filepath = \"/explicit/sector\" + cls.filename_ext\n        assert operator.invoke(ctx, None) == {\"RUNNING_MODAL\"}\n        assert \"UNDO\" not in cls.bl_options\n    assert len(invoked) == 2 and vars(ctx.scene.mechanical_cad) == before\n"
+        }
+      ],
+      "original_bytes": 23282,
+      "original_sha256": "b83199cbd578cbecc3d4e55bc34190f7cd23cb1770c4ed800d65a39585cda405",
+      "reviewed_bytes": 24407,
+      "reviewed_sha256": "ad4b02f3635ee60c46c84163442cdd486ae2b31f4580711170f3c56cf0a6f253"
+    },
+    "tests/unit/test_arc_guarded_evidence.py": {
+      "hunks": [
+        {
+          "new_end": 15286,
+          "new_start": 15252,
+          "original": "def test_only_explicit_capable_owners_can_admit_v3_and_data_only_jobs_stay_out():\n",
+          "replacement": "def check_capable_calls(sources):\n"
+        },
+        {
+          "new_end": 15728,
+          "new_start": 15525,
+          "original": "    for path in ADDON.glob(\"*.py\"):\n        tree = ast.parse(path.read_text())\n",
+          "replacement": "    for name, source in sources.items():\n        path = Path(name)\n        tree = ast.parse(source)\n        if path.name == \"geometry_operations.py\":\n            verify_geometry_version_provenance(tree)\n"
+        },
+        {
+          "new_end": 17387,
+          "new_start": 16540,
+          "original": "",
+          "replacement": "                    elif path.name == \"geometry_operations.py\":\n                        assert ast.unparse(keyword.value) == \"version\"\n                        assert node is next(\n                            call\n                            for call in ast.walk(\n                                next(\n                                    function\n                                    for function in tree.body\n                                    if isinstance(function, ast.FunctionDef)\n                                    and function.name == \"_historical_projection\"\n                                )\n                            )\n                            if isinstance(call, ast.Call)\n                            and isinstance(call.func, ast.Attribute)\n                            and call.func.attr == \"revalidate\"\n                        )\n"
+        },
+        {
+          "new_end": 22541,
+          "new_start": 17663,
+          "original": "",
+          "replacement": "\n\nGEOMETRY_HISTORICAL_SOURCE = '''def _historical_projection(evidence, prepared, binding, action):\n    \"\"\"Validate exact intended bytes without asserting current configuration.\n\n    This projection is a historical fact only; every current sink separately\n    checks the live selection, native context and one-shot publication claim.\n    \"\"\"\n    version = binding.get(\"result_version\")\n    if (\n        type(prepared) is not backend_contracts.PreparedRequest\n        or type(version) is not int\n        or version not in (2, 3)\n        or prepared.operation_request().get(\"result_version\") != version\n        or prepared.action != action\n        or action not in {\"check_geometry\", \"export_step\", \"export_stl\"}\n        or binding.get(\"prepared\") != prepared\n        or binding.get(\"request_fingerprint\") != prepared.fingerprint\n        or type(evidence) is not GuardedEvidence\n        or backend_contracts.request_fingerprint(evidence.guarded_request()) != prepared.fingerprint\n    ):\n        raise bridge.BridgeError(\"Geometry action requires its exact guarded completion.\")\n    return evidence.revalidate(\n        binding[\"selection\"],\n        owner_token=binding[\"owner_token\"],\n        expected_action=action,\n        expected_result_version=version,\n    )\n'''\n\n\ndef verify_geometry_version_provenance(tree):\n    function = next(\n        node\n        for node in tree.body\n        if isinstance(node, ast.FunctionDef) and node.name == \"_historical_projection\"\n    )\n    assert ast.dump(function, include_attributes=False) == ast.dump(\n        ast.parse(GEOMETRY_HISTORICAL_SOURCE).body[0], include_attributes=False\n    )\n    run = next(\n        node\n        for node in tree.body\n        if isinstance(node, ast.FunctionDef) and node.name == \"run_geometry_action\"\n    )\n    text = ast.unparse(run)\n    for name, expression in {\n        \"version\": \"document_state._result_version(document, result_version, action=action)\",\n        \"prepared_version\": \"prepared.operation_request().get('result_version')\",\n    }.items():\n        stores = [\n            node\n            for node in ast.walk(run)\n            if isinstance(node, ast.Name) and isinstance(node.ctx, ast.Store) and node.id == name\n        ]\n        assert len(stores) == 1\n        assignments = [\n            node\n            for node in ast.walk(run)\n            if isinstance(node, ast.Assign) and node.targets == [stores[0]]\n        ]\n        assert len(assignments) == 1 and ast.unparse(assignments[0].value) == expression\n    version_writes = [\n        node\n        for node in ast.walk(run)\n        if isinstance(node, ast.Subscript)\n        and isinstance(node.ctx, ast.Store)\n        and ast.unparse(node) == \"binding['result_version']\"\n    ]\n    assert len(version_writes) == 1\n    assert (\n        \"version = document_state._result_version(document, result_version, action=action)\" in text\n    )\n    assert \"prepared = _prepare_action(document, action, destination, binding, version)\" in text\n    assert \"prepared_version = prepared.operation_request().get('result_version')\" in text\n    assert \"if type(prepared_version) is not int or prepared_version != version:\" in text\n    assert \"binding['result_version'] = version\" in text\n    assert (\n        text.index(\"prepared_version =\")\n        < text.index(\"binding['result_version'] =\")\n        < text.index(\"evidence = guarded_transport.execute\")\n    )\n\n\ndef test_only_explicit_capable_owners_can_admit_v3_and_data_only_jobs_stay_out():\n    check_capable_calls({path.name: path.read_text() for path in ADDON.glob(\"*.py\")})\n\n\n@pytest.mark.parametrize(\n    \"mutation\",\n    [\n        \"wrong_version\",\n        \"unbound_version\",\n        \"supplied_version\",\n        \"reassigned_version\",\n        \"extra_callsite\",\n    ],\n)\ndef test_geometry_historical_allowance_rejects_wrong_unbound_or_extra_calls(mutation):\n    sources = {path.name: path.read_text() for path in ADDON.glob(\"*.py\")}\n    source = sources[\"geometry_operations.py\"]\n    if mutation == \"wrong_version\":\n        source = source.replace(\"expected_result_version=version\", \"expected_result_version=3\")\n    elif mutation == \"unbound_version\":\n        source = source.replace('version = binding.get(\"result_version\")', \"version = 3\")\n    elif mutation == \"supplied_version\":\n        source = source.replace(\n            'binding[\"result_version\"] = version', 'binding[\"result_version\"] = prepared_version'\n        )\n    elif mutation == \"reassigned_version\":\n        source = source.replace(\n            'binding[\"result_version\"] = version',\n            'version = 3\\n            binding[\"result_version\"] = version',\n        )\n    else:\n        source += \"\\ndef forbidden(evidence, selection):\\n    return evidence.revalidate(selection, expected_result_version=version)\\n\"\n    sources[\"geometry_operations.py\"] = source\n    with pytest.raises(AssertionError):\n        check_capable_calls(sources)\n"
+        }
+      ],
+      "original_bytes": 17952,
+      "original_sha256": "ff292d3b68198fb613101a556a17b439de116c53bcb77b890ec623c523832b07",
+      "reviewed_bytes": 23753,
+      "reviewed_sha256": "51961b68752ec16a2c61078d9665db7369d44f94b5003bb160c1c561e23d52c5"
+    },
+    "tests/unit/test_arc_live_owner_boundary.py": {
+      "hunks": [
+        {
+          "new_end": 4497,
+          "new_start": 4421,
+          "original": "    (\"geometry_operations\", \"_historical_projection\", \"2\", \"action\"),\n",
+          "replacement": "    (\"geometry_operations\", \"_historical_projection\", \"version\", \"action\"),\n"
+        }
+      ],
+      "original_bytes": 17795,
+      "original_sha256": "a1c303ed0f2ade91288c001d6ab21fb4a2b5a14d97303dd42db1252cad7a481f",
+      "reviewed_bytes": 17801,
+      "reviewed_sha256": "fe140a97bf5968a2a801da23e7a442a904225b57c296c56a3fa68190ddf37e66"
+    },
+    "tests/unit/test_arc_operation_contracts.py": {
+      "hunks": [
+        {
+          "new_end": 1806,
+          "new_start": 1729,
+          "original": "def test_unsupported_schema3_actions_reject_even_empty_arcs(factory, action):\n",
+          "replacement": "def test_schema3_geometry_eligibility_and_snapshot_barrier(factory, action):\n"
+        },
+        {
+          "new_end": 2250,
+          "new_start": 1831,
+          "original": "    with pytest.raises(ValueError, match=\"do not support\"):\n        policy.result_version_for(document, action=action)\n",
+          "replacement": "    if factory is sector and action != \"canonical_snapshot\":\n        assert policy.result_version_for(document, action=action) == 3\n        for role in (\"general\", \"rectangle\"):\n            with pytest.raises(ValueError):\n                policy.result_version_for(document, action=action, owner_role=role)\n    else:\n        with pytest.raises(ValueError):\n            policy.result_version_for(document, action=action)\n"
+        },
+        {
+          "new_end": 6599,
+          "new_start": 6599,
+          "original": "        \"check_geometry\",\n        \"export_step\",\n        \"export_stl\",\n",
+          "replacement": ""
+        },
+        {
+          "new_end": 10217,
+          "new_start": 7684,
+          "original": "",
+          "replacement": "\n\n@pytest.mark.parametrize(\"action\", [\"check_geometry\", \"export_step\", \"export_stl\"])\ndef test_geometry3_response_uses_its_exact_validator_without_fallback(monkeypatch, action):\n    from test_geometry_result_v3 import pair\n\n    request, response = pair(action)\n    monkeypatch.setattr(\n        policy.result_v3, \"validate_response\", lambda *_: pytest.fail(\"replay route\")\n    )\n    assert policy.validate_response(request, response) == response\n    with pytest.raises(ValueError):\n        policy.validate_response(request, {**response, \"result_version\": 2})\n\n\n@pytest.mark.parametrize(\"action\", [\"check_geometry\", \"export_step\", \"export_stl\"])\n@pytest.mark.parametrize(\n    \"variant\",\n    [\n        \"profile\",\n        \"selected\",\n        \"origin\",\n        \"near_origin\",\n        \"quaternion\",\n        \"near_quaternion\",\n        \"alias\",\n        \"inactive\",\n        \"second_extrude\",\n    ],\n)\ndef test_geometry_selection_rejects_every_unsupported_source_without_mutation(action, variant):\n    document = sector()\n    sketch = document[\"features\"][0][\"sketch\"]\n    if variant == \"profile\":\n        document[\"features\"].pop()\n        document[\"active_feature\"] = document[\"features\"][0][\"id\"]\n    elif variant == \"selected\":\n        document[\"active_feature\"] = document[\"features\"][0][\"id\"]\n    elif variant in {\"origin\", \"near_origin\"}:\n        sketch[\"plane\"][\"origin\"] = [1 if variant == \"origin\" else 1e-300, 0, 0]\n    elif variant in {\"quaternion\", \"near_quaternion\"}:\n        sketch[\"plane\"][\"quaternion\"] = (\n            [-1, 0, 0, 0] if variant == \"quaternion\" else [1, 0, 0, 1e-15]\n        )\n    elif variant == \"alias\":\n        sketch[\"points\"].append({\"id\": \"alias\", \"u\": 0, \"v\": 0})\n        sketch[\"lines\"][0][\"start\"] = \"alias\"\n    elif variant == \"inactive\":\n        extra = arc_empty()[\"features\"][0]\n        extra[\"id\"] = \"inactive_schema3\"\n        document[\"features\"].append(extra)\n    else:\n        document[\"features\"].append({**copy.deepcopy(document[\"features\"][1]), \"id\": \"second\"})\n    before = copy.deepcopy(document)\n    with pytest.raises(ValueError):\n        policy.result_version_for(document, action=action)\n    assert document == before\n\n\ndef test_geometry_source_selection_preserves_unsolved_seeds_and_nonzero_freedom():\n    document = sector()\n    sketch = document[\"features\"][0][\"sketch\"]\n    sketch[\"constraints\"] = []\n    sketch[\"points\"][1][\"u\"] = 7.25\n    before = copy.deepcopy(document)\n    assert policy.result_version_for(document, action=\"check_geometry\") == 3\n    assert document == before\n"
+        }
+      ],
+      "original_bytes": 7456,
+      "original_sha256": "a51207ea1da56abd40ba45956c8859558aadfb5f5074aeda245caa3fa484b206",
+      "reviewed_bytes": 10217,
+      "reviewed_sha256": "869c27b1e0f996904fd7c817e63cf9c6e799536c4d1f5ed079bc69b23df98bab"
+    },
+    "tests/unit/test_arc_part_owners.py": {
+      "hunks": [
+        {
+          "new_end": 10912,
+          "new_start": 10287,
+          "original": "def test_action_specific_version_barrier_rejects3(owner, action):\n    with pytest.raises(owner.modules.bridge.BridgeError, match=\"do not support\"):\n        owner.doc._result_version(recorded()[0][\"document\"], action=action)\n",
+          "replacement": "def test_action_specific_version_barrier_keeps_only_eligible_sector_output(owner, action):\n    if action == \"canonical_snapshot\":\n        with pytest.raises(owner.modules.bridge.BridgeError, match=\"do not support\"):\n            owner.doc._result_version(recorded()[0][\"document\"], action=action)\n    else:\n        assert owner.doc._result_version(recorded()[0][\"document\"], action=action) == 3\n        for options in ({\"profile\": True}, {\"selected_profile\": True}):\n            with pytest.raises(owner.modules.bridge.BridgeError):\n                owner.doc._result_version(recorded(**options)[0][\"document\"], action=action)\n"
+        }
+      ],
+      "original_bytes": 25480,
+      "original_sha256": "60d17c236521ed82b7d37962ea3b4de128ed2fbb8d822e95e6754781731327e8",
+      "reviewed_bytes": 25881,
+      "reviewed_sha256": "6d9467426750df34cd764aa61394b0ea62a0a68d9d9dc19682ff438fa4ca9cc1"
+    },
+    "tests/unit/test_arc_ui_availability.py": {
+      "hunks": [
+        {
+          "new_end": 4701,
+          "new_start": 4651,
+          "original": "    def __init__(self, entries=None):\n",
+          "replacement": "    def __init__(self, entries=None, icons=None):\n"
+        },
+        {
+          "new_end": 4811,
+          "new_start": 4759,
+          "original": "",
+          "replacement": "        self.icons = [] if icons is None else icons\n"
+        },
+        {
+          "new_end": 4919,
+          "new_start": 4870,
+          "original": "        child = Layout(self.entries)\n",
+          "replacement": "        child = Layout(self.entries, self.icons)\n"
+        },
+        {
+          "new_end": 5176,
+          "new_start": 5096,
+          "original": "",
+          "replacement": "        self.icons.append((kwargs.get(\"text\", \"\"), kwargs.get(\"icon\", \"NONE\")))\n"
+        },
+        {
+          "new_end": 5540,
+          "new_start": 5478,
+          "original": "",
+          "replacement": "\n    def template_list(self, *_args, **_kwargs):\n        pass\n"
+        },
+        {
+          "new_end": 5860,
+          "new_start": 5764,
+          "original": "@pytest.mark.parametrize(\"variant\", [{}, {\"empty\": True}, {\"inactive\": True}])\n",
+          "replacement": "@pytest.mark.parametrize(\"variant\", [{\"extruded\": False}, {\"empty\": True}, {\"inactive\": True}])\n"
+        },
+        {
+          "new_end": 7049,
+          "new_start": 6983,
+          "original": "    assert \"do not support\" in labels(menu)\n",
+          "replacement": "    assert \"Geometry\" in labels(menu) or \"sector\" in labels(menu)\n"
+        },
+        {
+          "new_end": 38188,
+          "new_start": 33312,
+          "original": "",
+          "replacement": "\n\ndef test_sector_output_visibility_is_separate_from_snapshot_and_assembly_limits(ui, monkeypatch):\n    ctx = context(ui, sector())\n    before = copy.deepcopy(vars(ctx.scene.mechanical_cad))\n    monkeypatch.setattr(\n        ui.workspace_ui, \"_operator\", lambda *_: types.SimpleNamespace(poll=lambda: True)\n    )\n    for action in (\"CHECK\", \"EXPORT\"):\n        assert not ui.workspace_ui.action_reason(ctx, action)\n        assert ui.workspace_ui.available(ctx, action)\n    menu = Layout()\n    ui.workspace_ui.MCAD_MT_export.draw(types.SimpleNamespace(layout=menu), ctx)\n    assert all(item.enabled for kind, item in menu.entries if kind == \"operator\")\n    limits = Layout()\n    ui.workspace_ui.draw_part_limits(limits, ctx)\n    assert \"Geometry Check and STEP/STL are available\" in labels(limits)\n    assert \"Snapshots and Assembly capture/update are unavailable\" in labels(limits)\n    assert ui.operators.part_action_reason(ctx, \"canonical_snapshot\")\n    assert ui.assembly_operators.working_part_capture_reason(ctx)\n    assert vars(ctx.scene.mechanical_cad) == before\n\n\ndef draw_history(ui, monkeypatch, report, *, current=True, draft=False, feature=True):\n    ctx = context(ui, sector())\n    state = ctx.scene.mechanical_cad\n    state.status = \"READY\"\n    state.feature_index = 0\n    state.features[0].status = \"ok\"\n    state.features[0].sketch_report_json = json.dumps(\n        {\n            \"status\": \"redundant_okay\",\n            \"failed_constraints\": [\"saved_candidate\"],\n            \"remaining_dof\": 0,\n        }\n    )\n    result = {\n        \"features\": [{\"id\": state.features[0].feature_id, \"sketch\": report}] if feature else []\n    }\n    monkeypatch.setattr(\n        ui.document_state, \"current_part_result\", lambda _context: result if current else None\n    )\n    monkeypatch.setattr(ui.workspace, \"get_role\", lambda _context: \"SKETCH\")\n    monkeypatch.setattr(ui.workspace, \"has_draft\", lambda _context: draft)\n    monkeypatch.setattr(ui.workspace, \"active_draft\", lambda _context: object() if draft else None)\n    monkeypatch.setattr(ui.workspace, \"_LAST_ERROR\", \"\", raising=False)\n    monkeypatch.setattr(ui.workspace_ui, \"draw_suspended_draft\", ports.noop)\n    monkeypatch.setattr(ui.workspace_ui, \"_action_button\", ports.noop)\n    monkeypatch.setattr(ui.workspace_ui, \"_draft_actions\", lambda _context: ())\n    layout = Layout()\n    ui.workspace_ui.MCAD_PT_workspace_history.draw(types.SimpleNamespace(layout=layout), ctx)\n    return layout\n\n\n@pytest.mark.parametrize(\"dof\", [0, 5])\ndef test_exact_redundant_okay_history_uses_ordered_info_candidates_without_mutating_report(\n    ui, monkeypatch, dof\n):\n    report = {\n        \"status\": \"redundant_okay\",\n        \"remaining_dof\": dof,\n        \"failed_constraints\": [\"second\", \"first\"],\n        \"redundant_constraints\": [\"known_b\", \"known_a\"],\n    }\n    before = copy.deepcopy(report)\n    layout = draw_history(ui, monkeypatch, report)\n    assert (\"Redundancy candidates: second, first\", \"INFO\") in layout.icons\n    assert (\"Redundant constraints: known_b, known_a\", \"INFO\") in layout.icons\n    assert not any(\"Conflict candidates:\" in text for text, _ in layout.icons)\n    assert not any(icon == \"ERROR\" for text, icon in layout.icons if \"second\" in text)\n    assert \"Remaining DoF: \" + str(dof) in labels(layout)\n    assert report == before\n\n\n@pytest.mark.parametrize(\"status\", [\"okay\", \"redundant_okay\", \"inconsistent\", \"too_many_unknowns\"])\n@pytest.mark.parametrize(\"empty\", [True, False])\ndef test_history_candidate_wording_depends_only_on_exact_status(ui, monkeypatch, status, empty):\n    report = {\n        \"status\": status,\n        \"remaining_dof\": 0,\n        \"failed_constraints\": [] if empty else [\"candidate\"],\n    }\n    layout = draw_history(ui, monkeypatch, report)\n    candidates = [(text, icon) for text, icon in layout.icons if \"candidates:\" in text]\n    expected = (\n        []\n        if empty\n        else [\n            (\"Redundancy candidates: candidate\", \"INFO\")\n            if status == \"redundant_okay\"\n            else (\"Conflict candidates: candidate\", \"ERROR\")\n        ]\n    )\n    assert candidates == expected\n\n\n@pytest.mark.parametrize(\"variant\", [\"no_current\", \"no_feature\", \"no_report\", \"draft\"])\ndef test_saved_candidate_json_never_becomes_current_history(ui, monkeypatch, variant):\n    report = (\n        None\n        if variant == \"no_report\"\n        else {\"status\": \"redundant_okay\", \"failed_constraints\": [\"live_candidate\"]}\n    )\n    layout = draw_history(\n        ui,\n        monkeypatch,\n        report,\n        current=variant != \"no_current\",\n        feature=variant != \"no_feature\",\n        draft=variant == \"draft\",\n    )\n    assert \"saved_candidate\" not in labels(layout) and \"live_candidate\" not in labels(layout)\n    if variant != \"draft\":\n        assert \"Sketch solve needs verification\" in labels(layout)\n    else:\n        assert \"Editing rectangle\" in labels(layout)\n"
+        }
+      ],
+      "original_bytes": 33055,
+      "original_sha256": "61b3316a07d5681aa9b9a8c2a88cf1275a5b71253d63ead7e3141b399121c743",
+      "reviewed_bytes": 38188,
+      "reviewed_sha256": "4f8f59047b14497df6d950867017c77e67ed8ac1b780b6a0137e105cb6abe998"
+    },
+    "tests/unit/test_backend_contract_server.py": {
+      "hunks": [
+        {
+          "new_end": 8884,
+          "new_start": 8705,
+          "original": "    if action in {\"solve_sketch\", \"replay\"}:\n",
+          "replacement": "    if action in {\"solve_sketch\", \"replay\", \"check_geometry\", \"export_step\", \"export_stl\"}:\n        # This dispatch stub establishes capability observation, not source admission.\n"
+        },
+        {
+          "new_end": 26071,
+          "new_start": 25897,
+          "original": "    if action in {\"solve_sketch\", \"replay\"}:\n",
+          "replacement": "    if action in {\"solve_sketch\", \"replay\", \"check_geometry\", \"export_step\", \"export_stl\"}:\n        # Downstream dispatch is stubbed: real source admission remains separate.\n"
+        }
+      ],
+      "original_bytes": 26791,
+      "original_sha256": "13c1d65c484c87db90120909f06d6342cc1838e1e095c2749b1e66d2fc6ea0c7",
+      "reviewed_bytes": 27054,
+      "reviewed_sha256": "63e4046d513c97a95b1a825f2b77e923e84209655a7c41db715d993b532ec4f4"
+    },
+    "tests/unit/test_geometry3_core_contracts.py": {
+      "hunks": [
+        {
+          "new_end": 21010,
+          "new_start": 20709,
+          "original": "def test_dormant_markers_and_guarded_service_admission_remain_disabled(monkeypatch):\n    assert actions.BACKEND_CAPABILITIES == geometry_protocol_v3.BACKEND_CAPABILITIES == frozenset()\n",
+          "replacement": "def test_live_markers_and_explicit_missing_marker_pre_dispatch_rejection(monkeypatch):\n    assert (\n        actions.BACKEND_CAPABILITIES\n        == geometry_protocol_v3.BACKEND_CAPABILITIES\n        == frozenset({CAPABILITY})\n    )\n    monkeypatch.setattr(actions, \"BACKEND_CAPABILITIES\", frozenset())\n"
+        }
+      ],
+      "original_bytes": 23768,
+      "original_sha256": "eddb8be5b3fb235ed4eb72c3b18eb0eb0bd14580768a4027dfa449d1f27d160b",
+      "reviewed_bytes": 23884,
+      "reviewed_sha256": "72de0d8a7d732f99cd04b6b3175b8b625e5e8e23c8163421aba6f6e2fbf37769"
+    },
+    "tests/unit/test_geometry3_dispatch.py": {
+      "hunks": [
+        {
+          "new_end": 11134,
+          "new_start": 10965,
+          "original": "def test_guarded_geometry_remains_closed_before_dispatch_and_observer_activation(\n    action, monkeypatch\n):\n",
+          "replacement": "@pytest.mark.parametrize(\"missing\", [\"actions\", \"geometry_protocol_v3\"])\ndef test_guarded_geometry_missing_marker_rejects_before_dispatch(action, monkeypatch, missing):\n"
+        },
+        {
+          "new_end": 11427,
+          "new_start": 11166,
+          "original": "    assert actions.BACKEND_CAPABILITIES == geometry_protocol_v3.BACKEND_CAPABILITIES == frozenset()\n",
+          "replacement": "    assert (\n        actions.BACKEND_CAPABILITIES\n        == geometry_protocol_v3.BACKEND_CAPABILITIES\n        == frozenset({CAPABILITY})\n    )\n    monkeypatch.setattr(\n        sys.modules[\"mechanical_cad.\" + missing], \"BACKEND_CAPABILITIES\", frozenset()\n    )\n"
+        },
+        {
+          "new_end": 11697,
+          "new_start": 11697,
+          "original": "    monkeypatch.setattr(\n        backend_contract, \"_observe_geometry_v3\", lambda *_a: pytest.fail(\"geometry observation\")\n    )\n",
+          "replacement": ""
+        },
+        {
+          "new_end": 16949,
+          "new_start": 15252,
+          "original": "",
+          "replacement": "\n\n@pytest.mark.parametrize(\"action\", GEOMETRY_ACTIONS)\ndef test_live_guarded_geometry_observes_all_companions_and_dispatches_once(action, monkeypatch):\n    request = operation(action)\n    request[\"backend_contract\"] = {\n        \"version\": 1,\n        \"request_id\": \"c\" * 32,\n        \"required_capabilities\": sorted(backend_contract.minimum_capabilities(request)),\n    }\n    prepared = backend_contract.prepare_request(request)\n    monkeypatch.chdir(ROOT)\n    calls = []\n    monkeypatch.setattr(\n        sidecar, \"_process_legacy_request\", lambda value: calls.append(value) or {\"ok\": True}\n    )\n    response = sidecar.process_request(request)\n    assert calls == [prepared.operation]\n    assert response[\"result_version\"] == 3\n    receipt = response[\"backend_receipt\"]\n    assert receipt[\"phase\"] == \"dispatched\" and receipt[\"missing_capabilities\"] == []\n    assert receipt[\"confirmed_capabilities\"] == request[\"backend_contract\"][\"required_capabilities\"]\n    assert receipt[\"request_id\"] == prepared.contract[\"request_id\"]\n    assert receipt[\"request_fingerprint\"] == prepared.request_fingerprint\n\n\n@pytest.mark.parametrize(\"version\", [None, True, 3.0, \"3\", 1, 2])\n@pytest.mark.parametrize(\"action\", [*GEOMETRY_ACTIONS, \"canonical_snapshot\", \"assembly_replay\"])\ndef test_observer_never_infers_geometry3_from_nonexact_versions(version, action, monkeypatch):\n    monkeypatch.chdir(ROOT)\n    monkeypatch.setattr(\n        backend_contract,\n        \"_observe_geometry_v3\",\n        lambda *_: pytest.fail(\"unexpected geometry3 observation\"),\n    )\n    _, supported, _ = backend_contract.observe_backend(\n        {\"action\": action, \"result_version\": version}\n    )\n    assert CAPABILITY not in supported\n"
+        }
+      ],
+      "original_bytes": 15160,
+      "original_sha256": "9beceb6679717073385404530ddbf5b73861699891bfd817414dad98dd3fd77e",
+      "reviewed_bytes": 16949,
+      "reviewed_sha256": "7003ef4a609ea412df3e20e21d5088454b7ca761075919bd04a9089cdcdd4504"
+    }
+  },
+  "schema": "gate-c-owner-source-boundary-v1"
+}

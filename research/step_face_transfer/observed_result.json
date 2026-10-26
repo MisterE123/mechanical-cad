@@ -1,0 +1,332 @@
+{
+  "ocp_version": "8.0.1.1",
+  "packages": {
+    "cadquery-ocp-proxy": "8.0.1.1.0",
+    "cadquery-ocp-novtk": "8.0.1.1.0"
+  },
+  "asset_sha256": "507aadd99eeda372d3371e2d52640e05456a64601a1231b1a7fc3e17581b9735",
+  "fixture": "One native box, 20 x 30 x 5; exported once, imported twice",
+  "identity_established": false,
+  "runs": [
+    {
+      "output_face_count": 6,
+      "model_faces": [
+        {
+          "diagnostic_model_position": 17,
+          "entity_type": "StepShape_AdvancedFace",
+          "number_roundtrip": 0,
+          "ident_label": 0,
+          "map_index": 0,
+          "find_is_none": true,
+          "shape_result_is_null": true,
+          "exact_output_match_count": 0
+        },
+        {
+          "diagnostic_model_position": 137,
+          "entity_type": "StepShape_AdvancedFace",
+          "number_roundtrip": 0,
+          "ident_label": 0,
+          "map_index": 0,
+          "find_is_none": true,
+          "shape_result_is_null": true,
+          "exact_output_match_count": 0
+        },
+        {
+          "diagnostic_model_position": 237,
+          "entity_type": "StepShape_AdvancedFace",
+          "number_roundtrip": 0,
+          "ident_label": 0,
+          "map_index": 0,
+          "find_is_none": true,
+          "shape_result_is_null": true,
+          "exact_output_match_count": 0
+        },
+        {
+          "diagnostic_model_position": 284,
+          "entity_type": "StepShape_AdvancedFace",
+          "number_roundtrip": 0,
+          "ident_label": 0,
+          "map_index": 0,
+          "find_is_none": true,
+          "shape_result_is_null": true,
+          "exact_output_match_count": 0
+        },
+        {
+          "diagnostic_model_position": 331,
+          "entity_type": "StepShape_AdvancedFace",
+          "number_roundtrip": 0,
+          "ident_label": 0,
+          "map_index": 0,
+          "find_is_none": true,
+          "shape_result_is_null": true,
+          "exact_output_match_count": 0
+        },
+        {
+          "diagnostic_model_position": 338,
+          "entity_type": "StepShape_AdvancedFace",
+          "number_roundtrip": 0,
+          "ident_label": 0,
+          "map_index": 0,
+          "find_is_none": true,
+          "shape_result_is_null": true,
+          "exact_output_match_count": 0
+        }
+      ],
+      "mapped_faces": [
+        {
+          "diagnostic_map_position": 14,
+          "number_roundtrip": 0,
+          "ident_label": 0,
+          "map_index_roundtrip": 0,
+          "find_is_none": true,
+          "shape_result_is_null": true,
+          "binder_python_type": "Transfer_Binder",
+          "result_type_name": "TopoDS_Face",
+          "multiple": false,
+          "has_next_result": false,
+          "execution_status": "Transfer_StatusExec.Transfer_StatusDone",
+          "warnings": 0,
+          "failures": 0
+        },
+        {
+          "diagnostic_map_position": 28,
+          "number_roundtrip": 0,
+          "ident_label": 0,
+          "map_index_roundtrip": 0,
+          "find_is_none": true,
+          "shape_result_is_null": true,
+          "binder_python_type": "Transfer_Binder",
+          "result_type_name": "TopoDS_Face",
+          "multiple": false,
+          "has_next_result": false,
+          "execution_status": "Transfer_StatusExec.Transfer_StatusDone",
+          "warnings": 0,
+          "failures": 0
+        },
+        {
+          "diagnostic_map_position": 34,
+          "number_roundtrip": 0,
+          "ident_label": 0,
+          "map_index_roundtrip": 0,
+          "find_is_none": true,
+          "shape_result_is_null": true,
+          "binder_python_type": "Transfer_Binder",
+          "result_type_name": "TopoDS_Face",
+          "multiple": false,
+          "has_next_result": false,
+          "execution_status": "Transfer_StatusExec.Transfer_StatusDone",
+          "warnings": 0,
+          "failures": 0
+        },
+        {
+          "diagnostic_map_position": 40,
+          "number_roundtrip": 0,
+          "ident_label": 0,
+          "map_index_roundtrip": 0,
+          "find_is_none": true,
+          "shape_result_is_null": true,
+          "binder_python_type": "Transfer_Binder",
+          "result_type_name": "TopoDS_Face",
+          "multiple": false,
+          "has_next_result": false,
+          "execution_status": "Transfer_StatusExec.Transfer_StatusDone",
+          "warnings": 0,
+          "failures": 0
+        },
+        {
+          "diagnostic_map_position": 42,
+          "number_roundtrip": 0,
+          "ident_label": 0,
+          "map_index_roundtrip": 0,
+          "find_is_none": true,
+          "shape_result_is_null": true,
+          "binder_python_type": "Transfer_Binder",
+          "result_type_name": "TopoDS_Face",
+          "multiple": false,
+          "has_next_result": false,
+          "execution_status": "Transfer_StatusExec.Transfer_StatusDone",
+          "warnings": 0,
+          "failures": 0
+        },
+        {
+          "diagnostic_map_position": 44,
+          "number_roundtrip": 0,
+          "ident_label": 0,
+          "map_index_roundtrip": 0,
+          "find_is_none": true,
+          "shape_result_is_null": true,
+          "binder_python_type": "Transfer_Binder",
+          "result_type_name": "TopoDS_Face",
+          "multiple": false,
+          "has_next_result": false,
+          "execution_status": "Transfer_StatusExec.Transfer_StatusDone",
+          "warnings": 0,
+          "failures": 0
+        }
+      ],
+      "mapped_count": 48,
+      "shape_process_flags_error": "Unable to convert function return value to a Python type! The signature was\n\t(self: OCP.OCP.XSControl.XSControl_Reader) -> tuple[std::bitset<18ul>, bool]\n\nDid you forget to `#include <pybind11/stl.h>`? Or <pybind11/complex.h>,\n<pybind11/functional.h>, <pybind11/chrono.h>, etc. Some automatic\nconversions are optional and require extra headers to be included\nwhen compiling your pybind11 module.",
+      "shape_fix_parameter_count": 54
+    },
+    {
+      "output_face_count": 6,
+      "model_faces": [
+        {
+          "diagnostic_model_position": 17,
+          "entity_type": "StepShape_AdvancedFace",
+          "number_roundtrip": 0,
+          "ident_label": 0,
+          "map_index": 0,
+          "find_is_none": true,
+          "shape_result_is_null": true,
+          "exact_output_match_count": 0
+        },
+        {
+          "diagnostic_model_position": 137,
+          "entity_type": "StepShape_AdvancedFace",
+          "number_roundtrip": 0,
+          "ident_label": 0,
+          "map_index": 0,
+          "find_is_none": true,
+          "shape_result_is_null": true,
+          "exact_output_match_count": 0
+        },
+        {
+          "diagnostic_model_position": 237,
+          "entity_type": "StepShape_AdvancedFace",
+          "number_roundtrip": 0,
+          "ident_label": 0,
+          "map_index": 0,
+          "find_is_none": true,
+          "shape_result_is_null": true,
+          "exact_output_match_count": 0
+        },
+        {
+          "diagnostic_model_position": 284,
+          "entity_type": "StepShape_AdvancedFace",
+          "number_roundtrip": 0,
+          "ident_label": 0,
+          "map_index": 0,
+          "find_is_none": true,
+          "shape_result_is_null": true,
+          "exact_output_match_count": 0
+        },
+        {
+          "diagnostic_model_position": 331,
+          "entity_type": "StepShape_AdvancedFace",
+          "number_roundtrip": 0,
+          "ident_label": 0,
+          "map_index": 0,
+          "find_is_none": true,
+          "shape_result_is_null": true,
+          "exact_output_match_count": 0
+        },
+        {
+          "diagnostic_model_position": 338,
+          "entity_type": "StepShape_AdvancedFace",
+          "number_roundtrip": 0,
+          "ident_label": 0,
+          "map_index": 0,
+          "find_is_none": true,
+          "shape_result_is_null": true,
+          "exact_output_match_count": 0
+        }
+      ],
+      "mapped_faces": [
+        {
+          "diagnostic_map_position": 14,
+          "number_roundtrip": 0,
+          "ident_label": 0,
+          "map_index_roundtrip": 0,
+          "find_is_none": true,
+          "shape_result_is_null": true,
+          "binder_python_type": "Transfer_Binder",
+          "result_type_name": "TopoDS_Face",
+          "multiple": false,
+          "has_next_result": false,
+          "execution_status": "Transfer_StatusExec.Transfer_StatusDone",
+          "warnings": 0,
+          "failures": 0
+        },
+        {
+          "diagnostic_map_position": 28,
+          "number_roundtrip": 0,
+          "ident_label": 0,
+          "map_index_roundtrip": 0,
+          "find_is_none": true,
+          "shape_result_is_null": true,
+          "binder_python_type": "Transfer_Binder",
+          "result_type_name": "TopoDS_Face",
+          "multiple": false,
+          "has_next_result": false,
+          "execution_status": "Transfer_StatusExec.Transfer_StatusDone",
+          "warnings": 0,
+          "failures": 0
+        },
+        {
+          "diagnostic_map_position": 34,
+          "number_roundtrip": 0,
+          "ident_label": 0,
+          "map_index_roundtrip": 0,
+          "find_is_none": true,
+          "shape_result_is_null": true,
+          "binder_python_type": "Transfer_Binder",
+          "result_type_name": "TopoDS_Face",
+          "multiple": false,
+          "has_next_result": false,
+          "execution_status": "Transfer_StatusExec.Transfer_StatusDone",
+          "warnings": 0,
+          "failures": 0
+        },
+        {
+          "diagnostic_map_position": 40,
+          "number_roundtrip": 0,
+          "ident_label": 0,
+          "map_index_roundtrip": 0,
+          "find_is_none": true,
+          "shape_result_is_null": true,
+          "binder_python_type": "Transfer_Binder",
+          "result_type_name": "TopoDS_Face",
+          "multiple": false,
+          "has_next_result": false,
+          "execution_status": "Transfer_StatusExec.Transfer_StatusDone",
+          "warnings": 0,
+          "failures": 0
+        },
+        {
+          "diagnostic_map_position": 42,
+          "number_roundtrip": 0,
+          "ident_label": 0,
+          "map_index_roundtrip": 0,
+          "find_is_none": true,
+          "shape_result_is_null": true,
+          "binder_python_type": "Transfer_Binder",
+          "result_type_name": "TopoDS_Face",
+          "multiple": false,
+          "has_next_result": false,
+          "execution_status": "Transfer_StatusExec.Transfer_StatusDone",
+          "warnings": 0,
+          "failures": 0
+        },
+        {
+          "diagnostic_map_position": 44,
+          "number_roundtrip": 0,
+          "ident_label": 0,
+          "map_index_roundtrip": 0,
+          "find_is_none": true,
+          "shape_result_is_null": true,
+          "binder_python_type": "Transfer_Binder",
+          "result_type_name": "TopoDS_Face",
+          "multiple": false,
+          "has_next_result": false,
+          "execution_status": "Transfer_StatusExec.Transfer_StatusDone",
+          "warnings": 0,
+          "failures": 0
+        }
+      ],
+      "mapped_count": 48,
+      "shape_process_flags_error": "Unable to convert function return value to a Python type! The signature was\n\t(self: OCP.OCP.XSControl.XSControl_Reader) -> tuple[std::bitset<18ul>, bool]\n\nDid you forget to `#include <pybind11/stl.h>`? Or <pybind11/complex.h>,\n<pybind11/functional.h>, <pybind11/chrono.h>, etc. Some automatic\nconversions are optional and require extra headers to be included\nwhen compiling your pybind11 module.",
+      "shape_fix_parameter_count": 54
+    }
+  ]
+}
