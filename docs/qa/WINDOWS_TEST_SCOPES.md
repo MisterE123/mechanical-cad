@@ -113,3 +113,17 @@ Source/fixture readers in these modules specify UTF-8. Windows' legacy default
 encoding must not reject valid source or change Unicode constants before an AST
 audit. Reviewed hashes, exact allowlists, authority assertions and negative
 mutation checks retain their original values and remain live.
+
+The mixed client-contract module uses the same captured fixtures. Its Linux
+venv/symlink invocation test remains Linux-specific. Windows instead compares
+identical bytes in two ordinary files and rejects the alternative invocation
+and resolved target after accepting the original receipt. This neither creates
+a filesystem link nor establishes native Windows link support.
+
+`test_guarded_transport.py` scopes only its real manual-profile child-process
+cases to Linux. Its stale-before-launch, cancel-before-launch and forged-request
+cases execute on Windows with an exact public capture, inert files and forbidden
+native leaves. The original real-child test bodies and assertions are retained;
+`test_windows_transport.py` separately executes Windows process-owner composition
+against explicit fake OS/API leaves. Neither suite relabels mocks as a native
+Windows child or Blender qualification.

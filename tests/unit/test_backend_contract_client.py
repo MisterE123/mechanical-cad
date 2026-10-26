@@ -9,6 +9,7 @@ import types
 from pathlib import Path
 
 import pytest
+from captured_backend_fixture import captured_backend as captured_backend
 
 ROOT = Path(__file__).resolve().parents[2]
 PACKAGE = "mcad_backend_contract_client_tests"
@@ -34,6 +35,19 @@ def selection():
     )
 
 
+@pytest.fixture(autouse=True)
+def captured_selection(monkeypatch, captured_backend):
+    selected = None
+
+    def capture():
+        nonlocal selected
+        if selected is None:
+            selected = captured_backend(selection_module, generation=1, lifetime_id="lifetime")
+        return selected
+
+    monkeypatch.setattr(sys.modules[__name__], "selection", capture)
+
+
 def receipt_response(guarded, *, rejected=False):
     required = guarded["backend_contract"]["required_capabilities"]
     selected = selection()
@@ -56,15 +70,15 @@ def receipt_response(guarded, *, rejected=False):
             "phase": "rejected_before_dispatch" if rejected else "dispatched",
             "backend": {
                 "core_version": "0.5.1",
-                "project_root": str(ROOT),
-                "core_origin": str(ROOT / "src/mechanical_cad"),
+                "project_root": selected.project_root,
+                "core_origin": selected.core_origin,
                 "solver_origin": None
                 if rejected or guarded["action"] == "canonical_snapshot"
-                else str(ROOT / "src/mechanical_cad/sketch_solver.py"),
+                else str(Path(selected.core_origin) / "sketch_solver.py"),
                 "python_executable": selected.python_executable,
                 "python_executable_target": selected.python_executable_target,
-                "python_prefix": "/diagnostic/not-inferred",
-                "python_base_prefix": "/diagnostic/base",
+                "python_prefix": str(Path(selected.project_root) / "diagnostic/not-inferred"),
+                "python_base_prefix": str(Path(selected.project_root) / "diagnostic/base"),
                 "python_version": [3, 12, 14],
             },
         },
@@ -321,9 +335,11 @@ def test_receipt_diagnostics_are_observations_and_rejected_null_solver_is_valid(
     guarded = client.compose_request(operation())
     response = receipt_response(guarded)
     accepted = client.validate_receipt(guarded, response, selection())
-    assert accepted["backend"]["python_prefix"] == "/diagnostic/not-inferred"
-    response["backend_receipt"]["backend"]["python_prefix"] = "/changed"
-    assert accepted["backend"]["python_prefix"] != "/changed"
+    prefix = str(Path(selection().project_root) / "diagnostic/not-inferred")
+    changed_prefix = str(Path(selection().project_root) / "changed-prefix")
+    assert accepted["backend"]["python_prefix"] == prefix
+    response["backend_receipt"]["backend"]["python_prefix"] = changed_prefix
+    assert accepted["backend"]["python_prefix"] != changed_prefix
     rejected = receipt_response(guarded, rejected=True)
     assert (
         client.validate_receipt(guarded, rejected, selection())["phase"]
@@ -349,6 +365,7 @@ def test_snapshot_null_solver_is_exact_and_missing_receipt_never_accepted():
     assert error.value.code == "backend_contract_unavailable"
 
 
+@pytest.mark.skipif(sys.platform != "linux", reason="Linux manual venv symlink invocation")
 def test_same_base_binary_in_another_venv_is_not_same_invocation(tmp_path):
     first, second = tmp_path / "first-python", tmp_path / "second-python"
     first.symlink_to(sys.executable)
@@ -361,6 +378,23 @@ def test_same_base_binary_in_another_venv_is_not_same_invocation(tmp_path):
     response["backend_receipt"]["backend"]["python_executable"] = str(first)
     assert client.validate_receipt(guarded, response, selected)
     response["backend_receipt"]["backend"]["python_executable"] = str(second)
+    with pytest.raises(client.BackendContractError) as error:
+        client.validate_receipt(guarded, response, selected)
+    assert error.value.code == "backend_identity_mismatch"
+
+
+@pytest.mark.skipif(sys.platform != "win32", reason="actual public Windows bundled capture")
+@pytest.mark.parametrize("field", ["python_executable", "python_executable_target"])
+def test_windows_identical_regular_bytes_do_not_authorize_another_invocation(field):
+    selected = selection()
+    original = Path(selected.python_executable)
+    other = original.with_name("other-python.exe")
+    other.write_bytes(original.read_bytes())
+    assert other.is_file() and other.read_bytes() == original.read_bytes()
+    guarded = client.compose_request(operation())
+    response = receipt_response(guarded)
+    assert client.validate_receipt(guarded, response, selected)
+    response["backend_receipt"]["backend"][field] = str(other)
     with pytest.raises(client.BackendContractError) as error:
         client.validate_receipt(guarded, response, selected)
     assert error.value.code == "backend_identity_mismatch"
