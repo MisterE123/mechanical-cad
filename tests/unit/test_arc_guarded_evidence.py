@@ -19,6 +19,7 @@ from pathlib import Path
 
 import pytest
 from arc_owner_review import reviewed_dynamic_calls
+from captured_backend_fixture import captured_backend as captured_backend
 
 ROOT = Path(__file__).resolve().parents[2]
 ADDON = ROOT / "blender_addon/mechanical_cad_blender"
@@ -45,12 +46,12 @@ CASES3 = (
 
 def recorded(label):
     if label.startswith("rectangle"):
-        guarded = json.loads((FIXTURES / (label + ".request.raw")).read_text())
+        guarded = json.loads((FIXTURES / (label + ".request.raw")).read_text(encoding="utf-8"))
         operation = {key: value for key, value in guarded.items() if key != "backend_contract"}
-        response = json.loads((FIXTURES / (label + ".response.raw")).read_text())
+        response = json.loads((FIXTURES / (label + ".response.raw")).read_text(encoding="utf-8"))
     else:
-        operation = json.loads((FIXTURES / (label + ".operation.json")).read_text())
-        response = json.loads((FIXTURES / (label + ".response")).read_text())
+        operation = json.loads((FIXTURES / (label + ".operation.json")).read_text(encoding="utf-8"))
+        response = json.loads((FIXTURES / (label + ".response")).read_text(encoding="utf-8"))
     return operation, contracts.project_response(response)
 
 
@@ -58,6 +59,21 @@ def selection():
     return selections.BackendSelection.capture(
         str(ROOT), sys.executable, generation=2, lifetime_id="synthetic-port-only", environment={}
     )
+
+
+@pytest.fixture(autouse=True)
+def captured_selection(monkeypatch, captured_backend):
+    selected = None
+
+    def capture():
+        nonlocal selected
+        if selected is None:
+            selected = captured_backend(
+                selections, generation=2, lifetime_id="synthetic-port-only"
+            )
+        return selected
+
+    monkeypatch.setattr(sys.modules[__name__], "selection", capture)
 
 
 def synthetic_outer(prepared, inner, selected):
@@ -82,8 +98,8 @@ def synthetic_outer(prepared, inner, selected):
                 else str(Path(selected.core_origin) / "sketch_solver.py"),
                 "python_executable": selected.python_executable,
                 "python_executable_target": selected.python_executable_target,
-                "python_prefix": "/synthetic/prefix",
-                "python_base_prefix": "/synthetic/base",
+                "python_prefix": str(Path(selected.project_root) / "synthetic-prefix"),
+                "python_base_prefix": str(Path(selected.project_root) / "synthetic-base"),
                 "python_version": [3, 12, 14],
             },
         },
@@ -100,8 +116,8 @@ def accepted_case(label):
 
 def snapshot_case():
     root = ROOT / "tests/fixtures/result_v3/legacy_30383a1"
-    operation = json.loads((root / "snapshot_viewport_rectangle.request.txt").read_text())
-    inner = json.loads((root / "snapshot_viewport_rectangle.stdout.txt").read_text())
+    operation = json.loads((root / "snapshot_viewport_rectangle.request.txt").read_text(encoding="utf-8"))
+    inner = json.loads((root / "snapshot_viewport_rectangle.stdout.txt").read_text(encoding="utf-8"))
     prepared, selected, owner = contracts.prepare_request(operation), selection(), object()
     response = synthetic_outer(prepared, inner, selected)
     evidence = evidence_module.accept_response(prepared, response, selected, owner_token=owner)
@@ -109,13 +125,13 @@ def snapshot_case():
 
 
 def test_recorded_fixture_bytes_match_sealed_provenance():
-    manifest = json.loads((FIXTURES / "provenance.json").read_text())
+    manifest = json.loads((FIXTURES / "provenance.json").read_text(encoding="utf-8"))
     for name, record in manifest["files"].items():
         data = (FIXTURES / name).read_bytes()
         assert len(data) == record["bytes"]
         assert hashlib.sha256(data).hexdigest() == record["sha256"]
     for label in ("rectangle_solve3", "rectangle_replay3", "rectangle_replay2"):
-        terminal = json.loads((FIXTURES / (label + ".terminal.json")).read_text())
+        terminal = json.loads((FIXTURES / (label + ".terminal.json")).read_text(encoding="utf-8"))
         assert terminal["cleanup_complete"] and terminal["returncode"] == 0
         for suffix, original in (("request.raw", "request.raw"), ("response.raw", "stdout.raw")):
             assert (
@@ -583,7 +599,7 @@ def verify_geometry_version_provenance(tree):
 
 
 def test_only_explicit_capable_owners_can_admit_v3_and_data_only_jobs_stay_out():
-    check_capable_calls({path.name: path.read_text() for path in ADDON.glob("*.py")})
+    check_capable_calls({path.name: path.read_text(encoding="utf-8") for path in ADDON.glob("*.py")})
 
 
 @pytest.mark.parametrize(
@@ -597,7 +613,7 @@ def test_only_explicit_capable_owners_can_admit_v3_and_data_only_jobs_stay_out()
     ],
 )
 def test_geometry_historical_allowance_rejects_wrong_unbound_or_extra_calls(mutation):
-    sources = {path.name: path.read_text() for path in ADDON.glob("*.py")}
+    sources = {path.name: path.read_text(encoding="utf-8") for path in ADDON.glob("*.py")}
     source = sources["geometry_operations.py"]
     if mutation == "wrong_version":
         source = source.replace("expected_result_version=version", "expected_result_version=3")
@@ -638,7 +654,7 @@ def test_geometry_historical_allowance_rejects_wrong_unbound_or_extra_calls(muta
     ],
 )
 def test_assembly_allowance_rejects_wrong_unbound_or_extra_calls(filename, function_name, mutation):
-    sources = {path.name: path.read_text() for path in ADDON.glob("*.py")}
+    sources = {path.name: path.read_text(encoding="utf-8") for path in ADDON.glob("*.py")}
     tree = ast.parse(sources[filename])
     function = next(
         node
@@ -720,7 +736,7 @@ print('ARC_OPERATION_NATIVE_FREE_OK')
 def test_assembly_export_allowance_rejects_unbound_versions_actions_or_extra_sinks(
     function_name, mutation
 ):
-    sources = {path.name: path.read_text() for path in ADDON.glob("*.py")}
+    sources = {path.name: path.read_text(encoding="utf-8") for path in ADDON.glob("*.py")}
     filename = "assembly_export_owner.py"
     tree = ast.parse(sources[filename])
     function = next(
@@ -772,7 +788,7 @@ def test_assembly_export_allowance_rejects_unbound_versions_actions_or_extra_sin
     ],
 )
 def test_new_owner_versions_require_exact_reviewed_source_or_prepared_provenance(module, before, after):
-    sources = {module + ".py": (ADDON / (module + ".py")).read_text()}
+    sources = {module + ".py": (ADDON / (module + ".py")).read_text(encoding="utf-8")}
     check_capable_calls(sources, complete=False)
     original = sources[module + ".py"]
     assert before in original
@@ -782,7 +798,7 @@ def test_new_owner_versions_require_exact_reviewed_source_or_prepared_provenance
 
 
 def test_reviewed_owner_module_is_not_a_blanket_dynamic_version_capability():
-    sources = {"direct_edge_pick.py": (ADDON / "direct_edge_pick.py").read_text()}
+    sources = {"direct_edge_pick.py": (ADDON / "direct_edge_pick.py").read_text(encoding="utf-8")}
     check_capable_calls(sources, complete=False)
     sources["direct_edge_pick.py"] += "\ndef rogue(e):\n    return e.revalidate(s, expected_result_version=self.catalog_version)\n"
     with pytest.raises(AssertionError):

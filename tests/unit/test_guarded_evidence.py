@@ -15,8 +15,10 @@ from dataclasses import replace
 from pathlib import Path
 
 import pytest
+from captured_backend_fixture import captured_backend as captured_backend
 
 ROOT = Path(__file__).resolve().parents[2]
+WINDOWS_FIXTURE_DIRECTORY = None
 PACKAGE = "mcad_guarded_evidence_tests"
 package = types.ModuleType(PACKAGE)
 package.__path__ = [str(ROOT / "blender_addon/mechanical_cad_blender")]
@@ -29,6 +31,18 @@ evidence_module = importlib.import_module(PACKAGE + ".guarded_evidence")
 def selection():
     return selections.BackendSelection.capture(
         str(ROOT), sys.executable, generation=2, lifetime_id="evidence-lifetime", environment={}
+    )
+
+
+@pytest.fixture(autouse=True)
+def captured_selection(monkeypatch, captured_backend):
+    selected = captured_backend(selections, generation=2, lifetime_id="evidence-lifetime")
+    monkeypatch.setattr(sys.modules[__name__], "selection", lambda: selected)
+    monkeypatch.setattr(
+        sys.modules[__name__],
+        "WINDOWS_FIXTURE_DIRECTORY",
+        captured_backend.windows_directory,
+        raising=False,
     )
 
 
@@ -51,15 +65,15 @@ def wrap(prepared, ordinary, *, phase="dispatched", missing=()):
             "phase": phase,
             "backend": {
                 "core_version": "test-ordinary-fixture",
-                "project_root": str(ROOT),
-                "core_origin": str(ROOT / "src/mechanical_cad"),
+                "project_root": selected.project_root,
+                "core_origin": selected.core_origin,
                 "solver_origin": None
                 if prepared.action == "canonical_snapshot" or phase != "dispatched"
-                else str(ROOT / "src/mechanical_cad/sketch_solver.py"),
+                else str(Path(selected.core_origin) / "sketch_solver.py"),
                 "python_executable": selected.python_executable,
                 "python_executable_target": selected.python_executable_target,
-                "python_prefix": "/observed/prefix",
-                "python_base_prefix": "/observed/base",
+                "python_prefix": str(Path(selected.project_root) / "observed-prefix"),
+                "python_base_prefix": str(Path(selected.project_root) / "observed-base"),
                 "python_version": [3, 12, 14],
             },
         },
@@ -108,7 +122,7 @@ def part_fixture(*, failed=False, action="replay"):
 def snapshot_fixture():
     from mechanical_cad.sidecar import process_request
 
-    raw = json.loads((ROOT / "examples/regressions/viewport_schema2_capture.mcad.json").read_text())
+    raw = json.loads((ROOT / "examples/regressions/viewport_schema2_capture.mcad.json").read_text(encoding="utf-8"))
     operation = {"protocol_version": 1, "action": "canonical_snapshot", "document": raw}
     prepared = contracts.prepare_request(operation)
     return prepared, wrap(prepared, process_request(operation))
@@ -166,7 +180,7 @@ def assembly_fixture(action="assembly_replay"):
     from mechanical_cad.assembly_service import run_assembly_action
 
     assembly = AssemblyDocument.from_json(
-        (ROOT / "examples/reused_blocks.mcad-assembly.json").read_text()
+        (ROOT / "examples/reused_blocks.mcad-assembly.json").read_text(encoding="utf-8")
     )
     ordinary = {
         "protocol_version": 1,
@@ -235,6 +249,29 @@ def test_current_epoch_generation_owner_and_action_are_all_required():
         expected_action="canonical_snapshot",
         expected_result_version=None,
     )
+
+
+@pytest.mark.parametrize(
+    "field",
+    ["project_root", "core_origin", "solver_origin", "python_executable", "python_executable_target"],
+)
+def test_existing_foreign_identity_paths_cannot_replace_captured_receipt(field, tmp_path):
+    prepared, response = part_fixture()
+    selected, owner = selection(), object()
+    accepted = evidence_module.accept_response(prepared, response, selected, owner_token=owner)
+    assert accepted.revalidate(selected, owner_token=owner, expected_action="replay")
+    # Existing regular files/directories exercise identity comparison, rather
+    # than passing vacuously because an invalid or missing path was rejected.
+    foreign = tmp_path / "foreign"
+    if field in {"project_root", "core_origin"}:
+        foreign.mkdir()
+    else:
+        foreign.write_bytes(b"unrelated inert identity")
+    changed = copy.deepcopy(response)
+    changed["backend_receipt"]["backend"][field] = str(foreign)
+    with pytest.raises(contracts.BackendContractError) as caught:
+        evidence_module.accept_response(prepared, changed, selected, owner_token=owner)
+    assert caught.value.code == "backend_identity_mismatch"
 
 
 def test_retained_evidence_separate_from_single_publication_and_cancellation():
@@ -492,6 +529,19 @@ def test_all_nine_operation_projections_validate_without_core_or_native_imports(
         for action in ("assembly_replay", "assembly_check", "assembly_sample")
     ]
     payload = json.dumps([[request.guarded_request(), response] for request, response in fixtures])
+    if sys.platform == "win32":
+        capture_script = f"""
+sys.path.insert(0, {str(ROOT / 'tests/unit')!r})
+from captured_backend_fixture import capture_windows_fixture
+selection = capture_windows_fixture(
+    importlib.import_module('isolated.backend_selection'), {str(WINDOWS_FIXTURE_DIRECTORY)!r},
+    generation=2, lifetime_id='evidence-lifetime')
+"""
+    else:
+        capture_script = f"""
+selection = importlib.import_module('isolated.backend_selection').BackendSelection.capture(
+    {str(ROOT)!r}, sys.executable, generation=2, lifetime_id='evidence-lifetime', environment={{}})
+"""
     script = f"""
 import importlib, importlib.abc, json, sys, types
 class Deny(importlib.abc.MetaPathFinder):
@@ -501,8 +551,7 @@ class Deny(importlib.abc.MetaPathFinder):
 sys.meta_path.insert(0, Deny())
 p = types.ModuleType('isolated'); p.__path__ = [{str(ROOT / "blender_addon/mechanical_cad_blender")!r}]
 sys.modules['isolated'] = p
-selection = importlib.import_module('isolated.backend_selection').BackendSelection.capture(
-    {str(ROOT)!r}, sys.executable, generation=2, lifetime_id='evidence-lifetime', environment={{}})
+{capture_script}
 evidence = importlib.import_module('isolated.guarded_evidence')
 for request, response in json.load(sys.stdin):
     owner = object()

@@ -13,6 +13,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 import pytest
+from captured_backend_fixture import captured_backend as captured_backend
 
 ROOT = Path(__file__).resolve().parents[2]
 PACKAGE = "mcad_assembly_publication_binding_tests"
@@ -36,16 +37,16 @@ selection_module = importlib.import_module(PACKAGE + ".backend_selection")
 
 
 @pytest.fixture
-def snapshot(monkeypatch):
-    selected = selection_module.BackendSelection.capture(
-        str(ROOT), sys.executable, generation=0, lifetime_id="assembly-owner-test", environment={}
+def snapshot(monkeypatch, captured_backend):
+    selected = captured_backend(
+        selection_module, generation=0, lifetime_id="assembly-owner-test"
     )
     monkeypatch.setattr(state, "_current_selection", lambda _context, _snapshot: selected)
     return {"selection": selected, "deflection": 0.1, "owner_token": object()}
 
 
 def assembly():
-    return json.loads((ROOT / "examples/reused_blocks.mcad-assembly.json").read_text())
+    return json.loads((ROOT / "examples/reused_blocks.mcad-assembly.json").read_text(encoding="utf-8"))
 
 
 def evidence(prepared, snapshot):
@@ -81,12 +82,12 @@ def evidence(prepared, snapshot):
             "backend": {
                 "core_version": "native-free-owner-fixture",
                 "project_root": selected.project_root,
-                "core_origin": str(ROOT / "src/mechanical_cad"),
-                "solver_origin": str(ROOT / "src/mechanical_cad/sketch_solver.py"),
+                "core_origin": selected.core_origin,
+                "solver_origin": str(Path(selected.core_origin) / "sketch_solver.py"),
                 "python_executable": selected.python_executable,
                 "python_executable_target": selected.python_executable_target,
-                "python_prefix": "/test/prefix",
-                "python_base_prefix": "/test/base",
+                "python_prefix": str(Path(selected.project_root) / "test-prefix"),
+                "python_base_prefix": str(Path(selected.project_root) / "test-base"),
                 "python_version": [3, 12, 14],
             },
         },
@@ -153,7 +154,7 @@ def test_mixed_sector_assembly_uses_source_selected_three_and_exact_once_claim(s
 
     candidate = assembly()
     sector = Document.from_dict(
-        json.loads((ROOT / "examples/sector_profile_data_only.mcad.json").read_text())
+        json.loads((ROOT / "examples/sector_profile_data_only.mcad.json").read_text(encoding="utf-8"))
     )
     candidate["part_sources"].append(PartSource.from_document(sector).to_dict())
     # A defined/instanced sector is covered by the native project journey. This

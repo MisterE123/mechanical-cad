@@ -15,6 +15,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 import pytest
+from captured_backend_fixture import captured_backend as captured_backend
 
 ROOT = Path(__file__).resolve().parents[2]
 SPEC = importlib.util.spec_from_file_location(
@@ -26,12 +27,12 @@ ports.PACKAGE = "mcad_arc_ui_tests"
 
 
 def legacy():
-    return json.loads((ROOT / "examples/viewport_rectangle.mcad.json").read_text())
+    return json.loads((ROOT / "examples/viewport_rectangle.mcad.json").read_text(encoding="utf-8"))
 
 
 def sector(*, extruded=True, empty=False, inactive=False):
     path = ROOT / "tests/fixtures/arc_authoring_evidence/radius_edit_5_0_replay.operation.json"
-    result = json.loads(path.read_text())["document"]
+    result = json.loads(path.read_text(encoding="utf-8"))["document"]
     if not extruded:
         result["features"] = result["features"][:1]
         result["active_feature"] = result["features"][0]["id"]
@@ -47,7 +48,7 @@ def sector(*, extruded=True, empty=False, inactive=False):
 
 
 @pytest.fixture
-def ui(monkeypatch):
+def ui(monkeypatch, captured_backend):
     modules = ports.load_owners()
     package = sys.modules[ports.PACKAGE]
     bpy = modules.bpy
@@ -127,9 +128,7 @@ def ui(monkeypatch):
             key: value for key, value in sys.modules.items() if key.startswith(ports.PACKAGE + ".")
         }
     sys.modules.update(retained)
-    selected = modules.backend_selection.BackendSelection.capture(
-        str(ROOT), sys.executable, generation=0, lifetime_id="ui-host-port", environment={}
-    )
+    selected = captured_backend(modules.backend_selection, generation=0, lifetime_id="ui-host-port")
     modules.selected = selected
     monkeypatch.setattr(modules.backend_runtime, "capture", lambda _context: selected)
     yield modules
@@ -141,7 +140,7 @@ def context(ui, document=None):
     ctx.window.view_layer = ctx.view_layer
     ctx.scene.mechanical_cad_assembly.document_json = (
         ROOT / "examples/reused_blocks.mcad-assembly.json"
-    ).read_text()
+    ).read_text(encoding="utf-8")
     return ctx
 
 

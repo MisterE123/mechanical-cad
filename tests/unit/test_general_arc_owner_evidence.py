@@ -13,6 +13,7 @@ from dataclasses import replace
 from pathlib import Path
 
 import pytest
+from captured_backend_fixture import captured_backend as captured_backend
 
 ROOT = Path(__file__).resolve().parents[2]
 PACKAGE = "mcad_general_arc_owner_tests"
@@ -41,18 +42,18 @@ def recorded(version, action="solve_sketch"):
     if version == 3:
         root = ROOT / "tests/fixtures/arc_authoring_evidence"
         name = "radius_edit_5_0_" + action
-        request = json.loads((root / (name + ".operation.json")).read_text())
-        response = json.loads((root / (name + ".response")).read_text())
+        request = json.loads((root / (name + ".operation.json")).read_text(encoding="utf-8"))
+        response = json.loads((root / (name + ".response")).read_text(encoding="utf-8"))
     elif action == "replay":
         root = ROOT / "tests/fixtures/arc_authoring_evidence"
-        request = json.loads((root / "rectangle_replay2.request.raw").read_text())
+        request = json.loads((root / "rectangle_replay2.request.raw").read_text(encoding="utf-8"))
         request.pop("backend_contract")
-        response = json.loads((root / "rectangle_replay2.response.raw").read_text())
+        response = json.loads((root / "rectangle_replay2.response.raw").read_text(encoding="utf-8"))
     else:
         root = ROOT / "tests/fixtures/result_v3/legacy_30383a1"
         name = ("solve" if action == "solve_sketch" else "replay") + "_viewport_rectangle"
-        request = json.loads((root / (name + ".request.txt")).read_text())
-        response = json.loads((root / (name + ".stdout.txt")).read_text())
+        request = json.loads((root / (name + ".request.txt")).read_text(encoding="utf-8"))
+        response = json.loads((root / (name + ".stdout.txt")).read_text(encoding="utf-8"))
     return request, contracts.project_response(response)
 
 
@@ -64,6 +65,21 @@ def selection():
         lifetime_id="synthetic-general-test-port",
         environment={},
     )
+
+
+@pytest.fixture(autouse=True)
+def captured_selection(monkeypatch, captured_backend):
+    selected = None
+
+    def capture():
+        nonlocal selected
+        if selected is None:
+            selected = captured_backend(
+                selections, generation=5, lifetime_id="synthetic-general-test-port"
+            )
+        return selected
+
+    monkeypatch.setattr(sys.modules[__name__], "selection", capture)
 
 
 def accepted(request, inner, selected, owner, *, prepared=None):
@@ -86,8 +102,8 @@ def accepted(request, inner, selected, owner, *, prepared=None):
                 "solver_origin": str(Path(selected.core_origin) / "sketch_solver.py"),
                 "python_executable": selected.python_executable,
                 "python_executable_target": selected.python_executable_target,
-                "python_prefix": "/synthetic/prefix",
-                "python_base_prefix": "/synthetic/base",
+                "python_prefix": str(Path(selected.project_root) / "synthetic-prefix"),
+                "python_base_prefix": str(Path(selected.project_root) / "synthetic-base"),
                 "python_version": [3, 12, 14],
             },
         },

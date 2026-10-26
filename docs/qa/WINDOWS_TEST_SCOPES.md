@@ -76,3 +76,40 @@ leaves are forbidden, and a retained attempt counter prevents an expected worker
 exception from hiding an accidental native call. This is lifecycle/record
 coverage, not native backend or Blender qualification. No module-wide skip was
 introduced.
+
+## Captured receipts and pure visual owners
+
+The shared visual-owner fixture now uses an explicit logical epoch for the
+already synthetic display/publication ports. Its stale-epoch controls remain
+active. A separate rejection proof sends that stamp to the real transport and
+guarded-evidence entry points; neither accepts it. Shared candidate-create,
+explicit-replay, load-rebuild and motion-preview consumers execute those pure
+owner assertions on Windows.
+
+Receipt/publication tests use `captured_backend_fixture.py`. On Linux it retains
+the real manual selection. On the actual Windows host it uses public bundled
+capture with the namespace's exact immutable record classes and regular inert
+files in a short, test-local directory. Production path resolution, receipt
+binding, currentness and class checks all stay active. No platform spoof, type
+waiver, filesystem link or native launch is involved. Interpreter/DLL/solver
+bytes are inert fixture data, not a usable backend. Process/API entry points are
+forbidden, and an attempt counter survives failure/cancellation paths. Existing
+foreign files/directories must fail receipt identity comparisons after a clean
+positive succeeds. The fresh-interpreter nine-operation check retains its deny
+finder for Blender/core/native imports and constructs the same Windows profile
+through public capture.
+
+The dormant data-only result-3 service explicitly rejects every bundled profile
+before model validation. Its original manual-profile lifecycle, receipt,
+currentness and process tests remain unchanged in
+`test_service_v3_lifecycle_linux.py`; they require the Linux-only manual profile.
+The portable module tests exact-class rejection before later leaves, and the
+Windows-specific cases use a real public captured profile to prove bundled,
+policy and descriptor admission rejection. No service guard is removed to make
+an unsupported profile run. These scopes establish neither native Windows
+backend qualification nor Blender usability.
+
+Source/fixture readers in these modules specify UTF-8. Windows' legacy default
+encoding must not reject valid source or change Unicode constants before an AST
+audit. Reviewed hashes, exact allowlists, authority assertions and negative
+mutation checks retain their original values and remain live.

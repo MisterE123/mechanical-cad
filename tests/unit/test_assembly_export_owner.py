@@ -16,6 +16,7 @@ from types import SimpleNamespace
 from unittest.mock import patch
 
 import pytest
+from captured_backend_fixture import captured_backend as captured_backend
 from test_arc_guarded_evidence import synthetic_outer
 from test_assembly_export_contracts import pair
 
@@ -24,7 +25,7 @@ NAMES = itertools.count()
 
 
 @pytest.fixture(params=[2, 3], ids=["result2", "result3"])
-def host(request, monkeypatch, tmp_path):
+def host(request, monkeypatch, tmp_path, captured_backend):
     name = "mcad_assembly_export_owner_tests_" + str(next(NAMES))
     package = types.ModuleType(name)
     package.__path__ = [str(ROOT / "blender_addon/mechanical_cad_blender")]
@@ -51,9 +52,7 @@ def host(request, monkeypatch, tmp_path):
         monkeypatch.setitem(sys.modules, key, value)
     state_api = owner.assembly_state
     selections = importlib.import_module(name + ".backend_selection")
-    selected = selections.BackendSelection.capture(
-        str(ROOT), sys.executable, generation=2, lifetime_id="assembly-step-host", environment={}
-    )
+    selected = captured_backend(selections, generation=2, lifetime_id="assembly-step-host")
     current = [selected]
     monkeypatch.setattr(state_api.backend_runtime, "capture", lambda _context: current[0])
     monkeypatch.setattr(

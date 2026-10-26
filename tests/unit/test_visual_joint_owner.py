@@ -12,7 +12,7 @@ import itertools
 import json
 import sys
 import types
-from dataclasses import replace
+from dataclasses import dataclass, replace
 from pathlib import Path
 from unittest.mock import patch
 
@@ -35,6 +35,17 @@ class Host(types.SimpleNamespace):
 
 def inert(*_args, **_kwargs):
     return None
+
+
+@dataclass(frozen=True)
+class VisualOwnerStamp:
+    """Only a logical owner epoch; never a captured backend or CAD authority."""
+
+    generation: int = 2
+    lifetime_id: str = "synthetic-visual-owner"
+
+    def launch_environment(self):
+        raise AssertionError("Visual owner stamps cannot provide a launch environment")
 
 
 def fixture_response(assembly):
@@ -127,9 +138,7 @@ def host(monkeypatch):
         monkeypatch.setitem(sys.modules, key, value)
     state_api = owner.state_api
     selection_api = importlib.import_module(name + ".backend_selection")
-    selected = selection_api.BackendSelection.capture(
-        str(ROOT), sys.executable, generation=2, lifetime_id="visual-owner-test", environment={}
-    )
+    selected = VisualOwnerStamp()
     current = [selected]
     monkeypatch.setattr(state_api.backend_runtime, "capture", lambda _context: current[0])
     monkeypatch.setattr(
@@ -137,11 +146,12 @@ def host(monkeypatch):
     )
 
     def assert_selection(expected, _context):
-        expected.assert_current(current[0])
+        if type(expected) is not VisualOwnerStamp or expected != current[0]:
+            raise selection_api.SelectionError("Synthetic visual owner epoch changed")
         return current[0]
 
     monkeypatch.setattr(state_api.backend_runtime, "assert_current", assert_selection)
-    assembly = json.loads((ROOT / "examples/box_sector/assembly.mcad-assembly.json").read_text())
+    assembly = json.loads((ROOT / "examples/box_sector/assembly.mcad-assembly.json").read_text(encoding="utf-8"))
     fields = {key: "" for key in state_api._STATE_FIELDS}
     fields.update(
         owner_id="synthetic-owner",
@@ -260,6 +270,32 @@ def begin(host, joint_id="slide_a"):
     session = host.owner.JointViewportSession(host.context, joint_id=joint_id)
     session.start()
     return session
+
+
+def test_logical_visual_stamp_cannot_enter_transport_or_guarded_evidence(host):
+    package = host.owner.__package__
+    contracts = importlib.import_module(package + ".backend_contracts")
+    evidence = importlib.import_module(package + ".guarded_evidence")
+    jobs = importlib.import_module(package + ".sidecar_job")
+    prepared = contracts.prepare_request(
+        {
+            "protocol_version": 1,
+            "action": "canonical_snapshot",
+            "document": {
+                "schema_version": 1,
+                "id": "visual-port",
+                "name": "Visual port",
+                "units": "mm",
+                "parameters": {},
+                "features": [],
+                "active_feature": None,
+            },
+        }
+    )
+    with pytest.raises(jobs.bridge.BridgeError, match="prepared request and selection"):
+        jobs.SidecarJob.from_selection(prepared, host.current[0])
+    with pytest.raises(contracts.BackendContractError, match="captured backend selection"):
+        evidence.accept_response(prepared, {}, host.current[0], owner_token=object())
 
 
 def test_getter_reads_live_evidence_port_never_saved_projection(host):

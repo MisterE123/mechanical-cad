@@ -17,6 +17,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 import pytest
+from captured_backend_fixture import captured_backend as captured_backend
 
 ROOT = Path(__file__).resolve().parents[2]
 FIXTURES = ROOT / "tests/fixtures/arc_authoring_evidence"
@@ -33,13 +34,13 @@ ports.PACKAGE = "mcad_arc_part_owner_boundary_tests"
 
 def recorded(label="radius_edit_5_0_replay", *, profile=False, selected_profile=False):
     if label.startswith("rectangle"):
-        request = json.loads((FIXTURES / (label + ".request.raw")).read_text())
+        request = json.loads((FIXTURES / (label + ".request.raw")).read_text(encoding="utf-8"))
         request.pop("backend_contract")
-        response = json.loads((FIXTURES / (label + ".response.raw")).read_text())
+        response = json.loads((FIXTURES / (label + ".response.raw")).read_text(encoding="utf-8"))
         response.pop("backend_receipt")
     else:
-        request = json.loads((FIXTURES / (label + ".operation.json")).read_text())
-        response = json.loads((FIXTURES / (label + ".response")).read_text())
+        request = json.loads((FIXTURES / (label + ".operation.json")).read_text(encoding="utf-8"))
+        response = json.loads((FIXTURES / (label + ".response")).read_text(encoding="utf-8"))
     request["options"] = {"linear_deflection": 0.1}
     if profile:
         request["document"]["features"] = request["document"]["features"][:1]
@@ -111,15 +112,11 @@ def real_display(owners):
 
 
 @pytest.fixture
-def owner(monkeypatch):
+def owner(monkeypatch, captured_backend):
     modules = ports.load_owners()
     assert modules.document_state._CandidateDisplay is ports.CandidateDisplay
-    selected = modules.backend_selection.BackendSelection.capture(
-        str(ROOT),
-        sys.executable,
-        generation=2,
-        lifetime_id="pure-gate-b-part-port",
-        environment={},
+    selected = captured_backend(
+        modules.backend_selection, generation=2, lifetime_id="pure-gate-b-part-port"
     )
     current = [selected]
     monkeypatch.setattr(modules.backend_runtime, "capture", lambda _context: current[0])
@@ -450,8 +447,8 @@ def test_sync_commit_captures_one_prepared3_and_keeps_original_request(owner, mo
 
 def test_arc_empty3_open_chain_keeps_typed_wire_and_legacy_defaults(owner):
     path = ROOT / "tests/fixtures/result_v3/legacy_30383a1"
-    request = json.loads((path / "replay_open_line_sketch.request.txt").read_text())
-    response = json.loads((path / "replay_open_line_sketch.stdout.txt").read_text())
+    request = json.loads((path / "replay_open_line_sketch.request.txt").read_text(encoding="utf-8"))
+    response = json.loads((path / "replay_open_line_sketch.stdout.txt").read_text(encoding="utf-8"))
     source, feature = request["document"]["features"][0], response["result"]["features"][0]
     for sketch in (source["sketch"], feature["sketch"]["solved"]):
         sketch["schema_version"] = 3

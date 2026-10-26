@@ -13,6 +13,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 import pytest
+from captured_backend_fixture import captured_backend as captured_backend
 from test_arc_guarded_evidence import recorded, synthetic_outer
 from test_assembly_bridge_v3 import make as make_assembly3  # noqa: F401
 
@@ -25,7 +26,7 @@ SPEC.loader.exec_module(ports)
 
 
 def legacy():
-    return json.loads((ROOT / "examples/viewport_rectangle.mcad.json").read_text())
+    return json.loads((ROOT / "examples/viewport_rectangle.mcad.json").read_text(encoding="utf-8"))
 
 
 def source3(kind="sector"):
@@ -60,7 +61,7 @@ def malformed_source3(kind="sector"):
 
 
 def assembly(source=None, *, unused=False):
-    result = json.loads((ROOT / "examples/reused_blocks.mcad-assembly.json").read_text())
+    result = json.loads((ROOT / "examples/reused_blocks.mcad-assembly.json").read_text(encoding="utf-8"))
     if source is not None:
         if unused:
             result["part_sources"].append(
@@ -72,7 +73,7 @@ def assembly(source=None, *, unused=False):
 
 
 @pytest.fixture
-def owners(monkeypatch):
+def owners(monkeypatch, captured_backend):
     result = ports.load_owners()
     package = ports.PACKAGE
     # Assembly operators now import the shared job UI. This suite never draws,
@@ -112,12 +113,8 @@ def owners(monkeypatch):
             setattr(result, name, importlib.import_module(package + "." + name))
         loaded = {key: value for key, value in sys.modules.items() if key.startswith(package + ".")}
     sys.modules.update(loaded)
-    selected = result.backend_selection.BackendSelection.capture(
-        str(ROOT),
-        sys.executable,
-        generation=0,
-        lifetime_id="downstream-synthetic-port",
-        environment={},
+    selected = captured_backend(
+        result.backend_selection, generation=0, lifetime_id="downstream-synthetic-port"
     )
     result.selected = selected
     monkeypatch.setattr(result.backend_runtime, "capture", lambda _context: selected)
@@ -508,7 +505,7 @@ def test_legacy_geometry_current_positive_preserves_part_binding(
     assert len(calls) == 1 and state.status == "READY" and state.geometry_status == "PASSED"
     assert owners.document_state.part_is_current(ctx)
     assert owners.document_state.geometry_report_is_current(ctx)
-    assert destination.read_text() == "existing destination sentinel"
+    assert destination.read_text(encoding="utf-8") == "existing destination sentinel"
 
 
 @pytest.mark.parametrize("action", ["export_step", "export_stl"])
@@ -558,13 +555,13 @@ def test_legacy_export_outdated_written_vs_unknown_never_retries(
     assert state.geometry_status == expected and len(calls) == 1, state.geometry_message
     assert bool(report.get("export")) == (expected == "OUTDATED")
     assert ("written:" in state.geometry_message) == (expected == "OUTDATED")
-    assert destination.read_text() == "existing destination sentinel"
+    assert destination.read_text(encoding="utf-8") == "existing destination sentinel"
 
 
 def test_legacy_snapshot_capture_returns_only_detached_canonical_data(owners, monkeypatch):
     root = ROOT / "tests/fixtures/result_v3/legacy_30383a1"
-    operation = json.loads((root / "snapshot_viewport_rectangle.request.txt").read_text())
-    inner = json.loads((root / "snapshot_viewport_rectangle.stdout.txt").read_text())
+    operation = json.loads((root / "snapshot_viewport_rectangle.request.txt").read_text(encoding="utf-8"))
+    inner = json.loads((root / "snapshot_viewport_rectangle.stdout.txt").read_text(encoding="utf-8"))
     ctx = context(owners, operation["document"])
     calls = []
 
