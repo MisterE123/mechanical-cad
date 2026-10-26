@@ -1,0 +1,717 @@
+"""Strict, native-free assembly snapshots, independent of Part schemas 1 and 2.
+
+All saved frames are literal part-local data. No file paths, automatic source
+updates, geometry handles, or geometry-derived frame attachments are supported.
+"""
+
+from __future__ import annotations
+
+import hashlib
+import json
+import math
+import re
+from dataclasses import dataclass, field, replace
+from types import MappingProxyType
+from typing import Any
+
+from .assembly_requirements import (
+    MAX_TOTAL_CLEARANCE_REQUIREMENTS,
+    MAX_VERIFICATION_PRESETS,
+    VerificationPreset,
+)
+from .errors import CADException
+from .model import Document, output_type, reject_duplicate_keys
+
+ASSEMBLY_SCHEMA_VERSION = 1
+MAX_ASSEMBLY_BYTES = 2 * 1024 * 1024
+MAX_PART_SOURCES = 16
+MAX_PART_DEFINITIONS = 16
+MAX_INSTANCES = 16
+MAX_MATE_FRAMES = 128
+MAX_JOINTS = 15
+MAX_JSON_DEPTH = 20
+MAX_NUMBER_CHARACTERS = 128
+MAX_COORDINATE_MM = 1e6
+MAX_ANGLE_RAD = 1e4
+IDENTIFIER = re.compile(r"^[A-Za-z0-9_][A-Za-z0-9_.-]{0,127}$")
+SHA256 = re.compile(r"^[0-9a-f]{64}$")
+
+
+class AssemblyError(CADException):
+    """Expected assembly validation failure with a stable machine-readable code."""
+
+
+def _error(message: str, code: str = "invalid_assembly") -> None:
+    raise AssemblyError(code, message)
+
+
+def _keys(data: Any, allowed: set[str], required: set[str], label: str) -> None:
+    if type(data) is not dict:
+        _error(f"{label} must be an object")
+    extra, missing = set(data) - allowed, required - set(data)
+    if extra or missing:
+        _error(f"{label}: unknown keys {list(extra)!r}; missing keys {list(missing)!r}")
+
+
+def _text(value: Any, label: str, limit: int = 256) -> None:
+    if type(value) is not str or not value or len(value) > limit:
+        _error(f"{label} requires nonempty text up to {limit} characters")
+    try:
+        value.encode("utf-8")
+    except UnicodeEncodeError as exc:
+        raise AssemblyError("invalid_assembly", f"{label} contains invalid Unicode") from exc
+
+
+def _name(data: dict) -> str:
+    name = data.get("name", data["id"])
+    _text(name, "Name")
+    return name
+
+
+def _id(value: Any, label: str) -> None:
+    if type(value) is not str or not IDENTIFIER.fullmatch(value):
+        _error(f"{label} requires a 1-128 character stable ASCII ID", "invalid_id")
+
+
+def _hash(value: Any) -> None:
+    if type(value) is not str or not SHA256.fullmatch(value):
+        _error("Source digest must be a lowercase SHA-256 hash", "invalid_source")
+
+
+def number(value: Any, label: str, bound: float = MAX_COORDINATE_MM) -> float:
+    if type(value) not in (int, float):
+        _error(f"{label} must be a finite number, not a boolean or expression", "invalid_number")
+    try:
+        converted = float(value)
+    except (ValueError, OverflowError) as exc:
+        raise AssemblyError("invalid_number", f"{label} is outside double range") from exc
+    if not math.isfinite(converted) or abs(converted) > bound:
+        _error(f"{label} must be finite and within +/-{bound:g}", "invalid_number")
+    return converted
+
+
+def _vector(value: Any, length: int, label: str, bound: float) -> tuple:
+    if type(value) not in (tuple, list) or len(value) != length:
+        _error(f"{label} requires exactly {length} numeric values", "invalid_frame")
+    return tuple(number(v, label, bound) for v in value)
+
+
+def _records(value: Any, typ: type, limit: int, label: str) -> tuple:
+    if type(value) not in (tuple, list) or len(value) > limit:
+        _error(f"{label} must contain at most {limit} records", "resource_limit")
+    if any(type(item) is not typ for item in value):
+        _error(f"{label} requires typed {typ.__name__} records")
+    result = tuple(value)
+    ids = [item.id for item in result]
+    if len(set(ids)) != len(ids):
+        _error(f"Duplicate {label} ID", "duplicate_id")
+    return result
+
+
+def _array(value: Any, limit: int, label: str) -> list:
+    if type(value) is not list or len(value) > limit:
+        _error(f"{label} requires an array of at most {limit} records", "resource_limit")
+    return value
+
+
+def _check_text(text: Any) -> None:
+    if type(text) is not str:
+        _error("Assembly JSON must be text", "invalid_json")
+    if len(text) > MAX_ASSEMBLY_BYTES:
+        _error("Assembly exceeds the 2 MiB limit", "assembly_too_large")
+    try:
+        if len(text.encode("utf-8")) > MAX_ASSEMBLY_BYTES:
+            _error("Assembly exceeds the 2 MiB limit", "assembly_too_large")
+    except UnicodeEncodeError as exc:
+        raise AssemblyError("invalid_json", "Assembly contains invalid Unicode") from exc
+    depth, quoted, escaped = 0, False, False
+    for character in text:
+        if quoted:
+            if escaped:
+                escaped = False
+            elif character == "\\":
+                escaped = True
+            elif character == '"':
+                quoted = False
+        elif character == '"':
+            quoted = True
+        elif character in "[{":
+            depth += 1
+            if depth > MAX_JSON_DEPTH:
+                _error("Assembly JSON nesting exceeds limit", "resource_limit")
+        elif character in "]}":
+            depth -= 1
+
+
+def _json(data: Any) -> str:
+    try:
+        text = json.dumps(data, sort_keys=True, indent=2, allow_nan=False) + "\n"
+    except (ValueError, TypeError, RecursionError, OverflowError) as exc:
+        raise AssemblyError("invalid_json", "Assembly must contain finite JSON data") from exc
+    _check_text(text)
+    # Direct constructors/from_dict must obey the same token policy as from_json,
+    # including values embedded in legacy Part snapshots. Otherwise an accepted
+    # assembly could emit canonical JSON that its own loader refuses to reopen.
+    json.loads(
+        text,
+        parse_int=lambda token: _parse_number(token, integer=True),
+        parse_float=_parse_number,
+        parse_constant=_reject_constant,
+    )
+    return text
+
+
+def _parse_number(token: str, *, integer: bool = False) -> int | float:
+    if len(token) > MAX_NUMBER_CHARACTERS:
+        _error("JSON numeric token exceeds limit", "resource_limit")
+    value = int(token) if integer else float(token)
+    if not math.isfinite(value):
+        _error("JSON numbers must be finite", "invalid_number")
+    return value
+
+
+def _reject_constant(token: str) -> None:
+    _error(f"Non-finite JSON constant {token}", "invalid_json")
+
+
+def _qmul(a: tuple, b: tuple) -> tuple:
+    aw, ax, ay, az = a
+    bw, bx, by, bz = b
+    return (
+        aw * bw - ax * bx - ay * by - az * bz,
+        aw * bx + ax * bw + ay * bz - az * by,
+        aw * by - ax * bz + ay * bw + az * bx,
+        aw * bz + ax * by - ay * bx + az * bw,
+    )
+
+
+@dataclass(frozen=True)
+class Frame:
+    """Rigid local-to-parent placement; authored quaternion bytes are preserved."""
+
+    xyz_mm: tuple[float, float, float] = (0.0, 0.0, 0.0)
+    wxyz: tuple[float, float, float, float] = (1.0, 0.0, 0.0, 0.0)
+
+    def __post_init__(self) -> None:
+        xyz = _vector(self.xyz_mm, 3, "Frame position", MAX_COORDINATE_MM)
+        q = _vector(self.wxyz, 4, "Quaternion", 1.00000001)
+        if abs(sum(v * v for v in q) - 1) > 1e-9:
+            _error("Quaternion must already be unit length", "invalid_frame")
+        object.__setattr__(self, "xyz_mm", xyz)
+        object.__setattr__(self, "wxyz", q)
+
+    def _rotation(self) -> tuple:
+        # Normalize only this temporary arithmetic value, never the saved frame.
+        length = math.sqrt(sum(v * v for v in self.wxyz))
+        return tuple(v / length for v in self.wxyz)
+
+    def rotate(self, point: tuple) -> tuple:
+        p = _vector(point, 3, "Point", float("inf"))
+        w, x, y, z = q = self._rotation()
+        return _qmul(_qmul(q, (0.0, *p)), (w, -x, -y, -z))[1:]
+
+    def point(self, point: tuple) -> tuple:
+        return tuple(a + b for a, b in zip(self.rotate(point), self.xyz_mm, strict=True))
+
+    def then(self, local: Frame) -> Frame:
+        if type(local) is not Frame:
+            _error("Composition requires a Frame", "invalid_frame")
+        return Frame(self.point(local.xyz_mm), _qmul(self._rotation(), local._rotation()))
+
+    def inverse(self) -> Frame:
+        w, x, y, z = self._rotation()
+        rotation = Frame(wxyz=(w, -x, -y, -z))
+        return Frame(rotation.rotate(tuple(-v for v in self.xyz_mm)), rotation.wxyz)
+
+    @classmethod
+    def rz(cls, radians: float) -> Frame:
+        angle = number(radians, "Angle", MAX_ANGLE_RAD)
+        return cls(wxyz=(math.cos(angle / 2), 0.0, 0.0, math.sin(angle / 2)))
+
+    def matrix34(self) -> tuple[float, ...]:
+        columns = [self.rotate(p) for p in ((1, 0, 0), (0, 1, 0), (0, 0, 1))]
+        return tuple(
+            v for row in range(3) for v in (*[columns[c][row] for c in range(3)], self.xyz_mm[row])
+        )
+
+    def to_dict(self) -> dict:
+        return {"xyz_mm": list(self.xyz_mm), "wxyz": list(self.wxyz)}
+
+    @classmethod
+    def from_dict(cls, data: dict) -> Frame:
+        fields = {"xyz_mm", "wxyz"}
+        _keys(data, fields, fields, "Frame")
+        if type(data["xyz_mm"]) is not list or type(data["wxyz"]) is not list:
+            _error("Frame vectors must be JSON arrays", "invalid_frame")
+        return cls(data["xyz_mm"], data["wxyz"])
+
+
+@dataclass(frozen=True)
+class MateFrame:
+    id: str
+    placement: Frame = field(default_factory=Frame)
+    name: str | None = None
+
+    def __post_init__(self) -> None:
+        _id(self.id, "Mate frame")
+        object.__setattr__(self, "name", self.id if self.name is None else self.name)
+        _text(self.name, "Mate frame name")
+        if type(self.placement) is not Frame:
+            _error("Mate placement requires a Frame", "invalid_frame")
+
+    def to_dict(self) -> dict:
+        return {"id": self.id, "name": self.name, "placement": self.placement.to_dict()}
+
+    @classmethod
+    def from_dict(cls, data: dict) -> MateFrame:
+        _keys(data, {"id", "name", "placement"}, {"id", "placement"}, "Mate frame")
+        return cls(data["id"], Frame.from_dict(data["placement"]), _name(data))
+
+
+@dataclass(frozen=True)
+class PartSource:
+    source_document_id: str
+    source_digest: str
+    document: Document
+
+    def __post_init__(self) -> None:
+        # Legacy Document IDs are text, not restricted to assembly's ASCII IDs.
+        _text(self.source_document_id, "Source document ID", 128)
+        _hash(self.source_digest)
+        if type(self.document) is not Document:
+            _error("An embedded source requires an existing Document snapshot", "invalid_source")
+        # Reparse to detach mutable construction inputs and apply the existing Part contract.
+        raw = self.document.to_dict()
+        _json(raw)
+        snapshot = Document.from_dict(raw)
+        if snapshot.id != self.source_document_id or snapshot.content_hash != self.source_digest:
+            _error("Embedded source identity/hash does not match its snapshot", "source_mismatch")
+        object.__setattr__(self, "document", snapshot)
+
+    @property
+    def id(self) -> str:
+        return self.source_document_id
+
+    @classmethod
+    def from_document(cls, document: Document) -> PartSource:
+        if type(document) is not Document:
+            _error("Source requires a Document", "invalid_source")
+        _json(document.to_dict())
+        return cls(document.id, document.content_hash, document)
+
+    def to_dict(self) -> dict:
+        return {
+            "source_document_id": self.source_document_id,
+            "source_digest": self.source_digest,
+            "document": self.document.to_dict(),
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict) -> PartSource:
+        fields = {"source_document_id", "source_digest", "document"}
+        _keys(data, fields, fields, "Part source")
+        return cls(
+            data["source_document_id"], data["source_digest"], Document.from_dict(data["document"])
+        )
+
+
+@dataclass(frozen=True)
+class PartDefinition:
+    id: str
+    source_digest: str
+    source_document_id: str
+    output_feature_id: str
+    mate_frames: tuple[MateFrame, ...]
+    name: str | None = None
+
+    def __post_init__(self) -> None:
+        _id(self.id, "Part definition")
+        object.__setattr__(self, "name", self.id if self.name is None else self.name)
+        _text(self.name, "Part definition name")
+        _text(self.source_document_id, "Source document ID", 128)
+        _id(self.output_feature_id, "Output feature")
+        _hash(self.source_digest)
+        object.__setattr__(
+            self, "mate_frames", _records(self.mate_frames, MateFrame, MAX_MATE_FRAMES, "frame")
+        )
+
+    def frame(self, frame_id: str) -> Frame:
+        for frame in self.mate_frames:
+            if frame.id == frame_id:
+                return frame.placement
+        _error(f"Part {self.id} has no mate frame {frame_id}", "missing_frame")
+
+    def to_dict(self) -> dict:
+        return {
+            "id": self.id,
+            "name": self.name,
+            "source_digest": self.source_digest,
+            "source_document_id": self.source_document_id,
+            "output_feature_id": self.output_feature_id,
+            "mate_frames": [f.to_dict() for f in self.mate_frames],
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict) -> PartDefinition:
+        fields = {"id", "source_digest", "source_document_id", "output_feature_id", "mate_frames"}
+        _keys(data, fields | {"name"}, fields, "Part definition")
+        frames = _array(data["mate_frames"], MAX_MATE_FRAMES, "Mate frames")
+        return cls(
+            data["id"],
+            data["source_digest"],
+            data["source_document_id"],
+            data["output_feature_id"],
+            tuple(MateFrame.from_dict(f) for f in frames),
+            _name(data),
+        )
+
+
+@dataclass(frozen=True)
+class Instance:
+    id: str
+    part_id: str
+    name: str | None = None
+
+    def __post_init__(self) -> None:
+        _id(self.id, "Instance")
+        object.__setattr__(self, "name", self.id if self.name is None else self.name)
+        _text(self.name, "Instance name")
+        _id(self.part_id, "Part definition reference")
+
+    def to_dict(self) -> dict:
+        return {"id": self.id, "part_id": self.part_id, "name": self.name}
+
+    @classmethod
+    def from_dict(cls, data: dict) -> Instance:
+        _keys(data, {"id", "part_id", "name"}, {"id", "part_id"}, "Instance")
+        return cls(data["id"], data["part_id"], _name(data))
+
+
+@dataclass(frozen=True)
+class Joint:
+    id: str
+    kind: str
+    parent: str
+    child: str
+    parent_frame: str
+    child_frame: str
+    coordinate: float = 0.0
+    limits: tuple[float, float] | None = None
+    name: str | None = None
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "name", self.id if self.name is None else self.name)
+        _text(self.name, "Joint name")
+        for value in (self.id, self.parent, self.child, self.parent_frame, self.child_frame):
+            _id(value, "Joint/reference")
+        if type(self.kind) is not str or self.kind not in ("fixed", "revolute", "slider"):
+            _error("Joint kind must be fixed, revolute or slider", "unsupported_joint")
+        q = number(self.coordinate, "Joint coordinate", self.coordinate_bound)
+        if self.kind == "fixed" and (q != 0 or self.limits is not None):
+            _error("Fixed joints have no coordinate or limits", "invalid_joint")
+        object.__setattr__(self, "coordinate", q)
+        if self.limits is not None:
+            if type(self.limits) not in (tuple, list) or len(self.limits) != 2:
+                _error("Limits require lower and upper values", "invalid_limits")
+            lo, hi = (number(v, "Joint limit", self.coordinate_bound) for v in self.limits)
+            if lo >= hi:
+                _error("Limits must increase; use a fixed joint for a lock", "invalid_limits")
+            if not lo <= q <= hi:
+                _error("Authored coordinate is outside its limits", "limit_violation")
+            object.__setattr__(self, "limits", (lo, hi))
+
+    @property
+    def coordinate_bound(self) -> float:
+        return MAX_ANGLE_RAD if self.kind == "revolute" else MAX_COORDINATE_MM
+
+    def motion(self, coordinate: float) -> Frame:
+        value = number(coordinate, "Joint coordinate", self.coordinate_bound)
+        if self.kind == "fixed":
+            if value != 0:
+                _error("A fixed joint cannot move", "invalid_coordinate")
+            return Frame()
+        return Frame.rz(value) if self.kind == "revolute" else Frame((0, 0, value))
+
+    def to_dict(self) -> dict:
+        data = {
+            "id": self.id,
+            "name": self.name,
+            "kind": self.kind,
+            "parent": self.parent,
+            "child": self.child,
+            "parent_frame": self.parent_frame,
+            "child_frame": self.child_frame,
+        }
+        if self.kind != "fixed":
+            data["coordinate"] = self.coordinate
+            data["limits"] = list(self.limits) if self.limits is not None else None
+        return data
+
+    @classmethod
+    def from_dict(cls, data: dict) -> Joint:
+        base = {"id", "kind", "parent", "child", "parent_frame", "child_frame"}
+        _keys(data, base | {"name", "coordinate", "limits"}, base, "Joint")
+        if data["kind"] == "fixed":
+            _keys(data, base | {"name"}, base, "Fixed joint")
+        else:
+            _keys(
+                data, base | {"name", "coordinate", "limits"}, base | {"coordinate"}, "Moving joint"
+            )
+        limits = data.get("limits")
+        if limits is not None and type(limits) is not list:
+            _error("Joint limits must be a JSON array", "invalid_limits")
+        return cls(
+            data["id"],
+            data["kind"],
+            data["parent"],
+            data["child"],
+            data["parent_frame"],
+            data["child_frame"],
+            data.get("coordinate", 0.0),
+            limits,
+            _name(data),
+        )
+
+
+@dataclass(frozen=True)
+class AssemblyDocument:
+    id: str
+    name: str
+    part_sources: tuple[PartSource, ...]
+    parts: tuple[PartDefinition, ...]
+    instances: tuple[Instance, ...]
+    joints: tuple[Joint, ...]
+    grounded_instance: str
+    ground: Frame = field(default_factory=Frame)
+    assembly_schema_version: int = ASSEMBLY_SCHEMA_VERSION
+    length_unit: str = "mm"
+    angle_unit: str = "rad"
+    kind: str = "assembly"
+    verification_presets: tuple[VerificationPreset, ...] = ()
+    active_verification_preset: str | None = None
+
+    def __post_init__(self) -> None:
+        for name, typ, limit in (
+            ("part_sources", PartSource, MAX_PART_SOURCES),
+            ("parts", PartDefinition, MAX_PART_DEFINITIONS),
+            ("instances", Instance, MAX_INSTANCES),
+            ("joints", Joint, MAX_JOINTS),
+            ("verification_presets", VerificationPreset, MAX_VERIFICATION_PRESETS),
+        ):
+            object.__setattr__(self, name, _records(getattr(self, name), typ, limit, name))
+        self.validate()
+        _json(self.to_dict())  # The complete embedded envelope shares one byte budget.
+
+    def validate(self) -> None:
+        _id(self.id, "Assembly")
+        _text(self.name, "Assembly name")
+        if type(self.assembly_schema_version) is not int or self.assembly_schema_version != 1:
+            _error("Only assembly schema 1 is supported", "unsupported_schema")
+        if self.kind != "assembly":
+            _error("Envelope kind must be assembly")
+        if self.length_unit != "mm" or self.angle_unit != "rad":
+            _error("Assemblies require mm and rad", "unsupported_units")
+        if type(self.ground) is not Frame:
+            _error("Ground placement requires a Frame", "invalid_frame")
+        _id(self.grounded_instance, "Ground instance")
+        if sum(len(part.mate_frames) for part in self.parts) > MAX_MATE_FRAMES:
+            _error("Assembly exceeds the 128-frame limit", "resource_limit")
+        sources = {source.id: source for source in self.part_sources}
+        parts = {part.id: part for part in self.parts}
+        for part in self.parts:
+            if part.source_document_id not in sources:
+                _error(f"Missing source {part.source_document_id}", "missing_source")
+            source = sources[part.source_document_id]
+            if part.source_digest != source.source_digest:
+                _error(f"Part {part.id} refers to a different source revision", "source_mismatch")
+            output = next(
+                (f for f in source.document.features if f.id == part.output_feature_id), None
+            )
+            if output is None or output_type(output.kind) != "solid":
+                _error(
+                    f"Part {part.id} requires an explicit existing solid output", "invalid_output"
+                )
+        for instance in self.instances:
+            if instance.part_id not in parts:
+                _error(f"Missing part definition {instance.part_id}", "missing_part")
+        self.ordered_joints()
+        if (
+            sum(len(p.requirements) for p in self.verification_presets)
+            > MAX_TOTAL_CLEARANCE_REQUIREMENTS
+        ):
+            _error("Assembly exceeds its total clearance-requirement limit", "resource_limit")
+        instance_ids = {instance.id for instance in self.instances}
+        for preset in self.verification_presets:
+            for requirement in preset.requirements:
+                if not set(requirement.instances) <= instance_ids:
+                    _error(
+                        f"Requirement {preset.id}.{requirement.id} refers to an unknown instance",
+                        "invalid_clearance_pair",
+                    )
+        if self.active_verification_preset is not None:
+            _id(self.active_verification_preset, "Active verification preset")
+            if self.active_verification_preset not in {p.id for p in self.verification_presets}:
+                _error("Active verification preset does not exist", "missing_verification_preset")
+
+    def ordered_joints(self) -> tuple[Joint, ...]:
+        instances = {instance.id: instance for instance in self.instances}
+        parts = {part.id: part for part in self.parts}
+        if self.grounded_instance not in instances:
+            _error("Exactly one existing instance must be grounded", "missing_ground")
+        incoming = {}
+        for joint in self.joints:
+            if joint.parent not in instances or joint.child not in instances:
+                _error(f"Joint {joint.id} has a missing instance", "missing_instance")
+            if joint.parent == joint.child or joint.child == self.grounded_instance:
+                _error("Cycles and joints into the ground are unsupported", "unsupported_graph")
+            if joint.child in incoming:
+                _error("Each non-ground instance must have exactly one parent", "multiple_parents")
+            incoming[joint.child] = joint
+            parts[instances[joint.parent].part_id].frame(joint.parent_frame)
+            parts[instances[joint.child].part_id].frame(joint.child_frame)
+        if set(incoming) != set(instances) - {self.grounded_instance}:
+            _error("Every non-ground instance requires a parent joint", "disconnected")
+        ordered, reached, pending = [], {self.grounded_instance}, list(self.joints)
+        while pending:
+            ready = [j for j in pending if j.parent in reached]
+            if not ready:
+                _error("Closed-loop/cyclic assemblies are unsupported", "unsupported_cycle")
+            for joint in ready:
+                ordered.append(joint)
+                reached.add(joint.child)
+                pending.remove(joint)
+        return tuple(ordered)
+
+    @property
+    def source_hashes(self):
+        return MappingProxyType({s.id: s.source_digest for s in self.part_sources})
+
+    def to_dict(self) -> dict:
+        return {
+            "kind": self.kind,
+            "assembly_schema_version": self.assembly_schema_version,
+            "id": self.id,
+            "name": self.name,
+            "length_unit": self.length_unit,
+            "angle_unit": self.angle_unit,
+            "part_sources": [s.to_dict() for s in self.part_sources],
+            "parts": [p.to_dict() for p in self.parts],
+            "instances": [i.to_dict() for i in self.instances],
+            "joints": [j.to_dict() for j in self.joints],
+            "grounded_instance": self.grounded_instance,
+            "ground": self.ground.to_dict(),
+            "verification_presets": [preset.to_dict() for preset in self.verification_presets],
+            "active_verification_preset": self.active_verification_preset,
+        }
+
+    def to_json(self) -> str:
+        return _json(self.to_dict())
+
+    @property
+    def content_hash(self) -> str:
+        return hashlib.sha256(self.to_json().encode("utf-8")).hexdigest()
+
+    @property
+    def fingerprint(self) -> str:
+        return self.content_hash
+
+    @classmethod
+    def from_dict(cls, data: dict) -> AssemblyDocument:
+        fields = {
+            "kind",
+            "assembly_schema_version",
+            "id",
+            "name",
+            "length_unit",
+            "angle_unit",
+            "part_sources",
+            "parts",
+            "instances",
+            "joints",
+            "grounded_instance",
+            "ground",
+        }
+        _keys(
+            data,
+            fields | {"verification_presets", "active_verification_preset"},
+            fields,
+            "Assembly",
+        )
+        _json(data)  # Bound nested direct-Python input as strictly as textual JSON.
+        arrays = {}
+        for name, typ, limit in (
+            ("part_sources", PartSource, MAX_PART_SOURCES),
+            ("parts", PartDefinition, MAX_PART_DEFINITIONS),
+            ("instances", Instance, MAX_INSTANCES),
+            ("joints", Joint, MAX_JOINTS),
+        ):
+            arrays[name] = tuple(typ.from_dict(v) for v in _array(data[name], limit, name))
+        return cls(
+            data["id"],
+            data["name"],
+            **arrays,
+            grounded_instance=data["grounded_instance"],
+            ground=Frame.from_dict(data["ground"]),
+            kind=data["kind"],
+            assembly_schema_version=data["assembly_schema_version"],
+            length_unit=data["length_unit"],
+            angle_unit=data["angle_unit"],
+            verification_presets=tuple(
+                VerificationPreset.from_dict(preset)
+                for preset in _array(
+                    data.get("verification_presets", []),
+                    MAX_VERIFICATION_PRESETS,
+                    "Verification presets",
+                )
+            ),
+            active_verification_preset=data.get("active_verification_preset"),
+        )
+
+    @classmethod
+    def from_json(cls, text: str) -> AssemblyDocument:
+        _check_text(text)
+        try:
+            data = json.loads(
+                text,
+                object_pairs_hook=reject_duplicate_keys,
+                parse_constant=_reject_constant,
+                parse_int=lambda token: _parse_number(token, integer=True),
+                parse_float=_parse_number,
+            )
+        except CADException:
+            raise
+        except (ValueError, RecursionError) as exc:
+            raise AssemblyError("invalid_json", f"Cannot read assembly JSON: {exc}") from exc
+        return cls.from_dict(data)
+
+    def replace_source(self, source_document_id: str, document: Document) -> AssemblyDocument:
+        return replace_source(self, source_document_id, document)
+
+
+def replace_source(
+    assembly: AssemblyDocument, source_document_id: str, document: Document
+) -> AssemblyDocument:
+    """Atomically accept one source revision for all definitions/instances.
+
+    IDs, output IDs, literal frames and joints are preserved. Exact B-rep validation
+    and display publication/rollback belong to the service and UI transactions.
+    """
+    if source_document_id not in assembly.source_hashes:
+        _error(f"Unknown source {source_document_id}", "missing_source")
+    source = PartSource.from_document(document)
+    if source.id != source_document_id:
+        _error(
+            "An update must preserve source identity; fork explicitly for a copy", "source_mismatch"
+        )
+    return replace(
+        assembly,
+        part_sources=tuple(
+            source if s.id == source_document_id else s for s in assembly.part_sources
+        ),
+        parts=tuple(
+            replace(p, source_digest=source.source_digest)
+            if p.source_document_id == source_document_id
+            else p
+            for p in assembly.parts
+        ),
+    )

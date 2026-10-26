@@ -12,6 +12,7 @@ import json
 from pathlib import Path
 
 import pytest
+from historical_runtime_source import historical_runtime_root as historical_source_root
 
 ROOT = Path(__file__).resolve().parents[2]
 GUARDS = (
@@ -599,19 +600,20 @@ def test_original_runtime_hash_guard_runs_without_importing_production_modules()
     _extract_function(
         "test_arc_profile_incidence.py",
         INCIDENCE_GUARD,
-        {"ROOT": ROOT, "ast": ast, "hashlib": hashlib, "json": json},
+        {"ROOT": historical_source_root(), "ast": ast, "hashlib": hashlib, "json": json},
     )()
 
 
 @pytest.fixture(scope="module")
 def historical_runtime_root(tmp_path_factory):
+    source = historical_source_root()
     root = tmp_path_factory.mktemp("historical-runtime-guard")
-    added, authoring_originals = _authoring_originals(ROOT)
+    added, authoring_originals = _authoring_originals(source)
     standalone_fixtures = {
         "tests/fixtures/standalone/python_additions_69d0f81.json": "0e6152a913e23079c770f23bbe6daf111d28f82981496e1c85af19ae1bc5c6c9",
         "tests/fixtures/standalone/python_revision_ab7edce.json": "28a8c806614dbfd7bb7e81c443630f3b05b34fd089c3684b6b4139c840c038ee",
     }
-    guard_source = ast.parse((ROOT / "tests/unit/test_arc_profile_native_end_cap.py").read_bytes())
+    guard_source = ast.parse((source / "tests/unit/test_arc_profile_native_end_cap.py").read_bytes())
     windows_digests = {
         node.targets[0].id: ast.literal_eval(node.value)
         for node in guard_source.body
@@ -685,11 +687,11 @@ def historical_runtime_root(tmp_path_factory):
         "tests/fixtures/geometry_v3/standalone_integration_harness.json",
     ):
         support.add(relative)
-        fixture = json.loads((ROOT / relative).read_bytes())
+        fixture = json.loads((source / relative).read_bytes())
         support.update(fixture.get("added", {}))
         support.update(fixture.get("changed", {}))
     for relative, expected in standalone_fixtures.items():
-        raw = (ROOT / relative).read_bytes()
+        raw = (source / relative).read_bytes()
         assert hashlib.sha256(raw).hexdigest() == expected
         fixture = json.loads(raw)
         support.add(relative)
@@ -709,12 +711,12 @@ def historical_runtime_root(tmp_path_factory):
     ):
         target = root / relative
         target.parent.mkdir(parents=True, exist_ok=True)
-        target.write_bytes((ROOT / relative).read_bytes())
+        target.write_bytes((source / relative).read_bytes())
     baseline_path = "docs/architecture/arc_profile_service/BASELINE.json"
-    manifest_bytes = (ROOT / baseline_path).read_bytes()
+    manifest_bytes = (source / baseline_path).read_bytes()
     hashes = json.loads(manifest_bytes)["source_sha256"]
     dispatch_path = "tests/fixtures/result_v3/dispatch_extension_30383a1.json"
-    dispatch_bytes = (ROOT / dispatch_path).read_bytes()
+    dispatch_bytes = (source / dispatch_path).read_bytes()
     assert hashlib.sha256(dispatch_bytes).hexdigest() == (
         "4eed9a50153d2c4b3d0ea8fda5e48cd378e050287ca374241b56ee0481b497c8"
     )
@@ -727,10 +729,10 @@ def historical_runtime_root(tmp_path_factory):
     for relative, expected in hashes.items():
         target = root / relative
         target.parent.mkdir(parents=True, exist_ok=True)
-        data = (ROOT / relative).read_bytes()
-        # The live inverse checks the current kernel against its unchanged129
-        # baseline. Historical kernel bytes remain the separate fixture used by
-        # this original hash assertion and the original additive-span guard.
+        data = (source / relative).read_bytes()
+        # This historical inverse checks the pinned-era kernel against its129
+        # baseline. Its original additive-span and per-file mutation assertions
+        # remain exact; current runtime boundaries are exercised separately.
         original = (
             BASELINE
             if relative == "src/mechanical_cad/kernel_ocp.py"
@@ -753,7 +755,7 @@ def historical_runtime_root(tmp_path_factory):
         (str(PRIMITIVE_FIXTURE.relative_to(ROOT)), PRIMITIVE_BASELINE),
         (
             "src/mechanical_cad/arc_profile_primitives.py",
-            (ROOT / "src/mechanical_cad/arc_profile_primitives.py").read_bytes(),
+            (source / "src/mechanical_cad/arc_profile_primitives.py").read_bytes(),
         ),
     ):
         target = root / relative

@@ -1,6 +1,6 @@
 # Public source snapshot provenance
 
-Source: local development commit `0cd03714ea1d64f86e931ad05be4d60d5c7cadc6`.
+Source: local development commit `a15bdbf107116b8ebd6f5f2a547144b6eef3a225`.
 
 All executable source, tests, hash-pinned fixtures, examples and application assets are byte-identical to that committed tree. Documentation-only privacy changes remove private transfer/host details, replace six operational Windows reports with public technical summaries, and generalize workspace/host descriptions in Markdown. This provenance document is added.
 
@@ -36,3 +36,11 @@ This follow-on corrects the complete-CI dependency installation and fail-fast re
 Scoped checks during integration passed: 161 engine/release checks, 118 sketch-model checks, 54 removal/retirement checks, 369 pending/insert/general checks, 118 architecture/preview-owner checks, 44 source-owner checks, 18 historical-source checks, and 188 materials/acquisition/builder/qualifier checks. Subsequent fixture and bounded-ID runs passed 276 and 345 checks respectively, with two existing exact UI materials-wording failures retained. Counts overlap and must not be added into a full-suite total. Whole-tree Ruff and Git whitespace checks passed.
 
 Fresh complete CI is required for this exact public commit. Other historical guard and version-policy failures remain under investigation. Native Linux/Windows qualification of this complete candidate and release-materials review are incomplete. The workflows do not publish releases, and a successful structural materials check is not legal clearance or release admission. Main promotion remains withheld pending validation.
+
+## Historical isolation and Windows acquisition follow-on
+
+The next normal public commit follows `c407db478ad54488c31484c568422a858cdda400`. It adds checksum-locked Windows runtime acquisition as data only, exact content-addressed historical source fixtures, and bounded test compatibility fixes. The historical source objects are intentional regression data, not imported private Git history. Their original protected digests remain enforced; live product imports continue to use the current checkout. Synthetic Windows user-directory strings in adversarial path tests are test data, not personal directory disclosures.
+
+Scoped validation recorded 200 release-tool checks, 183 historical/pin/live-root/dispatch checks, 336 cleanup/arc/UI checks and 2,645 arc mutation checks passing. Packaging checks passed 203 with one existing byte-pin failure retained. Counts overlap and do not establish a full-suite pass. Whole-tree Ruff and Git whitespace checks passed.
+
+The preceding c407 public candidate's sketch CI recorded 18,142 passed, 640 failed, 12 skipped and 119 setup errors. Those results precede this follow-on. Original live runtime allowlist failures and remaining historical/version-policy failures require further work; none are waived here. Native platform qualification and materials approval are still incomplete. No main promotion or release publication is performed.

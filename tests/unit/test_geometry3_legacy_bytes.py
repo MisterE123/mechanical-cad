@@ -1,7 +1,7 @@
 """Portable integrity of real recovered-baseline geometry wire observations.
 
-These pure checks establish the stored original bytes and untouched legacy helper
-spans. Fresh current-sidecar byte comparisons are a separate native service gate.
+These pure checks establish the stored original bytes and legacy helper spans,
+allowing only the explicit reviewed Windows writable-fsync correction. Fresh current-sidecar byte comparisons are a separate native service gate.
 No missing historical run is recreated or claimed by this corpus.
 """
 

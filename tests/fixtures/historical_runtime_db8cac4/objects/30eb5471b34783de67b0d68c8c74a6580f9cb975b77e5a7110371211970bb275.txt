@@ -1,0 +1,500 @@
+"""Bounded disposable joint overlay geometry; no model or backend authority.
+
+The panel layout and handle geometry are shared by drawing and hit testing.
+Blender/GPU imports are deliberately lazy so layout contracts remain pure tests.
+"""
+
+from __future__ import annotations
+
+import math
+import textwrap
+from contextlib import contextmanager
+from dataclasses import dataclass
+
+AXIS_COLORS = ((1.0, 0.26, 0.22, 1.0), (0.3, 0.9, 0.38, 1.0), (0.3, 0.57, 1.0, 1.0))
+GOLD = (1.0, 0.71, 0.18, 0.9)
+TEXT = (0.92, 0.94, 0.97, 1.0)
+MUTED = (0.65, 0.71, 0.79, 1.0)
+
+
+@dataclass(frozen=True)
+class Button:
+    action: str
+    label: str
+    hint: str
+    bounds: tuple
+    selected: bool = False
+    enabled: bool = True
+
+
+@dataclass(frozen=True)
+class Label:
+    text: str
+    position: tuple
+    color: tuple = TEXT
+    hint: str = ""
+
+
+@dataclass(frozen=True)
+class Panel:
+    bounds: tuple
+    buttons: tuple
+    labels: tuple
+    scale: float
+    font_size: float
+
+
+@dataclass(frozen=True)
+class Handle:
+    end: str
+    axis: str
+    origin: tuple
+    tip: tuple
+    selected: bool
+
+
+def inside(point, bounds):
+    return bounds[0] <= point[0] <= bounds[2] and bounds[1] <= point[1] <= bounds[3]
+
+
+def segment_distance(point, a, b):
+    dx, dy = b[0] - a[0], b[1] - a[1]
+    length = dx * dx + dy * dy
+    t = (
+        max(0.0, min(1.0, ((point[0] - a[0]) * dx + (point[1] - a[1]) * dy) / length))
+        if length
+        else 0.0
+    )
+    return math.hypot(point[0] - a[0] - t * dx, point[1] - a[1] - t * dy)
+
+
+def pick_handle(handles, point, *, scale=1.0):
+    """Prefer the active connector when two literal connectors coincide."""
+    choices = [
+        (segment_distance(point, h.origin, h.tip), not h.selected, h)
+        for h in handles
+        if math.dist(h.origin, h.tip) >= 5 * scale
+    ]
+    # The active connector wins overlapping axes, then the nearest line wins.
+    choices = [row for row in choices if row[0] <= 9 * scale]
+    if not choices:
+        return None
+    choices.sort(key=lambda row: (row[1], row[0]))
+    return choices[0][2]
+
+
+def hit_button(panel, point):
+    return next((b for b in panel.buttons if inside(point, b.bounds)), None)
+
+
+def hint_at(panel, point):
+    button = hit_button(panel, point)
+    if button is not None:
+        return button.hint
+    for label in panel.labels:
+        bounds = (
+            label.position[0],
+            label.position[1] - 3 * panel.scale,
+            panel.bounds[2],
+            label.position[1] + 14 * panel.scale,
+        )
+        if label.hint and inside(point, bounds):
+            return label.hint
+    return ""
+
+
+def build_panel(
+    usable_rect,
+    *,
+    scale=1.0,
+    parent_name="",
+    child_name="",
+    joint_name="",
+    replaced_name="",
+    selected="parent",
+    kind="fixed",
+    distance=0.0,
+    ready=False,
+    error="",
+    hint="",
+    field="",
+):
+    """Keep all controls inside the actual usable viewport, including UI scaling."""
+    if len(usable_rect) != 4 or not all(math.isfinite(v) for v in usable_rect):
+        raise ValueError("Joint panel requires finite viewport bounds.")
+    left, bottom, right, top = usable_rect
+    if right <= left or top <= bottom:
+        raise ValueError("Joint panel requires a nonempty viewport.")
+    if not math.isfinite(scale):
+        raise ValueError("Joint panel requires a finite UI scale.")
+    scale = max(1.0, min(3.0, float(scale)))
+    fitted = min(scale, (right - left) / 302.0, (top - bottom) / 330.0)
+    if fitted < 1.0:
+        width, height = min(right - left, 302 * scale), min(top - bottom, 105 * scale)
+        bounds = (left, bottom, left + width, bottom + height)
+        pad = min(6.0, width / 8)
+        button_height = min(28 * scale, max(1, height - 2 * pad))
+        button = Button(
+            "cancel",
+            "Cancel / Esc",
+            "Enlarge the 3D viewport to edit a visual joint.",
+            (left + pad, bottom + pad, left + width - pad, bottom + pad + button_height),
+        )
+        labels = (
+            (
+                Label(
+                    "Enlarge viewport to edit joints",
+                    (left + pad, bottom + height - 18 * scale),
+                    GOLD,
+                ),
+            )
+            if height > button_height + 35 * scale
+            else ()
+        )
+        return Panel(bounds, (button,), labels, scale, 11.5 * scale)
+    scale = fitted
+    width, height = 302 * scale, 330 * scale
+    bounds = (left, bottom, left + width, bottom + height)
+    labels, buttons = [], []
+    pad, row_h, gap = 9 * scale, 25 * scale, 5 * scale
+    y = bottom + height - 21 * scale
+
+    def label(text, color=TEXT, hint=""):
+        nonlocal y
+        labels.append(Label(str(text), (left + pad, y), color, hint))
+        y -= 18 * scale
+
+    def row(items, weights=None):
+        nonlocal y
+        available = width - 2 * pad - gap * (len(items) - 1)
+        weights = weights or [1] * len(items)
+        x = left + pad
+        for weight, (action, text, explanation, chosen, enabled) in zip(
+            weights, items, strict=True
+        ):
+            cell = available * weight / sum(weights)
+            buttons.append(
+                Button(
+                    action,
+                    text,
+                    explanation,
+                    (x, y - row_h + 4 * scale, x + cell, y + 4 * scale),
+                    chosen,
+                    enabled,
+                )
+            )
+            x += cell + gap
+        y -= row_h + gap
+
+    label("Visual joint · Preview not checked", GOLD)
+    label(
+        "Parent: " + (parent_name or "click an assembly instance"),
+        hint="Parent instance: " + parent_name if parent_name else "",
+    )
+    label(
+        "Child: "
+        + (child_name or ("click another instance" if parent_name else "choose parent first")),
+        hint="Child instance: " + child_name if child_name else "",
+    )
+    label(
+        "Replaces: " + replaced_name if replaced_name else "Choose two existing instances",
+        MUTED,
+        hint="Apply replaces the child’s existing incoming joint: " + replaced_name
+        if replaced_name
+        else "",
+    )
+    row(
+        [
+            (
+                "parent",
+                "Parent handle",
+                "Edit the parent connector at its accepted placement.",
+                selected == "parent",
+                ready,
+            ),
+            (
+                "child",
+                "Child handle",
+                "Edit the child connector at its accepted placement.",
+                selected == "child",
+                ready,
+            ),
+            (
+                "reselect",
+                "Pick pair",
+                "Discard this preview and select parent, then child again.",
+                False,
+                bool(parent_name),
+            ),
+        ]
+    )
+    row(
+        [
+            ("fixed", "Fixed", "Align the two literal connectors rigidly.", kind == "fixed", ready),
+            (
+                "slider",
+                "Slider",
+                "Translate along the parent connector's +Z direction.",
+                kind == "slider",
+                ready,
+            ),
+            (
+                "roll",
+                "Roll 90°",
+                "Turn the selected connector a quarter turn about its local Z axis.",
+                False,
+                ready,
+            ),
+        ]
+    )
+    label("Selected connector +Z direction", MUTED)
+    row(
+        [
+            (
+                "axis_X",
+                "+X",
+                "Point the selected connector's +Z along its instance-local +X.",
+                False,
+                ready,
+            ),
+            (
+                "axis_Y",
+                "+Y",
+                "Point the selected connector's +Z along its instance-local +Y.",
+                False,
+                ready,
+            ),
+            (
+                "axis_Z",
+                "+Z",
+                "Point the selected connector's +Z along its instance-local +Z.",
+                False,
+                ready,
+            ),
+            ("flip", "Flip", "Reverse the selected connector's +Z direction.", False, ready),
+        ]
+    )
+    shown_distance = field if field else f"{distance:.6g}"
+    row(
+        [
+            (
+                "distance",
+                f"Slide: {shown_distance} mm",
+                "Type an exact slider distance in millimetres; Enter accepts.",
+                bool(field),
+                ready and kind == "slider",
+            ),
+            ("minus", "−1", "Decrease slider distance by 1 mm.", False, ready and kind == "slider"),
+            ("plus", "+1", "Increase slider distance by 1 mm.", False, ready and kind == "slider"),
+        ],
+        weights=[3, 1, 1],
+    )
+    row(
+        [
+            (
+                "apply",
+                "Apply joint",
+                "Replay the candidate through the guarded assembly transaction; then run an explicit pose check.",
+                False,
+                ready and not field,
+            ),
+            (
+                "cancel",
+                "Cancel / Esc",
+                "Discard all transient joint edits; accepted assembly and display stay unchanged.",
+                False,
+                True,
+            ),
+        ]
+    )
+    message = (
+        error
+        or hint
+        or (
+            "Drag RGB axes · X/Y/Z constrain · type mm"
+            if ready
+            else "Click owned meshes · middle mouse or wheel navigates"
+        )
+    )
+    # Two bounded lines; actual font clipping also applies at draw time.
+    limit = 45
+    words, lines, line = message.split(), [], ""
+    for word in words:
+        if line and len(line) + len(word) + 1 > limit:
+            lines.append(line)
+            line = word
+        else:
+            line += (" " if line else "") + word
+    lines.append(line)
+    for text in lines[:2]:
+        label(text, (1.0, 0.45, 0.25, 1.0) if error else MUTED)
+    return Panel(bounds, tuple(buttons), tuple(labels), scale, 11.5 * scale)
+
+
+@contextmanager
+def drawing_state():
+    import gpu
+
+    previous = (
+        gpu.state.blend_get(),
+        gpu.state.depth_test_get(),
+        gpu.state.depth_mask_get(),
+        gpu.state.line_width_get(),
+    )
+    try:
+        gpu.state.blend_set("ALPHA")
+        gpu.state.depth_test_set("NONE")
+        gpu.state.depth_mask_set(False)
+        yield
+    finally:
+        try:
+            gpu.state.line_width_set(previous[3])
+        finally:
+            try:
+                gpu.state.depth_mask_set(previous[2])
+            finally:
+                try:
+                    gpu.state.depth_test_set(previous[1])
+                finally:
+                    gpu.state.blend_set(previous[0])
+
+
+def _batch(shader, mode, points, color):
+    from gpu_extras.batch import batch_for_shader
+
+    if not points:
+        return
+    shader.bind()
+    shader.uniform_float("color", color)
+    batch_for_shader(shader, mode, {"pos": points}).draw(shader)
+
+
+def _box(shader, bounds, color):
+    x, y, right, top = bounds
+    _batch(
+        shader, "TRIS", ((x, y), (right, y), (right, top), (x, y), (right, top), (x, top)), color
+    )
+
+
+def _text(text, position, size, color, max_width):
+    import blf
+
+    blf.size(0, size)
+    if max_width <= 0:
+        return
+    if blf.dimensions(0, text)[0] > max_width:
+        while text and blf.dimensions(0, text + "…")[0] > max_width:
+            text = text[:-1]
+        text += "…"
+    blf.position(0, *position, 0)
+    blf.color(0, *color)
+    blf.draw(0, text)
+
+
+def draw_panel(panel, handles, connector_labels, *, hover="", hint="", usable_rect=None):
+    """Draw precisely the bounds used by the modal owner's hit tests."""
+    import gpu
+
+    shader = gpu.shader.from_builtin("UNIFORM_COLOR")
+    with drawing_state():
+        for handle in sorted(handles, key=lambda h: h.selected):
+            color = AXIS_COLORS["XYZ".index(handle.axis)]
+            gpu.state.line_width_set((3.5 if handle.selected else 1.5) * panel.scale)
+            _batch(shader, "LINES", (handle.origin, handle.tip), color)
+            size = 4 * panel.scale
+            x, y = handle.tip
+            _box(shader, (x - size, y - size, x + size, y + size), color)
+            direction = (handle.tip[0] - handle.origin[0], handle.tip[1] - handle.origin[1])
+            length = math.hypot(*direction)
+            if length > 1:
+                dx, dy = (value / length for value in direction)
+                arrow = (
+                    (x, y),
+                    (
+                        x - 10 * panel.scale * dx + 5 * panel.scale * dy,
+                        y - 10 * panel.scale * dy - 5 * panel.scale * dx,
+                    ),
+                    (
+                        x - 10 * panel.scale * dx - 5 * panel.scale * dy,
+                        y - 10 * panel.scale * dy + 5 * panel.scale * dx,
+                    ),
+                )
+                _batch(shader, "TRIS", arrow, color)
+            label = ("P +" if handle.end == "parent" else "C +") + handle.axis
+            _text(
+                label,
+                (x + 6 * panel.scale, y + 4 * panel.scale),
+                panel.font_size,
+                color,
+                70 * panel.scale,
+            )
+        for text, point, selected in connector_labels:
+            _text(
+                text,
+                (point[0] + 8 * panel.scale, point[1] - 19 * panel.scale),
+                panel.font_size,
+                GOLD if selected else TEXT,
+                180 * panel.scale,
+            )
+        _box(shader, panel.bounds, (0.025, 0.033, 0.047, 0.95))
+        for button in panel.buttons:
+            color = (0.11, 0.29, 0.43, 1.0) if button.selected else (0.13, 0.16, 0.20, 1.0)
+            if hover == button.action and button.enabled:
+                color = (0.23, 0.33, 0.40, 1.0)
+            _box(shader, button.bounds, color)
+            _text(
+                button.label,
+                (button.bounds[0] + 5 * panel.scale, button.bounds[1] + 7 * panel.scale),
+                panel.font_size,
+                TEXT if button.enabled else (0.4, 0.43, 0.48, 1),
+                button.bounds[2] - button.bounds[0] - 10 * panel.scale,
+            )
+        for label in panel.labels:
+            _text(
+                label.text,
+                label.position,
+                panel.font_size,
+                label.color,
+                panel.bounds[2] - label.position[0] - 9 * panel.scale,
+            )
+
+        if hint and usable_rect is not None:
+            tooltip_bounds, tooltip_labels = tooltip_layout(hint, panel, usable_rect)
+            _box(shader, tooltip_bounds, (0.06, 0.085, 0.12, 0.98))
+            for label in tooltip_labels:
+                _text(
+                    label.text,
+                    label.position,
+                    panel.font_size,
+                    TEXT,
+                    tooltip_bounds[2] - label.position[0] - 7 * panel.scale,
+                )
+
+
+def tooltip_layout(hint, panel, usable_rect):
+    left, bottom, right, top = usable_rect
+    scale = panel.scale
+    width = min(355 * scale, right - left)
+    characters = max(1, int((width - 14 * scale) / (6.3 * scale)))
+    lines = textwrap.wrap(hint, width=characters) or [""]
+    lines = lines[: max(1, int((top - bottom - 14 * scale) / (16 * scale)))]
+    height = min(top - bottom, (len(lines) * 16 + 14) * scale)
+    x = min(max(left, panel.bounds[0]), right - width)
+    y = min(max(bottom, panel.bounds[3] + 6 * scale), top - height)
+    bounds = (x, y, x + width, y + height)
+    labels = tuple(
+        Label(line, (x + 7 * scale, y + height - (index * 16 + 18) * scale))
+        for index, line in enumerate(lines)
+    )
+    return bounds, labels
+
+
+def draw_ghost(positions):
+    """Gold wires are a bounded UI placement preview, never checked geometry."""
+    import gpu
+
+    if not positions:
+        return
+    with drawing_state():
+        gpu.state.line_width_set(1.4)
+        _batch(gpu.shader.from_builtin("UNIFORM_COLOR"), "LINES", positions, GOLD)

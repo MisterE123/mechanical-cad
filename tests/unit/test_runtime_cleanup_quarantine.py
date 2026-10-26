@@ -34,6 +34,20 @@ def harness(monkeypatch):
     package = types.ModuleType(name)
     package.__path__ = [str(ADDON)]
     monkeypatch.setitem(sys.modules, name, package)
+    # Cleanup owns no Blender interaction or new admission. These explicit ports
+    # let the real Assembly cleanup code load without importing the host UI.
+    def forbidden_admission(*args, **kwargs):
+        pytest.fail("cleanup unexpectedly entered Blender interaction/admission")
+
+    for leaf, methods in (
+        ("sketch_session", ("interaction_revision",)),
+        ("staged_edit_store", ("interaction_revision", "require_no_live_edit", "require_no_resume")),
+        ("workspace", ("get_role",)),
+    ):
+        module = types.ModuleType(name + "." + leaf)
+        for method in methods:
+            setattr(module, method, forbidden_admission)
+        monkeypatch.setitem(sys.modules, module.__name__, module)
     lease = importlib.import_module(name + ".execution_lease")
     guarded = importlib.import_module(name + ".guarded_transport")
     managed = importlib.import_module(name + ".sidecar_job")
@@ -421,7 +435,15 @@ def test_async_uncertainty_replaces_prior_reason_and_retains_exact_owner(
 def test_live_replay_guard_lends_and_preserves_its_existing_token(harness, monkeypatch):
     h = harness
     jobs, value = port(h, monkeypatch)
+    resume_checks = []
+    monkeypatch.setattr(
+        sys.modules[h.name + ".staged_edit_store"],
+        "require_no_resume",
+        lambda: resume_checks.append("checked"),
+    )
     namespace = {
+        "__name__": h.name + ".document_state",
+        "__package__": h.name,
         "contextmanager": contextmanager,
         "execution_lease": h.lease,
         "bridge": h.managed.bridge,
@@ -434,6 +456,8 @@ def test_live_replay_guard_lends_and_preserves_its_existing_token(harness, monke
         assert jobs[0].token is token and h.lease._TOKEN is token
         assert namespace["_REPLAY_RUNNING"]
     assert not h.lease.is_busy() and not namespace["_REPLAY_RUNNING"]
+
+    assert resume_checks == ["checked"]
 
 
 def test_live_assembly_run_lends_and_releases_its_existing_token(harness, monkeypatch):
@@ -516,7 +540,15 @@ def test_wrong_thread_cannot_borrow_main_scope_before_job_construction(harness, 
 def test_uncertainty_through_live_replay_guard_cannot_release_or_clear_gate(harness, monkeypatch):
     h = harness
     jobs, _ = port(h, monkeypatch, uncertain=True)
+    resume_checks = []
+    monkeypatch.setattr(
+        sys.modules[h.name + ".staged_edit_store"],
+        "require_no_resume",
+        lambda: resume_checks.append("checked"),
+    )
     namespace = {
+        "__name__": h.name + ".document_state",
+        "__package__": h.name,
         "contextmanager": contextmanager,
         "execution_lease": h.lease,
         "bridge": h.managed.bridge,
@@ -529,6 +561,8 @@ def test_uncertainty_through_live_replay_guard_cannot_release_or_clear_gate(harn
     assert not namespace["_REPLAY_RUNNING"]
     assert h.lease._QUARANTINE[1] is jobs[0]
     assert h.lease.is_busy() and h.lease.try_acquire() is None
+
+    assert resume_checks == ["checked"]
 
 
 def test_uncertainty_through_live_assembly_scope_preserves_original_job(harness, monkeypatch):

@@ -1,0 +1,41 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mechanical-cad"
+version = "0.8.0"
+description = "An experimental, replayable B-rep CAD foundation for Blender"
+readme = "README.md"
+requires-python = ">=3.11,<3.15"
+license = "GPL-3.0-or-later"
+authors = [{name = "Mechanical CAD contributors"}]
+dependencies = ["cadquery-ocp-novtk==8.0.1.1.0"]
+
+[project.optional-dependencies]
+sketch = ["slvs==3.2"]
+dev = ["pytest==9.1.1", "ruff==0.17.1"]
+
+[project.scripts]
+mechanical-cad = "mechanical_cad.cli:main"
+
+[tool.mechanical_cad.release]
+scope = "Visual joint placement standalone preview candidate: offline Linux x86_64 Blender 5.2.2 extension; constrained lines/circles and bounded sectors, editable Parts, rooted-tree box/sector assemblies, pose checks, save/reopen, individual-Part STEP/STL and checked Assembly STEP preserving reusable definitions and placements; visual fixed/slider connector placement and exact 0.8.0 installer qualification pending; Windows deferred"
+blender_minimum = [5, 2, 0]
+qualified_runtime = "Native Blender 5.2.2 LTS on Linux x86_64; CPython 3.12 sidecar"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests", "scripts/tests"]
+pythonpath = ["src"]
+markers = ["kernel: requires the pinned Open CASCADE backend"]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+exclude = [".venv", "dist"]
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F", "B", "I"]

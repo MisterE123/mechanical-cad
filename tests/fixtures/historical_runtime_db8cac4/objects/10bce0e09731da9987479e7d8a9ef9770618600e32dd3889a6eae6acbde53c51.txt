@@ -1,0 +1,77 @@
+"""Native-free admission for the bounded schema-3 Part geometry actions.
+
+This selects source intent only. Fresh replay still owns solving, sector
+classification, construction and geometry validation; admission is no certificate.
+"""
+
+from __future__ import annotations
+
+from .errors import CADException
+from .model import Document
+from .result_policy_v3 import validate_replay_v3
+
+
+def validate_geometry_v3(document: Document, result_version: int) -> None:
+    """Require one directed sector and its sole selected direct extrusion.
+
+    Compose the existing replay policy, including its height/expression bounds.
+    Unused points and constraints retain their existing semantics. Neither a solve
+    nor a zero-DoF requirement belongs in this structural, native-free gate.
+    """
+    validate_replay_v3(document, result_version)
+    profiles = [
+        feature
+        for feature in document.features
+        if feature.kind == "sketch_constrained" and feature.sketch is not None
+    ]
+    if not any(profile.sketch.schema_version == 3 and profile.sketch.arcs for profile in profiles):
+        raise CADException(
+            "unsupported_geometry_source", "Geometry result 3 requires a schema-3 sector source."
+        )
+    if document.active_feature is None:
+        raise CADException(
+            "missing_active_feature", "Choose an active solid before checking or exporting."
+        )
+    active = next(feature for feature in document.features if feature.id == document.active_feature)
+    if active.kind != "extrude":
+        raise CADException(
+            "not_a_solid", "Geometry checks and export require the selected sector extrusion."
+        )
+    if len(document.features) != 2 or len(profiles) != 1:
+        raise CADException(
+            "unsupported_profile_graph",
+            "Geometry result 3 requires one sector sketch and its selected direct extrusion.",
+        )
+    profile = profiles[0]
+    extrusion = next(feature for feature in document.features if feature is not profile)
+    if (
+        extrusion.kind != "extrude"
+        or dict(extrusion.inputs) != {"profile": profile.id}
+        or document.active_feature != extrusion.id
+    ):
+        raise CADException(
+            "unsupported_profile_graph",
+            "Geometry result 3 requires the sole direct extrusion to be selected.",
+        )
+    sketch = profile.sketch
+    if (
+        sketch.schema_version != 3
+        or len(sketch.arcs) != 1
+        or len(sketch.lines) != 2
+        or sketch.circles
+    ):
+        raise CADException(
+            "unsupported_profile_form",
+            "Geometry result 3 requires one schema-3 arc and two shared-ID radial lines.",
+        )
+    arc = sketch.arcs[0]
+    expected = {frozenset((arc.center, arc.start)), frozenset((arc.center, arc.end))}
+    if {frozenset((line.start, line.end)) for line in sketch.lines} != expected:
+        raise CADException(
+            "unsupported_profile_form", "Sector radial lines must use the arc's point IDs."
+        )
+    if sketch.plane.origin != (0, 0, 0) or sketch.plane.quaternion != (1, 0, 0, 0):
+        raise CADException(
+            "unsupported_native_frame",
+            "Geometry result 3 requires exact zero workplane origin and identity quaternion.",
+        )

@@ -457,7 +457,43 @@ def test_part_depth_32_is_not_raised_by_shallow_metadata():
         bc.prepare_request(request)
 
 
-def test_solver_cleanup_and_cycle_guard_remain_identical_to_qualified_arc_core():
+def _reviewed_cycle_guard_bytes(original):
+    """Only the 3d8270c concentric-center equality extension may change old bytes."""
+    before = '        elif constraint.kind in ("horizontal", "vertical"):\n'
+    added = (
+        '        elif constraint.kind == "concentric":\n'
+        '            circles = {item.id: item for item in sketch.circles}\n'
+        '            start, end = (circles[identifier].center for identifier in constraint.refs)\n'
+        '            axes = (0, 1)\n'
+    )
+    assert original.count(before) == 1
+    return original.replace(before, added + before)
+
+
+def _assert_reviewed_cycle_guard(original, current):
+    assert current == _reviewed_cycle_guard_bytes(original)
+
+
+@pytest.mark.parametrize("mutation", ["omitted", "wrong_axis", "unrelated", "duplicate_anchor"])
+def test_cycle_guard_equivalence_rejects_unreviewed_mutations(mutation):
+    # A minimal original exercises the exact transformation and comparison;
+    # the independent preserved-fixture test below binds it to real source.
+    original = '        elif constraint.kind in ("horizontal", "vertical"):\n'
+    reviewed = _reviewed_cycle_guard_bytes(original)
+    if mutation == "duplicate_anchor":
+        with pytest.raises(AssertionError):
+            _reviewed_cycle_guard_bytes(original + original)
+        return
+    mutated = {
+        "omitted": original,
+        "wrong_axis": reviewed.replace("axes = (0, 1)", "axes = (0,)"),
+        "unrelated": reviewed + "# unreviewed change\n",
+    }[mutation]
+    with pytest.raises(AssertionError):
+        _assert_reviewed_cycle_guard(original, mutated)
+
+
+def test_solver_cleanup_and_reviewed_cycle_guard_preserve_qualified_arc_core():
     source = (ROOT / "tests/fixtures/backend_capability/sketch_solver-51ed72d.py.txt").read_bytes()
     assert hashlib.sha256(source).hexdigest() == (
         "35577e8ac6f8c7517d34bce981987bec9167f6e5ebe688ffa4ab31630a3a12da"
@@ -476,8 +512,11 @@ def test_solver_cleanup_and_cycle_guard_remain_identical_to_qualified_arc_core()
         }
 
     old, new = functions(original), functions(current)
-    for name in ("solve", "_require_acyclic_coordinate_equalities"):
-        assert new[name] == old[name]
+    assert new["solve"] == old["solve"]
+    _assert_reviewed_cycle_guard(
+        old["_require_acyclic_coordinate_equalities"],
+        new["_require_acyclic_coordinate_equalities"],
+    )
     assert sketch_solver.BACKEND_CAPABILITIES == frozenset({GUARD})
 
 

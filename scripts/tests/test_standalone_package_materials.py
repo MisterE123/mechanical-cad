@@ -994,6 +994,19 @@ def test_post_link_receipt_failure_is_honest_committed_success(inputs, monkeypat
     assert json.loads((work / "MATERIALS_RECEIPT.before.json").read_bytes())["published"] is False
 
 
+def test_human_index_identifies_exact_packaged_source_and_notice_bytes(inputs):
+    build(inputs)
+    with zipfile.ZipFile(inputs["destination"]) as archive:
+        index = archive.read("MATERIALS.md").decode()
+        for item in inputs["materials_files"]:
+            assert item["path"].startswith(("sources/", "licenses/"))
+            assert archive.read(item["path"]) == (inputs["materials_root"] / item["path"]).read_bytes()
+            # The index quotes punctuation for inert Markdown display.
+            display_path = item["path"].replace(".", r"\.")
+            assert f'{display_path}: {item["size"]} bytes; SHA-256 {item["sha256"]}' in index
+        assert "redistribution rights, rebuild success or native/release approval" in index
+
+
 def test_human_index_escapes_caller_markup_and_preserves_json_text(inputs):
     value = map_value(inputs)
     hostile = '<img src="https://invalid.example/x"> [link](https://invalid.example) ![remote](url)'

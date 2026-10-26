@@ -1,7 +1,7 @@
 """Gate B unguarded dispatch controls, with no native or sidecar process launches.
 
 Synthetic action ports establish routing only. Historical rejection assertions
-use the exact inverse-restored recovered 0.6 sidecar in its own module namespace.
+use the exact pinned recovered 0.6 sidecar in its own module namespace.
 The real main function is exercised with in-memory streams and fake descriptors;
 this establishes wire/error behavior, never native geometry or installed output.
 """
@@ -434,8 +434,19 @@ def test_observer_never_infers_geometry3_from_nonexact_versions(version, action,
             backend_contract.observe_backend(request)
         assert exc.value.code == "backend_contract_invalid"
         return
-    _, supported, _ = backend_contract.observe_backend(request)
-    assert CAPABILITY not in supported
+    if action == "assembly_replay":
+        request["kind"] = "assembly"
+    if type(version) is not int or version != 2:
+        # Observation now reuses the guarded minimum-capability contract. It
+        # rejects malformed/legacy guarded versions rather than silently
+        # returning a partial capability set. The sentinel above independently
+        # forbids treating any of these inputs as geometry-result/3.
+        with pytest.raises(CADException, match="explicit result version 2 or 3") as exc:
+            backend_contract.observe_backend(request)
+        assert exc.value.code == "backend_contract_invalid"
+    else:
+        _, supported, _ = backend_contract.observe_backend(request)
+        assert CAPABILITY not in supported
 
 
 @pytest.mark.parametrize("legacy", [False, True])
@@ -451,3 +462,15 @@ def test_snapshot_observation_uses_source_schema_without_geometry_owner(legacy, 
     _, supported, mismatch = backend_contract.observe_backend(request)
     assert not mismatch and CAPABILITY not in supported
     assert ("mcad.snapshot-sketch3/1" in supported) is (not legacy)
+
+
+@pytest.mark.parametrize("version", [2, 3])
+def test_assembly_observation_requires_its_envelope_before_geometry_observation(version, monkeypatch):
+    monkeypatch.chdir(ROOT)
+    monkeypatch.setattr(
+        backend_contract, "_observe_geometry_v3",
+        lambda *_: pytest.fail("unexpected geometry3 observation"),
+    )
+    with pytest.raises(CADException, match="assembly envelope") as exc:
+        backend_contract.observe_backend({"action": "assembly_replay", "result_version": version})
+    assert exc.value.code == "backend_contract_invalid"

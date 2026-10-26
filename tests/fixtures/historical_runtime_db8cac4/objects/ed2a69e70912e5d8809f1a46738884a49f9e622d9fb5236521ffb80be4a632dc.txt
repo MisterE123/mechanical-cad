@@ -1,0 +1,296 @@
+"""Native-free exact-request validation of explicitly negotiated Part results.
+
+Legacy bridge acceptance stays in bridge.py. No native CAD imports, solving,
+model mutation or display publication occur at this boundary.
+"""
+
+from __future__ import annotations
+
+import copy
+
+from . import part_contracts as snapshots
+from .part_geometry_evidence import validate_geometry_action
+from .sketch_action_bridge import _error_record
+from .sketch_bridge import _keys, _number, _require, validate_output
+from .topology_evidence import validate_topology
+
+
+def validate_response(request, response):
+    """Return owned v2 evidence, or reject stale/malformed/unsupported semantics."""
+    request = snapshots.snapshot_request(request)
+    snapshots._bounded_response(response)
+    _keys(
+        request,
+        {"protocol_version", "result_version", "document", "action", "options", "destination"},
+        {"protocol_version", "result_version", "document"},
+    )
+    action = request.get("action", "replay")
+    _require(
+        type(request["protocol_version"]) is int
+        and request["protocol_version"] == 1
+        and type(request["result_version"]) is int
+        and request["result_version"] == 2,
+        "Use matching add-on and backend versions supporting typed Part results.",
+    )
+    _require(
+        type(action) is str and action in {"replay", "check_geometry", "export_step", "export_stl"},
+        "unsupported typed Part action",
+    )
+    _require(
+        type(response) is dict
+        and type(response.get("protocol_version")) is int
+        and response["protocol_version"] == 1
+        and type(response.get("result_version")) is int
+        and response["result_version"] == 2
+        and type(response.get("ok")) is bool,
+        "Use matching add-on and backend versions supporting typed Part results.",
+    )
+    # Parsing/schema failures can precede request fingerprinting. They carry no
+    # usable result and can only become a readable failure, never display state.
+    if (
+        response.get("result") is None
+        and response["ok"] is False
+        and "input_fingerprint" not in response
+    ):
+        _keys(response, {"protocol_version", "result_version", "ok", "result", "error"})
+        _error_record(response["error"])
+        return copy.deepcopy(response)
+    fields = {"protocol_version", "result_version", "input_fingerprint", "ok", "result", "error"}
+    if action != "replay":
+        fields |= {"action", "geometry_check", "export"}
+    _keys(response, fields)
+    _require(
+        response["input_fingerprint"] == snapshots.input_fingerprint(request),
+        "stale or different complete Part request",
+    )
+    if action != "replay":
+        _require(response["action"] == action, "Part action response differs from request")
+    result = response["result"]
+    if result is None:
+        _require(response["ok"] is False, "successful response lacks replay evidence")
+        _error_record(response["error"])
+        if action != "replay":
+            _require(
+                response["geometry_check"] is None and response["export"] is None,
+                "missing replay cannot claim geometry or export evidence",
+            )
+        return copy.deepcopy(response)
+    canonical = snapshots._expected_document(request["document"])
+    expected_hash = snapshots.document_hash(canonical)
+    _keys(
+        result,
+        {
+            "document_id",
+            "document_hash",
+            "active_feature",
+            "status",
+            "units",
+            "parameters",
+            "features",
+            "result_version",
+        },
+    )
+    _require(
+        type(result["result_version"]) is int
+        and result["result_version"] == 2
+        and result["document_id"] == canonical["id"]
+        and result["document_hash"] == expected_hash
+        and result["active_feature"] == canonical["active_feature"]
+        and result["units"] == "mm",
+        "Part replay identity/version differs from candidate",
+    )
+    _keys(result["parameters"], set(canonical["parameters"]))
+    for key, value in result["parameters"].items():
+        _number(value, bound=1e12)
+        authored = canonical["parameters"][key]
+        _require(type(authored) is str or value == authored, "resolved literal parameter changed")
+    features = result["features"]
+    _require(
+        type(features) is list and len(features) == len(canonical["features"]),
+        "Part replay omitted or added features",
+    )
+    statuses = []
+    for feature, source in zip(features, canonical["features"], strict=True):
+        _keys(
+            feature,
+            {
+                "id",
+                "label",
+                "kind",
+                "status",
+                "error",
+                "stats",
+                "mesh",
+                "topology",
+                "resolved_params",
+                "inputs",
+                "output",
+                "sketch",
+            },
+            {
+                "id",
+                "label",
+                "kind",
+                "status",
+                "error",
+                "stats",
+                "mesh",
+                "topology",
+                "resolved_params",
+                "inputs",
+                "output",
+            },
+        )
+        _require(
+            feature["id"] == source["id"]
+            and feature["kind"] == source["kind"]
+            and feature["label"] == source["label"]
+            and feature["inputs"] == source["inputs"],
+            "Part feature identity, label or dependency edges changed",
+        )
+        parameters = feature["resolved_params"]
+        _require(
+            type(parameters) is dict and set(parameters) <= set(source["params"]),
+            "resolved feature parameters do not match source",
+        )
+        if feature["status"] == "ok":
+            _require(
+                set(parameters) == set(source["params"]), "successful feature lacks parameters"
+            )
+        for key, value in parameters.items():
+            _number(value, bound=1e12)
+            authored = source["params"][key]
+            _require(
+                type(authored) is str or value == authored, "resolved literal dimension changed"
+            )
+        validate_output(feature, source)
+        statuses.append(feature["status"])
+    _validate_dependencies(features)
+    for feature in features:
+        if feature["topology"]:
+            validate_topology(
+                feature["topology"],
+                feature_id=feature["id"],
+                kind=feature["kind"],
+                mesh=feature["mesh"],
+                source_features=canonical["features"],
+            )
+    _validate_cut_lineage(features)
+    _require(
+        result["status"] == ("ok" if all(status == "ok" for status in statuses) else "failed"),
+        "Part status contradicts per-feature evidence",
+    )
+    if action == "replay":
+        _require(
+            response["ok"] == (result["status"] == "ok") and response["error"] is None,
+            "replay envelope contradicts feature results",
+        )
+    elif response["ok"]:
+        _require(
+            result["status"] == "ok" and response["error"] is None,
+            "successful geometry action lacks complete replay",
+        )
+    else:
+        _error_record(response["error"])
+    if action != "replay":
+        validate_geometry_action(request, response)
+    return copy.deepcopy(response)
+
+
+def _validate_cut_lineage(features):
+    """Bind inherited semantic roles to actual base-output faces, never list order.
+
+    A cut deliberately retains the originating feature ID for a surviving face.
+    The current operation ID alone is therefore insufficient to validate lineage.
+    """
+    by_id = {feature["id"]: feature for feature in features}
+    for feature in features:
+        if feature["kind"] != "cut" or feature["status"] != "ok":
+            continue
+        base = by_id[feature["inputs"]["base"]]
+        _require(base["status"] == "ok", "cut inherits from an unavailable base")
+        base_faces = {face["id"]: face for face in base["topology"]}
+        tool = by_id[feature["inputs"]["tool"]]
+        tool_faces = {face["id"] for face in tool["topology"]}
+        inherited = []
+        for face in feature["topology"]:
+            if face["role"] == "cut.wall" and face["feature_id"] == feature["id"]:
+                sources = face["provenance"].get("sources")
+                _require(
+                    type(sources) is list and sources and set(sources) <= tool_faces,
+                    "cut wall cites an unavailable tool face",
+                )
+            if face["feature_id"] == feature["id"]:
+                continue
+            provenance = face["provenance"]
+            source = base_faces.get(provenance["source_id"])
+            _require(
+                source is not None
+                and face["feature_id"] == source["feature_id"]
+                and face.get("role") == source.get("role"),
+                "cut face does not inherit its base semantic identity",
+            )
+            inherited.append(face)
+        counts = {}
+        for face in inherited:
+            identifier = face["provenance"]["source_id"]
+            counts[identifier] = counts.get(identifier, 0) + 1
+        for face in inherited:
+            provenance = face["provenance"]
+            # Multiple-source faces can become unresolved instead of inherited,
+            # so observed descendants may be fewer than the native image count.
+            _require(
+                counts[provenance["source_id"]] <= provenance["image_count"],
+                "cut lineage image count contradicts observed descendants",
+            )
+            source_status = base_faces[provenance["source_id"]]["provenance"]["semantic_status"]
+            expected = "split" if provenance["image_count"] > 1 else source_status
+            if provenance["relation"] == "generated" and expected == "stable":
+                expected = "generated"
+            _require(
+                provenance.get("semantic_status") == expected,
+                "cut lineage silently promoted an ambiguous source identity",
+            )
+
+
+def _validate_dependencies(features):
+    """Successful outputs require successful, appropriately typed input ports."""
+    by_id = {feature["id"]: feature for feature in features}
+    for feature in features:
+        failed_inputs = [
+            by_id[target]
+            for target in feature["inputs"].values()
+            if by_id[target]["status"] != "ok"
+        ]
+        profile = by_id.get(feature["inputs"].get("profile"))
+        open_profile = (
+            profile is not None
+            and profile["status"] == "ok"
+            and (
+                profile["output"]["kind"] == "sketch"
+                and profile["output"]["profile"]["state"] == "unavailable"
+            )
+        )
+        if failed_inputs:
+            _require(
+                feature["status"] == "blocked" and feature["error"]["code"] == "upstream_failed",
+                "successful or failed feature has failed or blocked input instead of upstream blocking",
+            )
+        elif feature["status"] == "blocked":
+            _require(
+                open_profile and feature["error"]["code"] == "profile_unavailable",
+                "blocked feature has no unavailable input port",
+            )
+        if feature["status"] != "ok":
+            continue
+        for port, target in feature["inputs"].items():
+            source = by_id[target]
+            _require(source["status"] == "ok", "successful feature has failed or blocked input")
+            output = source["output"]
+            if port == "profile":
+                available = output["kind"] == "profile" or (
+                    output["kind"] == "sketch" and output["profile"]["state"] == "available"
+                )
+                _require(available, "successful extrusion requires an available profile")
+            else:
+                _require(output["kind"] == "solid", "successful Boolean requires both solid inputs")

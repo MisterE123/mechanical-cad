@@ -1,0 +1,47 @@
+"""Explicit data-only solve result 3; real source and unchanged native solver."""
+
+from __future__ import annotations
+
+from .errors import CADException
+from .expressions import resolve_parameters
+from .model import Document, check_persisted_document_budget
+from .profile_adapter_v3 import profile_check_v3
+from .result_policy_v3 import validate_result_version_v3
+from .sketch_evaluation import evaluate_sketch
+
+BACKEND_CAPABILITIES = frozenset({"mcad.solve-result/3"})
+
+
+def solve_sketch_v3(document: Document, feature_id: str) -> dict:
+    """Evaluate one genuine feature, preserving unsuccessful solver evidence."""
+    validate_result_version_v3(document, 3)
+    for candidate in document.features:
+        if candidate.sketch is not None:
+            candidate.sketch.to_json()
+    check_persisted_document_budget(document.to_dict())
+    if type(feature_id) is not str or not feature_id:
+        raise CADException("invalid_feature", "Select one constrained sketch feature ID.")
+    feature = next((item for item in document.features if item.id == feature_id), None)
+    if feature is None:
+        raise CADException("missing_feature", "The selected sketch feature does not exist.")
+    if feature.kind != "sketch_constrained":
+        raise CADException("invalid_feature", "Solve Sketch requires a constrained sketch.")
+    document_hash = document.content_hash
+    report, evidence = evaluate_sketch(feature.sketch, resolve_parameters(document.parameters))
+    result = {
+        "document_id": document.id,
+        "document_hash": document_hash,
+        "feature_id": feature.id,
+        "sketch": evidence,
+        "profile_check": profile_check_v3(report.sketch) if report.success else None,
+    }
+    error = None
+    if not report.success:
+        error = {
+            "code": "sketch_solve_failed",
+            "message": (
+                f"{feature.id}: {report.status.name.lower()}. Diagnostic constraint IDs are "
+                "candidates for inspection, not proven causes. Keep the draft to correct it."
+            ),
+        }
+    return {"ok": report.success, "result": result, "error": error}

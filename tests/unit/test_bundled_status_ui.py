@@ -274,7 +274,9 @@ def test_preferences_retains_exact_copyright_acknowledgements_without_setup_or_i
     assert "FreeImage" in text and "Open CASCADE Technology (LGPL-2.1 + exception)" in text
     assert "copyright OPEN CASCADE SAS and contributors; see licenses/occt/" in text
     assert "Copyright (C) 2008-2018 LibRaw LLC; LGPL-2.1" in text
-    assert "MATERIALS.md, licenses/ and sources/ in the ZIP" in text
+    # The compact palette points to the materials index; the packaging tests
+    # separately verify its inventoried licenses/ and sources/ entries.
+    assert "Licenses and source access: MATERIALS.md in the ZIP." in text
     assert not any(event[0] in {"operator", "menu"} for event in layout.events)
     assert [event[1] for event in layout.events if event[0] == "prop"] == (
         [] if bundled else ["project_root", "python_executable"]

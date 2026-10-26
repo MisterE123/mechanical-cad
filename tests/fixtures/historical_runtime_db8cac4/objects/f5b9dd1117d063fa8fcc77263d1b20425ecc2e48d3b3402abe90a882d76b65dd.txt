@@ -1,0 +1,642 @@
+"""Canonical embedded-source assembly and per-definition geometry payload validation."""
+
+from __future__ import annotations
+
+import copy
+
+from .assembly_validation_common import (
+    DEFAULT_POLICY,
+    MAX_FRAMES,
+    MAX_INSTANCES,
+    MAX_JOINTS,
+    MAX_PARTS,
+    MAX_TRIANGLES,
+    MAX_VERTICES,
+    _frame,
+    _hash,
+    _identifier,
+    _keys,
+    _number,
+    _records,
+    _require,
+    _same_supplied,
+    _text,
+    _vector,
+    canonical_digest,
+    fingerprint,
+)
+
+
+def _policy(value):
+    _keys(value, DEFAULT_POLICY)
+    for key, lower, upper in (
+        ("linear_tolerance_mm", 1e-9, 1),
+        ("volume_tolerance_mm3", 1e-15, 1),
+        ("linear_deflection_mm", 0.001, 10),
+    ):
+        _number(value[key], minimum=lower, bound=upper)
+
+
+def _presets(canonical, instances):
+    presets = _records(canonical["verification_presets"], 8)
+    for preset in presets.values():
+        _keys(preset, {"id", "name", "kind", "requirements", "policy"})
+        _identifier(preset["id"])
+        _text(preset["name"])
+        _require(
+            preset["kind"] in {"clearance", "interference_only"}, "invalid verification preset kind"
+        )
+        _policy(preset["policy"])
+        requirements = _records(preset["requirements"], 120)
+        _require(
+            bool(requirements) == (preset["kind"] == "clearance"),
+            "preset kind contradicts engineering requirements",
+        )
+        pairs = set()
+        for requirement in requirements.values():
+            _keys(requirement, {"id", "name", "instances", "minimum_mm"})
+            _identifier(requirement["id"])
+            _text(requirement["name"])
+            pair = requirement["instances"]
+            _require(
+                type(pair) is list
+                and len(pair) == 2
+                and all(type(i) is str and i in instances for i in pair),
+                "unknown requirement instance pair",
+            )
+            _require(
+                pair[0] < pair[1] and tuple(pair) not in pairs,
+                "duplicate or noncanonical requirement pair",
+            )
+            pairs.add(tuple(pair))
+            _number(requirement["minimum_mm"], minimum=0, bound=1e6)
+    active = canonical["active_verification_preset"]
+    _require(
+        active is None or type(active) is str and active in presets,
+        "unknown active verification preset",
+    )
+    return presets
+
+
+def _verification_basis(request, canonical, report):
+    basis = report.get("verification_basis")
+    if basis is None:
+        _require(
+            not report["poses"] and "effective_policy" not in report,
+            "verification basis is missing",
+        )
+        return False, [], None
+    _keys(basis, {"kind", "preset_id", "preset", "configured"})
+    _require(type(basis["configured"]) is bool, "verification configuration flag is invalid")
+    supplied_id = request.get("preset_id")
+    if supplied_id is not None:
+        _identifier(supplied_id)
+    selected = canonical["active_verification_preset"] if supplied_id is None else supplied_id
+    requirements = request.get("requirements")
+    policy = request.get("policy")
+    expected = {"kind": "not_requested", "preset_id": None, "preset": None, "configured": False}
+    if request["action"] == "assembly_replay":
+        _require(supplied_id is None, "replay unexpectedly selects a verification preset")
+        resolved = []
+    elif selected is not None:
+        presets = {p["id"]: p for p in canonical["verification_presets"]}
+        _require(
+            selected in presets and requirements is None and policy is None,
+            "saved preset has conflicting overrides or missing identity",
+        )
+        preset = presets[selected]
+        expected.update(kind=preset["kind"], preset_id=selected, preset=preset, configured=True)
+        policy = preset["policy"]
+        resolved = [
+            {"instances": r["instances"], "minimum_mm": r["minimum_mm"]}
+            for r in preset["requirements"]
+        ]
+    else:
+        _require(
+            requirements is None or type(requirements) is list,
+            "ad-hoc requirements must be an array",
+        )
+        configured = requirements is not None
+        expected.update(
+            kind=("ad_hoc_clearance" if requirements else "ad_hoc_interference_only")
+            if configured
+            else "unconfigured",
+            configured=configured,
+        )
+        resolved = requirements or []
+    _require(basis == expected, "verification basis changed configured intent or selected preset")
+    _require(policy is None or type(policy) is dict, "invalid numerical policy")
+    return expected["configured"], resolved, {**DEFAULT_POLICY, **(policy or {})}
+
+
+def _canonical(request, result):
+    canonical = result["canonical_assembly"]
+    fields = {
+        "kind",
+        "assembly_schema_version",
+        "id",
+        "name",
+        "length_unit",
+        "angle_unit",
+        "part_sources",
+        "parts",
+        "instances",
+        "joints",
+        "grounded_instance",
+        "ground",
+        "verification_presets",
+        "active_verification_preset",
+    }
+    _keys(canonical, fields)
+    _require(
+        canonical["kind"] == "assembly"
+        and type(canonical["assembly_schema_version"]) is int
+        and canonical["assembly_schema_version"] == 1,
+        "unsupported assembly schema",
+    )
+    _require(
+        canonical["length_unit"] == "mm" and canonical["angle_unit"] == "rad",
+        "unsupported assembly units",
+    )
+    _identifier(canonical["id"])
+    _text(canonical["name"])
+    _frame(canonical["ground"])
+    raw = copy.deepcopy(request["assembly"])
+    raw.setdefault("verification_presets", [])
+    raw.setdefault("active_verification_preset", None)
+    for preset in raw["verification_presets"]:
+        for requirement in preset["requirements"]:
+            requirement["instances"] = sorted(requirement["instances"])
+    _same_supplied(raw, canonical)
+    sources = _records(canonical["part_sources"], MAX_PARTS, "source_document_id")
+    expected_sources = {}
+    for source in sources.values():
+        _keys(source, {"source_document_id", "source_digest", "document"})
+        _text(source["source_document_id"], 128)
+        _hash(source["source_digest"])
+        _require(
+            source["document"]["id"] == source["source_document_id"],
+            "source document identity mismatch",
+        )
+        _require(
+            canonical_digest(source["document"]) == source["source_digest"],
+            "source content hash mismatch",
+        )
+        expected_sources[source["source_document_id"]] = source["source_digest"]
+    # Source hashes already bind all canonical Part defaults. Assembly defaults
+    # are restricted here; no additional frame, joint or record may be inserted.
+    for source in raw["part_sources"]:
+        source["document"] = sources[source["source_document_id"]]["document"]
+    for field in ("parts", "instances", "joints"):
+        for row in raw[field]:
+            row.setdefault("name", row["id"])
+            if field == "joints" and row["kind"] != "fixed":
+                row.setdefault("limits", None)
+            for frame in row.get("mate_frames", []):
+                frame.setdefault("name", frame["id"])
+    _require(raw == canonical, "canonical assembly differs from the requested snapshot")
+    _hash(result["assembly_digest"])
+    _require(
+        canonical_digest(canonical) == result["assembly_digest"], "canonical assembly hash mismatch"
+    )
+    _require(result["source_hashes"] == expected_sources, "source hash set mismatch")
+    parts = _records(canonical["parts"], MAX_PARTS)
+    instances = _records(canonical["instances"], MAX_INSTANCES)
+    joints = _records(canonical["joints"], MAX_JOINTS)
+    _require(sources and parts and instances, "empty assembly")
+    _presets(canonical, instances)
+    frame_count = 0
+    for part in parts.values():
+        _keys(
+            part,
+            {
+                "id",
+                "name",
+                "source_document_id",
+                "source_digest",
+                "output_feature_id",
+                "mate_frames",
+            },
+        )
+        _identifier(part["id"])
+        _text(part["name"])
+        _identifier(part["output_feature_id"])
+        _require(
+            expected_sources.get(part["source_document_id"]) == part["source_digest"],
+            "definition source binding differs",
+        )
+        frames = _records(part["mate_frames"], MAX_FRAMES)
+        frame_count += len(frames)
+        for frame in frames.values():
+            _keys(frame, {"id", "name", "placement"})
+            _identifier(frame["id"])
+            _text(frame["name"])
+            _frame(frame["placement"])
+    _require(frame_count <= MAX_FRAMES, "total frame count exceeds limit")
+    for instance in instances.values():
+        _keys(instance, {"id", "name", "part_id"})
+        _identifier(instance["id"])
+        _text(instance["name"])
+        _require(instance["part_id"] in parts, "unknown definition instance")
+    root = canonical["grounded_instance"]
+    _require(root in instances, "missing ground instance")
+    incoming = set()
+    for joint in joints.values():
+        base = {"id", "name", "kind", "parent", "child", "parent_frame", "child_frame"}
+        _require(joint["kind"] in {"fixed", "slider", "revolute"}, "unsupported joint")
+        _keys(joint, base if joint["kind"] == "fixed" else base | {"coordinate", "limits"})
+        _identifier(joint["id"])
+        _text(joint["name"])
+        _require(
+            joint["parent"] in instances and joint["child"] in instances, "unknown joint instance"
+        )
+        _require(
+            joint["child"] != root
+            and joint["child"] not in incoming
+            and joint["child"] != joint["parent"],
+            "invalid joint tree",
+        )
+        incoming.add(joint["child"])
+        for end in ("parent", "child"):
+            definition = parts[instances[joint[end]]["part_id"]]
+            _require(
+                joint[end + "_frame"] in {f["id"] for f in definition["mate_frames"]},
+                "unknown joint frame",
+            )
+        bound = 1e4 if joint["kind"] == "revolute" else 1e6
+        if joint["kind"] != "fixed":
+            q = _number(joint["coordinate"], bound=bound)
+            if joint["limits"] is not None:
+                _vector(joint["limits"], 2, bound)
+                lo, hi = joint["limits"]
+                _require(lo < hi and lo <= q <= hi, "invalid authored limits")
+    _require(incoming == set(instances) - {root}, "disconnected assembly")
+    reached = {root}
+    for _ in joints:
+        reached.update(j["child"] for j in joints.values() if j["parent"] in reached)
+    _require(reached == set(instances), "cyclic assembly")
+    return canonical, parts, instances, joints
+
+
+def validate_mesh(mesh):
+    _keys(mesh, {"vertices", "triangles", "triangle_face_ids"})
+    vertices, triangles = mesh["vertices"], mesh["triangles"]
+    _require(
+        type(vertices) is list and 0 < len(vertices) <= MAX_VERTICES, "invalid mesh vertex count"
+    )
+    _require(
+        type(triangles) is list and 0 < len(triangles) <= MAX_TRIANGLES,
+        "invalid mesh triangle count",
+    )
+    for point in vertices:
+        _vector(point, 3, 1e8)
+    for triangle in triangles:
+        _require(
+            type(triangle) is list
+            and len(triangle) == 3
+            and all(type(i) is int and 0 <= i < len(vertices) for i in triangle)
+            and len(set(triangle)) == 3,
+            "invalid triangle indices",
+        )
+    face_ids = mesh["triangle_face_ids"]
+    _require(
+        type(face_ids) is list
+        and len(face_ids) == len(triangles)
+        and all(i is None or type(i) is str for i in face_ids),
+        "invalid mesh face provenance",
+    )
+
+
+def _parts(result, canonical, definitions, complete, *, strict=False, strict_v3=False):
+    rows = _records(result["parts"], MAX_PARTS)
+    _require(
+        set(rows) <= set(definitions) and (not complete or set(rows) == set(definitions)),
+        "missing or unexpected part mesh",
+    )
+    for identifier, row in rows.items():
+        _keys(
+            row,
+            set(definitions[identifier]) | {"geometry_check", "mesh", "topology", "datum_policy"},
+        )
+        _require(
+            {k: row[k] for k in definitions[identifier]} == definitions[identifier],
+            "part definition identity or literal frame changed",
+        )
+        _require(
+            row["datum_policy"] == "literal_part_local_coordinates", "unsupported datum policy"
+        )
+        validate_mesh(row["mesh"])
+        checks = row["geometry_check"]
+        _keys(checks, {"brep", "mesh", "linear_deflection_mm"})
+        _number(checks["linear_deflection_mm"], minimum=0.001, bound=10)
+        brep, mesh = checks["brep"], checks["mesh"]
+        _require(
+            type(brep) is dict
+            and brep.get("valid") is True
+            and type(brep.get("solids")) is int
+            and brep["solids"] == 1,
+            "unverified part B-rep",
+        )
+        _number(brep.get("volume"), minimum=1e-300)
+        _require(
+            type(mesh) is dict
+            and all(
+                mesh.get(k) is True
+                for k in ("watertight", "consistently_oriented", "vertex_manifold")
+            ),
+            "unverified part tessellation",
+        )
+        _require(
+            type(row["topology"]) is list and len(row["topology"]) <= MAX_TRIANGLES,
+            "invalid topology metadata",
+        )
+    sources = {s["source_document_id"]: s for s in canonical["part_sources"]}
+    replays = _records(result["source_replays"], MAX_PARTS, "source_document_id")
+    _require(
+        set(replays) <= set(sources) and (not complete or set(replays) == set(sources)),
+        "source replay set mismatch",
+    )
+    for identifier, replay in replays.items():
+        _keys(
+            replay,
+            {"source_document_id", "source_digest", "status", "features"}
+            | ({"replay"} if strict_v3 else set()),
+        )
+        _require(
+            replay["source_digest"] == sources[identifier]["source_digest"],
+            "source replay hash mismatch",
+        )
+        _require(
+            replay["status"] in {"ok", "failed"} and (not complete or replay["status"] == "ok"),
+            "invalid source replay status",
+        )
+        features = _records(replay["features"], 256)
+        expected = {f["id"] for f in sources[identifier]["document"]["features"]}
+        _require(set(features) == expected, "source replay features differ")
+        for feature in features.values():
+            _keys(
+                feature,
+                {"id", "status", "error", "stats"} | ({"output"} if strict or strict_v3 else set()),
+            )
+            _require(
+                feature["status"] in {"ok", "failed", "blocked"}
+                and (not complete or feature["status"] == "ok"),
+                "invalid replay feature status",
+            )
+
+    if strict_v3:
+        _parts_v3(canonical, rows, replays)
+    elif strict:
+        _parts_v2(result, canonical, rows, replays)
+
+
+def _source_output(feature, source):
+    """Validate a summary's typed port without inventing unavailable solve evidence."""
+    from .geometry_evidence import validate_stats
+
+    output, status, kind = feature["output"], feature["status"], source["kind"]
+    if status != "ok":
+        _require(
+            output is None and feature["stats"] is None, "failed source publishes usable output"
+        )
+        _keys(feature["error"], {"code", "message"})
+        _text(feature["error"]["code"])
+        _text(feature["error"]["message"], 100_000)
+        _require(
+            feature["error"]["code"].strip() and feature["error"]["message"].strip(),
+            "failed source requires a readable error",
+        )
+        return None
+    _require(feature["error"] is None, "successful source feature also contains an error")
+    solid = kind in {"extrude", "cut"}
+    if solid:
+        validate_stats(feature["stats"])
+    else:
+        _require(feature["stats"] is None, "profile/sketch source cannot report solid statistics")
+    if kind != "sketch_constrained":
+        _keys(output, {"kind", "display"})
+        _require(
+            kind in {"sketch_rectangle", "sketch_circle", "extrude", "cut"}
+            and output == {"kind": "solid" if solid else "profile", "display": "mesh"},
+            "source output discriminant contradicts authored feature kind",
+        )
+        return output
+    _keys(output, {"kind", "display", "profile"})
+    _require(
+        output["kind"] == "sketch" and output["display"] == "solved_sketch",
+        "invalid source sketch discriminant",
+    )
+    sketch, profile = source["sketch"], output["profile"]
+    _require(type(profile) is dict, "missing source profile availability")
+    if profile.get("state") == "unavailable":
+        _keys(profile, {"state", "reason"})
+        _keys(profile["reason"], {"code", "message"})
+        _require(
+            sketch["schema_version"] == 2
+            and not sketch.get("circles")
+            and bool(sketch["lines"])
+            and profile["reason"]["code"] == "open_profile",
+            "unsupported unavailable source profile",
+        )
+        _text(profile["reason"]["message"], 100_000)
+        _require(
+            profile["reason"]["message"].strip(), "unavailable profile needs a readable reason"
+        )
+    else:
+        _keys(profile, {"state", "region_kind"})
+        _require(profile["state"] == "available", "unknown source profile state")
+        _require(
+            (
+                profile["region_kind"] == "circle"
+                and len(sketch.get("circles", [])) == 1
+                and not sketch["lines"]
+            )
+            or (
+                profile["region_kind"] == "line_loop"
+                and not sketch.get("circles")
+                and len(sketch["lines"]) >= 3
+            ),
+            "source profile region contradicts authored curve kinds",
+        )
+    return output
+
+
+def _parts_v2(result, canonical, rows, replays):
+    """Strict v2 evidence algebra; legacy v1 acceptance remains frozen above."""
+    from .geometry_evidence import validate_geometry_check
+    from .topology_evidence import validate_topology
+
+    sources = canonical["part_sources"]
+    _require(
+        list(replays) == [source["source_document_id"] for source in sources][: len(replays)],
+        "source replay order differs from canonical source order",
+    )
+    source_features, summaries = {}, {}
+    for source in sources:
+        identifier = source["source_document_id"]
+        source_features[identifier] = source["document"]["features"]
+        if identifier not in replays:
+            continue
+        replay = replays[identifier]
+        authored = source_features[identifier]
+        _require(
+            [feature["id"] for feature in replay["features"]]
+            == [feature["id"] for feature in authored],
+            "source feature order differs from canonical history",
+        )
+        features = {feature["id"]: feature for feature in replay["features"]}
+        summaries[identifier] = features
+        outputs = {
+            feature["id"]: _source_output(feature, source_feature)
+            for feature, source_feature in zip(replay["features"], authored, strict=True)
+        }
+        for source_feature in authored:
+            feature = features[source_feature["id"]]
+            dependencies = source_feature["inputs"]
+            unavailable = any(outputs[target] is None for target in dependencies.values())
+            profile = outputs.get(dependencies.get("profile"))
+            open_profile = (
+                profile is not None
+                and profile["kind"] == "sketch"
+                and profile["profile"]["state"] == "unavailable"
+            )
+            if unavailable:
+                _require(
+                    feature["status"] == "blocked"
+                    and feature["error"]["code"] == "upstream_failed",
+                    "source feature uses a failed or blocked dependency",
+                )
+            elif feature["status"] == "blocked":
+                _require(
+                    open_profile and feature["error"]["code"] == "profile_unavailable",
+                    "blocked source feature has no unavailable input port",
+                )
+            if feature["status"] == "ok":
+                for port, target in dependencies.items():
+                    value = outputs[target]
+                    _require(
+                        value is not None
+                        and (
+                            (
+                                port == "profile"
+                                and (
+                                    value["kind"] == "profile"
+                                    or value["kind"] == "sketch"
+                                    and value["profile"]["state"] == "available"
+                                )
+                            )
+                            or (port in {"base", "tool"} and value["kind"] == "solid")
+                        ),
+                        "successful source feature consumes an unavailable or wrong input port",
+                    )
+        expected_status = (
+            "ok" if all(feature["status"] == "ok" for feature in features.values()) else "failed"
+        )
+        _require(
+            replay["status"] == expected_status, "source replay status contradicts feature evidence"
+        )
+    failed = [identifier for identifier, replay in replays.items() if replay["status"] != "ok"]
+    _require(
+        not failed or failed == list(replays)[-1:] and not rows,
+        "assembly continued or published parts after failed source replay",
+    )
+    if rows:
+        _require(
+            list(rows) == [part["id"] for part in canonical["parts"]]
+            and len(replays) == len(sources),
+            "part publication requires all canonical definitions and source replays",
+        )
+    for row in rows.values():
+        identifier, output_id = row["source_document_id"], row["output_feature_id"]
+        feature = summaries[identifier][output_id]
+        _require(
+            feature["status"] == "ok" and feature["output"] == {"kind": "solid", "display": "mesh"},
+            "selected assembly output is not an evaluated solid",
+        )
+        checks = row["geometry_check"]
+        validate_geometry_check(
+            checks,
+            linear_deflection=checks["linear_deflection_mm"],
+            stats=feature["stats"],
+            mesh=row["mesh"],
+        )
+        authored = {feature["id"]: feature for feature in source_features[identifier]}
+        topology = validate_topology(
+            row["topology"],
+            feature_id=output_id,
+            kind=authored[output_id]["kind"],
+            mesh=row["mesh"],
+            source_features=source_features[identifier],
+        )
+        _require(
+            feature["stats"]["faces"] == len(topology), "solid face count differs from topology"
+        )
+
+
+def _parts_v3(canonical, rows, replays):
+    """Bind integrated Assembly display to complete source-bound replay-3 evidence."""
+    from . import part_snapshot_bridge, result_v3
+    from .geometry_evidence import validate_geometry_check
+
+    sources = canonical["part_sources"]
+    _require(
+        list(replays) == [source["source_document_id"] for source in sources][: len(replays)],
+        "source replay order differs from canonical source order",
+    )
+    outputs = {}
+    for source in sources:
+        # Preflight every source, even an unused one or one after a failed replay.
+        document = part_snapshot_bridge._expected_document(source["document"])
+        _require(
+            fingerprint(document) == fingerprint(source["document"]),
+            "source replay requires canonical Part source",
+        )
+        result_v3._graph(document, replay=True)
+        identifier = source["source_document_id"]
+        if identifier not in replays:
+            continue
+        replay = replays[identifier]
+        body = replay["replay"]
+        result_v3._validate_replay_body(document, body)
+        projection = [
+            {key: feature[key] for key in ("id", "status", "error", "stats", "output")}
+            for feature in body["features"]
+        ]
+        _require(
+            replay["status"] == body["status"]
+            and fingerprint(replay["features"]) == fingerprint(projection),
+            "source replay summary differs from complete replay evidence",
+        )
+        outputs[identifier] = {feature["id"]: feature for feature in body["features"]}
+    failed = [identifier for identifier, replay in replays.items() if replay["status"] != "ok"]
+    _require(
+        not failed or failed == list(replays)[-1:] and not rows,
+        "assembly continued or published parts after failed source replay",
+    )
+    if rows:
+        _require(
+            list(rows) == [part["id"] for part in canonical["parts"]]
+            and len(replays) == len(sources),
+            "part publication requires all canonical definitions and source replays",
+        )
+    for row in rows.values():
+        source = outputs[row["source_document_id"]]
+        output_id = row["output_feature_id"]
+        _require(output_id in source, "selected assembly output is missing from source replay")
+        feature = source[output_id]
+        _require(
+            feature["status"] == "ok" and feature["output"] == {"kind": "solid", "display": "mesh"},
+            "selected assembly output is not an evaluated solid",
+        )
+        _require(
+            fingerprint(row["mesh"]) == fingerprint(feature["mesh"])
+            and fingerprint(row["topology"]) == fingerprint(feature["topology"]),
+            "part display differs from selected source replay geometry",
+        )
+        checks = row["geometry_check"]
+        validate_geometry_check(
+            checks,
+            linear_deflection=checks["linear_deflection_mm"],
+            stats=feature["stats"],
+            mesh=row["mesh"],
+        )

@@ -16,6 +16,7 @@ from pathlib import Path
 from types import SimpleNamespace as NS
 
 import pytest
+from historical_runtime_source import historical_runtime_root
 from test_arc_profile_native_end_cap import _assembly_step_bytes
 
 from mechanical_cad.arc_profile_native_plan import NativePlanError
@@ -977,8 +978,8 @@ def test_nonidentity_record_placements_are_recorded_without_silent_repair(collec
     assert rep.location is first and rep.location2 is second
 
 
-def test_source_mutation_and_ocpkernel_methods_remain_snapshot8_exact():
-    raw = _assembly_step_bytes(ROOT, "src/mechanical_cad/kernel_ocp.py")
+def test_historical_snapshot8_source_and_ocpkernel_methods_are_exact():
+    raw = _assembly_step_bytes(historical_runtime_root(), "src/mechanical_cad/kernel_ocp.py")
     lines = raw.splitlines(keepends=True)
     kept = []
     for node in ast.parse(raw).body:

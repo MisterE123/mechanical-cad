@@ -1,4 +1,8 @@
-"""Finite live-launch footprint, exact historical inverses and import boundaries."""
+"""Current live-launch/import boundaries and exact historical inverse mutations.
+
+Only inverse inputs use the pinned historical source snapshot. ROOT, ADDON and
+all live boundary checks/mutations still target the current checkout.
+"""
 
 import ast
 import hashlib
@@ -7,6 +11,7 @@ import sys
 from pathlib import Path
 
 import pytest
+from historical_runtime_source import historical_runtime_root
 
 ROOT = Path(__file__).resolve().parents[2]
 ADDON = ROOT / "blender_addon/mechanical_cad_blender"
@@ -225,7 +230,7 @@ def guard_namespace():
             target = node.targets[0]
             if isinstance(target, ast.Name) and target.id in names:
                 nodes.append(node)
-    namespace = {"hashlib": hashlib, "json": json, "ROOT": ROOT}
+    namespace = {"hashlib": hashlib, "json": json, "ROOT": historical_runtime_root()}
     exec(compile(ast.Module(body=nodes, type_ignores=[]), str(path), "exec"), namespace)
     assert names <= set(namespace)
     return namespace
@@ -301,7 +306,7 @@ def test_guard_source_mutations_have_no_historical_exemption(before, after):
 
 def test_harness_inverse_restores_exact_parent_test_bytes_and_original_guard_seal():
     namespace = guard_namespace()
-    restored = namespace["standalone_harness_originals"](ROOT)
+    restored = namespace["standalone_harness_originals"](historical_runtime_root())
     assert set(restored) == set(namespace["STANDALONE_HARNESS_ORIGINALS"])
     assert len(restored) == 6
     for path, raw in restored.items():
@@ -474,9 +479,9 @@ def test_harness_inverse_rejects_invalid_hunks_metadata_and_non_test_paths(tmp_p
         namespace["standalone_harness_originals"](tmp_path)
 
 
-def test_original_core_addon_bytes_and_linux_only_selection_are_unchanged():
+def test_historical_core_addon_bytes_and_current_linux_manual_selection_guard():
     namespace = guard_namespace()
-    added, restored = namespace["standalone_live_originals"](ROOT)
+    added, restored = namespace["standalone_live_originals"](historical_runtime_root())
     assert added == (
         namespace["STANDALONE_LIVE_ADDED"]
         | namespace["WINDOWS_TRANSPORT_REVISION_ADDED"]
@@ -489,26 +494,26 @@ def test_original_core_addon_bytes_and_linux_only_selection_are_unchanged():
         | namespace["WINDOWS_CACHE_REVISION_CHANGED"]
         | namespace["WINDOWS_RUNTIME_CACHE_REVISION_CHANGED"]
     )
-    namespace["standalone_revision_added"](ROOT)
+    namespace["standalone_revision_added"](historical_runtime_root())
     revision = json.loads((ROOT / namespace["STANDALONE_REVISION_FIXTURE"]).read_bytes())
     baseline = revision["baseline_runtime"]
     assert len(baseline) == 129
     assert "src/mechanical_cad/kernel_ocp.py" in baseline
     assert "blender_addon/mechanical_cad_blender/backend_selection.py" in baseline
     assert "blender_addon/mechanical_cad_blender/guarded_evidence.py" in baseline
-    _, transport_originals = namespace["windows_transport_originals"](ROOT)
-    _, integration_originals = namespace["standalone_integration_source_originals"](ROOT)
-    _, gate_c_originals = namespace["gate_c_owner_source_originals"](ROOT)
-    _, assembly_originals = namespace["assembly_source_originals"](ROOT)
+    _, transport_originals = namespace["windows_transport_originals"](historical_runtime_root())
+    _, integration_originals = namespace["standalone_integration_source_originals"](historical_runtime_root())
+    _, gate_c_originals = namespace["gate_c_owner_source_originals"](historical_runtime_root())
+    _, assembly_originals = namespace["assembly_source_originals"](historical_runtime_root())
     integration_originals = (
         assembly_originals
         | gate_c_originals
         | integration_originals
-        | namespace["redundant_solve_source_originals"](ROOT)
+        | namespace["redundant_solve_source_originals"](historical_runtime_root())
     )
     for path, expected in baseline.items():
         data = restored.get(
-            path, integration_originals.get(path, namespace["_release_070_bytes"](ROOT, path))
+            path, integration_originals.get(path, namespace["_release_070_bytes"](historical_runtime_root(), path))
         )
         assert hashlib.sha256(data).hexdigest() == expected, path
         if path not in namespace["STANDALONE_LIVE_CHANGED"]:
@@ -519,7 +524,7 @@ def test_original_core_addon_bytes_and_linux_only_selection_are_unchanged():
                     transport_originals.get(
                         path,
                         integration_originals.get(
-                            path, namespace["_release_070_bytes"](ROOT, path)
+                            path, namespace["_release_070_bytes"](historical_runtime_root(), path)
                         ),
                     )
                 ).hexdigest()
@@ -527,7 +532,7 @@ def test_original_core_addon_bytes_and_linux_only_selection_are_unchanged():
             ), path
     assert not any(path.startswith("src/") for path in restored)
     assert 'if sys.platform != "linux":' in (ADDON / "backend_selection.py").read_text()
-    assert namespace["protected_python_digest"](ROOT) == namespace["SNAPSHOT3_PYTHON_PROTECTED"]
+    assert namespace["protected_python_digest"](historical_runtime_root()) == namespace["SNAPSHOT3_PYTHON_PROTECTED"]
     assert namespace["SNAPSHOT3_PYTHON_PROTECTED"] == (
         259,
         "f1c9a006975a48a8ef3fb051709eb4ac75a0dadc207090c27783902034e939b7",
@@ -540,11 +545,11 @@ def test_original_standalone_fixture_and_all_fourteen_before_files_stay_exact():
     assert hashlib.sha256(raw).hexdigest() == (
         "0e6152a913e23079c770f23bbe6daf111d28f82981496e1c85af19ae1bc5c6c9"
     )
-    _added, restored = namespace["standalone_live_originals"](ROOT)
+    _added, restored = namespace["standalone_live_originals"](historical_runtime_root())
     old = json.loads(raw)["added"]
     assert len(old) == 14
     for path, expected in old.items():
-        data = restored.get(path, namespace["_release_070_bytes"](ROOT, path))
+        data = restored.get(path, namespace["_release_070_bytes"](historical_runtime_root(), path))
         assert len(data) == expected["bytes"], path
         assert hashlib.sha256(data).hexdigest() == expected["sha256"], path
 
@@ -889,23 +894,23 @@ def test_forged_before_hash_cannot_replace_baseline_or_older_added_bytes(tmp_pat
 
 def test_windows_inverse_restores_exact_reviewed_parent_before_older_guards():
     namespace = guard_namespace()
-    harness = namespace["windows_transport_harness_originals"](ROOT)
+    harness = namespace["windows_transport_harness_originals"](historical_runtime_root())
     assert set(harness) == set(namespace["WINDOWS_TRANSPORT_HARNESS_ORIGINALS"])
     assert len(harness) == 5
     for path, data in harness.items():
         assert (len(data), hashlib.sha256(data).hexdigest()) == (
             namespace["WINDOWS_TRANSPORT_HARNESS_ORIGINALS"][path]
         )
-    added, restored = namespace["windows_transport_originals"](ROOT)
+    added, restored = namespace["windows_transport_originals"](historical_runtime_root())
     assert added == namespace["WINDOWS_TRANSPORT_REVISION_ADDED"]
     assert set(restored) == namespace["WINDOWS_TRANSPORT_REVISION_CHANGED"]
     assert len(added) == 4 and len(restored) == 8
     assert not any(path.startswith("src/") for path in added | restored.keys())
-    old = namespace["standalone_harness_originals"](ROOT)
+    old = namespace["standalone_harness_originals"](historical_runtime_root())
     assert_guard_source_bytes(
         old["tests/unit/test_arc_profile_native_end_cap.py"], namespace["STANDALONE_LIVE_SHA256"]
     )
-    assert namespace["protected_python_digest"](ROOT) == namespace["SNAPSHOT3_PYTHON_PROTECTED"]
+    assert namespace["protected_python_digest"](historical_runtime_root()) == namespace["SNAPSHOT3_PYTHON_PROTECTED"]
 
 
 @pytest.mark.parametrize(
@@ -1347,23 +1352,23 @@ def test_windows_harness_normalizes_no_other_digest_slot(tmp_path, constant):
 
 def test_windows_cache_inverse_restores_exact_reviewed_parent_before_older_guards():
     namespace = guard_namespace()
-    harness = namespace["windows_cache_harness_originals"](ROOT)
+    harness = namespace["windows_cache_harness_originals"](historical_runtime_root())
     assert set(harness) == set(namespace["WINDOWS_CACHE_HARNESS_ORIGINALS"])
     assert len(harness) == 5
     for path, data in harness.items():
         assert (len(data), hashlib.sha256(data).hexdigest()) == (
             namespace["WINDOWS_CACHE_HARNESS_ORIGINALS"][path]
         )
-    added, restored = namespace["windows_cache_originals"](ROOT)
+    added, restored = namespace["windows_cache_originals"](historical_runtime_root())
     assert added == namespace["WINDOWS_CACHE_REVISION_ADDED"]
     assert set(restored) == namespace["WINDOWS_CACHE_REVISION_CHANGED"]
     assert len(added) == 3 and len(restored) == 7
     assert not any(path.startswith("src/") for path in added | restored.keys())
-    old = namespace["standalone_harness_originals"](ROOT)
+    old = namespace["standalone_harness_originals"](historical_runtime_root())
     assert_guard_source_bytes(
         old["tests/unit/test_arc_profile_native_end_cap.py"], namespace["STANDALONE_LIVE_SHA256"]
     )
-    assert namespace["protected_python_digest"](ROOT) == namespace["SNAPSHOT3_PYTHON_PROTECTED"]
+    assert namespace["protected_python_digest"](historical_runtime_root()) == namespace["SNAPSHOT3_PYTHON_PROTECTED"]
 
 
 @pytest.mark.parametrize(
@@ -1835,7 +1840,7 @@ def test_windows_cache_qualification_extra_callers_and_aliases_reject(tmp_path, 
 def assert_windows_cache_materializer_scope(root):
     # Read the trusted source's inverse, never validator code from a mutation tree.
     namespace = guard_namespace()
-    _, originals = namespace["windows_cache_originals"](ROOT)
+    _, originals = namespace["windows_cache_originals"](historical_runtime_root())
     relative = "blender_addon/mechanical_cad_blender/runtime_bundle_materialize.py"
     original = originals[relative]
     current = (root / relative).read_bytes()
@@ -2035,23 +2040,23 @@ def test_windows_cache_known_folder_query_extra_callers_and_aliases_reject(tmp_p
 
 def test_windows_runtime_cache_inverse_restores_exact_reviewed_parent_before_older_guards():
     namespace = guard_namespace()
-    harness = namespace["windows_runtime_cache_harness_originals"](ROOT)
+    harness = namespace["windows_runtime_cache_harness_originals"](historical_runtime_root())
     assert set(harness) == set(namespace["WINDOWS_RUNTIME_CACHE_HARNESS_ORIGINALS"])
     assert len(harness) == 4
     for path, data in harness.items():
         assert (len(data), hashlib.sha256(data).hexdigest()) == (
             namespace["WINDOWS_RUNTIME_CACHE_HARNESS_ORIGINALS"][path]
         )
-    added, restored = namespace["windows_runtime_cache_originals"](ROOT)
+    added, restored = namespace["windows_runtime_cache_originals"](historical_runtime_root())
     assert added == namespace["WINDOWS_RUNTIME_CACHE_REVISION_ADDED"]
     assert set(restored) == namespace["WINDOWS_RUNTIME_CACHE_REVISION_CHANGED"]
     assert len(added) == 1 and len(restored) == 8
     assert not any(path.startswith("src/") for path in added | restored.keys())
-    old = namespace["standalone_harness_originals"](ROOT)
+    old = namespace["standalone_harness_originals"](historical_runtime_root())
     assert_guard_source_bytes(
         old["tests/unit/test_arc_profile_native_end_cap.py"], namespace["STANDALONE_LIVE_SHA256"]
     )
-    assert namespace["protected_python_digest"](ROOT) == namespace["SNAPSHOT3_PYTHON_PROTECTED"]
+    assert namespace["protected_python_digest"](historical_runtime_root()) == namespace["SNAPSHOT3_PYTHON_PROTECTED"]
 
 
 @pytest.mark.parametrize(
@@ -2393,7 +2398,7 @@ def test_windows_runtime_cache_harness_normalizes_no_other_digest_slot(tmp_path,
 def assert_windows_runtime_cache_finite_symbols(root):
     """Only the reviewed methods, exact imports and one policy field may change."""
     namespace = guard_namespace()
-    _, originals = namespace["windows_runtime_cache_originals"](ROOT)
+    _, originals = namespace["windows_runtime_cache_originals"](historical_runtime_root())
     allowed = {
         "backend_selection.py": {"BackendSelection._capture_windows_bundled_transport"},
         "runtime_bundle_launch.py": {

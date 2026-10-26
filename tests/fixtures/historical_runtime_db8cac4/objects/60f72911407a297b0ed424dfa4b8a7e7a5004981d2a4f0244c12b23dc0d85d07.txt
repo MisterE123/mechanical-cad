@@ -1,0 +1,290 @@
+"""Adversarial v2 UI envelope tests; v1 remains a separate exact codec."""
+
+import copy
+import importlib
+import json
+import sys
+import types
+from pathlib import Path
+
+import pytest
+
+ROOT = Path(__file__).resolve().parents[2]
+PACKAGE = "mcad_general_authoring_store_tests"
+package = types.ModuleType(PACKAGE)
+package.__path__ = [str(ROOT / "blender_addon/mechanical_cad_blender")]
+sys.modules[PACKAGE] = package
+a = importlib.import_module(PACKAGE + ".general_authoring")
+s = importlib.import_module(PACKAGE + ".general_authoring_store")
+d = importlib.import_module(PACKAGE + ".general_sketch_draft")
+v1 = importlib.import_module(PACKAGE + ".general_draft_store")
+BASE = '{"schema_version":1,"id":"doc","name":"Part","units":"mm","parameters":{},"features":[],"active_feature":null}\n'
+
+
+def authoring():
+    command = d.GeneralSketchDraft(BASE)
+    center, circle = command.execute(d.AddCircle(d.PointSeed(2, 3), 4.125)).entity_ids
+    radius = command.execute(d.AddRelation("radius", (circle,), value="4 + 0.125")).constraint_id
+    state = a.GeneralSketchAuthoringState(command)
+    state.begin_circle(d.PointRef(center), 9)
+    state.select((("circle", circle),))
+    state.place_annotation(radius, (2, -3))
+    return state
+
+
+def test_v1_and_v2_reject_one_another_and_roundtrip_nested_command_exactly():
+    state = authoring()
+    command_payload = state.command_draft.checkpoint_payload()
+    old = v1.dumps(state.command_draft)
+    new = s.dumps(state)
+    envelope = json.loads(new)
+    assert envelope["schema_version"] == 2 and envelope["ui"]["schema_version"] == 1
+    assert envelope["kind"] == "general_sketch_ui_draft"
+    assert envelope["draft"] == command_payload == json.loads(old)["draft"]
+    assert s.dumps(s.restore(new, BASE)) == new
+    assert v1.dumps(state.command_draft) == old
+    with pytest.raises(s.SnapshotError):
+        s.loads(old)
+    with pytest.raises(v1.SnapshotError):
+        v1.loads(new)
+
+
+@pytest.mark.parametrize(
+    "mutate",
+    [
+        lambda e: e.update(schema_version=1),
+        lambda e: e.update(schema_version=3),
+        lambda e: e.update(schema_version=True),
+        lambda e: e.update(kind="rectangle_ui_draft"),
+        lambda e: e.update(base_sha256="invented"),
+        lambda e: e.update(pointer_capture=True),
+        lambda e: e.pop("ui"),
+        lambda e: e["ui"].update(schema_version=2),
+        lambda e: e["ui"].update(schema_version=True),
+        lambda e: e["ui"].update(revision=-1),
+        lambda e: e["ui"].update(revision=True),
+        lambda e: e["ui"].update(revision=2**53),
+        lambda e: e["ui"].update(tool="Rectangle"),
+        lambda e: e["ui"].update(queuedEnter=True),
+        lambda e: e["ui"].update(input_lease={}),
+        lambda e: e["ui"].update(gesture_grab=1),
+        lambda e: e["ui"].update(process_token="process"),
+        lambda e: e["ui"].update(solver_report={"ok": True}),
+        lambda e: e["ui"]["selection"][0].update(id="invented"),
+        lambda e: e["ui"]["selection"][0].update(kind="line"),
+        lambda e: e["ui"]["selection"].append(e["ui"]["selection"][0]),
+        lambda e: e["ui"].update(selection=[e["ui"]["selection"][0]] * 33),
+        lambda e: e["ui"]["proposal"].update(kind="arc"),
+        lambda e: e["ui"]["proposal"].update(pointer_capture=True),
+        lambda e: e["ui"]["proposal"].update(radius=-1),
+        lambda e: e["ui"]["proposal"].update(radius=True),
+        lambda e: e["ui"]["proposal"].update(radius="4"),
+        lambda e: e["ui"]["proposal"]["anchor"].update(point_id="invented"),
+        lambda e: e["ui"]["proposal"]["anchor"].update(point_id=e["ui"]["selection"][0]["id"]),
+        lambda e: e["ui"]["proposal"]["anchor"].update(position=[2, 3]),
+        lambda e: e["ui"]["proposal"].update(anchor={"kind": "new", "position": [0, 1e6 + 1]}),
+        lambda e: next(iter(e["ui"]["annotations"].values())).update(display="diameter"),
+        lambda e: next(iter(e["ui"]["annotations"].values())).update(refs=["invented"]),
+        lambda e: next(iter(e["ui"]["annotations"].values())).update(kind="distance"),
+        lambda e: next(iter(e["ui"]["annotations"].values())).update(offset=[0, True]),
+        lambda e: next(iter(e["ui"]["annotations"].values())).update(offset=[0, 0, 0]),
+        lambda e: next(iter(e["ui"]["annotations"].values())).update(dragging=True),
+        lambda e: e["ui"]["annotations"].update(
+            invented=next(iter(e["ui"]["annotations"].values()))
+        ),
+        lambda e: e["ui"].update(annotations={f"r_d{i}": {} for i in range(513)}),
+        lambda e: e["draft"].update(pointer_capture=True),
+        lambda e: e["draft"]["journal"].update(schema_version=1),
+        lambda e: e["draft"].update(next_id=1),
+    ],
+)
+def test_unknown_versions_fields_and_forged_bindings_fail_without_changing_input(mutate):
+    envelope = json.loads(s.dumps(authoring()))
+    mutate(envelope)
+    raw = json.dumps(envelope)
+    before = raw
+    with pytest.raises(s.SnapshotError):
+        s.loads(raw)
+    assert raw == before
+
+
+@pytest.mark.parametrize(
+    "raw",
+    [
+        None,
+        {},
+        [],
+        "null",
+        "[]",
+        "{} junk",
+        "{",
+        "\ud800",
+        '{"kind":"general_sketch_ui_draft","kind":"general_sketch_ui_draft"}',
+        '{"schema_version":NaN}',
+        '{"schema_version":Infinity}',
+        '{"schema_version":-Infinity}',
+        '{"schema_version":1e999}',
+        "[" * 33 + "0" + "]" * 33,
+        '{"schema_version":' + "9" * 129 + "}",
+    ],
+)
+def test_strict_json_byte_boundary_rejects_nonfinite_deep_duplicate_and_malformed(raw):
+    with pytest.raises(s.SnapshotError):
+        s.loads(raw)
+
+
+def test_nested_duplicate_keys_and_nonfinite_numbers_fail_publicly():
+    raw = s.dumps(authoring())
+    for mutated in [
+        raw.replace('"tool":"Circle"', '"tool":"Circle","tool":"Circle"'),
+        raw.replace('"radius":9', '"radius":NaN'),
+        raw.replace('"radius":9', '"radius":1e999'),
+    ]:
+        assert mutated != raw
+        with pytest.raises(s.SnapshotError):
+            s.loads(mutated)
+
+
+@pytest.mark.parametrize("place", ["raw_field", "base", "ui", "id"])
+def test_escaped_lone_unicode_surrogates_are_rejected_before_restoration(place):
+    state = authoring()
+    constraint = next(iter(state.annotations))
+    state.command_draft.begin_edit(constraint)
+    state.command_draft.update_edit("invalid +( 🛠")
+    envelope = json.loads(s.dumps(state))
+    if place == "raw_field":
+        envelope["draft"]["pending_edit"]["raw_text"] = "bad\ud800"
+    elif place == "base":
+        envelope["draft"]["document_json"] += "\ud800"
+    elif place == "ui":
+        envelope["ui"]["tool"] = "Select\udfff"
+    else:
+        envelope["ui"]["selection"][0]["id"] = "c_\ud800"
+    raw = json.dumps(envelope, ensure_ascii=True)
+    assert raw.encode("utf-8")  # Valid source bytes can decode to invalid strings.
+    with pytest.raises(s.SnapshotError):
+        s.loads(raw)
+    assert s.dumps(state)
+
+
+def test_exact_byte_budget_combines_both_payloads_and_counts_utf8(monkeypatch):
+    state = authoring()
+    state.command_draft.begin_edit(next(iter(state.annotations)))
+    state.command_draft.update_edit("🛠" * 20)
+    raw = s.dumps(state)
+    size = len(raw.encode())
+    assert size > len(raw)
+    monkeypatch.setattr(s, "MAX_SNAPSHOT_BYTES", size)
+    assert s.dumps(state) == raw and s.loads(raw)
+    monkeypatch.setattr(s, "MAX_SNAPSHOT_BYTES", size - 1)
+    before = state.ui_payload(), state.command_draft.checkpoint_payload()
+    with pytest.raises(s.SnapshotError, match="byte limit"):
+        s.dumps(state)
+    with pytest.raises(s.SnapshotError, match="byte limit"):
+        s.loads(raw)
+    assert (state.ui_payload(), state.command_draft.checkpoint_payload()) == before
+    monkeypatch.setattr(s, "MAX_SNAPSHOT_BYTES", 8 * 1024 * 1024)
+    with pytest.raises(s.SnapshotError):
+        s.loads(" " * (8 * 1024 * 1024) + raw)
+
+
+def test_stale_base_is_exact_and_failed_text_is_retained():
+    state = authoring()
+    raw = s.dumps(state)
+    for stale in (BASE + " ", BASE.rstrip(), BASE.replace('"Part"', '"Renamed"')):
+        with pytest.raises(s.SnapshotError, match="different committed document"):
+            s.restore(raw, stale)
+        assert s.dumps(state) == raw
+    assert s.restore(raw, BASE).document_json == BASE
+
+
+def test_forged_relation_refs_to_another_real_circle_are_rejected():
+    state = authoring()
+    _, other = state.command_draft.execute(d.AddCircle(d.PointSeed(7, 8), 2)).entity_ids
+    envelope = json.loads(s.dumps(state))
+    next(iter(envelope["ui"]["annotations"].values()))["refs"] = [other]
+    with pytest.raises(s.SnapshotError, match="relation provenance"):
+        s.loads(json.dumps(envelope))
+
+
+def test_old_exact_relation_signature_can_be_unavailable_after_changed_checkpoint():
+    source = authoring().command_draft
+    _, other = source.execute(d.AddCircle(d.PointSeed(7, 8), 2)).entity_ids
+    base = json.dumps(source.candidate())
+    edit = d.GeneralSketchDraft(base, source.feature_id, True)
+    state = a.GeneralSketchAuthoringState(edit)
+    driver = state.command_draft.sketch["constraints"][0]["id"]
+    state.place_annotation(driver, (1, 2))
+    # Represent a later bounded checkpoint where this relation changed refs.
+    # Its exact original signature remains demonstrable from the unchanged base.
+    payload = state.command_draft.checkpoint_payload()
+    changed = copy.deepcopy(payload["accepted_sketch"])
+    changed["constraints"][0]["refs"] = [other]
+    payload["accepted_sketch"] = changed
+    payload["journal"]["anchor"] = changed
+    payload["journal"]["anchor_sequence"] = 1
+    payload["revision"] = 1
+    changed_draft = d.GeneralSketchDraft.from_checkpoint_payload(payload)
+    changed_state = a.GeneralSketchAuthoringState(changed_draft, state.ui_payload())
+    assert changed_state.status.annotations[0].state == "changed"
+    assert s.restore(s.dumps(changed_state), base).status.annotations[0].state == "changed"
+    assert changed_state.annotations == state.annotations
+    with pytest.raises(d.DraftError, match="unavailable"):
+        changed_state.move_annotation(driver, (2, 3))
+
+
+def test_fresh_empty_ui_defaults_never_normalize_v1_command_source_types():
+    old = authoring().command_draft
+    document = old.candidate()
+    document["features"][0]["sketch"]["circles"][0]["radius"] = 4
+    base = json.dumps(document, indent=3) + "\n"
+    old = d.GeneralSketchDraft(base, old.feature_id, True)
+    old.begin_edit(old.sketch["constraints"][0]["id"])
+    old.update_edit(" +bad 🛠 ")
+    before = v1.dumps(old)
+    state = a.GeneralSketchAuthoringState.from_v1_draft(v1.restore(before, base))
+    restored = s.restore(s.dumps(state), base)
+    assert v1.dumps(restored.command_draft) == before
+    assert type(restored.command_draft.sketch["circles"][0]["radius"]) is int
+    assert restored.ui_payload() == a.empty_ui()
+
+
+def test_annotation_count_bound_is_atomic_for_live_placement(monkeypatch):
+    state = authoring()
+    _, circle = state.command_draft.execute(d.AddCircle(d.PointSeed(8, 9), 2)).entity_ids
+    driver = state.command_draft.execute(d.AddRelation("radius", (circle,), value=2)).constraint_id
+    before = s.dumps(state)
+    monkeypatch.setattr(a, "MAX_ANNOTATIONS", 1)
+    with pytest.raises(d.DraftError, match="Too many"):
+        state.place_annotation(driver, (0, 1))
+    assert s.dumps(state) == before
+
+
+@pytest.mark.parametrize(
+    "mutate",
+    [
+        lambda p: p.update(endpoint=[True, 2]),
+        lambda p: p.update(endpoint=[0, 1e6 + 1]),
+        lambda p: p.update(radius=2),
+        lambda p: p.update(endpoint=[0]),
+        lambda p: p.update(anchor={"kind": "new", "position": [0, 0], "point_id": "invented"}),
+    ],
+)
+def test_malformed_line_proposals_fail_the_strict_codec(mutate):
+    state = authoring()
+    state.cancel_proposal()
+    state.begin_line(d.PointSeed(0, 0), (1, 1))
+    envelope = json.loads(s.dumps(state))
+    mutate(envelope["ui"]["proposal"])
+    with pytest.raises(s.SnapshotError):
+        s.loads(json.dumps(envelope))
+
+
+def test_legal_escaped_unicode_pairs_and_whitespace_raw_fields_stay_exact():
+    state = authoring()
+    state.command_draft.begin_edit(next(iter(state.annotations)))
+    state.command_draft.update_edit(" 🛠 半径 + ( \t")
+    escaped = json.dumps(json.loads(s.dumps(state)), ensure_ascii=True)
+    restored = s.restore(escaped, BASE)
+    assert restored.command_draft.pending_edit.raw_text == " 🛠 半径 + ( \t"
+    assert s.dumps(restored) == s.dumps(state)

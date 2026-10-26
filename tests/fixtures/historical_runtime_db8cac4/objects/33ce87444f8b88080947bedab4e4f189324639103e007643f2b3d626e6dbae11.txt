@@ -1,0 +1,165 @@
+"""Pure add-on candidates preserve source identities before sidecar publication."""
+
+import copy
+import importlib.util
+import sys
+import types
+from pathlib import Path
+
+import pytest
+
+from mechanical_cad.assembly_model import AssemblyDocument
+from mechanical_cad.model import Document
+
+ROOT = Path(__file__).resolve().parents[2]
+ADDON = ROOT / "blender_addon/mechanical_cad_blender"
+PACKAGE = "mcad_assembly_edit_test_package"
+package = types.ModuleType(PACKAGE)
+package.__path__ = [str(ADDON)]
+sys.modules[PACKAGE] = package
+spec = importlib.util.spec_from_file_location(
+    PACKAGE + ".assembly_edit", ADDON / "assembly_edit.py"
+)
+edit = importlib.util.module_from_spec(spec)
+sys.modules[spec.name] = edit
+spec.loader.exec_module(edit)
+
+
+def document():
+    return Document.from_json(
+        (ROOT / "examples/viewport_rectangle.mcad.json").read_text()
+    ).to_dict()
+
+
+def test_user_part_becomes_grounded_definition_without_modifying_working_document():
+    part = document()
+    saved = copy.deepcopy(part)
+    result = edit.new_from_part(part, name="User assembly")
+    model = AssemblyDocument.from_dict(result)
+    assert model.name == "User assembly"
+    assert model.part_sources[0].document.to_dict() == part == saved
+    assert len(model.instances) == len(model.parts) == 1 and not model.joints
+    assert not model.verification_presets and model.active_verification_preset is None
+    assert edit.canonical_digest(model.to_dict()) == model.content_hash
+
+
+def test_reuse_inserts_child_and_incoming_joint_together_without_new_source():
+    original = edit.new_from_part(document())
+    candidate, part_id = edit.capture_definition(original, document())
+    assert candidate == original
+    result = edit.insert_instance(
+        candidate,
+        part_id,
+        parent=original["grounded_instance"],
+        parent_frame="origin",
+        child_frame="origin",
+        kind="slider",
+        coordinate=20,
+        limits=(0, 100),
+        name="Moving block",
+    )
+    model = AssemblyDocument.from_dict(result)
+    assert len(model.part_sources) == len(model.parts) == 1
+    assert len(model.instances) == 2 and len(model.joints) == 1
+    assert model.joints[0].coordinate == 20 and model.joints[0].limits == (0, 100)
+    assert len(original["instances"]) == 1 and not original["joints"]
+
+
+def test_changed_source_requires_explicit_all_instance_update_preserving_ids_and_frames():
+    part = document()
+    original = edit.new_from_part(part)
+    original = edit.insert_instance(
+        original,
+        original["parts"][0]["id"],
+        parent=original["grounded_instance"],
+        parent_frame="origin",
+        child_frame="origin",
+        kind="fixed",
+    )
+    saved = copy.deepcopy(original)
+    changed = copy.deepcopy(part)
+    changed["parameters"]["sketch_1_width"] = 60
+    with pytest.raises(edit.BridgeError, match="update available"):
+        edit.capture_definition(original, changed)
+    updated, affected = edit.update_source(original, changed)
+    model = AssemblyDocument.from_dict(updated)
+    assert affected == [i["id"] for i in original["instances"]]
+    assert updated["instances"] == original["instances"] and updated["joints"] == original["joints"]
+    assert updated["parts"][0]["mate_frames"] == original["parts"][0]["mate_frames"]
+    assert model.parts[0].source_digest != original["parts"][0]["source_digest"]
+    assert original == saved
+
+
+def test_literal_frame_edit_and_working_copy_are_explicit_detached_candidates():
+    original = edit.new_from_part(document())
+    part_id = original["parts"][0]["id"]
+    result = edit.edit_frame(
+        original,
+        part_id,
+        frame_id="origin",
+        name="Pin axis",
+        placement={"xyz_mm": [3, 4, 5], "wxyz": [1, 0, 0, 0]},
+    )
+    model = AssemblyDocument.from_dict(result)
+    assert model.parts[0].mate_frames[0].id == "origin"
+    assert model.parts[0].mate_frames[0].placement.xyz_mm == (3, 4, 5)
+    working = edit.working_copy(original, part_id)
+    working["name"] = "Independent editor buffer"
+    assert edit.working_copy(original, part_id)["name"] != working["name"]
+    assert original["parts"][0]["mate_frames"][0]["placement"] == edit.origin_frame()
+
+
+def paired():
+    result = edit.new_from_part(document())
+    return edit.insert_instance(
+        result,
+        result["parts"][0]["id"],
+        parent=result["grounded_instance"],
+        parent_frame="origin",
+        child_frame="origin",
+        kind="slider",
+        coordinate=20,
+    )
+
+
+def test_named_verification_edit_keeps_pair_identity_and_invalidates_only_intent():
+    original = paired()
+    pair = [i["id"] for i in original["instances"]]
+    kwargs = dict(
+        name="Running fit",
+        kind="clearance",
+        pair=pair,
+        minimum_mm=0.25,
+        policy={
+            "linear_tolerance_mm": 1e-6,
+            "volume_tolerance_mm3": 1e-9,
+            "linear_deflection_mm": 0.1,
+        },
+    )
+    first = edit.edit_verification_preset(original, **kwargs)
+    preset = first["verification_presets"][0]
+    second = edit.edit_verification_preset(
+        first, preset_id=preset["id"], **{**kwargs, "pair": pair[::-1], "minimum_mm": 0.5}
+    )
+    model = AssemblyDocument.from_dict(second)
+    assert len(model.verification_presets[0].requirements) == 1
+    assert (
+        second["verification_presets"][0]["requirements"][0]["id"]
+        == preset["requirements"][0]["id"]
+    )
+    assert (
+        second["part_sources"] == original["part_sources"]
+        and second["joints"] == original["joints"]
+    )
+    assert original["verification_presets"] == []
+    cleared = edit.select_verification_preset(second, None)
+    assert AssemblyDocument.from_dict(cleared).active_verification_preset is None
+    assert cleared["verification_presets"] == second["verification_presets"]
+
+
+@pytest.mark.parametrize("active", [None, "sketch_1"])
+def test_only_explicit_solid_output_can_be_captured(active):
+    part = document()
+    part["active_feature"] = active
+    with pytest.raises(edit.BridgeError, match="solid feature"):
+        edit.new_from_part(part)

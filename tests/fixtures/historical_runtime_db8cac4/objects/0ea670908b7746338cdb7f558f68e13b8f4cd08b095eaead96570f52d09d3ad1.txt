@@ -1,0 +1,256 @@
+"""Fresh Assembly STEP exports with separate, historical file outcomes.
+
+No export completion publishes an Assembly display, pose report or Part. The
+existing current preset check is a precondition; the sidecar repeats that check
+on freshly built solids and writes only the exact requested assembly pose.
+"""
+
+from __future__ import annotations
+
+import json
+
+from . import (
+    assembly_export_bridge,
+    assembly_state,
+    backend_contracts,
+    bridge,
+    execution_lease,
+    guarded_evidence,
+    guarded_transport,
+)
+
+ACTION = "assembly_export_step"
+
+
+def _checked_report(context):
+    """Read live guarded evidence, never a saved PASS label or report dictionary."""
+    state = assembly_state._state(context)
+    assembly = assembly_state.read_assembly(state)
+    version = assembly_export_bridge.result_version_for(assembly)
+    if not assembly_state.report_is_current(context):
+        raise bridge.BridgeError("Replay and Check Pose before exporting the Assembly.")
+    runtime = assembly_state._RUNTIME[assembly_state._key(context.scene)]
+    evidence = runtime.get("report_evidence")
+    if type(evidence) is not guarded_evidence.GuardedEvidence:
+        raise bridge.BridgeError("Saved Assembly checks are historical. Check Pose again.")
+    selection, _ = assembly_state._configuration(context)
+    response = evidence.revalidate(
+        selection,
+        owner_token=runtime.get("report_owner_token"),
+        expected_action="assembly_check",
+        expected_result_version=version,
+        require_success=True,
+    )
+    request = evidence.operation_request()
+    report = response["report"]
+    basis = report.get("verification_basis") or {}
+    active = assembly.get("active_verification_preset")
+    if not (
+        active
+        and basis.get("configured") is True
+        and basis.get("preset_id") == active
+        and report.get("complete") is True
+        and report.get("passed") is True
+        and report.get("scope") == "single_requested_pose"
+        and len(report.get("poses", ())) == 1
+        and request.get("coordinates") is None
+        and request.get("requirements") is None
+        and request.get("policy") is None
+        and request.get("samples") is None
+        and request.get("preset_id") in (None, active)
+    ):
+        raise bridge.BridgeError(
+            "Export requires a complete passing Check Pose with the active saved preset."
+        )
+    return assembly, evidence, runtime.get("report_owner_token"), assembly_state._binding(state)
+
+
+def availability_reason(context):
+    """Read-only UI preflight; never starts a solve, check or file operation."""
+    try:
+        if execution_lease.is_busy():
+            raise bridge.BridgeError(execution_lease.BUSY_MESSAGE)
+        assembly_state.require_idle(context)
+        _checked_report(context)
+    except (ValueError, RuntimeError, KeyError, TypeError, AttributeError, ReferenceError) as exc:
+        return str(exc)
+    return ""
+
+
+def capture(context):
+    """Bind file-selector intent to the exact current checked Assembly and owner."""
+    if execution_lease.is_busy():
+        raise bridge.BridgeError(execution_lease.BUSY_MESSAGE)
+    assembly_state.require_idle(context)
+    assembly, evidence, token, binding = _checked_report(context)
+    snapshot = assembly_state._capture(context, context.scene)
+    snapshot.update(
+        assembly=assembly,
+        export_report=evidence,
+        export_report_token=token,
+        export_report_binding=binding,
+    )
+    return snapshot
+
+
+def _assert_current(context, snapshot):
+    assembly_state._assert_current(context, snapshot, drafts=True)
+    assembly, evidence, token, binding = _checked_report(context)
+    if (
+        evidence is not snapshot["export_report"]
+        or token is not snapshot["export_report_token"]
+        or binding != snapshot["export_report_binding"]
+        or assembly_state.assembly_bridge.fingerprint(assembly)
+        != assembly_state.assembly_bridge.fingerprint(snapshot["assembly"])
+    ):
+        raise bridge.BridgeError("The checked Assembly changed while choosing or writing the file.")
+
+
+def _historical_projection(evidence, snapshot):
+    """Validate the exact completion independently of current UI currency."""
+    prepared = snapshot.get("prepared")
+    if (
+        type(prepared) is not backend_contracts.PreparedRequest
+        or prepared.action != ACTION
+        or type(evidence) is not guarded_evidence.GuardedEvidence
+        or backend_contracts.request_fingerprint(evidence.guarded_request()) != prepared.fingerprint
+    ):
+        raise bridge.BridgeError("Assembly export requires its exact guarded completion.")
+    return evidence.revalidate(
+        snapshot["selection"],
+        owner_token=snapshot["owner_token"],
+        expected_action=ACTION,
+        expected_result_version=prepared.operation_request()["result_version"],
+    )
+
+
+def _transport_selection(context, snapshot):
+    # The transport classifies a post-launch selection failure as an uncertain
+    # file outcome. Translate missing Blender RNA into that supported error
+    # boundary rather than allowing it to escape as an apparent prelaunch error.
+    try:
+        return assembly_state._current_selection(context, snapshot)
+    except (AttributeError, ReferenceError, TypeError) as exc:
+        raise bridge.BridgeError(
+            "Assembly export context is no longer available: " + str(exc)
+        ) from exc
+
+
+def _record(state, snapshot, response, outcome, message):
+    """Persist only file facts. These fields never grant current CAD authority."""
+    prepared = snapshot["prepared"]
+    record = {
+        "action": ACTION,
+        "outcome": outcome,
+        "path": prepared.operation_request()["path"],
+        "guarded_request_fingerprint": prepared.fingerprint,
+        "export": response.get("export") if response is not None else None,
+        "message": message,
+    }
+    state.export_receipt_json = json.dumps(record, sort_keys=True, allow_nan=False)
+    state.export_message = message
+
+
+def _write_message(response):
+    exported = response["export"]
+    return (
+        f"Assembly STEP written: {exported['path']} ({exported['bytes_written']} bytes). "
+        f"{exported['definition_count']} reusable Part definitions, "
+        f"{exported['instance_count']} placed instances. "
+        "This is a historical file receipt; Blender Undo does not undo the file."
+    )
+
+
+def run_export(context, path, *, snapshot=None):
+    """Write once from fresh native evidence; never retry an uncertain export."""
+    if execution_lease.is_busy():
+        raise bridge.BridgeError(execution_lease.BUSY_MESSAGE)
+    assembly_state.require_idle(context)
+    snapshot = capture(context) if snapshot is None else snapshot
+    _assert_current(context, snapshot)
+    if "prepared" in snapshot:
+        raise bridge.BridgeError("This Assembly export intent has already been used.")
+    request = assembly_export_bridge.build_request(snapshot["assembly"], path)
+    snapshot["prepared"] = backend_contracts.prepare_request(request)
+    # Atomic acquisition remains authoritative after the non-consuming UI checks.
+    lease = execution_lease.try_acquire()
+    if lease is None:
+        raise bridge.BridgeError(execution_lease.BUSY_MESSAGE)
+    scene, state = context.scene, assembly_state._state(context)
+    key = assembly_state._key(scene)
+    assembly_state._BUSY.add(key)
+    response = completion = None
+    completed = False
+    try:
+        with execution_lease.synchronous(lease):
+            evidence = guarded_transport.execute(
+                snapshot["prepared"],
+                snapshot["selection"],
+                owner_token=snapshot["owner_token"],
+                current_selection=lambda: _transport_selection(context, snapshot),
+            )
+        completed = True
+        response = _historical_projection(evidence, snapshot)
+        completion = evidence
+        _assert_current(context, snapshot)
+        evidence.publication.consume(
+            assembly_state._current_selection(context, snapshot),
+            owner_token=snapshot["owner_token"],
+            expected_action=ACTION,
+            expected_result_version=request["result_version"],
+        )
+        message = (
+            _write_message(response)
+            if response["ok"]
+            else response["error"]["code"] + ": " + response["error"]["message"]
+        )
+        _record(state, snapshot, response, "WRITTEN" if response["ok"] else "FAILED", message)
+        _assert_current(context, snapshot)
+        _historical_projection(evidence, snapshot)
+        state.last_action_error = "" if response["ok"] else message
+        return response
+    except Exception as exc:
+        historical = getattr(exc, "historical_export", None)
+        if type(historical) is guarded_evidence.GuardedEvidence:
+            try:
+                response = _historical_projection(historical, snapshot)
+                completion = historical
+            except (ValueError, RuntimeError, KeyError, TypeError, AttributeError, ReferenceError):
+                response = None
+                completed = True
+        if completion is not None:
+            completion.publication.cancel()
+        written = response is not None and response.get("ok") is True and response.get("export")
+        uncertain = bool(getattr(exc, "outcome_unknown", False) or completed and response is None)
+        if written:
+            message = (
+                _write_message(response) + " Current request handoff was rejected: " + str(exc)
+            )
+            outcome = "WRITTEN"
+        elif uncertain:
+            message = (
+                "Assembly STEP outcome is unconfirmed. Inspect the selected destination before "
+                "deliberately exporting again; no automatic retry was made. " + str(exc)
+            )
+            outcome = "UNKNOWN"
+        else:
+            message, outcome = str(exc), "FAILED"
+        try:
+            _record(state, snapshot, response, outcome, message)
+            state.last_action_error = message
+        except Exception as storage_error:
+            if written:
+                raise guarded_transport.GuardedOperationError(
+                    message + " Historical receipt storage failed: " + str(storage_error),
+                    historical_export=completion,
+                ) from storage_error
+            raise guarded_transport.GuardedOperationError(
+                message + " Export status storage failed: " + str(storage_error),
+                outcome_unknown=uncertain,
+            ) from storage_error
+        raise guarded_transport.GuardedOperationError(
+            message, outcome_unknown=uncertain, historical_export=completion if written else None
+        ) from exc
+    finally:
+        assembly_state._BUSY.discard(key)
+        execution_lease.release(lease)

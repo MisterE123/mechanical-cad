@@ -1,0 +1,286 @@
+"""Strict native-free face metadata and mesh-to-face binding for opted-in results.
+
+Semantic roles come from authored feature/entity identities. This is a protocol
+consistency check, not an independent proof that OCCT built the claimed surface.
+"""
+
+from __future__ import annotations
+
+import math
+
+from .sketch_bridge import _identifier, _keys, _number, _require
+
+
+def validate_signature(signature):
+    """Only the current analytic surface evidence schema is supported."""
+    _require(type(signature) is dict, "face signature must be an object")
+    surface = signature.get("surface")
+    _require(type(surface) is str and surface in {"plane", "cylinder"}, "unsupported face surface")
+    fields = {"surface", "area", "centroid"}
+    fields |= {"normal"} if surface == "plane" else {"radius", "axis"}
+    _keys(signature, fields)
+    _require(_number(signature["area"], minimum=0, bound=1e100) > 0, "face has no positive area")
+    center = signature["centroid"]
+    _require(type(center) is list and len(center) == 3, "invalid face centroid")
+    for value in center:
+        _number(value, bound=1e12)
+    direction = signature["normal" if surface == "plane" else "axis"]
+    _require(type(direction) is list and len(direction) == 3, "invalid face direction")
+    values = [_number(value, bound=1.0000001) for value in direction]
+    _require(math.isclose(sum(v * v for v in values), 1, abs_tol=1e-7), "non-unit face direction")
+    if surface == "cylinder":
+        _require(_number(signature["radius"], minimum=0, bound=1e12) > 0, "invalid cylinder radius")
+
+
+def _origin_features(source, features):
+    """A cut can inherit identities only down its base chain, not from the tool."""
+    allowed, current = {source["id"]}, source
+    while current["kind"] == "cut":
+        base_id = current["inputs"]["base"]
+        _require(base_id in features and base_id not in allowed, "invalid cut base ancestry")
+        allowed.add(base_id)
+        current = features[base_id]
+    return allowed
+
+
+def _roles(source, features):
+    kind = source["kind"]
+    if kind in {"sketch_rectangle", "sketch_circle", "sketch_constrained"}:
+        return {"profile"}
+    if kind == "cut":
+        return {"cut.wall", "unresolved"}
+    _require(kind == "extrude", "unsupported topology source feature")
+    profile = features[source["inputs"]["profile"]]
+    roles = {"cap.start", "cap.end", "unresolved"}
+    if profile["kind"] == "sketch_rectangle":
+        return roles | {"side.x_min", "side.x_max", "side.y_min", "side.y_max"}
+    if profile["kind"] == "sketch_circle":
+        return roles | {"side.circle"}
+    _require(profile["kind"] == "sketch_constrained", "unsupported extrusion profile")
+    return (
+        roles
+        | {"side.line." + line["id"] for line in profile["sketch"]["lines"]}
+        | {"side.circle." + circle["id"] for circle in profile["sketch"].get("circles", [])}
+    )
+
+
+def validate_topology(topology, *, feature_id, kind, mesh, source_features):
+    """Return face-ID map after schema, provenance, ancestry and mesh binding."""
+    _require(type(source_features) is list, "missing canonical topology sources")
+    features = {source["id"]: source for source in source_features}
+    _require(
+        feature_id in features and features[feature_id]["kind"] == kind, "topology source mismatch"
+    )
+    origins = _origin_features(features[feature_id], features)
+    _require(type(topology) is list and 1 <= len(topology) <= 200_000, "invalid topology count")
+    by_id = {}
+    for index, face in enumerate(topology):
+        _keys(face, {"id", "feature_id", "role", "kind", "signature", "provenance"})
+        _identifier(face["feature_id"])
+        _require(face["feature_id"] in origins and face["kind"] == "face", "unrelated face origin")
+        _require(
+            type(face["id"]) is str and face["id"] not in by_id, "invalid or duplicate face ID"
+        )
+        _require(
+            type(face["role"]) is str
+            and face["role"] in _roles(features[face["feature_id"]], features),
+            "unsupported semantic face role",
+        )
+        validate_signature(face["signature"])
+        if face["role"] not in {"cut.wall", "unresolved"}:
+            expected_surface = (
+                "cylinder"
+                if face["role"] == "side.circle" or face["role"].startswith("side.circle.")
+                else "plane"
+            )
+            _require(
+                face["signature"]["surface"] == expected_surface,
+                "face surface contradicts its analytic semantic role",
+            )
+        provenance = face["provenance"]
+        required = {
+            "semantic_status",
+            "kernel",
+            "operation",
+            "operation_id",
+            "relation",
+            "evolution",
+        }
+        _keys(
+            provenance,
+            required
+            | {
+                "id_scope",
+                "source_boundary",
+                "source_id",
+                "modifying_feature_id",
+                "source_count",
+                "image_count",
+                "sources",
+            },
+            required,
+        )
+        status, relation = provenance["semantic_status"], provenance["relation"]
+        _require(
+            type(status) is str and status in {"stable", "split", "merged", "generated", "unknown"},
+            "invalid semantic status",
+        )
+        _require(
+            type(relation) is str
+            and relation
+            in {
+                "constructed_profile",
+                "first_shape",
+                "last_shape",
+                "generated_from_profile_edge",
+                "unchanged",
+                "modified",
+                "generated",
+                "tool_surface",
+                "multiple_sources",
+                "no_history",
+            },
+            "invalid face evolution",
+        )
+        expected_operation = {
+            "sketch_rectangle": {"rectangle"},
+            "sketch_circle": {"circle"},
+            "sketch_constrained": {"polygon", "circle_profile"},
+            "extrude": {"extrude"},
+            "cut": {"cut"},
+        }[kind]
+        _require(
+            provenance["kernel"] == "OCCT"
+            and provenance["operation_id"] == feature_id
+            and type(provenance["operation"]) is str
+            and provenance["operation"] in expected_operation
+            and provenance["evolution"] == relation,
+            "face provenance operation mismatch",
+        )
+        if status == "stable":
+            _require(
+                face["id"] == f"{face['feature_id']}/face/{face['role']}"
+                and "id_scope" not in provenance,
+                "stable face identity differs from semantic role",
+            )
+            _require(
+                face["role"] != "unresolved"
+                and (kind != "cut" or face["feature_id"] != feature_id),
+                "cut-generated or unresolved face cannot acquire stable semantic identity",
+            )
+        else:
+            _require(
+                face["id"] == f"snapshot:{feature_id}:face:{index}"
+                and provenance.get("id_scope") == "evaluation_snapshot_only",
+                "ambiguous face identity must remain snapshot-local",
+            )
+        if face["feature_id"] != feature_id:
+            _require(
+                kind == "cut"
+                and provenance.get("modifying_feature_id") == feature_id
+                and relation in {"unchanged", "modified", "generated"}
+                and type(provenance.get("source_id")) is str
+                and provenance["source_id"]
+                and type(provenance.get("source_count")) is int
+                and provenance["source_count"] == 1
+                and type(provenance.get("image_count")) is int
+                and 1 <= provenance["image_count"] <= len(topology),
+                "inherited face lacks explicit cut provenance",
+            )
+        if face["role"] == "unresolved":
+            _require(
+                (status, relation) in {("unknown", "no_history"), ("merged", "multiple_sources")},
+                "unresolved face contradicts its provenance",
+            )
+        elif kind != "cut":
+            expected_relation = (
+                "constructed_profile"
+                if kind.startswith("sketch_")
+                else "first_shape"
+                if face["role"] == "cap.start"
+                else "last_shape"
+                if face["role"] == "cap.end"
+                else "generated_from_profile_edge"
+            )
+            _require(
+                relation == expected_relation, "face role contradicts its construction relation"
+            )
+        elif face["feature_id"] == feature_id:
+            _require(
+                face["role"] == "cut.wall" and status == "generated" and relation == "tool_surface",
+                "cut wall contradicts generated-tool provenance",
+            )
+        extra_fields = {
+            "constructed_profile": set(),
+            "first_shape": set(),
+            "last_shape": set(),
+            "generated_from_profile_edge": {"source_boundary"},
+            "unchanged": {"source_id", "modifying_feature_id", "source_count", "image_count"},
+            "modified": {"source_id", "modifying_feature_id", "source_count", "image_count"},
+            "generated": {"source_id", "modifying_feature_id", "source_count", "image_count"},
+            "tool_surface": {"sources"},
+            "multiple_sources": {"sources"},
+            "no_history": {"sources"},
+        }[relation]
+        _keys(provenance, required | extra_fields | ({"id_scope"} if status != "stable" else set()))
+        if "source_id" in provenance:
+            _reference(
+                provenance["source_id"], features[features[feature_id]["inputs"]["base"]], features
+            )
+        if relation == "tool_surface":
+            _require(provenance["sources"], "cut wall has no tool sources")
+            for reference in provenance["sources"]:
+                _reference(reference, features[features[feature_id]["inputs"]["tool"]], features)
+        if "sources" in provenance:
+            _require(
+                type(provenance["sources"]) is list
+                and len(provenance["sources"]) <= 200_000
+                and all(type(value) is str and value for value in provenance["sources"]),
+                "invalid face sources",
+            )
+        if "source_boundary" in provenance:
+            _require(
+                type(provenance["source_boundary"]) is str
+                and face["role"] == "side." + provenance["source_boundary"],
+                "face boundary role mismatch",
+            )
+        by_id[face["id"]] = face
+    _require(type(mesh) is dict and type(mesh.get("triangles")) is list, "missing topology mesh")
+    face_ids = mesh.get("triangle_face_ids")
+    _require(
+        type(face_ids) is list
+        and len(face_ids) == len(mesh["triangles"])
+        and all(type(value) is str and value in by_id for value in face_ids),
+        "mesh faces are not bound to output topology",
+    )
+    _require(set(face_ids) == set(by_id), "tessellation omitted an output face")
+    return by_id
+
+
+def _reference(identifier, source, features):
+    """Check diagnostic source handles against authored origin/role domains.
+
+    Full Part replay additionally checks exact base/tool face membership. An
+    assembly summary does not duplicate every intermediate face payload.
+    """
+    _require(type(identifier) is str, "invalid topology source reference")
+    if identifier.startswith("snapshot:"):
+        pieces = identifier.split(":")
+        _require(
+            len(pieces) == 4
+            and pieces[:3] == ["snapshot", source["id"], "face"]
+            and pieces[3].isascii()
+            and pieces[3].isdigit()
+            and len(pieces[3]) <= 6
+            and 0 <= int(pieces[3]) < 200_000,
+            "unrelated snapshot topology source",
+        )
+        return
+    parts = identifier.split("/face/")
+    _require(
+        len(parts) == 2
+        and parts[0] in _origin_features(source, features)
+        and parts[1] in _roles(features[parts[0]], features)
+        and parts[1] != "unresolved",
+        "unrelated semantic topology source",
+    )

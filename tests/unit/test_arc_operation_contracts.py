@@ -1,4 +1,8 @@
-"""Dormant Gate-A source/action policy; these tests execute no native CAD."""
+"""Current source/action admission, not solved readiness; executes no native CAD.
+
+Connected feature contracts (f8639a0) deliberately replaced single-sector-only
+structural admission. Strict schemas, owner roles and output kinds still apply.
+"""
 
 import copy
 import importlib
@@ -51,18 +55,18 @@ def test_complete_candidate_selects_exact_schema_not_nonempty_arcs(factory, vers
     "action", ["canonical_snapshot", "check_geometry", "export_step", "export_stl"]
 )
 @pytest.mark.parametrize("factory", [sector, arc_empty])
-def test_schema3_geometry_and_capture_require_eligible_sector(factory, action):
+def test_schema3_geometry_and_capture_require_part_owned_solid_graph(factory, action):
     document = factory()
-    if factory is sector:
-        assert policy.result_version_for(document, action=action) == (
-            None if action == "canonical_snapshot" else 3
-        )
-        for role in ("general", "rectangle"):
-            with pytest.raises(ValueError):
-                policy.result_version_for(document, action=action, owner_role=role)
-    else:
+    before = copy.deepcopy(document)
+    # Arc-empty/open drafts can be structurally admitted without claiming a
+    # successful solve, closed profile, solid, or export. The backend proves those.
+    assert policy.result_version_for(document, action=action) == (
+        None if action == "canonical_snapshot" else 3
+    )
+    for role in ("general", "rectangle"):
         with pytest.raises(ValueError):
-            policy.result_version_for(document, action=action)
+            policy.result_version_for(document, action=action, owner_role=role)
+    assert document == before
     assert policy.result_version_for(legacy(), action=action) == (
         None if action == "canonical_snapshot" else 2
     )
@@ -109,7 +113,7 @@ def test_incomplete_arc_drafts_are_admitted_without_projecting_raw_points(line_c
 
 
 @pytest.mark.parametrize("kind", ["second_arc", "full_circle", "third_line"])
-def test_bounded_arc_curve_admission_is_atomic(kind):
+def test_general_analytic_draft_admission_is_detached_and_not_profile_readiness(kind):
     document = sector()
     sketch = document["features"][0]["sketch"]
     if kind == "second_arc":
@@ -123,8 +127,9 @@ def test_bounded_arc_curve_admission_is_atomic(kind):
         (policy.validate_authoring_sketch, sketch),
         (policy.validate_authoring_candidate, document),
     ):
-        with pytest.raises(ValueError, match="one arc"):
-            validator(value)
+        accepted = validator(value)
+        assert accepted == value and accepted is not value
+        accepted["name"] = "detached mutation"
         assert json.dumps(document) == before
 
 
@@ -144,13 +149,20 @@ def test_arc_admission_checks_entire_part_graph(kind):
             {"id": "cut", "kind": "cut", "inputs": {"base": "pad", "tool": "pad"}}
         )
     before = json.dumps(document)
-    with pytest.raises(ValueError):
-        policy.validate_authoring_candidate(document)
+    if kind == "wrong_source":
+        with pytest.raises(ValueError):
+            policy.validate_authoring_candidate(document)
+    else:
+        # Additional profiles/solids and Cut nodes are now supported graph types.
+        # This does not promise that self-cut produces a valid solid at replay.
+        accepted = policy.validate_authoring_candidate(document)
+        assert accepted == document and accepted is not document
+        accepted["features"][0]["name"] = "detached mutation"
     assert json.dumps(document) == before
 
 
 @pytest.mark.parametrize("action", ["assembly_replay", "assembly_check", "assembly_sample"])
-def test_assembly_checks_unused_sources_and_rejects_arc_empty_schema3(action):
+def test_assembly_checks_all_source_schemas_including_unused_arc_empty(action):
     assembly = json.loads((ROOT / "examples/reused_blocks.mcad-assembly.json").read_text())
     assert policy.result_version_for_assembly(assembly, action=action) == 2
     for document in (sector(), arc_empty()):
@@ -159,12 +171,14 @@ def test_assembly_checks_unused_sources_and_rejects_arc_empty_schema3(action):
             {"source_document_id": document["id"], "source_digest": "0" * 64, "document": document}
         )
         before = json.dumps(candidate)
-        if document == sector():
-            assert policy.result_version_for_assembly(candidate, action=action) == 3
-        else:
-            with pytest.raises(ValueError):
-                policy.result_version_for_assembly(candidate, action=action)
+        assert policy.result_version_for_assembly(candidate, action=action) == 3
         assert json.dumps(candidate) == before
+        # Unused sources are still validated in full, not ignored for selection.
+        candidate["part_sources"][-1]["document"]["features"][1]["inputs"]["profile"] = "missing"
+        invalid = copy.deepcopy(candidate)
+        with pytest.raises(ValueError):
+            policy.result_version_for_assembly(candidate, action=action)
+        assert candidate == invalid
 
 
 @pytest.mark.parametrize(
@@ -223,7 +237,7 @@ def test_geometry3_response_uses_its_exact_validator_without_fallback(monkeypatc
         "second_extrude",
     ],
 )
-def test_geometry_selection_rejects_every_unsupported_source_without_mutation(action, variant):
+def test_geometry_selection_distinguishes_solid_graph_admission_from_profile_readiness(action, variant):
     document = sector()
     sketch = document["features"][0]["sketch"]
     if variant == "profile":
@@ -247,8 +261,16 @@ def test_geometry_selection_rejects_every_unsupported_source_without_mutation(ac
     else:
         document["features"].append({**copy.deepcopy(document["features"][1]), "id": "second"})
     before = copy.deepcopy(document)
-    with pytest.raises(ValueError):
-        policy.result_version_for(document, action=action)
+    if variant in {"profile", "selected"}:
+        with pytest.raises(ValueError, match="selected solid"):
+            policy.result_version_for(document, action=action)
+    else:
+        # Transformed planes, shared-coordinate distinct IDs, inactive sketches,
+        # and connected feature histories are legal source graphs. Result and
+        # geometry validators remain responsible for actual solved output.
+        assert policy.result_version_for(document, action=action) == 3
+        with pytest.raises(ValueError):
+            policy.result_version_for(document, action=action, owner_role="general")
     assert document == before
 
 
@@ -260,3 +282,39 @@ def test_geometry_source_selection_preserves_unsolved_seeds_and_nonzero_freedom(
     before = copy.deepcopy(document)
     assert policy.result_version_for(document, action="check_geometry") == 3
     assert document == before
+
+
+@pytest.mark.parametrize("mutation", ["duplicate_arc_id", "missing_endpoint", "unknown_arc_field"])
+def test_general_analytic_draft_rejects_malformed_entities_without_mutation(mutation):
+    document = sector()
+    sketch = document["features"][0]["sketch"]
+    if mutation == "duplicate_arc_id":
+        sketch["arcs"].append(copy.deepcopy(sketch["arcs"][0]))
+    elif mutation == "missing_endpoint":
+        sketch["arcs"][0]["end"] = "missing"
+    else:
+        sketch["arcs"][0]["unrecognized"] = True
+    before = copy.deepcopy(document)
+    for validator, value in (
+        (policy.validate_authoring_sketch, sketch),
+        (policy.validate_authoring_candidate, document),
+    ):
+        with pytest.raises(ValueError):
+            validator(value)
+        assert document == before
+
+
+@pytest.mark.parametrize("mutation", ["duplicate_feature", "feature_cycle", "unsupported_kind"])
+def test_general_connected_graph_rejects_invalid_structure_atomically(mutation):
+    document = sector()
+    if mutation == "duplicate_feature":
+        document["features"].append(copy.deepcopy(document["features"][-1]))
+    elif mutation == "feature_cycle":
+        document["features"][-1]["inputs"]["profile"] = document["features"][-1]["id"]
+    else:
+        document["features"][-1]["kind"] = "unrecognized_solid"
+    before = copy.deepcopy(document)
+    for action in ("replay", "canonical_snapshot", "check_geometry", "export_step", "export_stl"):
+        with pytest.raises(ValueError):
+            policy.result_version_for(document, action=action)
+        assert document == before

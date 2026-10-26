@@ -1,0 +1,786 @@
+"""UI2/envelope3 pure persistence; no native process or visible Arc tool activation."""
+
+import copy
+import hashlib
+import importlib
+import json
+import math
+import subprocess
+import sys
+import types
+from pathlib import Path
+
+import pytest
+
+ROOT = Path(__file__).resolve().parents[2]
+PACKAGE = "mcad_general_arc_authoring_tests"
+package = types.ModuleType(PACKAGE)
+package.__path__ = [str(ROOT / "blender_addon/mechanical_cad_blender")]
+sys.modules[PACKAGE] = package
+a = importlib.import_module(PACKAGE + ".general_authoring")
+d = importlib.import_module(PACKAGE + ".general_sketch_draft")
+s = importlib.import_module(PACKAGE + ".general_arc_authoring_store")
+v1 = importlib.import_module(PACKAGE + ".general_draft_store")
+v2 = importlib.import_module(PACKAGE + ".general_authoring_store")
+BASE = '{"schema_version":1, "id":"doc", "name":"Part 🛠", "units":"mm", "parameters":{"radius":"4 + 0.125"}, "features":[], "active_feature":null}\n'
+
+
+def capable():
+    return a.GeneralSketchAuthoringState(d.GeneralSketchDraft(BASE)).promote_arc_capability()
+
+
+def arc_state():
+    state = capable()
+    receipt = state.command_draft.execute(
+        d.AddArc(d.PointSeed(-0.0, 0), d.PointSeed(5, 0), d.PointSeed(0, 7.0), "ccw")
+    )
+    center, start, end, arc = receipt.entity_ids
+    relation = state.command_draft.execute(
+        d.AddRelation("radius", (arc,), value="radius")
+    ).constraint_id
+    return state, (center, start, end, arc, relation)
+
+
+def points_state():
+    state = capable()
+    ids = [
+        state.command_draft.execute(d.AddPoint(d.PointSeed(*point))).entity_ids[0]
+        for point in ((-0.0, 0), (5, 0), (0, 7), (0, 7))
+    ]
+    return state, ids
+
+
+def checkpoint(state):
+    return state.command_draft.checkpoint_payload(), state.ui_payload()
+
+
+def roundtrip(state):
+    return s.restore(s.dumps(state), state.document_json)
+
+
+def test_ui_capabilities_are_explicit_and_default_tools_are_unchanged():
+    old = a.GeneralSketchAuthoringState(d.GeneralSketchDraft(BASE))
+    assert a.UI_VERSION == 1 and a.TOOLS == {"Select", "Line", "Circle", "Dimension"}
+    assert old.ui_version == 1 and old.tools == a.TOOLS
+    assert a.ARC_UI_VERSION == 2 and a.ARC_TOOLS == a.TOOLS | {"Arc"}
+    assert a.empty_ui()["schema_version"] == 1
+    assert a.empty_ui(ui_version=2)["schema_version"] == 2
+    for action in (lambda: old.select_tool("Arc"), lambda: old.begin_arc(d.PointSeed(0, 0))):
+        before = checkpoint(old)
+        with pytest.raises(d.DraftError):
+            action()
+        assert checkpoint(old) == before
+    new = old.promote_arc_capability()
+    assert new.ui_version == 2 and new.command_draft.journal_version == 3
+    assert new.tools == a.ARC_TOOLS
+    assert new.select_tool("Arc")
+    with pytest.raises(d.DraftError):
+        a.GeneralSketchAuthoringState(new.command_draft)
+    with pytest.raises(d.DraftError):
+        a.GeneralSketchAuthoringState(old.command_draft, ui_version=2)
+    with pytest.raises(d.DraftError):
+        a.GeneralSketchAuthoringState(new.command_draft, a.empty_ui(), ui_version=2)
+
+
+@pytest.mark.parametrize("version", [True, False, 1.0, 2.0, "2", None, -1, 0, 3])
+def test_constructor_and_empty_ui_reject_nonexact_or_unknown_capabilities(version):
+    with pytest.raises(d.DraftError):
+        a.empty_ui(ui_version=version)
+    with pytest.raises(d.DraftError):
+        a.GeneralSketchAuthoringState(d.GeneralSketchDraft(BASE), ui_version=version)
+
+
+@pytest.mark.parametrize("with_pending", [False, True])
+def test_detached_capability_promotion_changes_only_versions_and_drops_no_history(with_pending):
+    draft = d.GeneralSketchDraft(BASE)
+    p, q, line = draft.execute(d.AddLine(d.PointSeed(-0.0, 0), d.PointSeed(3, 4))).entity_ids
+    distance = draft.execute(d.AddRelation("distance", (p, q), value="5 + 0")).constraint_id
+    old = a.GeneralSketchAuthoringState(draft)
+    old.select((("point", p), ("line", line)))
+    old.place_annotation(distance, (-0.0, 3))
+    old.begin_line(d.PointRef(q), (5, -0.0))
+    old.command_draft.execute(d.AddPoint(d.PointSeed(9, 9)))
+    old.command_draft.undo()
+    if with_pending:
+        old.command_draft.begin_edit(distance)
+        old.command_draft.update_edit(" \t半径 + ( 🛠\n")
+    before_command, before_ui = checkpoint(old)
+    old_text = v2.dumps(old)
+    old_v1_text = v1.dumps(old.command_draft)
+    promoted = old.promote_arc_capability()
+    expected_command, expected_ui = copy.deepcopy(before_command), copy.deepcopy(before_ui)
+    expected_command["journal"]["schema_version"] = 3
+    expected_ui["schema_version"] = 2
+    assert checkpoint(promoted) == (expected_command, expected_ui)
+    assert d._json(promoted.candidate()) == d._json(old.candidate())
+    assert promoted.revision == old.revision and promoted.ui_revision == old.ui_revision
+    assert not promoted.command_draft.has_current_solution
+    assert not promoted.command_draft.has_verified_trial
+    assert promoted.command_draft is not old.command_draft
+    assert v2.dumps(old) == old_text and v1.dumps(old.command_draft) == old_v1_text
+    assert checkpoint(roundtrip(promoted)) == checkpoint(promoted)
+    again = promoted.promote_arc_capability()
+    assert again is not promoted and checkpoint(again) == checkpoint(promoted)
+    if with_pending:
+        assert again.command_draft.pending_edit.raw_text == " \t半径 + ( 🛠\n"
+        with pytest.raises(d.DraftError, match="driving field"):
+            again.resume_proposal()
+    else:
+        assert again.command_draft.can_redo
+    # Promotion reserves nothing; edits to a staged copy cannot affect the source.
+    promoted.cancel_proposal()
+    assert checkpoint(old) == (before_command, before_ui)
+
+
+def test_envelope1_explicit_defaults_promote_without_rewriting_command_bytes():
+    draft = d.GeneralSketchDraft(BASE)
+    draft.execute(d.AddLine(d.PointSeed(1, -0.0), d.PointSeed(2, 3)))
+    encoded = v1.dumps(draft)
+    old = a.GeneralSketchAuthoringState.from_v1_draft(v1.restore(encoded, BASE))
+    state = old.promote_arc_capability()
+    expected = json.loads(encoded)["draft"]
+    expected["journal"]["schema_version"] = 3
+    assert state.command_draft.checkpoint_payload() == expected
+    assert state.ui_payload() == a.empty_ui(ui_version=2)
+    assert v1.dumps(old.command_draft) == encoded
+
+
+@pytest.mark.parametrize("phase", ["start", "end"])
+@pytest.mark.parametrize("existing", [False, True])
+@pytest.mark.parametrize("direction", ["ccw", "cw"])
+def test_arc_phase_observations_roundtrip_without_allocation_or_projection(
+    phase, existing, direction
+):
+    state, ids = points_state()
+    before = state.command_draft.checkpoint_payload()
+    state.begin_arc(d.PointRef(ids[0]), direction=direction)
+    if phase == "end":
+        state.choose_arc_start(d.PointRef(ids[1]))
+    observed = d.PointRef(ids[2]) if existing else d.PointSeed(-0.0, 7.25)
+    state.observe_arc(observed)
+    expected = {
+        "kind": "arc",
+        "phase": phase,
+        "center": {"kind": "existing", "point_id": ids[0]},
+        "start": None if phase == "start" else {"kind": "existing", "point_id": ids[1]},
+        "observation": {"kind": "existing", "point_id": ids[2]}
+        if existing
+        else {
+            "kind": "new",
+            "position": [-0.0, 7.25],
+        },
+        "direction": direction,
+    }
+    assert state.proposal == expected
+    restored = roundtrip(state)
+    assert restored.proposal == expected and restored.resume_proposal() == expected
+    assert restored.command_draft.checkpoint_payload() == before
+    assert not restored.command_draft.has_current_solution
+    assert not restored.command_draft.has_verified_trial
+    assert restored.point_input_phase == ("arc", phase)
+    raw = s.dumps(restored)
+    for forbidden in ("pointer_capture", "queued_accept", "lease", "native", "sweep", '"radius"'):
+        assert forbidden not in json.dumps(restored.proposal)
+    assert '"schema_version":3' in raw
+    assert restored.cancel_proposal()
+    assert restored.ui_version == 2 and restored.command_draft.journal_version == 3
+    assert restored.command_draft.checkpoint_payload() == before
+
+
+def test_raw_rejected_existing_end_observation_is_preserved_but_never_accepted():
+    state, ids = points_state()
+    state.begin_arc(d.PointRef(ids[0]))
+    before = checkpoint(state)
+    with pytest.raises(d.DraftError, match="distinct"):
+        state.choose_arc_start(d.PointRef(ids[0]))
+    assert checkpoint(state) == before
+    state.choose_arc_start(d.PointRef(ids[1]))
+    state.observe_arc(d.PointRef(ids[0]))
+    assert roundtrip(state).proposal["observation"] == {"kind": "existing", "point_id": ids[0]}
+    before = checkpoint(state)
+    with pytest.raises(d.DraftError):
+        state.command_draft.execute(
+            d.AddArc(d.PointRef(ids[0]), d.PointRef(ids[1]), d.PointRef(ids[0]), "ccw")
+        )
+    assert checkpoint(state) == before
+    state.observe_arc(d.PointSeed(0, 8.125))
+    assert state.proposal["observation"]["position"] == [0, 8.125]
+    assert state.command_draft.sketch["points"][2]["v"] == 7
+
+
+def test_arc_observation_directions_and_selection_are_ui_only():
+    state, ids = points_state()
+    state.begin_arc(d.PointRef(ids[0]))
+    state.observe_arc(d.PointSeed(5, 0))
+    state.choose_arc_start(d.PointRef(ids[1]))
+    assert state.proposal["observation"] is None
+    state.observe_arc(d.PointSeed(0, 7))
+    before_command = state.command_draft.checkpoint_payload()
+    before_proposal = state.proposal
+    state.reverse_arc_proposal()
+    assert state.proposal == {**before_proposal, "direction": "cw"}
+    state.select((("point", ids[2]),))
+    assert state.proposal["observation"] == before_proposal["observation"]
+    state.reverse_arc_proposal()
+    assert state.proposal == before_proposal
+    assert state.command_draft.checkpoint_payload() == before_command
+    detached = state.resume_proposal()
+    detached["center"]["point_id"] = "changed"
+    assert state.proposal == before_proposal
+    with pytest.raises(d.DraftError):
+        state.choose_arc_start(d.PointRef(ids[2]))
+
+
+def test_missing_proposal_roles_and_observation_are_quarantined_until_exact_undo():
+    state, ids = points_state()
+    state.begin_arc(d.PointRef(ids[0]))
+    state.choose_arc_start(d.PointRef(ids[1]))
+    state.observe_arc(d.PointRef(ids[2]))
+    observed = state.proposal
+    state.command_draft.execute(
+        d.DeleteBatch(state.command_draft.preview_delete((("point", ids[2]),)))
+    )
+    assert state.status.proposal.state == "missing"
+    restored = roundtrip(state)
+    assert restored.proposal == observed
+    with pytest.raises(d.DraftError, match="unavailable"):
+        restored.resume_proposal()
+    # Identical coordinates and a different exact ID never repair a missing binding.
+    assert restored.command_draft.sketch["points"][-1]["id"] == ids[3]
+    assert restored.status.proposal.identifier == ids[2]
+    restored.command_draft.undo()
+    assert restored.resume_proposal() == observed
+
+
+def test_exact_point_ref_and_source_kind_role_lookups_do_not_select_or_accept():
+    state, (center, start, end, arc, _) = arc_state()
+    line = state.command_draft.execute(d.AddLine(d.PointRef(center), d.PointRef(start))).entity_ids[
+        -1
+    ]
+    before = checkpoint(state)
+    for identifier, kind, source, role in (
+        (center, "arc", arc, "center"),
+        (start, "arc", arc, "start"),
+        (end, "arc", arc, "end"),
+        (center, "line", line, "start"),
+    ):
+        assert state.existing_point(
+            identifier, source_kind=kind, source_id=source, role=role
+        ) == d.PointRef(identifier)
+    assert state.existing_point(start) == d.PointRef(start)
+    assert checkpoint(state) == before
+    for kwargs in (
+        {"source_kind": "circle", "source_id": arc, "role": "center"},
+        {"source_kind": "line", "source_id": line, "role": "center"},
+        {"source_kind": "arc", "source_id": arc, "role": "end"},
+        {"source_kind": "arc", "source_id": line, "role": "center"},
+        {"source_kind": "arc", "source_id": "missing", "role": "center"},
+        {"source_kind": "arc"},
+        {"source_id": arc},
+        {"role": "center"},
+        {"source_kind": [], "source_id": arc, "role": "center"},
+    ):
+        with pytest.raises(d.DraftError):
+            state.existing_point(center, **kwargs)
+        assert checkpoint(state) == before
+    with pytest.raises(d.DraftError):
+        state.existing_point(arc)
+    with pytest.raises(d.DraftError):
+        state.existing_point("missing")
+
+
+def test_phase_descriptor_covers_initial_and_later_line_arc_with_coincident_exact_ids():
+    state, ids = points_state()
+    assert state.point_input_phase is None
+    state.select_tool("Line")
+    assert state.point_input_phase == ("line", "start")
+    first = state.existing_point(ids[2])
+    second = state.existing_point(ids[3])
+    assert first != second
+    state.begin_line(first)
+    assert state.point_input_phase == ("line", "end")
+    # Looking up the terminal ref remains a pure operation for the later owner CAS handler.
+    before = checkpoint(state)
+    assert roundtrip(state).existing_point(ids[3]) == second
+    assert checkpoint(state) == before
+    state.cancel_proposal()
+    state.select_tool("Arc")
+    assert state.point_input_phase == ("arc", "center")
+    state.begin_arc(state.existing_point(ids[0]))
+    assert state.point_input_phase == ("arc", "start")
+    state.choose_arc_start(state.existing_point(ids[1]))
+    assert roundtrip(state).point_input_phase == ("arc", "end")
+    state.cancel_proposal()
+    state.select_tool("Circle")
+    assert state.point_input_phase is None
+
+
+def test_arc_radius_signature_uses_source_without_new_saved_authority():
+    state, (center, start, end, arc, relation) = arc_state()
+    before = state.command_draft.checkpoint_payload()
+    state.select((("arc", arc), ("point", center)))
+    state.place_annotation(relation, (-0.0, 4.5))
+    assert state.annotations[relation] == {
+        "kind": "radius",
+        "refs": [arc],
+        "display": "radius",
+        "offset": [-0.0, 4.5],
+    }
+    assert state.command_draft.checkpoint_payload() == before
+    state.command_draft.execute(d.ReverseArcSweep(arc))
+    assert state.status.annotations[0].available
+    assert state.annotations[relation]["offset"] == [-0.0, 4.5]
+    restored = roundtrip(state)
+    assert restored.annotations == state.annotations
+    assert restored.command_draft.sketch["constraints"][0]["value"] == "radius"
+    assert restored.command_draft.sketch["arcs"][0] == {
+        "id": arc,
+        "center": center,
+        "start": start,
+        "end": end,
+        "direction": "cw",
+    }
+    assert math.copysign(1, restored.command_draft.sketch["points"][0]["u"]) == -1
+    assert type(restored.command_draft.sketch["points"][0]["v"]) is int
+    assert type(restored.command_draft.sketch["points"][2]["v"]) is float
+    for wrong in (center, start, end):
+        payload = json.loads(s.dumps(state))
+        payload["ui"]["annotations"][relation]["refs"] = [wrong]
+        with pytest.raises(s.SnapshotError):
+            s.loads(json.dumps(payload))
+
+
+def test_ui2_legacy_circle_radius_stays_same_shape():
+    draft = d.GeneralSketchDraft(BASE)
+    center, circle = draft.execute(d.AddCircle(d.PointSeed(1, 2), 5)).entity_ids
+    relation = draft.execute(d.AddRelation("radius", (circle,), value=5)).constraint_id
+    state = a.GeneralSketchAuthoringState(draft)
+    state.place_annotation(relation, (1, 2))
+    promoted = state.promote_arc_capability()
+    assert promoted.annotations == state.annotations
+    assert promoted.existing_point(
+        center, source_kind="circle", source_id=circle, role="center"
+    ) == d.PointRef(center)
+    assert roundtrip(promoted).status.annotations[0].available
+
+
+def test_undo_and_branch_keep_capable_envelope_arc_tombstones_and_missing_annotations():
+    state, (_, _, _, arc, relation) = arc_state()
+    state.select((("arc", arc),))
+    state.place_annotation(relation, (1, 2))
+    state.command_draft.undo()
+    assert roundtrip(state).status.annotations[0].state == "missing"
+    state.command_draft.undo()
+    assert state.command_draft.sketch["schema_version"] == 2
+    restored = roundtrip(state)
+    assert restored.command_draft.can_redo and restored.ui_version == 2
+    assert restored.status.selection[0].state == "missing"
+    restored.command_draft.redo()
+    restored.command_draft.redo()
+    assert restored.status.annotations[0].available
+    assert restored.command_draft.sketch["arcs"][0]["id"] == arc
+    state.command_draft.execute(d.AddPoint(d.PointSeed(50, 60)))
+    branched = roundtrip(state)
+    assert not branched.command_draft.can_redo
+    assert arc in branched.command_draft.checkpoint_payload()["allocated_ids"]
+    assert branched.status.selection[0].state == "missing"
+    assert branched.status.annotations[0].state == "unverified"
+    assert branched.annotations == state.annotations
+    with pytest.raises(d.DraftError, match="unavailable"):
+        branched.move_annotation(relation, (3, 4))
+
+
+def test_old_envelopes_read_restore_and_write_reject_journal3_even_empty_ui1():
+    state = capable()
+    command_before, ui_before = checkpoint(state)
+    old_command = d.GeneralSketchDraft(BASE)
+    old_state = a.GeneralSketchAuthoringState(old_command)
+    payload1 = json.loads(v1.dumps(old_command))
+    payload2 = json.loads(v2.dumps(old_state))
+    payload1["draft"] = command_before
+    payload2["draft"] = command_before
+    for codec, payload in ((v1, payload1), (v2, payload2)):
+        raw = json.dumps(payload)
+        with pytest.raises(codec.SnapshotError):
+            codec.loads(raw)
+        with pytest.raises(codec.SnapshotError):
+            codec.restore(raw, BASE)
+        assert json.dumps(payload) == raw
+    with pytest.raises(v1.SnapshotError):
+        v1.dumps(state.command_draft)
+    with pytest.raises(v2.SnapshotError):
+        v2.dumps(state)
+    # Private corruption is used only to exercise the public writer's admission barrier.
+    state._ui = a.empty_ui()
+    with pytest.raises(v2.SnapshotError):
+        v2.dumps(state)
+    assert state.command_draft.checkpoint_payload() == command_before
+    assert state.ui_payload() == a.empty_ui()
+    state._ui = ui_before
+    assert checkpoint(state) == (command_before, ui_before)
+    with pytest.raises(d.DraftError):
+        d.GeneralSketchDraft.from_checkpoint_payload(command_before)
+
+
+@pytest.mark.parametrize(
+    "journal,ui", [(2, 1), (2, 2), (3, 1), (True, 2), (3.0, 2), (3, True), (3, 2.0)]
+)
+def test_envelope3_requires_exact_capability_pair(journal, ui):
+    state = capable()
+    payload = json.loads(s.dumps(state))
+    payload["draft"]["journal"]["schema_version"] = journal
+    payload["ui"]["schema_version"] = ui
+    raw = json.dumps(payload)
+    with pytest.raises(s.SnapshotError):
+        s.loads(raw)
+    with pytest.raises(s.SnapshotError):
+        s.restore(raw, BASE)
+    assert raw == json.dumps(payload)
+
+
+def test_each_codec_rejects_other_envelopes_and_capable_writer_rejects_legacy_state():
+    old = a.GeneralSketchAuthoringState(d.GeneralSketchDraft(BASE))
+    new = old.promote_arc_capability()
+    texts = ((v1, v1.dumps(old.command_draft)), (v2, v2.dumps(old)), (s, s.dumps(new)))
+    for own, raw in texts:
+        for other in (v1, v2, s):
+            if own is not other:
+                with pytest.raises(other.SnapshotError):
+                    other.loads(raw)
+    with pytest.raises(s.SnapshotError):
+        s.dumps(old)
+
+
+@pytest.mark.parametrize(
+    "mutate",
+    [
+        lambda e: e.update(schema_version=True),
+        lambda e: e.update(schema_version=3.0),
+        lambda e: e.update(schema_version="3"),
+        lambda e: e.update(base_sha256="wrong"),
+        lambda e: e.update(kind="rectangle_ui_draft"),
+        lambda e: e.update(pointer_capture=True),
+        lambda e: e["ui"].update(revision=True),
+        lambda e: e["ui"].update(revision=-1),
+        lambda e: e["ui"].update(revision=2**53),
+        lambda e: e["ui"].update(tool="Center Arc"),
+        lambda e: e["ui"].update(queued_accept=True),
+        lambda e: e["ui"].update(solver_report={}),
+        lambda e: e["ui"]["proposal"].update(sweep=90),
+        lambda e: e["ui"]["proposal"].update(radius=5),
+        lambda e: e["ui"]["proposal"].update(phase="center"),
+        lambda e: e["ui"]["proposal"].update(direction="CCW"),
+        lambda e: e["ui"]["proposal"].update(direction=True),
+        lambda e: e["ui"]["proposal"].update(start={"kind": "new", "position": [1, 2]}),
+        lambda e: e["ui"]["proposal"].update(phase="end"),
+        lambda e: e["ui"]["proposal"]["center"].update(point_id="missing"),
+        lambda e: e["ui"]["proposal"].update(
+            observation={"kind": "existing", "point_id": "missing"}
+        ),
+        lambda e: e["ui"]["proposal"].update(observation={"kind": "new", "position": [True, 0]}),
+        lambda e: e["ui"]["proposal"].update(observation={"kind": "new", "position": [0, 1e6 + 1]}),
+        lambda e: e["ui"]["proposal"].update(observation={"kind": "new", "position": [0]}),
+        lambda e: e["ui"]["proposal"].update(
+            observation={"kind": "new", "position": [0, 2], "radius": 2}
+        ),
+    ],
+)
+def test_arc_envelope_unknown_fields_versions_observations_fail_closed(mutate):
+    state = capable()
+    state.begin_arc(d.PointSeed(0, -0.0))
+    state.observe_arc(d.PointSeed(5, 0))
+    before = s.dumps(state)
+    envelope = json.loads(before)
+    mutate(envelope)
+    raw = json.dumps(envelope)
+    with pytest.raises(s.SnapshotError):
+        s.loads(raw)
+    assert s.dumps(state) == before
+    assert raw == json.dumps(envelope)
+
+
+@pytest.mark.parametrize(
+    "raw",
+    [
+        None,
+        {},
+        [],
+        "null",
+        "[]",
+        "{",
+        "{} junk",
+        "\ud800",
+        '{"schema_version":NaN}',
+        '{"schema_version":Infinity}',
+        '{"schema_version":1e999}',
+        '{"kind":"general_sketch_ui_draft","kind":"general_sketch_ui_draft"}',
+        "[" * 33 + "0" + "]" * 33,
+        '{"schema_version":' + "9" * 129 + "}",
+    ],
+)
+def test_arc_codec_strict_json_boundaries(raw):
+    with pytest.raises(s.SnapshotError):
+        s.loads(raw)
+
+
+def test_nested_duplicate_invalid_unicode_nonfinite_and_shared_container_expansion():
+    state = capable()
+    state.begin_arc(d.PointSeed(0, 0))
+    state.observe_arc(d.PointSeed(5, 0))
+    raw = s.dumps(state)
+    for changed in (
+        raw.replace('"phase":"start"', '"phase":"start","phase":"start"'),
+        raw.replace('"position":[5,0]', '"position":[NaN,0]'),
+        raw.replace('"tool":"Arc"', '"tool":"Arc\\ud800"'),
+    ):
+        assert changed != raw
+        with pytest.raises(s.SnapshotError):
+            s.loads(changed)
+    shared = ["x" * 1024] * 1024
+    ui = state.ui_payload()
+    ui["proposal"]["observation"] = {"kind": "new", "position": [shared, shared]}
+    with pytest.raises(d.DraftError):
+        a.GeneralSketchAuthoringState(state.command_draft, ui, ui_version=2)
+    assert s.dumps(state) == raw
+
+
+def test_arc_snapshot_budget_utf8_stale_base_and_failed_staged_promotion_are_atomic(monkeypatch):
+    old = a.GeneralSketchAuthoringState(d.GeneralSketchDraft(BASE))
+    original = v2.dumps(old)
+    promoted = old.promote_arc_capability()
+    promoted.begin_arc(d.PointSeed(-1e6, 1e6))
+    promoted.observe_arc(d.PointSeed(1e6, -1e6))
+    raw = s.dumps(promoted)
+    size = len(raw.encode())
+    assert size > len(raw)
+    monkeypatch.setattr(s, "MAX_SNAPSHOT_BYTES", size)
+    assert s.dumps(promoted) == raw and s.loads(raw)
+    monkeypatch.setattr(s, "MAX_SNAPSHOT_BYTES", size - 1)
+    with pytest.raises(s.SnapshotError, match="byte limit"):
+        s.dumps(promoted)
+    with pytest.raises(s.SnapshotError, match="byte limit"):
+        s.loads(raw)
+    assert v2.dumps(old) == original
+    monkeypatch.setattr(s, "MAX_SNAPSHOT_BYTES", 8 * 1024 * 1024)
+    for changed in (BASE + " ", BASE.rstrip(), BASE.replace('"doc"', '"other"')):
+        with pytest.raises(s.SnapshotError, match="different committed document"):
+            s.restore(raw, changed)
+    assert s.dumps(promoted) == raw
+
+
+def test_arc_ui_revision_exhaustion_and_invalid_observations_are_atomic():
+    state = capable()
+    state.begin_arc(d.PointSeed(-0.0, 0))
+    state.choose_arc_start(d.PointSeed(5, 0))
+    state.observe_arc(d.PointSeed(0, 7.5))
+    state._ui["revision"] = 2**53 - 1
+    before = s.dumps(state)
+    assert not state.observe_arc(d.PointSeed(0, 7.5))
+    for action in (
+        lambda: state.observe_arc(d.PointSeed(0, 8)),
+        lambda: state.reverse_arc_proposal(),
+        lambda: state.cancel_proposal(),
+        lambda: state.observe_arc(d.PointSeed(True, 7)),
+        lambda: state.observe_arc(d.PointSeed(float("nan"), 0)),
+    ):
+        with pytest.raises(d.DraftError):
+            action()
+        assert s.dumps(state) == before
+    assert roundtrip(state).ui_revision == 2**53 - 1
+
+
+def test_invalid_raw_radius_text_keeps_exact_annotations_history_and_no_authority():
+    state, (_, _, _, arc, relation) = arc_state()
+    state.place_annotation(relation, (-0.0, 7))
+    state.command_draft.begin_edit(relation)
+    state.command_draft.update_edit(" \t半径 + ( 🛠\n")
+    restored = roundtrip(state)
+    assert checkpoint(restored) == checkpoint(state)
+    assert restored.command_draft.pending_edit.raw_text == " \t半径 + ( 🛠\n"
+    assert restored.command_draft.pending_edit.source == "radius"
+    assert restored.annotations[relation]["refs"] == [arc]
+    assert not restored.command_draft.has_current_solution
+    assert not restored.command_draft.has_verified_trial
+    with pytest.raises(d.DraftError):
+        restored.command_draft.accept_edit()
+
+
+def test_legacy_deterministic_writer_bytes_match_prechange_baseline_digest():
+    # Baseline ce5b50bb011b3949a6599c7cbc28d31024805e0a, independently extracted
+    # before implementation: fourteen envelope1/2 outputs over seven old states.
+    result = {}
+
+    def save(name, state):
+        result[name] = {"envelope1": v1.dumps(state.command_draft), "envelope2": v2.dumps(state)}
+
+    state = a.GeneralSketchAuthoringState(d.GeneralSketchDraft(BASE))
+    save("empty", state)
+    p, q, _ = state.command_draft.execute(
+        d.AddLine(d.PointSeed(-0.0, 0), d.PointSeed(3, 4))
+    ).entity_ids
+    _, circle = state.command_draft.execute(d.AddCircle(d.PointSeed(8, 2), 4.125)).entity_ids
+    radius = state.command_draft.execute(
+        d.AddRelation("radius", (circle,), value="radius")
+    ).constraint_id
+    state.select((("point", p), ("circle", circle)))
+    state.place_annotation(radius, (-0.0, 4))
+    save("legacy_geometry", state)
+    state.begin_line(d.PointRef(q), (3, -0.0))
+    save("line_proposal", state)
+    state.cancel_proposal()
+    state.begin_circle(d.PointSeed(1.0, -0.0), 0)
+    save("circle_proposal", state)
+    state.command_draft.begin_edit(radius)
+    state.command_draft.update_edit(" \t半径 + ( 🛠\n")
+    save("raw_pending", state)
+    state.command_draft.cancel_edit()
+    state.cancel_proposal()
+    state.command_draft.undo()
+    save("retained_redo", state)
+    state.command_draft.execute(d.AddPoint(d.PointSeed(1, 2)))
+    save("branched_tombstone", state)
+    fixture = json.dumps(result, ensure_ascii=False, sort_keys=True, indent=2) + "\n"
+    assert (
+        hashlib.sha256(fixture.encode()).hexdigest()
+        == "60480bcb295f6d2dca7a229cbfa6a2cac3327a5a8a994cd583816024d3ba5c43"
+    )
+
+
+def test_new_codec_and_explicit_dispatch_are_native_free():
+    script = f"""import importlib, sys, types
+p = types.ModuleType("pure_arc_ui")
+p.__path__ = [{str(ROOT / "blender_addon/mechanical_cad_blender")!r}]
+sys.modules["pure_arc_ui"] = p
+importlib.import_module("pure_arc_ui.general_arc_authoring_store")
+importlib.import_module("pure_arc_ui.draft_dispatch")
+assert not any(name == "bpy" or name.startswith(("OCP", "slvs", "mechanical_cad.")) for name in sys.modules)
+assert "subprocess" not in sys.modules
+"""
+    subprocess.run([sys.executable, "-c", script], check=True, capture_output=True, text=True)
+
+
+@pytest.mark.parametrize("schema", [1, 2, 3])
+def test_existing_schema_empty_arcs_and_legacy_field_presence_are_not_normalized(schema):
+    source = d.GeneralSketchDraft(BASE)
+    source.execute(d.AddLine(d.PointSeed(-0.0, 1), d.PointSeed(5.0, 2)))
+    doc = source.candidate()
+    sketch = doc["features"][0]["sketch"]
+    sketch["schema_version"] = schema
+    if schema == 1:
+        sketch.pop("circles")
+    elif schema == 3:
+        sketch["arcs"] = []
+    base = json.dumps(doc, ensure_ascii=False, indent=3) + "\n"
+    draft = d.GeneralSketchDraft(
+        base, source.feature_id, True, journal_version=3 if schema == 3 else 2
+    )
+    if schema == 3:
+        state = a.GeneralSketchAuthoringState(draft, ui_version=2)
+    else:
+        state = a.GeneralSketchAuthoringState(draft).promote_arc_capability()
+    state.begin_arc(d.PointRef(sketch["points"][0]["id"]))
+    restored = s.restore(s.dumps(state), base)
+    assert restored.document_json == base
+    assert d._json(restored.command_draft.sketch) == d._json(sketch)
+    assert restored.command_draft.sketch["schema_version"] == schema
+    assert ("circles" in restored.command_draft.sketch) == (schema != 1)
+    assert ("arcs" in restored.command_draft.sketch) == (schema == 3)
+    assert math.copysign(1, restored.command_draft.sketch["points"][0]["u"]) == -1
+    assert type(restored.command_draft.sketch["points"][0]["v"]) is int
+    assert type(restored.command_draft.sketch["points"][1]["u"]) is float
+    assert restored.command_draft.checkpoint_payload()["journal"]["entries"] == []
+
+
+def test_imported_arc_source_proves_point_roles_and_radius_without_history_rewriting():
+    source, (center, start, end, arc, relation) = arc_state()
+    base = json.dumps(source.candidate(), ensure_ascii=False, indent=2) + "\n"
+    draft = d.GeneralSketchDraft(base, source.feature_id, True, journal_version=3)
+    state = a.GeneralSketchAuthoringState(draft, ui_version=2)
+    before = draft.checkpoint_payload()
+    state.select((("arc", arc),))
+    state.place_annotation(relation, (2, 4))
+    for point, role in ((center, "center"), (start, "start"), (end, "end")):
+        assert state.existing_point(
+            point, source_kind="arc", source_id=arc, role=role
+        ) == d.PointRef(point)
+    restored = s.restore(s.dumps(state), base)
+    assert restored.command_draft.checkpoint_payload() == before
+    assert restored.status.annotations[0].available
+    assert restored.document_json == base
+    assert restored.command_draft.checkpoint_payload()["journal"]["entries"] == []
+
+
+def test_ui2_uses_unchanged_selection_annotation_and_raw_text_caps(monkeypatch):
+    state, (center, _, _, arc, relation) = arc_state()
+    before = s.dumps(state)
+    monkeypatch.setattr(a, "MAX_SELECTION", 1)
+    with pytest.raises(d.DraftError):
+        state.select((("arc", arc), ("point", center)))
+    assert s.dumps(state) == before
+    monkeypatch.setattr(a, "MAX_ANNOTATIONS", 0)
+    with pytest.raises(d.DraftError, match="Too many"):
+        state.place_annotation(relation, (0, 2))
+    assert s.dumps(state) == before
+    state.command_draft.begin_edit(relation)
+    state.command_draft.update_edit("x" * (64 * 1024))
+    raw_before = s.dumps(state)
+    assert roundtrip(state).command_draft.pending_edit.raw_text == "x" * (64 * 1024)
+    with pytest.raises(d.DraftError):
+        state.command_draft.update_edit("x" * (64 * 1024 + 1))
+    assert s.dumps(state) == raw_before
+
+
+def test_capability_promotion_at_exhausted_ui_revision_does_not_spend_revision():
+    old = a.GeneralSketchAuthoringState(d.GeneralSketchDraft(BASE))
+    old._ui["revision"] = 2**53 - 1
+    old_text = v2.dumps(old)
+    promoted = old.promote_arc_capability()
+    assert promoted.ui_revision == old.ui_revision == 2**53 - 1
+    assert promoted.revision == old.revision == 0
+    assert promoted.command_draft.checkpoint_payload()["next_id"] == 1
+    assert v2.dumps(old) == old_text
+    with pytest.raises(d.DraftError, match="UI revision"):
+        promoted.select_tool("Arc")
+    assert roundtrip(promoted).ui_revision == 2**53 - 1
+
+
+def test_arc_binding_kind_and_annotation_extra_authority_fields_are_rejected():
+    state, (_, _, _, arc, relation) = arc_state()
+    state.select((("arc", arc),))
+    state.place_annotation(relation, (1, 2))
+    original = s.dumps(state)
+    for kind in ("circle", "line", "point", "constraint"):
+        value = json.loads(original)
+        value["ui"]["selection"][0]["kind"] = kind
+        with pytest.raises(s.SnapshotError):
+            s.loads(json.dumps(value))
+    for field, content in (
+        ("target_kind", "arc"),
+        ("radius", 5),
+        ("direction", "cw"),
+        ("sweep", 90),
+    ):
+        value = json.loads(original)
+        value["ui"]["annotations"][relation][field] = content
+        with pytest.raises(s.SnapshotError):
+            s.loads(json.dumps(value))
+    assert s.dumps(state) == original
+
+
+def test_live_dispatch_reads_restores_and_emits_only_the_explicit_capable_envelope():
+    dispatch = importlib.import_module(PACKAGE + ".draft_dispatch")
+    state = capable()
+    state.begin_arc(d.PointSeed(0, 0))
+    raw = s.dumps(state)
+    before = checkpoint(state)
+    assert dispatch.inspect(raw).schema_version == 3
+    assert dispatch.dumps(state) == raw
+    restored = dispatch.restore(raw, BASE)
+    assert checkpoint(restored) == before and s.dumps(restored) == raw
+    assert checkpoint(dispatch.clone(state)) == before
+    assert not restored.command_draft.has_current_solution
+    # A capable command draft alone cannot be miswritten as legacy envelope1.
+    with pytest.raises(dispatch.SnapshotError):
+        dispatch.dumps(state.command_draft)
+    assert checkpoint(state) == before
+    assert s.dumps(state) == raw

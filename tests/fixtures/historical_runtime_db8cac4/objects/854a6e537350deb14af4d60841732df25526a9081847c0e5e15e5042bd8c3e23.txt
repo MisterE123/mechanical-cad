@@ -1,0 +1,474 @@
+"""Atomic Blender class registration, persisted-state rebinding and cleanup.
+
+Registration may run under Blender restricted data access, so existing documents
+are rebound through a safe deferred timer when scene data is not yet available."""
+
+import importlib
+import sys
+from pathlib import Path
+
+import bpy
+from bpy.app.handlers import persistent
+from bpy.props import PointerProperty
+
+from . import (
+    assembly_job_ui,
+    assembly_joint_viewport,
+    assembly_operators,
+    assembly_properties,
+    assembly_state,
+    assembly_ui,
+    assembly_verification_ui,
+    backend_runtime,
+    constraint_ui,
+    document_state,
+    general_viewport,
+    viewport_sketch,
+    workspace,
+    workspace_ui,
+)
+from .common import MIN_BLENDER_VERSION
+from .display import _hide_owned
+from .document_state import _populate_document, _read_document
+from .geometry_operations import MCAD_OT_check_geometry, MCAD_OT_export_step, MCAD_OT_export_stl
+from .help_ui import MCAD_OT_help
+from .operators import (
+    MCAD_OT_activate_feature,
+    MCAD_OT_circle,
+    MCAD_OT_cut,
+    MCAD_OT_extrude,
+    MCAD_OT_focus,
+    MCAD_OT_load,
+    MCAD_OT_new_demo,
+    MCAD_OT_new_document,
+    MCAD_OT_rectangle,
+    MCAD_OT_regenerate,
+    MCAD_OT_save,
+    MCAD_OT_show_scene,
+)
+from .panels import MCAD_PT_main, MCAD_UL_features
+from .properties import MCAD_Feature, MCAD_Parameter, MCAD_Preferences, MCAD_State
+from .runtime_bundle_launch import LAUNCH_CONSTANT_FIELDS
+
+
+def _poll_bundle_setup():
+    return 0.1 if backend_runtime.poll_bundled_setup() else None
+
+
+def _stop_bundle_setup():
+    # Cancel before unregistering RNA; keep the original worker in backend_runtime
+    # until it confirms cleanup, including across a quick disable/re-enable.
+    try:
+        backend_runtime.stop_bundled_setup()
+    except Exception as exc:
+        # Never skip native-job retirement because independent setup cleanup
+        # failed. Setup revokes its policy before attempting cancellation.
+        print("Mechanical CAD bundled setup cleanup:", exc)
+    finally:
+        if bpy.app.timers.is_registered(_poll_bundle_setup):
+            bpy.app.timers.unregister(_poll_bundle_setup)
+
+
+def _start_bundle_setup():
+    if not __package__.startswith("bl_ext."):
+        return
+    if sys.platform == "win32":
+        backend_runtime.fail_bundled_setup(
+            "Windows bundled backend setup remains unavailable pending native qualification."
+        )
+        return
+    try:
+        generated = importlib.import_module(__package__ + ".standalone_launch_constants")
+        constants = {key: getattr(generated, key) for key in LAUNCH_CONSTANT_FIELDS}
+        package = str(Path(__file__).resolve().parent)
+        cache = bpy.utils.extension_path_user(__package__, path="backend_runtime", create=True)
+        pending = backend_runtime.begin_bundled_setup(package, cache, constants)
+    except Exception as exc:
+        backend_runtime.fail_bundled_setup("Bundled backend setup failed: " + str(exc))
+        return
+    if pending and not bpy.app.timers.is_registered(_poll_bundle_setup):
+        # File load may happen while first-use extraction is running. It must
+        # not orphan the bounded main-thread completion transfer.
+        bpy.app.timers.register(_poll_bundle_setup, first_interval=0.1, persistent=True)
+
+
+def _owns_scene_pointer(name, cls):
+    if not getattr(cls, "is_registered", False):
+        return False
+    try:
+        prop = bpy.types.Scene.bl_rna.properties[name]
+        return prop.fixed_type == cls.bl_rna
+    except (KeyError, AttributeError, ReferenceError):
+        return False
+
+
+_SCENE_POINTERS = (
+    ("mechanical_cad", MCAD_State),
+    ("mechanical_cad_assembly", assembly_properties.MCAD_AssemblyState),
+)
+
+
+def _owns_scene_registration():
+    return all(_owns_scene_pointer(name, cls) for name, cls in _SCENE_POINTERS)
+
+
+def _has_scene_registration():
+    return any(hasattr(bpy.types.Scene, name) for name, _cls in _SCENE_POINTERS)
+
+
+def _invalidate_backend_evidence(reason):
+    """Retire each existing owner independently, with no native wait or solve."""
+    failures = []
+    try:
+        session = viewport_sketch.active_session()
+        if session is not None:
+            session.invalidate_backend(reason)
+    except Exception as exc:
+        failures.append("Sketch evidence: " + str(exc))
+    for label, invalidate in (
+        ("Pending work", lambda: assembly_job_ui.cancel_for_configuration(reason)),
+        ("Part evidence", lambda: document_state.invalidate_backend(reason)),
+        ("Assembly evidence", lambda: assembly_state.invalidate_backend(reason)),
+    ):
+        try:
+            # Restricted registration can expose no RNA collections. Runtime
+            # generation already revoked authority; deferred rebind marks data.
+            if label == "Pending work" or hasattr(bpy.data, "scenes"):
+                invalidate()
+        except Exception as exc:
+            failures.append(label + ": " + str(exc))
+    if failures:
+        # A failed presentation cleanup never rolls back the global generation
+        # or stops other owners from losing authority.
+        print("Mechanical CAD backend invalidation: " + "; ".join(failures))
+
+
+@persistent
+def _on_blend_load(_dummy):
+    for scene in bpy.data.scenes:
+        state = scene.mechanical_cad
+        state.sketch_notice = ""
+        if state.document_json:
+            document_state.invalidate_geometry_report(state, force=True)
+            for row in state.features:
+                if row.sketch_report_json:
+                    row.sketch_report_status = "OUTDATED"
+            state.status = "DIRTY"
+            state.error = "Saved CAD document loaded. Regenerate to verify the display."
+            _hide_owned(scene)
+    viewport_sketch.after_file_load()
+    assembly_state.after_file_load()
+    backend_runtime.revoke("Saved CAD data loaded; previous backend evidence is historical.")
+
+
+CLASSES = (
+    MCAD_Parameter,
+    MCAD_Feature,
+    MCAD_State,
+    *assembly_properties.CLASSES,
+    MCAD_Preferences,
+    MCAD_OT_new_document,
+    MCAD_OT_new_demo,
+    MCAD_OT_regenerate,
+    MCAD_OT_load,
+    MCAD_OT_save,
+    MCAD_OT_activate_feature,
+    MCAD_OT_rectangle,
+    MCAD_OT_circle,
+    MCAD_OT_extrude,
+    MCAD_OT_cut,
+    MCAD_OT_help,
+    MCAD_OT_focus,
+    MCAD_OT_show_scene,
+    MCAD_OT_check_geometry,
+    MCAD_OT_export_step,
+    MCAD_OT_export_stl,
+    MCAD_UL_features,
+    MCAD_PT_main,
+    *viewport_sketch.CLASSES,
+    *general_viewport.CLASSES,
+    *constraint_ui.CLASSES,
+    *assembly_operators.CLASSES,
+    *assembly_joint_viewport.CLASSES,
+    *assembly_job_ui.CLASSES,
+    *assembly_verification_ui.CLASSES,
+    *assembly_ui.CLASSES,
+)
+
+
+@persistent
+def _before_history_change(_dummy):
+    _retire_native_jobs(
+        "History changed; pending native work cancelled.",
+        viewport_sketch.before_history_change,
+    )
+    backend_runtime.revoke("History is changing; previous backend evidence is stale.")
+    assembly_state.before_history_change()
+    workspace.cancel_pending_setup()
+
+
+@persistent
+def _after_history_change(_dummy):
+    viewport_sketch.after_history_change()
+    assembly_state.after_history_change()
+    backend_runtime.revoke("History changed; verify the restored CAD data again.")
+
+
+@persistent
+def _before_blend_save(_dummy):
+    try:
+        viewport_sketch.checkpoint_active()
+        assembly_state.before_file_save()
+    except Exception as exc:
+        session = viewport_sketch.active_session()
+        if session:
+            session.scene.mechanical_cad.sketch_notice = (
+                "The current draft could not be saved: " + str(exc)
+            )
+        print("Mechanical CAD draft save:", exc)
+
+
+@persistent
+def _before_blend_load(_dummy):
+    _retire_native_jobs(
+        "Opening a file; pending native work cancelled.",
+        lambda: viewport_sketch.suspend_active("Opening a file"),
+    )
+    backend_runtime.revoke("Opening a file; previous backend evidence is stale.")
+
+
+def _retire_native_jobs(reason, retire_owner):
+    # Retire the RNA-bearing input/publication capability before either adapter
+    # waits, and before native load/history/disable can free its original data.
+    # Even an unexpected owner failure cannot skip owned-process cancellation.
+    try:
+        assembly_joint_viewport.cancel_active(reason)
+    except Exception as exc:
+        print("Mechanical CAD visual joint cleanup:", str(exc))
+    try:
+        retire_owner()
+    except Exception as exc:
+        print("Mechanical CAD sketch owner cleanup:", str(exc))
+        try:
+            _cleanup_active_sketch()
+        except Exception as cleanup_exc:
+            print("Mechanical CAD sketch input detachment:", str(cleanup_exc))
+    return assembly_job_ui.cancel_all(reason, detach=True)
+
+
+def _cleanup_active_sketch():
+    session = viewport_sketch.active_session()
+    if session:
+        session.cleanup()
+
+
+@persistent
+def _before_blender_exit(_dummy):
+    # Blender exits before daemon transport workers can finish on their own.
+    # Cancel only our owned children and wait a bounded total cleanup deadline.
+    # No scene, saved data or unrelated process is modified by this hook.
+    try:
+        _stop_bundle_setup()
+        if not _retire_native_jobs(
+            "Blender is exiting; pending native work cancelled.", _cleanup_active_sketch
+        ):
+            print("Mechanical CAD: native process cleanup did not finish before the exit deadline.")
+    except Exception as exc:
+        print("Mechanical CAD: exit cleanup failed:", exc)
+
+
+@persistent
+def _on_assembly_depsgraph(scene, depsgraph):
+    assembly_state.depsgraph_update(scene, depsgraph)
+
+
+_HISTORY_HANDLERS = (
+    (bpy.app.handlers.load_pre, _before_blend_load),
+    (bpy.app.handlers.undo_pre, _before_history_change),
+    (bpy.app.handlers.redo_pre, _before_history_change),
+    (bpy.app.handlers.undo_post, _after_history_change),
+    (bpy.app.handlers.redo_post, _after_history_change),
+    (bpy.app.handlers.save_pre, _before_blend_save),
+    (bpy.app.handlers.depsgraph_update_post, _on_assembly_depsgraph),
+) + (
+    ((bpy.app.handlers.exit_pre, _before_blender_exit),)
+    if hasattr(bpy.app.handlers, "exit_pre")
+    else ()
+)
+
+
+def _rebind_existing_documents():
+    """Refresh RNA callbacks only after Blender permits access to scene data."""
+    if not hasattr(bpy.data, "scenes") or not hasattr(bpy.types.Scene, "mechanical_cad"):
+        return False
+    # Rebind persisted collections to current property callbacks after an
+    # add-on reload; old RNA collection instances can keep old bindings.
+    for scene in bpy.data.scenes:
+        state = scene.mechanical_cad
+        if not state.document_json:
+            continue
+        saved = {
+            key: getattr(state, key)
+            for key in (
+                "status",
+                "error",
+                "last_action_error",
+                "sketch_notice",
+                "volume",
+                "feature_index",
+                "geometry_status",
+                "geometry_message",
+            )
+        }
+        feature_fields = (
+            "status",
+            "error",
+            "sketch_report_json",
+            "sketch_report_status",
+            "sketch_document_json",
+        )
+        feature_states = {
+            row.feature_id: tuple(getattr(row, key) for key in feature_fields)
+            for row in state.features
+        }
+        document = _read_document(state)
+        original_json = state.document_json
+        try:
+            _populate_document(scene, document, state.document_path)
+        finally:
+            # Rebinding RNA callbacks is not a canonical edit. Saved sketch
+            # bases and verification receipts bind exact source bytes.
+            state.document_json = original_json
+        for key, value in saved.items():
+            setattr(state, key, value)
+        for row in state.features:
+            if row.feature_id in feature_states:
+                for key, value in zip(feature_fields, feature_states[row.feature_id], strict=True):
+                    setattr(row, key, value)
+        document_state.invalidate_backend(
+            "Add-on reloaded; saved CAD reports need fresh verification.", scene=scene
+        )
+    return assembly_state.rebind_existing()
+
+
+_DEFERRED_REBIND_ATTEMPTS = 0
+
+
+def _deferred_rebind():
+    global _DEFERRED_REBIND_ATTEMPTS
+    if not hasattr(bpy.types.Scene, "mechanical_cad"):
+        return None
+    if _rebind_existing_documents():
+        _DEFERRED_REBIND_ATTEMPTS = 0
+        return None
+    _DEFERRED_REBIND_ATTEMPTS += 1
+    return 0.1 if _DEFERRED_REBIND_ATTEMPTS < 30 else None
+
+
+def register(*, rebind=None):
+    """Idempotent normal registration, including repeated test calls."""
+    if bpy.app.version < MIN_BLENDER_VERSION:
+        raise RuntimeError(
+            "Mechanical CAD requires Blender 5.2 or newer. "
+            "Use the qualified Blender 5.2.2 LTS runtime; older versions lack "
+            "the native exit cleanup required by cancellable assembly checks."
+        )
+    if _has_scene_registration():
+        if _owns_scene_registration():
+            return
+        raise RuntimeError(
+            "Another Mechanical CAD version is enabled. Disable it before enabling "
+            "this extension. Saved documents and drafts are not changed."
+        )
+    backend_runtime.configure_invalidation(None)
+    backend_runtime.new_lifetime()
+    rebind = rebind or _rebind_existing_documents
+    registered = []
+    created_pointers = []
+    try:
+        for cls in CLASSES:
+            bpy.utils.register_class(cls)
+            registered.append(cls)
+        bpy.types.Scene.mechanical_cad = PointerProperty(type=MCAD_State)
+        created_pointers.append(("mechanical_cad", MCAD_State))
+        bpy.types.Scene.mechanical_cad_assembly = PointerProperty(
+            type=assembly_properties.MCAD_AssemblyState
+        )
+        created_pointers.append(("mechanical_cad_assembly", assembly_properties.MCAD_AssemblyState))
+        backend_runtime.configure_invalidation(_invalidate_backend_evidence)
+        _start_bundle_setup()
+        if _on_blend_load not in bpy.app.handlers.load_post:
+            bpy.app.handlers.load_post.append(_on_blend_load)
+        workspace.register()
+        workspace.set_draft_handlers(
+            viewport_sketch.active_session,
+            viewport_sketch.cancel_active,
+            suspend=viewport_sketch.suspend_active,
+            suspended=viewport_sketch.suspended_draft,
+            recovery=viewport_sketch.draft_recovery_notice,
+        )
+        workspace_ui.register()
+        for handlers, callback in _HISTORY_HANDLERS:
+            if callback not in handlers:
+                handlers.append(callback)
+        if not rebind() and not bpy.app.timers.is_registered(_deferred_rebind):
+            bpy.app.timers.register(_deferred_rebind, first_interval=0.1)
+    except Exception:
+        _stop_bundle_setup()
+        _retire_native_jobs(
+            "Registration failed; pending native work cancelled.",
+            lambda: viewport_sketch.cancel_active("Registration failed"),
+        )
+        backend_runtime.revoke("Registration failed; backend evidence was revoked.")
+        backend_runtime.configure_invalidation(None)
+        workspace_ui.unregister()
+        workspace.unregister()
+        for handlers, callback in _HISTORY_HANDLERS:
+            if callback in handlers:
+                handlers.remove(callback)
+        if _on_blend_load in bpy.app.handlers.load_post:
+            bpy.app.handlers.load_post.remove(_on_blend_load)
+        if bpy.app.timers.is_registered(_deferred_rebind):
+            bpy.app.timers.unregister(_deferred_rebind)
+        assembly_state.clear_runtime()
+        for name, cls in reversed(created_pointers):
+            if _owns_scene_pointer(name, cls):
+                delattr(bpy.types.Scene, name)
+        for cls in reversed(registered):
+            bpy.utils.unregister_class(cls)
+        raise
+
+
+def unregister():
+    # A failed attempt to enable beside a legacy/foreign owner must not remove
+    # that owner's RNA, callbacks, preferences or persisted CAD data.
+    if _has_scene_registration() and not _owns_scene_registration():
+        return
+    _stop_bundle_setup()
+    _retire_native_jobs(
+        "Add-on disabled; pending native work cancelled.",
+        lambda: viewport_sketch.suspend_active("Add-on disabled"),
+    )
+    backend_runtime.revoke("Add-on disabled; backend evidence was revoked.")
+    backend_runtime.configure_invalidation(None)
+    workspace_ui.unregister()
+    workspace.unregister()
+    for handlers, callback in _HISTORY_HANDLERS:
+        if callback in handlers:
+            handlers.remove(callback)
+    document_state._REPLAY_RUNNING = False
+    assembly_state.clear_runtime()
+    if bpy.app.timers.is_registered(_deferred_rebind):
+        bpy.app.timers.unregister(_deferred_rebind)
+    for handler in list(bpy.app.handlers.load_post):
+        if handler is _on_blend_load or (
+            getattr(handler, "__module__", "") == __name__
+            and getattr(handler, "__name__", "") == "_on_blend_load"
+        ):
+            bpy.app.handlers.load_post.remove(handler)
+    for name, cls in reversed(_SCENE_POINTERS):
+        if _owns_scene_pointer(name, cls):
+            delattr(bpy.types.Scene, name)
+    for cls in reversed(CLASSES):
+        if getattr(cls, "is_registered", False):
+            bpy.utils.unregister_class(cls)

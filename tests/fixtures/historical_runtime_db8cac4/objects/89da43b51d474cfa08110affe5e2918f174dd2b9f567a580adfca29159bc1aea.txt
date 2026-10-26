@@ -1,0 +1,167 @@
+"""Arc records cannot leak through unimplemented legacy profile/result contracts."""
+
+import json
+from dataclasses import replace
+from pathlib import Path
+
+import pytest
+
+from mechanical_cad.actions import run_geometry_action
+from mechanical_cad.assembly_model import AssemblyDocument, replace_source
+from mechanical_cad.assembly_service import preflight_source_update, run_assembly_action
+from mechanical_cad.engine import regenerate, validate_result_version
+from mechanical_cad.errors import CADException
+from mechanical_cad.model import Document, Feature
+from mechanical_cad.part_snapshot import canonical_snapshot
+from mechanical_cad.profile_region import classify_profile, closed_profile
+from mechanical_cad.sidecar import process_request
+from mechanical_cad.sketch_model import Arc, Point, SketchDefinition, resolve_sketch
+from mechanical_cad.sketch_protocol import needs_numeric_policy
+from mechanical_cad.sketch_service import solve_sketch
+
+ROOT = Path(__file__).resolve().parents[2]
+
+
+def definition():
+    return SketchDefinition(
+        "arc_sketch",
+        (Point("c", 0, 0), Point("s", 5, 0), Point("e", 0, 5)),
+        (),
+        (),
+        schema_version=3,
+        arcs=(Arc("arc", "c", "s", "e", "ccw"),),
+    )
+
+
+def document():
+    return Document(
+        "user_part",
+        "Arc core preview",
+        {},
+        (
+            Feature("profile", "sketch_constrained", "Arc", sketch=definition()),
+            Feature("pad", "extrude", "Pad", {"length": 10}, {"profile": "profile"}),
+        ),
+        "pad",
+        schema_version=2,
+    )
+
+
+class ForbiddenKernel:
+    def __getattr__(self, name):
+        raise AssertionError(f"Native work must not start: {name}")
+
+
+@pytest.mark.parametrize("version", [1, 2])
+def test_existing_replay_envelopes_reject_arc_capability_before_native(version):
+    doc = document()
+    before = doc.to_json()
+    for operation in (
+        lambda: validate_result_version(doc, version),
+        lambda: regenerate(doc, ForbiddenKernel(), result_version=version),
+    ):
+        with pytest.raises(CADException, match="result_version 3") as exc:
+            operation()
+        assert exc.value.code == "unsupported_result_version"
+    assert doc.to_json() == before
+
+
+@pytest.mark.parametrize("action", ["check_geometry", "export_step", "export_stl"])
+def test_geometry_actions_reject_before_native_and_preserve_files(action, tmp_path):
+    target = tmp_path / "sentinel.output"
+    target.write_bytes(b"previous accepted export")
+    response = run_geometry_action(
+        document(),
+        action,
+        result_version=2,
+        kernel=ForbiddenKernel(),
+        destination=target if action.startswith("export_") else None,
+    )
+    assert not response["ok"]
+    assert response["error"]["code"] == "unsupported_result_version"
+    assert response["result"] is None
+    assert target.read_bytes() == b"previous accepted export"
+
+
+def test_solve_and_canonical_services_fail_before_calling_native(monkeypatch):
+    def forbidden(*args, **kwargs):
+        raise AssertionError("Solver must not run before compatible result negotiation")
+
+    monkeypatch.setattr("mechanical_cad.sketch_service.evaluate_sketch", forbidden)
+    for operation in (
+        lambda: solve_sketch(document(), "profile"),
+        lambda: canonical_snapshot(document().to_dict()),
+    ):
+        with pytest.raises(CADException) as exc:
+            operation()
+        assert exc.value.code == "unsupported_result_version"
+    request = {
+        "protocol_version": 1,
+        "action": "solve_sketch",
+        "result_version": 2,
+        "document": document().to_dict(),
+        "feature_id": "profile",
+    }
+    response = process_request(request)
+    assert not response["ok"] and response["result"] is None
+    assert response["error"]["code"] == "unsupported_result_version"
+    assert needs_numeric_policy(request)
+    assert needs_numeric_policy({"document": document().to_dict()})
+
+
+@pytest.mark.parametrize("classifier", [classify_profile, closed_profile])
+def test_profile_classifier_never_silently_ignores_arcs(classifier):
+    numeric = resolve_sketch(definition(), {})
+    with pytest.raises(CADException) as exc:
+        classifier(numeric)
+    assert exc.value.code == "unsupported_profile_version"
+    # Opt-in capability is guarded even before an arc has been added.
+    with pytest.raises(CADException) as exc:
+        classifier(replace(numeric, arcs=()))
+    assert exc.value.code == "unsupported_profile_version"
+
+
+def test_assembly_preflights_all_sources_before_geometry_and_update():
+    original = AssemblyDocument.from_json(
+        (ROOT / "examples/reused_blocks.mcad-assembly.json").read_text()
+    )
+    before = original.to_json()
+    candidate = replace_source(original, "user_part", document())
+    for version in (1, 2):
+        response = run_assembly_action(
+            candidate, "assembly_replay", result_version=version, kernel=ForbiddenKernel()
+        )
+        assert not response["ok"]
+        assert response["error"]["code"] == "unsupported_result_version"
+        assert response["result"]["source_replays"] == []
+        update = preflight_source_update(
+            original, "user_part", document(), result_version=version, kernel=ForbiddenKernel()
+        )
+        assert not update["ok"] and update["update"]["candidate"] is None
+        assert update["error"]["code"] == "unsupported_result_version"
+    assert original.to_json() == before
+
+
+def test_new_core_documents_roundtrip_without_claiming_service_support():
+    doc = document()
+    text = doc.to_json()
+    assert Document.from_json(text).to_json() == text
+    assert Document.from_dict(doc.to_dict()).content_hash == doc.content_hash
+    # Numeric-token policy belongs to the new capability, not only schema 2.
+    raw = json.loads(text)
+    raw["features"][0]["sketch"]["points"][0]["u"] = "numeric-token-marker"
+    long_number = "0." + "0" * 130 + "1"
+    hostile = json.dumps(raw).replace('"numeric-token-marker"', long_number)
+    with pytest.raises(CADException) as exc:
+        Document.from_json(hostile)
+    assert exc.value.code == "resource_limit"
+
+
+@pytest.mark.parametrize("action", ["replay", "check_geometry", "canonical_snapshot"])
+def test_sidecar_rejects_arc_capability_without_silent_downgrade(action):
+    request = {"protocol_version": 1, "action": action, "document": document().to_dict()}
+    if action != "canonical_snapshot":
+        request["result_version"] = 2
+    with pytest.raises(CADException) as exc:
+        process_request(request)
+    assert exc.value.code == "unsupported_result_version"

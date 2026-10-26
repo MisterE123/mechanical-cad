@@ -1,0 +1,784 @@
+"""Transactional viewport rectangle sketches backed by the real sketch solver.
+
+Mouse placement and dimension edits remain separate from canonical history.
+Navigation suspends a pure scene-owned UI snapshot and releases every timer,
+overlay and cursor override. Resume requires the exact base revision. Finish is
+the sole canonical transaction; no draft preview enters the last-good cache.
+"""
+
+import json
+import textwrap
+import uuid
+
+import bpy
+from bpy.props import BoolProperty, IntProperty, StringProperty
+from bpy.types import Operator
+from bpy_extras import view3d_utils
+
+from . import (
+    backend_runtime,
+    document_state,
+    draft_dispatch,
+    execution_lease,
+    operation_contracts,
+    sketch_overlay,
+    workspace,
+    workspace_ui,
+)
+from .common import MM_TO_METERS, _state
+from .display import _focus_display
+from .help_ui import _draw_feature_help, _feature_help_next, _feature_help_previous
+from .sketch_draft import DraftError, RectangleDraft
+from .sketch_session import (
+    SketchSession,
+    _discard_stored,
+    _tag_redraw,
+    active_session,
+    editor_operator,
+    suspended_draft,
+)
+from .sketch_session import (
+    after_file_load as after_file_load,
+)
+from .sketch_session import (
+    after_history_change as after_history_change,
+)
+from .sketch_session import (
+    before_history_change as before_history_change,
+)
+from .sketch_session import (
+    cancel_active as cancel_active,
+)
+from .sketch_session import (
+    checkpoint_active as checkpoint_active,
+)
+from .sketch_session import (
+    draft_recovery_notice as draft_recovery_notice,
+)
+from .sketch_session import (
+    suspend_active as suspend_active,
+)
+
+NAVIGATION_EVENTS = {
+    "MIDDLEMOUSE",
+    "WHEELUPMOUSE",
+    "WHEELDOWNMOUSE",
+    "TRACKPADPAN",
+    "TRACKPADZOOM",
+    "NDOF_MOTION",
+    "NUMPAD_0",
+    "NUMPAD_1",
+    "NUMPAD_2",
+    "NUMPAD_3",
+    "NUMPAD_4",
+    "NUMPAD_5",
+    "NUMPAD_6",
+    "NUMPAD_7",
+    "NUMPAD_8",
+    "NUMPAD_9",
+    "NUMPAD_PERIOD",
+}
+
+
+def _draft_error_text(error):
+    message = str(error)
+    if "invalid_expression" in message or "arithmetic expression" in message.lower():
+        message += " Enter 60 for 60 mm, not 60mm; unit suffixes and conversion are unsupported. Named parameter formulas are allowed."
+    return message
+
+
+class RectangleSession(SketchSession):
+    def __init__(self, context, feature_id="", *, restored=None):
+        operation_contracts.result_version_for(
+            document_state._read_document(_state(context)), owner_role="rectangle"
+        )
+        draft = restored or RectangleDraft(
+            _state(context).document_json, feature_id=feature_id, is_edit=bool(feature_id)
+        )
+        super().__init__(context, draft, restored=restored is not None)
+        self._backend_owner = object()
+        self.popup_open = False
+        self.dimensions_input_token = ""
+        self.popup_close_timer = None
+
+    def start(self):
+        self.start_resources(
+            ((sketch_overlay.draw_lines, "POST_VIEW"), (sketch_overlay.draw_text, "POST_PIXEL")),
+            "CAD rectangle on XY: two corners; D dimensions; Enter Finish; Esc Cancel",
+        )
+
+    def _detach_input(self):
+        self.draft.invalidate_guarded()
+        self.dimensions_input_token = ""
+        timer, self.popup_close_timer = self.popup_close_timer, None
+        if timer and bpy.app.timers.is_registered(timer):
+            bpy.app.timers.unregister(timer)
+
+    @property
+    def can_finish(self):
+        return (
+            self.draft.phase == "DIMENSIONS"
+            and not self.popup_open
+            and self.draft.pending_dimensions is None
+        )
+
+    @property
+    def can_edit_dimensions(self):
+        return self.draft.phase == "DIMENSIONS"
+
+    def invalidate_backend(self, reason):
+        self.draft.invalidate_guarded()
+        if self.draft.phase == "DIMENSIONS":
+            self.draft.error = reason
+        _tag_redraw(self)
+
+    def _assert_owner(self, context, *, publishing=False):
+        if (
+            not self.alive
+            or context.scene != self.scene
+            or context.window != self.window
+            or context.workspace != self.workspace
+            or (not publishing and not self.valid_context())
+            or self.scene.mechanical_cad.sketch_draft_json != self.stored_snapshot
+        ):
+            raise DraftError("The original rectangle owner or editing context changed.")
+
+    @property
+    def evidence_is_current(self):
+        try:
+            self._assert_owner(bpy.context)
+            current = backend_runtime.capture(bpy.context)
+            return self.draft.guarded_is_current(current)
+        except (ValueError, RuntimeError, AttributeError, ReferenceError):
+            self.draft.invalidate_guarded()
+            return False
+
+    def current_solver_report(self):
+        """Read live immutable report content for drawing, without native work."""
+        if self.draft.pending_dimensions is not None:
+            return None
+        try:
+            self._assert_owner(bpy.context)
+            return self.draft._guarded_report(backend_runtime.capture(bpy.context))
+        except (ValueError, RuntimeError, TypeError, KeyError, AttributeError, ReferenceError):
+            self.draft.invalidate_guarded()
+            return None
+
+    @property
+    def has_current_solution(self):
+        return bool(self.evidence_is_current and self.draft.validated_json)
+
+    def initialize_preview(self, context):
+        """Reuse live exact-Part evidence; saved CURRENT text cannot trigger work."""
+        self._assert_owner(context)
+        if self.draft.is_edit:
+            retained = document_state.current_part_evidence(context)
+            if retained is not None:
+                evidence, owner_token = retained
+                try:
+                    return self.draft.accept_guarded_replay(
+                        self.draft.candidate(),
+                        evidence,
+                        backend_runtime.capture(context),
+                        owner_token=owner_token,
+                    )
+                except (DraftError, ValueError, TypeError) as exc:
+                    self.draft.invalidate_guarded()
+                    self.draft.error = _draft_error_text(exc)
+                    return False
+        self.draft.invalidate_guarded()
+        self.draft.error = "Preview is unverified. Apply Dimensions or Finish to run the solver."
+        return False
+
+    def solve(self, context):
+        try:
+            self._assert_owner(context)
+            self.draft.require_current(self.scene.mechanical_cad.document_json)
+            candidate = self.draft.candidate()
+            operation_contracts.result_version_for(candidate, owner_role="rectangle")
+            binding = document_state._capture_binding(context, owner_token=self._backend_owner)
+            with document_state.replay_guard(context):
+                evidence = document_state._run_sidecar(
+                    context, candidate, binding=binding, result_version=2
+                )
+            document_state._assert_binding(context, binding)
+            self.draft.require_current(self.scene.mechanical_cad.document_json)
+            accepted = self.draft.accept_guarded_replay(
+                candidate,
+                evidence,
+                backend_runtime.assert_current(binding["selection"], context),
+                owner_token=binding["owner_token"],
+                consume=True,
+            )
+            backend_runtime.assert_current(binding["selection"], context)
+            return accepted
+        except Exception as exc:
+            self.draft.error = _draft_error_text(exc)
+            self.draft.invalidate_guarded()
+            return False
+        finally:
+            _tag_redraw(self)
+
+    def finish(self, context):
+        try:
+            self._assert_owner(context)
+            if self.draft.pending_dimensions is not None:
+                raise DraftError(
+                    "Reopen Dimensions and Apply or Cancel the preserved input before Finish."
+                )
+            if self.scene.mechanical_cad.sketch_draft_json != self.stored_snapshot:
+                raise DraftError(
+                    "The saved draft changed externally. Finish was not allowed to overwrite it."
+                )
+            self.draft.require_current(self.scene.mechanical_cad.document_json)
+            candidate = self.draft.candidate()
+            operation_contracts.result_version_for(candidate, owner_role="rectangle")
+
+            accepted_snapshot = None
+
+            def validate_result(evidence, binding):
+                nonlocal accepted_snapshot
+                self._assert_owner(context)
+                self.draft.require_current(self.scene.mechanical_cad.document_json)
+                if not self.draft.accept_guarded_replay(
+                    candidate,
+                    evidence,
+                    backend_runtime.assert_current(binding["selection"], context),
+                    owner_token=binding["owner_token"],
+                ):
+                    raise DraftError(self.draft.error)
+                accepted_snapshot = draft_dispatch.dumps(self.draft)
+
+            def validate_publication():
+                self._assert_owner(context, publishing=True)
+                if draft_dispatch.dumps(self.draft) != accepted_snapshot:
+                    raise DraftError("The rectangle draft changed during publication.")
+
+            with document_state.replay_guard(context):
+                if not document_state._commit_candidate_locked(
+                    context,
+                    candidate,
+                    _state(context).document_path,
+                    validate_result=validate_result,
+                    result_version=2,
+                    validate_publication=validate_publication,
+                ):
+                    raise DraftError("The sketch transaction was not accepted.")
+            if self.draft.is_edit:
+                state = _state(context)
+                state.feature_index = next(
+                    i
+                    for i, row in enumerate(state.features)
+                    if row.feature_id == self.draft.feature_id
+                )
+        except Exception as exc:
+            self.draft.invalidate_guarded()
+            self.draft.error = "Finish rejected: " + _draft_error_text(exc)
+            _tag_redraw(self)
+            return False
+        _discard_stored(self.scene)
+        self.cleanup()
+        workspace.request_workspace(context, "PART", on_ready=_focus_display)
+        return True
+
+    def pointer_mm(self, event):
+        x, y = event.mouse_x - self.region.x, event.mouse_y - self.region.y
+        origin = view3d_utils.region_2d_to_origin_3d(self.region, self.rv3d, (x, y))
+        direction = view3d_utils.region_2d_to_vector_3d(self.region, self.rv3d, (x, y))
+        if abs(direction.z) < 1e-8:
+            raise DraftError("The view is edge-on to XY. Use top view (Numpad 7) to place corners.")
+        point = origin + direction * (-origin.z / direction.z)
+        scale = max(float(self.scene.unit_settings.scale_length), 1e-9) / MM_TO_METERS
+        return point.x * scale, point.y * scale
+
+    def over_viewport(self, event):
+        if not (
+            self.region.x <= event.mouse_x < self.region.x + self.region.width
+            and self.region.y <= event.mouse_y < self.region.y + self.region.height
+        ):
+            return False
+        for region in self.area.regions:
+            if (
+                region.type in {"UI", "TOOLS", "HEADER", "TOOL_HEADER"}
+                and region.width > 1
+                and region.x <= event.mouse_x < region.x + region.width
+                and region.y <= event.mouse_y < region.y + region.height
+            ):
+                return False
+        return True
+
+
+class MCAD_OT_rectangle_sketch(Operator):
+    bl_idname = "mcad.rectangle_sketch"
+    bl_label = "Rectangle Sketch"
+    bl_description = "Draw two XY corners; inspect real constraints and dimensions, then Finish or cancel the draft"
+    bl_options = {"REGISTER", "UNDO"}
+    feature_id: StringProperty(options={"HIDDEN", "SKIP_SAVE"})
+    resume_saved: BoolProperty(default=False, options={"HIDDEN", "SKIP_SAVE"})
+
+    @classmethod
+    def poll(cls, context):
+        return (
+            context.mode == "OBJECT"
+            and context.area
+            and context.area.type == "VIEW_3D"
+            and workspace.get_role(context) == "SKETCH"
+            and bool(_state(context).document_json)
+            and active_session() is None
+            and not document_state._REPLAY_RUNNING
+            and not execution_lease.is_busy()
+        )
+
+    def execute(self, context):
+        # Script/background entry has no initiating event; acquisition is the
+        # same checked path and still creates exactly one shared modal owner.
+        return self.invoke(context, None)
+
+    def invoke(self, context, event):
+        try:
+            restored = None
+            if self.resume_saved:
+                state = _state(context)
+                restored = draft_dispatch.restore(state.sketch_draft_json, state.document_json)
+                if type(restored) is not RectangleDraft:
+                    raise DraftError("Choose the matching editor for this saved draft.")
+            self.session = RectangleSession(context, self.feature_id, restored=restored)
+            self.session.start()
+            context.window_manager.modal_handler_add(self)
+            if self.feature_id and not self.resume_saved:
+                self.session.initialize_preview(context)
+            return {"RUNNING_MODAL"}
+        except Exception as exc:
+            if getattr(self, "session", None):
+                self.session.cleanup()
+            self.report({"ERROR"}, str(exc))
+            return {"CANCELLED"}
+
+    def modal(self, context, event):
+        session = self.session
+        if not session.valid_context():
+            if session.alive:
+                session.suspend("Workspace or editing context changed")
+            return {"CANCELLED"}
+        command, session.command = session.command, ""
+        if command == "CANCEL":
+            session.discard()
+            return {"CANCELLED"}
+        if command == "FINISH":
+            return {"FINISHED"} if session.finish(context) else {"RUNNING_MODAL"}
+        if session.popup_open:
+            return {"PASS_THROUGH"}
+        if event.type in NAVIGATION_EVENTS:
+            if event.type == "MIDDLEMOUSE":
+                session.navigation = event.value != "RELEASE"
+            return {"PASS_THROUGH"}
+        if event.type == "TIMER":
+            return {"RUNNING_MODAL"}
+        if event.type == "ESC" and event.value == "PRESS":
+            session.discard()
+            return {"CANCELLED"}
+        if not session.over_viewport(event) or workspace_ui.is_palette_event(context, event):
+            return {"PASS_THROUGH"}
+        if event.type in {"ESC", "RIGHTMOUSE"} and event.value == "PRESS":
+            session.discard()
+            return {"CANCELLED"}
+        if event.type in {"RET", "NUMPAD_ENTER"} and event.value == "PRESS":
+            return {"FINISHED"} if session.finish(context) else {"RUNNING_MODAL"}
+        if event.type == "D" and event.value == "PRESS" and session.draft.phase == "DIMENSIONS":
+            bpy.ops.mcad.sketch_dimensions("INVOKE_DEFAULT")
+            return {"RUNNING_MODAL"}
+        if (
+            event.type in {"MOUSEMOVE", "LEFTMOUSE"}
+            and not session.navigation
+            and session.draft.phase in {"FIRST_POINT", "SECOND_POINT"}
+        ):
+            try:
+                point = session.pointer_mm(event)
+                if event.type == "MOUSEMOVE":
+                    session.draft.move(point)
+                elif event.value == "PRESS":
+                    if session.draft.phase == "FIRST_POINT":
+                        session.draft.first_point(point)
+                    elif session.draft.phase == "SECOND_POINT":
+                        session.draft.second_point(point)
+            except DraftError as exc:
+                session.draft.error = str(exc)
+            _tag_redraw(session)
+        return {"RUNNING_MODAL"}
+
+    def cancel(self, context):
+        if getattr(self, "session", None) and self.session.alive:
+            self.session.suspend("Viewport operator context ended")
+
+
+def _begin_in_sketch(context, feature_id="", *, editor="mcad.general_sketch", resume_saved=False):
+    state = _state(context)
+    base, saved = state.document_json, state.sketch_draft_json
+
+    def begin(active_context):
+        current = _state(active_context)
+        if current.document_json != base or current.sketch_draft_json != saved:
+            raise RuntimeError(
+                "The document or saved draft changed before Sketch opened; try again."
+            )
+        namespace, name = editor.split(".", 1)
+        getattr(getattr(bpy.ops, namespace), name)(
+            "INVOKE_DEFAULT", feature_id=feature_id, resume_saved=resume_saved
+        )
+
+    workspace.request_workspace(context, "SKETCH", on_ready=begin)
+
+
+def _can_start_sketch(context):
+    return bool(
+        context.mode == "OBJECT"
+        and _state(context).document_json
+        and active_session() is None
+        and not _state(context).sketch_draft_json
+        and not document_state._REPLAY_RUNNING
+        and not execution_lease.is_busy()
+    )
+
+
+def _selected_editor(state):
+    """Validate supported intent before choosing the legacy rectangle shortcut."""
+    from .general_sketch_draft import GeneralSketchDraft
+
+    if not 0 <= state.feature_index < len(state.features):
+        raise DraftError("Select a supported constrained sketch to edit.")
+    feature = state.features[state.feature_index]
+    if feature.kind != "sketch_constrained":
+        raise DraftError("This feature has no supported viewport sketch editor.")
+    # This strict, pure validation rejects unknown fields/kinds/versions. A
+    # rectangle-like unsupported payload must never fall through to an editor.
+    version = operation_contracts.result_version_for(
+        json.loads(state.document_json), action="solve_sketch", owner_role="general"
+    )
+    general = GeneralSketchDraft(
+        state.document_json,
+        feature.feature_id,
+        is_edit=True,
+        journal_version=3 if version == 3 else 2,
+    )
+    if version == 3 or general.sketch.get("circles"):
+        return "mcad.general_sketch"
+    try:
+        RectangleDraft(state.document_json, feature.feature_id, is_edit=True)
+    except DraftError:
+        return "mcad.general_sketch"
+    return "mcad.rectangle_sketch"
+
+
+def _require_new_sketch(state, *, rectangle=False):
+    """Preflight before workspace mutation; exact candidate owns admission."""
+    from .general_sketch_draft import GeneralSketchDraft
+
+    version = operation_contracts.result_version_for(
+        json.loads(state.document_json),
+        action="solve_sketch",
+        owner_role="rectangle" if rectangle else "general",
+    )
+    if not rectangle:
+        candidate = GeneralSketchDraft(
+            state.document_json, journal_version=3 if version == 3 else 2
+        ).candidate()
+        operation_contracts.validate_authoring_candidate(candidate)
+
+
+def _can_start_new_sketch(context, *, rectangle=False):
+    if not _can_start_sketch(context):
+        return False
+    try:
+        _require_new_sketch(_state(context), rectangle=rectangle)
+        return True
+    except (ValueError, KeyError, TypeError):
+        return False
+
+
+class MCAD_OT_new_viewport_sketch(Operator):
+    bl_idname = "mcad.new_viewport_sketch"
+    bl_label = "New Sketch"
+    bl_description = "Open Sketch and draw explicit XY lines or circles with checked dimensions"
+
+    @classmethod
+    def poll(cls, context):
+        return _can_start_new_sketch(context)
+
+    def execute(self, context):
+        try:
+            _require_new_sketch(_state(context))
+            _begin_in_sketch(context)
+        except (RuntimeError, ValueError) as exc:
+            self.report({"ERROR"}, str(exc))
+            return {"CANCELLED"}
+        return {"FINISHED"}
+
+
+class MCAD_OT_new_rectangle_sketch(Operator):
+    bl_idname = "mcad.new_rectangle_sketch"
+    bl_label = "Rectangle Sketch"
+    bl_description = "Open the rectangle shortcut: two XY corners, then named width and height"
+
+    @classmethod
+    def poll(cls, context):
+        return _can_start_new_sketch(context, rectangle=True)
+
+    def execute(self, context):
+        try:
+            _require_new_sketch(_state(context), rectangle=True)
+            _begin_in_sketch(context, editor="mcad.rectangle_sketch")
+        except (RuntimeError, ValueError) as exc:
+            self.report({"ERROR"}, str(exc))
+            return {"CANCELLED"}
+        return {"FINISHED"}
+
+
+class MCAD_OT_edit_viewport_sketch(Operator):
+    bl_idname = "mcad.edit_viewport_sketch"
+    bl_label = "Edit Sketch"
+    bl_description = "Open the matching supported sketch editor, preserving its ID and dependents"
+
+    @classmethod
+    def poll(cls, context):
+        state = _state(context)
+        return bool(
+            _can_start_sketch(context)
+            and 0 <= state.feature_index < len(state.features)
+            and state.features[state.feature_index].kind == "sketch_constrained"
+        )
+
+    def execute(self, context):
+        state = _state(context)
+        try:
+            editor = _selected_editor(state)
+            _begin_in_sketch(context, state.features[state.feature_index].feature_id, editor=editor)
+        except (RuntimeError, ValueError, KeyError, TypeError) as exc:
+            self.report({"ERROR"}, str(exc))
+            return {"CANCELLED"}
+        return {"FINISHED"}
+
+
+class MCAD_OT_resume_sketch(Operator):
+    bl_idname = "mcad.resume_sketch"
+    bl_label = "Resume Sketch"
+    bl_description = "Resume the saved UI draft only against its exact original document; preview and DoF remain unverified"
+
+    @classmethod
+    def poll(cls, context):
+        return (
+            context.mode == "OBJECT"
+            and active_session() is None
+            and not document_state._REPLAY_RUNNING
+            and not execution_lease.is_busy()
+            and bool(_state(context).sketch_draft_json)
+        )
+
+    def execute(self, context):
+        status = suspended_draft(context)
+        if not status["compatible"] or not status["editor_available"]:
+            self.report({"ERROR"}, status["message"])
+            return {"CANCELLED"}
+        try:
+            _begin_in_sketch(
+                context,
+                editor=editor_operator(status["kind"], status["schema_version"]),
+                resume_saved=True,
+            )
+        except (RuntimeError, ValueError) as exc:
+            self.report({"ERROR"}, str(exc))
+            return {"CANCELLED"}
+        return {"FINISHED"}
+
+
+class MCAD_OT_discard_suspended_sketch(Operator):
+    bl_idname = "mcad.discard_suspended_sketch"
+    bl_label = "Discard Saved Draft"
+    bl_description = "Explicitly discard the suspended UI draft in this scene; committed CAD history is unchanged"
+
+    @classmethod
+    def poll(cls, context):
+        return active_session() is None and bool(_state(context).sketch_draft_json)
+
+    def execute(self, context):
+        _discard_stored(context.scene)
+        _state(
+            context
+        ).sketch_notice = "Saved sketch draft discarded. No draft changes were committed."
+        return {"FINISHED"}
+
+
+class MCAD_OT_finish_sketch(Operator):
+    bl_idname = "mcad.finish_sketch"
+    bl_label = "Finish Sketch"
+    bl_description = (
+        "Solve and commit this draft once; return to Part and rebuild downstream features"
+    )
+
+    @classmethod
+    def poll(cls, context):
+        session = active_session(context)
+        return bool(session and session.can_finish)
+
+    def execute(self, context):
+        active_session(context).command = "FINISH"
+        return {"FINISHED"}
+
+
+class MCAD_OT_cancel_sketch(Operator):
+    bl_idname = "mcad.cancel_sketch"
+    bl_label = "Cancel Sketch"
+    bl_description = "Discard this transient sketch draft without changing committed CAD history"
+
+    @classmethod
+    def poll(cls, context):
+        return active_session(context) is not None
+
+    def execute(self, context):
+        active_session(context).command = "CANCEL"
+        return {"FINISHED"}
+
+
+def _dimensions_input_changed(properties, context):
+    # Blender passes OperatorProperties here, not the Python Operator instance.
+    # Python-only attributes such as ``self.session`` do not cross that RNA
+    # boundary. Bind this exact native dialog with a transient, unique RNA token.
+    session = active_session()
+    token = getattr(properties, "draft_input_token", "")
+    if (
+        isinstance(session, RectangleSession)
+        and session.popup_open
+        and token
+        and token == session.dimensions_input_token
+        and session.draft.phase == "DIMENSIONS"
+    ):
+        session.draft.pending_dimensions = {
+            "width": properties.width,
+            "height": properties.height,
+            "fix_corner": properties.fix_position,
+        }
+        session.draft.solver_report = None
+        session.draft.validated_json = ""
+
+
+class MCAD_OT_sketch_dimensions(Operator):
+    bl_idname = "mcad.sketch_dimensions"
+    bl_label = "Rectangle Dimensions"
+    bl_description = (
+        "Edit exact millimetre values or formulas; Apply updates only the draft, Finish commits it"
+    )
+    draft_input_token: StringProperty(options={"HIDDEN", "SKIP_SAVE"})
+    width: StringProperty(
+        name="Width (mm / formula)",
+        description="Exact decimal or supported parameter expression",
+        update=_dimensions_input_changed,
+    )
+    height: StringProperty(
+        name="Height (mm / formula)",
+        description="Exact decimal or supported parameter expression",
+        update=_dimensions_input_changed,
+    )
+    fix_position: BoolProperty(
+        name="Fix rectangle position",
+        default=True,
+        description="Fix the lower-left point at its shown XY coordinates; disable to leave translation free",
+        update=_dimensions_input_changed,
+    )
+    show_help: BoolProperty(name="Help")
+    help_page: IntProperty(default=1, min=1, options={"SKIP_SAVE"})
+    help_previous: BoolProperty(update=_feature_help_previous, options={"SKIP_SAVE"})
+    help_next: BoolProperty(update=_feature_help_next, options={"SKIP_SAVE"})
+    help_topic: StringProperty(default="sketch.viewport_rectangle", options={"HIDDEN"})
+    help_summary = (
+        "Apply changes only this draft; Finish commits it.",
+        "Use 60 for 60 mm, not 60mm. Formulas stay exact.",
+    )
+
+    @classmethod
+    def poll(cls, context):
+        session = active_session(context)
+        # Blender re-polls this operator when confirming its native dialog.
+        # Keeping popup_open in poll would reject Apply without execute/cancel
+        # and strand the owning modal session in a permanently open state.
+        return bool(session and session.can_edit_dimensions)
+
+    def invoke(self, context, event):
+        self.session = active_session(context)
+        if self.session.popup_open:
+            self.report({"WARNING"}, "The dimensions dialog is already open.")
+            return {"CANCELLED"}
+        self.draft_input_token = ""
+        pending = self.session.draft.pending_dimensions
+        self.width = pending["width"] if pending else self.session.draft.width_text
+        self.height = pending["height"] if pending else self.session.draft.height_text
+        self.fix_position = pending["fix_corner"] if pending else self.session.draft.fix_corner
+        self.session.dimensions_input_token = uuid.uuid4().hex
+        self.draft_input_token = self.session.dimensions_input_token
+        self.session.popup_open = True
+        return context.window_manager.invoke_props_dialog(
+            self, width=470, confirm_text="Apply Dimensions"
+        )
+
+    def draw(self, context):
+        self.layout.prop(self, "width")
+        self.layout.prop(self, "height")
+        self.layout.prop(self, "fix_position")
+        self.layout.label(text="Lower-left in sketch coordinates; global XY.", icon="INFO")
+        if self.session and self.session.alive:
+            x, y = self.session.draft.anchor
+            self.layout.label(text=f"Position: X {x:.6g}, Y {y:.6g} mm")
+        if self.session and self.session.alive:
+            for line in textwrap.wrap(self.session.draft.error, width=66):
+                self.layout.label(text=line, icon="ERROR")
+        _draw_feature_help(self, context)
+
+    def _close_later(self):
+        session = self.session
+        session.dimensions_input_token = ""
+        if not session.alive:
+            return
+
+        def close():
+            if session.alive:
+                session.popup_open = False
+                _tag_redraw(session)
+            session.popup_close_timer = None
+            return None
+
+        session.popup_close_timer = close
+        bpy.app.timers.register(close, first_interval=0.05)
+
+    def execute(self, context):
+        try:
+            if active_session(context) is not self.session:
+                return {"CANCELLED"}
+            if (
+                self.session.draft.fix_corner != self.fix_position
+                and self.session.draft.last_solved_points is not None
+            ):
+                points = self.session.draft.guarded_seed_points(backend_runtime.capture(context))
+                self.session.draft.last_solved_points = points
+                corner = next(point for point in points if point["id"] == "p0")
+                self.session.draft.anchor = corner["u"], corner["v"]
+            self.session.draft.set_dimensions(self.width, self.height, self.fix_position)
+            self.session.solve(context)
+            return {"FINISHED"}
+        finally:
+            self._close_later()
+
+    def cancel(self, context):
+        if self.session.alive:
+            self.session.draft.pending_dimensions = None
+        self._close_later()
+
+
+CLASSES = (
+    MCAD_OT_rectangle_sketch,
+    MCAD_OT_new_viewport_sketch,
+    MCAD_OT_new_rectangle_sketch,
+    MCAD_OT_edit_viewport_sketch,
+    MCAD_OT_resume_sketch,
+    MCAD_OT_discard_suspended_sketch,
+    MCAD_OT_finish_sketch,
+    MCAD_OT_cancel_sketch,
+    MCAD_OT_sketch_dimensions,
+)

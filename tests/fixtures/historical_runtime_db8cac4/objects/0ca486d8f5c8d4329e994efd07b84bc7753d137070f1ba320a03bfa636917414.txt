@@ -1,0 +1,554 @@
+"""Versioned, subprocess-only connection to the OpenCascade sidecar.
+
+This module intentionally imports no bpy, OCP, cadquery, or geometry library.
+Blender and the sidecar may use different Python minor versions and ABIs.
+"""
+
+from __future__ import annotations
+
+import json
+import math
+import os
+import subprocess
+import sys
+from pathlib import Path
+from typing import Any
+
+PROTOCOL_VERSION = 1
+MAX_DOCUMENT_BYTES = 2 * 1024 * 1024
+MAX_RESPONSE_BYTES = 64 * 1024 * 1024
+
+
+class BridgeError(RuntimeError):
+    """A configuration, process, or protocol failure safe to show in Blender."""
+
+    def __init__(self, message: str, *, outcome_unknown: bool = False):
+        super().__init__(message)
+        self.outcome_unknown = outcome_unknown
+
+
+def parse_document_json(content: str, *, require_object: bool = True) -> Any:
+    """Reject ambiguous keys and non-finite JSON before forwarding a file."""
+
+    def object_pairs(pairs):
+        result = {}
+        for key, value in pairs:
+            if key in result:
+                raise BridgeError(f"Duplicate JSON key: {key}")
+            result[key] = value
+        return result
+
+    def reject_constant(value):
+        raise BridgeError(f"Non-finite JSON constant is not allowed: {value}")
+
+    def finite_float(value):
+        number = float(value)
+        if not math.isfinite(number):
+            raise BridgeError(f"Non-finite JSON number is not allowed: {value}")
+        return number
+
+    try:
+        document = json.loads(
+            content,
+            object_pairs_hook=object_pairs,
+            parse_constant=reject_constant,
+            parse_float=finite_float,
+        )
+    except (ValueError, RecursionError) as exc:
+        raise BridgeError(f"Invalid CAD document JSON: {exc}") from exc
+    if require_object and not isinstance(document, dict):
+        raise BridgeError("CAD document must be a JSON object.")
+    return document
+
+
+def resolve_configuration(project_root: str = "", python_executable: str = "") -> tuple[Path, Path]:
+    root_value = project_root or os.environ.get("MCAD_ROOT", "")
+    root = (
+        Path(root_value).expanduser().resolve()
+        if root_value
+        else Path(__file__).resolve().parents[2]
+    )
+    executable_value = python_executable or os.environ.get("MCAD_PYTHON", "")
+    if not executable_value:
+        executable_value = str(
+            root / ".venv" / ("Scripts/python.exe" if os.name == "nt" else "bin/python")
+        )
+    executable = Path(executable_value).expanduser().absolute()
+    if not (root / "src" / "mechanical_cad").is_dir():
+        raise BridgeError(
+            "Set Project Root in the add-on preferences to the mechanical_cad repository."
+        )
+    if not executable.is_file():
+        raise BridgeError(
+            "Sidecar Python was not found. Set Python Executable in the add-on preferences to the repository .venv Python."
+        )
+    return root, executable
+
+
+def _transport_error(request: dict[str, Any], message: str) -> BridgeError:
+    """A lost export reply does not prove that its atomic replacement failed."""
+    uncertain = request.get("action") in {"export_step", "export_stl", "assembly_export_step"}
+    if uncertain:
+        message += (
+            " Export outcome is unconfirmed: the destination may already have been replaced."
+            " Check the selected file before retrying; no automatic retry was attempted."
+        )
+    return BridgeError(message, outcome_unknown=uncertain)
+
+
+def _validate_sketch_report(feature, source):
+    """Validate display diagnostics without importing the solver/core in Blender."""
+    report = feature.get("sketch")
+    if report is None:
+        if feature.get("kind") == "sketch_constrained" and feature.get("status") == "ok":
+            raise ValueError("successful constrained sketch is missing its solve report")
+        return
+    if (
+        feature.get("kind") != "sketch_constrained"
+        or not isinstance(source, dict)
+        or source.get("kind") != "sketch_constrained"
+        or not isinstance(source.get("sketch"), dict)
+        or not isinstance(report, dict)
+    ):
+        raise ValueError("sketch diagnostics have no matching source definition")
+    fields = {
+        "solver",
+        "solver_version",
+        "status",
+        "remaining_dof",
+        "failed_constraints",
+        "redundant_constraints",
+        "max_residual_mm",
+        "solved",
+        "dimensions",
+    }
+    statuses = {"okay", "redundant_okay", "inconsistent", "didnt_converge", "too_many_unknowns"}
+    if (
+        set(report) != fields
+        or report["solver"] != "libslvs"
+        or report["solver_version"] != "3.2"
+        or report["status"] not in statuses
+    ):
+        raise ValueError("unknown sketch solve report contract")
+    definition = source["sketch"]
+    constraints = {item["id"]: item for item in definition["constraints"]}
+    for field in ("failed_constraints", "redundant_constraints"):
+        ids = report[field]
+        if (
+            not isinstance(ids, list)
+            or len(ids) > 512
+            or any(type(item) is not str or item not in constraints for item in ids)
+            or len(set(ids)) != len(ids)
+        ):
+            raise ValueError("invalid sketch diagnostic constraint IDs")
+    success = report["status"] in {"okay", "redundant_okay"}
+    if report["status"] == "okay" and report["redundant_constraints"]:
+        raise ValueError("exact redundant equations must be visibly reported")
+    residual = report["max_residual_mm"]
+    if residual is not None and (
+        type(residual) not in (int, float)
+        or not 0 <= residual <= 1e12
+        or not math.isfinite(residual)
+    ):
+        raise ValueError("invalid sketch residual")
+    if success:
+        dof = report["remaining_dof"]
+        if type(dof) is not int or not 0 <= dof <= 512 or residual is None or residual > 1e-7:
+            raise ValueError("invalid successful sketch DoF/residual")
+        solved = report["solved"]
+        if (
+            not isinstance(solved, dict)
+            or solved.get("id") != definition.get("id")
+            or type(solved.get("schema_version")) is not int
+            or solved.get("schema_version") != 1
+            or solved.get("units") != "mm"
+            or solved.get("plane") != definition.get("plane")
+        ):
+            raise ValueError("solved sketch identity or workplane differs from source")
+        points = solved.get("points")
+        source_points = {item["id"] for item in definition["points"]}
+        if not isinstance(points, list) or len(points) != len(source_points):
+            raise ValueError("solved sketch point count differs from source")
+        actual_ids = []
+        for point in points:
+            if (
+                not isinstance(point, dict)
+                or set(point) != {"id", "u", "v"}
+                or type(point["id"]) is not str
+                or any(
+                    type(point[axis]) not in (int, float)
+                    or abs(point[axis]) > 1e6
+                    or not math.isfinite(point[axis])
+                    for axis in ("u", "v")
+                )
+            ):
+                raise ValueError("invalid solved sketch point")
+            actual_ids.append(point["id"])
+        if set(actual_ids) != source_points or len(set(actual_ids)) != len(actual_ids):
+            raise ValueError("solved sketch point identities differ from source")
+    elif (
+        report["remaining_dof"] is not None
+        or report["solved"] is not None
+        or feature.get("status") == "ok"
+    ):
+        raise ValueError("failed sketch cannot publish current DoF or solved geometry")
+    dimensions = report["dimensions"]
+    expected = {key for key, item in constraints.items() if item["kind"] == "distance"}
+    if (
+        not isinstance(dimensions, dict)
+        or set(dimensions) != expected
+        or any(
+            type(value) not in (int, float) or not 1e-6 <= value <= 1e6 or not math.isfinite(value)
+            for value in dimensions.values()
+        )
+    ):
+        raise ValueError("invalid resolved sketch dimensions")
+    if success:
+        if set(solved) != {
+            "schema_version",
+            "id",
+            "units",
+            "plane",
+            "points",
+            "lines",
+            "constraints",
+        }:
+            raise ValueError("invalid solved sketch fields")
+        for field in ("lines", "constraints"):
+            records = solved[field]
+            if (
+                not isinstance(records, list)
+                or len(records) != len(definition[field])
+                or any(
+                    not isinstance(item, dict) or type(item.get("id")) is not str
+                    for item in records
+                )
+            ):
+                raise ValueError("invalid solved sketch records")
+            by_id = {item["id"]: item for item in records}
+            expected_records = {item["id"]: dict(item) for item in definition[field]}
+            if field == "constraints":
+                for key, item in expected_records.items():
+                    item.setdefault("value", None)
+                    item.setdefault("target", None)
+                    if item["kind"] == "distance":
+                        item["value"] = dimensions[key]
+            if len(by_id) != len(records) or by_id != expected_records:
+                raise ValueError("solved sketch changed persistent relation identities")
+
+
+def _exchange_raw(
+    request: dict[str, Any],
+    *,
+    project_root: str,
+    python_executable: str,
+    timeout: float,
+) -> dict[str, Any]:
+    """Run exactly one isolated process and validate the common response envelope."""
+    if sys.platform == "win32" or os.name == "nt":
+        raise BridgeError("Windows backend execution is not yet qualified.")
+    root, executable = resolve_configuration(project_root, python_executable)
+    try:
+        payload = json.dumps(request, allow_nan=False)
+    except (TypeError, ValueError) as exc:
+        raise BridgeError(f"Document cannot be encoded as finite JSON: {exc}") from exc
+    if len(payload.encode("utf-8")) > MAX_DOCUMENT_BYTES:
+        raise BridgeError("Document exceeds the 2 MiB input limit.")
+    environment = dict(os.environ)
+    environment.pop("PYTHONHOME", None)
+    environment["PYTHONPATH"] = str(root / "src")
+    environment["PYTHONNOUSERSITE"] = "1"
+    environment["PYTHONIOENCODING"] = "utf-8"
+    try:
+        process = subprocess.run(
+            [str(executable), "-m", "mechanical_cad.sidecar"],
+            input=payload,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            cwd=str(root),
+            env=environment,
+            timeout=max(1.0, min(float(timeout), 300.0)),
+            check=False,
+        )
+    except subprocess.TimeoutExpired as exc:
+        raise _transport_error(
+            request,
+            "CAD operation timed out; the sidecar was stopped. Reduce model complexity or increase the timeout in preferences.",
+        ) from exc
+    except OSError as exc:
+        raise BridgeError(f"Could not start sidecar Python: {exc}") from exc
+    if len(process.stdout.encode("utf-8")) > MAX_RESPONSE_BYTES:
+        raise _transport_error(request, "Sidecar response exceeds the 64 MiB display limit.")
+    try:
+        response = parse_document_json(process.stdout, require_object=False)
+    except (ValueError, TypeError, BridgeError) as exc:
+        detail = process.stderr.strip()[-1500:] or process.stdout.strip()[-1500:] or "No output."
+        raise _transport_error(
+            request, f"Sidecar returned invalid JSON (exit {process.returncode}). {detail}"
+        ) from exc
+    if (
+        not isinstance(response, dict)
+        or type(response.get("protocol_version")) is not int
+        or response.get("protocol_version") != PROTOCOL_VERSION
+    ):
+        raise _transport_error(
+            request,
+            "Sidecar protocol mismatch; use the Python environment and source from the same repository.",
+        )
+    if not isinstance(response.get("ok"), bool):
+        raise _transport_error(request, "Sidecar response is missing its success flag.")
+    if process.returncode and response["ok"]:
+        raise _transport_error(
+            request, f"Sidecar exited with status {process.returncode} despite reporting success."
+        )
+    return response
+
+
+def _exchange(
+    request: dict[str, Any],
+    *,
+    project_root: str,
+    python_executable: str,
+    timeout: float,
+) -> dict[str, Any]:
+    """Preserve legacy Part replay validation above the shared JSON transport."""
+    response = _exchange_raw(
+        request,
+        project_root=project_root,
+        python_executable=python_executable,
+        timeout=timeout,
+    )
+    if request.get("result_version") == 2:
+        # Keep legacy standalone module loading and response acceptance unchanged.
+        from .part_result_bridge import validate_response
+
+        try:
+            return validate_response(request, response)
+        except (ValueError, TypeError, KeyError, OverflowError, RecursionError) as exc:
+            raise _transport_error(request, f"Malformed typed Part response: {exc}") from exc
+    result = response.get("result")
+    if result is None and not response["ok"]:
+        error = response.get("error")
+        if not isinstance(error, dict):
+            raise _transport_error(request, "Sidecar returned a malformed error.")
+        return response
+    if not isinstance(result, dict) or not isinstance(result.get("features"), list):
+        raise _transport_error(request, "Sidecar returned a malformed replay result.")
+    if result.get("document_id") != request["document"].get("id"):
+        raise _transport_error(request, "Sidecar returned a result for a different document.")
+    try:
+        sources = {item["id"]: item for item in request["document"].get("features", [])}
+        for feature in result["features"]:
+            if not isinstance(feature, dict):
+                raise ValueError("feature results must be objects")
+            _validate_sketch_report(feature, sources.get(feature.get("id")))
+    except (ValueError, TypeError, KeyError) as exc:
+        raise _transport_error(request, f"Malformed sketch replay report: {exc}") from exc
+    return response
+
+
+def replay(
+    document: dict[str, Any],
+    *,
+    project_root: str = "",
+    python_executable: str = "",
+    timeout: float = 60.0,
+    linear_deflection: float = 0.1,
+    result_version: int = 1,
+) -> dict[str, Any]:
+    """Replay one document; preserve the original result-only public contract."""
+    if type(result_version) is not int or result_version not in (1, 2):
+        raise BridgeError("Only Part result versions 1 and 2 are supported.")
+    response = _exchange(
+        {
+            "protocol_version": PROTOCOL_VERSION,
+            "document": document,
+            "options": {"linear_deflection": linear_deflection},
+            **({"result_version": 2} if result_version == 2 else {}),
+        },
+        project_root=project_root,
+        python_executable=python_executable,
+        timeout=timeout,
+    )
+    result = response.get("result")
+    if result is None:
+        error = response["error"]
+        raise BridgeError(
+            f"{error.get('code', 'CAD_ERROR')}: {error.get('message', 'Document validation failed.')}"
+        )
+    return result
+
+
+def geometry_action(
+    document: dict[str, Any],
+    action: str,
+    *,
+    destination: str | None = None,
+    project_root: str = "",
+    python_executable: str = "",
+    timeout: float = 60.0,
+    linear_deflection: float = 0.1,
+    result_version: int = 1,
+) -> dict[str, Any]:
+    """Freshly check/export a canonical snapshot, returning the full action envelope.
+
+    A validated unsuccessful action is returned for feature/error diagnostics.
+    Protocol/transport failures raise BridgeError. For exports, outcome_unknown
+    identifies failures where an atomic write may have preceded the lost reply.
+    """
+    if type(result_version) is not int or result_version not in (1, 2):
+        raise BridgeError("Only Part result versions 1 and 2 are supported.")
+    if not isinstance(action, str) or action not in {"check_geometry", "export_step", "export_stl"}:
+        raise BridgeError("Unsupported geometry action.")
+    export_action = action != "check_geometry"
+    if export_action:
+        if (
+            not isinstance(destination, str)
+            or not destination.strip()
+            or "\0" in destination
+            or not Path(destination).is_absolute()
+        ):
+            raise BridgeError("Choose an explicit absolute export file path.")
+    elif destination is not None:
+        raise BridgeError("Geometry checks cannot have an export destination.")
+    request = {
+        "protocol_version": PROTOCOL_VERSION,
+        "document": document,
+        "options": {"linear_deflection": linear_deflection},
+        "action": action,
+        **({"result_version": 2} if result_version == 2 else {}),
+    }
+    if export_action:
+        request["destination"] = destination
+    response = _exchange(
+        request,
+        project_root=project_root,
+        python_executable=python_executable,
+        timeout=timeout,
+    )
+
+    def malformed(reason):
+        raise _transport_error(request, f"Malformed geometry action response: {reason}")
+
+    result = response.get("result")
+    # Early schema/request errors retain the legacy envelope with no action key.
+    if response.get("action") != action and not (
+        not response["ok"] and result is None and "action" not in response
+    ):
+        malformed("the action does not match the request.")
+    if not response["ok"]:
+        error = response.get("error")
+        if not isinstance(error, dict) or not all(
+            isinstance(error.get(key), str) and error[key] for key in ("code", "message")
+        ):
+            malformed("failure has no readable error code and message.")
+        if response.get("export") is not None:
+            malformed("a failed action claims a completed export.")
+        if response.get("geometry_check") is None:
+            return response
+        # A write may fail after completed checks. Validate those partial
+        # reports too, before allowing the UI to describe them as passed.
+    if response["ok"] and response.get("error") is not None:
+        malformed("success also contains an error.")
+    if (
+        result is None
+        or result.get("status") != "ok"
+        or result.get("units") != "mm"
+        or result.get("active_feature") != document.get("active_feature")
+        or not all(
+            isinstance(feature, dict) and feature.get("status") == "ok"
+            for feature in result["features"]
+        )
+    ):
+        malformed("success has no complete successful replay of the requested output.")
+    active = [
+        feature
+        for feature in result["features"]
+        if feature.get("id") == document.get("active_feature")
+    ]
+    if document.get("active_feature") is None or len(active) != 1:
+        malformed("the requested active solid is missing or duplicated.")
+    active_stats = active[0].get("stats")
+    if (
+        not isinstance(active_stats, dict)
+        or active_stats.get("valid") is not True
+        or type(active_stats.get("solids")) is not int
+        or active_stats["solids"] != 1
+        or isinstance(active_stats.get("volume"), bool)
+        or not isinstance(active_stats.get("volume"), (int, float))
+        or not math.isfinite(active_stats["volume"])
+        or active_stats["volume"] <= 0
+    ):
+        malformed("the active feature has no valid single-solid statistics.")
+    checks = response.get("geometry_check")
+    if not isinstance(checks, dict):
+        malformed("success has no geometry checks.")
+    brep, mesh = checks.get("brep"), checks.get("mesh")
+    if not isinstance(brep, dict) or not isinstance(mesh, dict):
+        malformed("geometry checks have no B-rep and mesh reports.")
+    volume = brep.get("volume")
+    if (
+        brep.get("valid") is not True
+        or type(brep.get("solids")) is not int
+        or brep["solids"] != 1
+        or isinstance(volume, bool)
+        or not isinstance(volume, (int, float))
+        or not math.isfinite(volume)
+        or volume <= 0
+        or any(
+            mesh.get(key) is not True
+            for key in ("watertight", "consistently_oriented", "vertex_manifold")
+        )
+    ):
+        malformed("the required single-solid and manifold-mesh checks did not pass.")
+    if not math.isclose(volume, active_stats["volume"], rel_tol=1e-12, abs_tol=1e-10):
+        malformed("the check volume differs from the freshly replayed active solid.")
+    if checks.get("linear_deflection_mm") != linear_deflection:
+        malformed("the checked tessellation tolerance differs from the request.")
+    if not response["ok"]:
+        return response
+    exported = response.get("export")
+    if not export_action:
+        if exported is not None:
+            malformed("a read-only check claims an export.")
+        return response
+    if (
+        not isinstance(exported, dict)
+        or exported.get("format") != ("STEP" if action == "export_step" else "STL")
+        or exported.get("destination") != destination
+        or type(exported.get("bytes")) is not int
+        or exported["bytes"] <= 0
+        or exported.get("units") != "mm"
+        or exported.get("atomic_replace") is not True
+        or not isinstance(exported.get("document_hash"), str)
+        or not exported["document_hash"]
+        or exported["document_hash"] != result.get("document_hash")
+        or exported.get("active_feature") != document.get("active_feature")
+        or exported.get("linear_deflection_mm") != linear_deflection
+    ):
+        malformed("export metadata does not match the selected file and current result.")
+    if action == "export_stl":
+        encoded, encoding = checks.get("encoded_mesh"), checks.get("encoding")
+        if (
+            not isinstance(encoded, dict)
+            or not isinstance(encoding, dict)
+            or any(
+                encoded.get(key) is not True
+                for key in ("watertight", "consistently_oriented", "vertex_manifold")
+            )
+        ):
+            malformed("STL has no successful encoded-mesh and precision checks.")
+        maximum, allowed = (
+            encoding.get("maximum_vertex_error_mm"),
+            encoding.get("allowed_vertex_error_mm"),
+        )
+        if any(
+            isinstance(value, bool)
+            or not isinstance(value, (int, float))
+            or not math.isfinite(value)
+            for value in (maximum, allowed)
+        ) or not 0 <= maximum <= allowed <= min(1e-5, linear_deflection * 0.1):
+            malformed("STL encoding exceeds its independent precision limit.")
+    return response

@@ -1,0 +1,184 @@
+"""Pure controls for pre-RNA exclusion and pre-acquisition schema admission.
+
+Execute the actual prepare function's AST with explicit inert transaction seams.
+The real native-free policy and lease remain in use; no Blender or transport runs.
+"""
+
+import ast
+import importlib
+import json
+import sys
+import types
+from pathlib import Path
+
+import pytest
+
+ROOT = Path(__file__).resolve().parents[2]
+PACKAGE = "mcad_assembly_pending_admission_tests"
+package = types.ModuleType(PACKAGE)
+package.__path__ = [str(ROOT / "blender_addon/mechanical_cad_blender")]
+sys.modules[PACKAGE] = package
+policy = importlib.import_module(PACKAGE + ".operation_contracts")
+lease = importlib.import_module(PACKAGE + ".execution_lease")
+
+
+def trap(*args, **kwargs):
+    raise AssertionError("Admission reached an unrequested transaction or native seam")
+
+
+@pytest.fixture
+def harness():
+    assert not lease.is_busy()
+    calls = []
+    candidate = json.loads((ROOT / "examples/reused_blocks.mcad-assembly.json").read_text())
+
+    def preflight(value, action):
+        calls.append("preflight")
+        return policy.result_version_for_assembly(value, action=action)
+
+    state = types.SimpleNamespace(
+        _state=lambda context: calls.append("state") or context.scene,
+        read_assembly=lambda scene: calls.append("read") or candidate,
+        _preflight_assembly=preflight,
+        _prepare_report=trap,
+        _prepare_operation=trap,
+        _recover_report=trap,
+        _current_selection=trap,
+    )
+    namespace = {
+        "_main_thread": lambda: calls.append("main_thread"),
+        "bridge": types.SimpleNamespace(BridgeError=ValueError),
+        "assembly_state": state,
+        "execution_lease": lease,
+        "_JOB_FACTORY": trap,
+        "PendingReport": trap,
+        "_ACTIVE": {},
+    }
+    path = ROOT / "blender_addon/mechanical_cad_blender/assembly_pending.py"
+    node = next(
+        node
+        for node in ast.parse(path.read_bytes()).body
+        if isinstance(node, ast.FunctionDef) and node.name == "prepare"
+    )
+    exec(compile(ast.Module(body=[node], type_ignores=[]), str(path), "exec"), namespace)
+    yield types.SimpleNamespace(
+        prepare=namespace["prepare"],
+        namespace=namespace,
+        state=state,
+        calls=calls,
+        candidate=candidate,
+    )
+    assert not lease.is_busy(), "The test must collect its exact owned lease"
+
+
+@pytest.mark.parametrize("action", ["assembly_check", "assembly_sample"])
+def test_busy_foreign_scene_never_reads_rna_or_attempts_acquisition(harness, monkeypatch, action):
+    token = lease.try_acquire()
+    assert token is not None
+    try:
+        monkeypatch.setattr(lease, "try_acquire", trap)
+        harness.state._state = trap
+        harness.state.read_assembly = trap
+        harness.state._preflight_assembly = trap
+        with pytest.raises(ValueError, match="Another CAD operation"):
+            harness.prepare(types.SimpleNamespace(scene=object()), action)
+        assert harness.calls == ["main_thread"]
+        assert lease.is_busy() and lease._TOKEN is token
+        assert not harness.namespace["_ACTIVE"]
+    finally:
+        assert lease.release(token)
+
+
+@pytest.mark.parametrize("action", ["assembly_check", "assembly_sample"])
+@pytest.mark.parametrize("unsupported", ["profile_only", "arc_empty"])
+def test_free_unsupported_source_rejects_before_acquisition(
+    harness, monkeypatch, action, unsupported
+):
+    path = ROOT / "tests/fixtures/arc_authoring_evidence/radius_edit_5_0_replay.operation.json"
+    document = json.loads(path.read_text())["document"]
+    if unsupported == "arc_empty":
+        document["features"][0]["sketch"]["arcs"] = []
+        document["features"][0]["sketch"]["constraints"] = []
+        reason = "one schema-3 arc and exactly two radial lines"
+    else:
+        document["features"] = document["features"][:1]
+        document["active_feature"] = document["features"][0]["id"]
+        reason = "one sector sketch and one direct extrusion"
+    harness.candidate["part_sources"][0]["document"] = document
+    before = json.dumps(harness.candidate)
+    monkeypatch.setattr(lease, "try_acquire", trap)
+    with pytest.raises(ValueError, match=reason):
+        harness.prepare(types.SimpleNamespace(scene=object()), action)
+    assert harness.calls == ["main_thread", "state", "read", "preflight"]
+    assert json.dumps(harness.candidate) == before
+    assert not lease.is_busy() and not harness.namespace["_ACTIVE"]
+
+
+@pytest.mark.parametrize("action", ["assembly_check", "assembly_sample"])
+def test_busy_race_still_rejects_at_atomic_acquisition(harness, monkeypatch, action):
+    token = lease.try_acquire()
+    real_acquire = lease.try_acquire
+    try:
+        monkeypatch.setattr(lease, "is_busy", lambda: False)
+
+        def acquire():
+            harness.calls.append("acquire")
+            return real_acquire()
+
+        monkeypatch.setattr(lease, "try_acquire", acquire)
+        with pytest.raises(ValueError, match="Another CAD operation"):
+            harness.prepare(types.SimpleNamespace(scene=object()), action)
+        assert harness.calls == ["main_thread", "state", "read", "preflight", "acquire"]
+        assert lease._TOKEN is token and not harness.namespace["_ACTIVE"]
+    finally:
+        assert lease.release(token)
+
+
+@pytest.mark.parametrize("action", ["assembly_check", "assembly_sample"])
+@pytest.mark.parametrize("source", ["legacy", "sector"])
+def test_free_supported_sources_acquire_once_and_release_if_transaction_capture_fails(
+    harness, monkeypatch, source, action
+):
+    if source == "sector":
+        path = ROOT / "tests/fixtures/arc_authoring_evidence/radius_edit_5_0_replay.operation.json"
+        harness.candidate["part_sources"][0]["document"] = json.loads(path.read_text())["document"]
+    assert policy.result_version_for_assembly(harness.candidate, action=action) == (
+        3 if source == "sector" else 2
+    )
+    before = json.dumps(harness.candidate)
+    real_acquire, real_release = lease.try_acquire, lease.release
+    acquired, released = [], []
+
+    def acquire():
+        harness.calls.append("acquire")
+        token = real_acquire()
+        acquired.append(token)
+        return token
+
+    def release(token):
+        harness.calls.append("release")
+        released.append(token)
+        return real_release(token)
+
+    def prepare_report(context, action):
+        harness.calls.append("transaction")
+        assert lease._TOKEN is acquired[0]
+        raise RuntimeError("controlled transaction-capture failure")
+
+    monkeypatch.setattr(lease, "try_acquire", acquire)
+    monkeypatch.setattr(lease, "release", release)
+    harness.state._prepare_report = prepare_report
+    with pytest.raises(RuntimeError, match="controlled transaction-capture failure"):
+        harness.prepare(types.SimpleNamespace(scene=object()), action)
+    assert harness.calls == [
+        "main_thread",
+        "state",
+        "read",
+        "preflight",
+        "acquire",
+        "transaction",
+        "release",
+    ]
+    assert len(acquired) == 1 and acquired[0] is not None
+    assert released == acquired and not lease.is_busy()
+    assert json.dumps(harness.candidate) == before

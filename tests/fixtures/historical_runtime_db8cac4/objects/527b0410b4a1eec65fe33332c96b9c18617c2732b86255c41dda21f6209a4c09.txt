@@ -1,0 +1,69 @@
+"""Reversible mesh isolation for one explicitly owned native sketch viewport.
+
+This presentation filter hides all mesh context in that SpaceView3D only. It
+never changes objects, collections, scenes, or any other viewport. The session
+owns this resource and must restore it on every exit; there are no handlers,
+timers, fallback viewport searches, or process-bound references here.
+"""
+
+
+class MeshVisibilityLease:
+    """Temporarily set one VIEW_3D space's mesh-visibility filter to false.
+
+    Acquisition errors raise RuntimeError after attempting a conditional rollback.
+    ``restore()`` returns an empty string on success, or a cleanup diagnostic. It
+    drops its native reference even when the captured space no longer exists.
+    An external change to true is preserved. Ownership is value-based: writing
+    false again cannot be distinguished from leaving the owned value unchanged.
+    """
+
+    __slots__ = ("_space", "_original")
+
+    def __init__(self, space):
+        self._space = None
+        self._original = None
+        message = ""
+        try:
+            if space.type != "VIEW_3D":
+                raise ValueError("Mesh isolation requires the owned VIEW_3D space.")
+            original = space.show_object_viewport_mesh
+            if type(original) is not bool:
+                raise TypeError("The native mesh-visibility filter must be a boolean.")
+            # Capture before writing so even a partially failed setter can be
+            # rolled back, without looking up a replacement area or space.
+            self._space = space
+            self._original = original
+            space.show_object_viewport_mesh = False
+            if space.show_object_viewport_mesh is not False:
+                raise RuntimeError("The owned viewport did not accept mesh isolation.")
+        except Exception as exc:
+            message = f"Could not isolate sketch mesh visibility: {type(exc).__name__}: {exc}"
+            cleanup_error = self.restore()
+            if cleanup_error:
+                message += f" Cleanup also failed: {cleanup_error}"
+            # Do not leave an extra local native reference in this traceback.
+            space = None
+        # Raise outside the exception handler so even __context__ cannot retain
+        # a native getter/setter traceback after failed acquisition.
+        if message:
+            raise RuntimeError(message)
+
+    def restore(self):
+        """Release once, restoring only the captured space's still-owned value.
+
+        Detach first: repeated or reentrant cleanup never accesses old RNA, even
+        after a destroyed-space error. A changed area or current viewport does
+        not redirect restoration to a new space.
+        """
+        space, self._space = self._space, None
+        original, self._original = self._original, None
+        if space is None:
+            return ""
+        try:
+            if space.show_object_viewport_mesh is False and original is True:
+                space.show_object_viewport_mesh = original
+        except Exception as exc:
+            return f"Could not restore sketch mesh visibility: {type(exc).__name__}: {exc}"
+        finally:
+            space = None
+        return ""

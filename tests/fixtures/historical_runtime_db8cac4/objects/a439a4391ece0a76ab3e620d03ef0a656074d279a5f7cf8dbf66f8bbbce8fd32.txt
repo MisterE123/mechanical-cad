@@ -1,0 +1,171 @@
+"""Assembly owners bind full guarded intent before their replaceable transport.
+
+Only native-free partial operation fixtures run here. Native Blender publication,
+geometry and preference callbacks have separate smoke coverage.
+"""
+
+import copy
+import importlib
+import json
+import sys
+import types
+from pathlib import Path
+from unittest.mock import patch
+
+import pytest
+
+ROOT = Path(__file__).resolve().parents[2]
+PACKAGE = "mcad_assembly_publication_binding_tests"
+package = types.ModuleType(PACKAGE)
+package.__path__ = [str(ROOT / "blender_addon/mechanical_cad_blender")]
+sys.modules[PACKAGE] = package
+with patch.dict(
+    sys.modules,
+    {
+        "bpy": types.ModuleType("bpy"),
+        PACKAGE + ".assembly_display": types.ModuleType(PACKAGE + ".assembly_display"),
+        PACKAGE + ".workspace": types.ModuleType(PACKAGE + ".workspace"),
+    },
+):
+    state = importlib.import_module(PACKAGE + ".assembly_state")
+    loaded = {
+        name: module for name, module in sys.modules.items() if name.startswith(PACKAGE + ".")
+    }
+sys.modules.update(loaded)
+selection_module = importlib.import_module(PACKAGE + ".backend_selection")
+
+
+@pytest.fixture
+def snapshot(monkeypatch):
+    selected = selection_module.BackendSelection.capture(
+        str(ROOT), sys.executable, generation=0, lifetime_id="assembly-owner-test", environment={}
+    )
+    monkeypatch.setattr(state, "_current_selection", lambda _context, _snapshot: selected)
+    return {"selection": selected, "deflection": 0.1, "owner_token": object()}
+
+
+def assembly():
+    return json.loads((ROOT / "examples/reused_blocks.mcad-assembly.json").read_text())
+
+
+def evidence(prepared, snapshot):
+    from mechanical_cad.assembly_model import AssemblyDocument
+    from mechanical_cad.assembly_service import run_assembly_action
+
+    operation = prepared.operation_request()
+    response = run_assembly_action(
+        AssemblyDocument.from_dict(operation["assembly"]),
+        operation["action"],
+        result_version=operation["result_version"],
+        kernel=object(),
+        **{
+            key: operation[key]
+            for key in ("coordinates", "requirements", "policy", "samples", "preset_id")
+        },
+    )
+    request, selected = prepared.guarded_request(), snapshot["selection"]
+    capabilities = request["backend_contract"]["required_capabilities"]
+    response.update(
+        protocol_version=1,
+        kind="assembly",
+        assembly_protocol_version=1,
+        input_fingerprint=state.assembly_bridge.fingerprint(operation),
+        backend_receipt={
+            "version": 1,
+            "request_id": request["backend_contract"]["request_id"],
+            "request_fingerprint": state.assembly_bridge.fingerprint(request),
+            "required_capabilities": capabilities,
+            "confirmed_capabilities": capabilities,
+            "missing_capabilities": [],
+            "phase": "dispatched",
+            "backend": {
+                "core_version": "native-free-owner-fixture",
+                "project_root": selected.project_root,
+                "core_origin": str(ROOT / "src/mechanical_cad"),
+                "solver_origin": str(ROOT / "src/mechanical_cad/sketch_solver.py"),
+                "python_executable": selected.python_executable,
+                "python_executable_target": selected.python_executable_target,
+                "python_prefix": "/test/prefix",
+                "python_base_prefix": "/test/base",
+                "python_version": [3, 12, 14],
+            },
+        },
+    )
+    return state.guarded_evidence.accept_response(
+        prepared, response, selected, owner_token=snapshot["owner_token"]
+    )
+
+
+def test_partial_report_accepts_only_exact_full_guarded_intent(snapshot):
+    prepared = state._prepare_operation(snapshot, assembly(), "assembly_check")
+    accepted = evidence(prepared, snapshot)
+    result = state._projection(None, snapshot, accepted, actions="assembly_check", consume=True)
+    assert not result["ok"] and not result["report"]["complete"]
+    assert state._projection(None, snapshot, accepted, actions="assembly_check") == result
+    with pytest.raises(state.bridge.BridgeError):
+        state._projection(None, snapshot, accepted, actions="assembly_check", consume=True)
+
+
+@pytest.mark.parametrize("change", ["nonce", "source", "policy", "coordinates"])
+def test_same_owner_cannot_substitute_other_guarded_operation(snapshot, change):
+    prepared = state._prepare_operation(snapshot, assembly(), "assembly_check")
+    operation = prepared.operation_request()
+    if change == "source":
+        operation["assembly"]["name"] = "Unrequested source"
+    elif change == "policy":
+        operation["policy"] = {**state.assembly_bridge.DEFAULT_POLICY, "linear_deflection_mm": 0.2}
+    elif change == "coordinates":
+        operation["coordinates"] = {"slide_a": 20}
+    replacement = state.backend_contracts.prepare_request(operation)
+    accepted = evidence(replacement, snapshot)
+    # This really is separately valid evidence for the same owner and backend.
+    assert accepted.revalidate(snapshot["selection"], owner_token=snapshot["owner_token"])
+    with pytest.raises(state.bridge.BridgeError, match="exact captured request"):
+        state._projection(None, snapshot, accepted, actions="assembly_check", consume=True)
+    # Rejection occurs before consuming another operation's publication claim.
+    accepted.publication.consume(snapshot["selection"], owner_token=snapshot["owner_token"])
+
+
+def test_transport_uses_captured_prepared_operation_without_rebuilding(snapshot, monkeypatch):
+    candidate = assembly()
+    original = copy.deepcopy(candidate)
+    prepared = state._prepare_operation(snapshot, candidate)
+    candidate["name"] = "Mutated after capture"
+    calls = []
+
+    def execute(actual, selection, *, owner_token, current_selection):
+        calls.append((actual, selection, owner_token, current_selection()))
+        return "controlled transport result"
+
+    monkeypatch.setattr(state.guarded_transport, "execute", execute)
+    assert state._run_sidecar(None, snapshot=snapshot) == "controlled transport result"
+    assert calls == [
+        (prepared, snapshot["selection"], snapshot["owner_token"], snapshot["selection"])
+    ]
+    assert prepared.operation_request()["assembly"] == original
+    with pytest.raises(state.bridge.BridgeError, match="already owns"):
+        state._prepare_operation(snapshot, candidate)
+
+
+def test_mixed_sector_assembly_uses_source_selected_three_and_exact_once_claim(snapshot):
+    from mechanical_cad.assembly_model import AssemblyDocument, PartSource
+    from mechanical_cad.model import Document
+
+    candidate = assembly()
+    sector = Document.from_dict(
+        json.loads((ROOT / "examples/sector_profile_data_only.mcad.json").read_text())
+    )
+    candidate["part_sources"].append(PartSource.from_document(sector).to_dict())
+    # A defined/instanced sector is covered by the native project journey. This
+    # extra source deliberately proves that unused sources also select the wire
+    # contract; the first legacy source fails at the injected no-kernel port.
+    candidate = AssemblyDocument.from_dict(candidate).to_dict()
+    prepared = state._prepare_operation(snapshot, candidate, "assembly_check")
+    assert prepared.operation_request()["result_version"] == 3
+    accepted = evidence(prepared, snapshot)
+    result = state._projection(None, snapshot, accepted, actions="assembly_check", consume=True)
+    assert not result["ok"] and not result["report"]["complete"]
+    assert result["result_version"] == 3
+    assert state._projection(None, snapshot, accepted, actions="assembly_check") == result
+    with pytest.raises(state.bridge.BridgeError):
+        state._projection(None, snapshot, accepted, actions="assembly_check", consume=True)

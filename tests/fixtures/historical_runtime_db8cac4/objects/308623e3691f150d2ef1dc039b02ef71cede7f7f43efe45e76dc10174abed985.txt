@@ -1,0 +1,1266 @@
+"""Dormant fixed Windows cache ownership; no backend admission or native CAD.
+
+The shell capture is a spelling, not a filesystem identity or configuration watch.
+A worker retains the objects reached through that capture. Pathname creation and
+ACL observations protect cooperating software, not hostile same-user/admin edits.
+Every original resource has one cleanup attempt; uncertainty is absorbing. Failed
+stages are diagnostic data and are never deleted, repaired, reused or resumed.
+"""
+
+from __future__ import annotations
+
+import ctypes
+import ntpath
+import re
+import secrets
+import sys
+import threading
+from dataclasses import dataclass
+from pathlib import PosixPath, WindowsPath
+
+from .runtime_bundle_manifest import (
+    BundleError,
+    BundleFile,
+    BundleLimits,
+    BundleManifest,
+    ReleaseManifest,
+    bundle_identity,
+    validate_path,
+)
+
+_FILE_ALL_ACCESS = 0x001F01FF
+_INHERIT = 0x03
+_NO_PROPAGATE = 0x04
+_INHERIT_ONLY = 0x08
+_INHERITED = 0x10
+_REPARSE = 0x400
+_OFFLINE = 0x1000
+_DIRECTORY = 0x10
+_DACL_PROTECTED = 0x1000
+_MAX_DESCRIPTOR = 65536
+_MAX_ACES = 16
+_MESSAGES = {
+    "windows_known_folder_unavailable": (
+        "Windows could not locate this account's local application-data folder. "
+        "Sign in with a normal local Windows profile and retry. No backend was started."
+    ),
+    "windows_cache_access_denied": (
+        "Mechanical CAD cannot create or inspect its private local cache. "
+        "Ask your administrator to check this account's LocalAppData access, then retry."
+    ),
+    "windows_cache_not_private": (
+        "The existing Mechanical CAD cache has unsupported ownership or permissions. "
+        "Setup stopped without changing it. Ask your administrator to restore private access."
+    ),
+    "windows_cache_unsupported_location": (
+        "The local application-data folder resolves through a link, remote location or "
+        "unsupported filesystem. This Windows profile is not supported by this build."
+    ),
+    "windows_cache_path_too_long": (
+        "This Windows profile makes a cache path too long for this build. "
+        "A compatible Windows profile or a later build is required."
+    ),
+    "windows_install_path_too_long": (
+        "The extension's installed path exceeds this build's Windows path limit. "
+        "Ask your administrator for a compatible installation."
+    ),
+    "windows_cache_binding_mismatch": "Windows cache preparation identity does not match.",
+    "windows_cache_worker_required": "Windows cache ownership requires its original worker.",
+    "windows_cache_not_held": "Windows cache ownership is not available.",
+    "windows_cache_stage_unavailable": "A new private staging directory could not be created.",
+    "cancelled": (
+        "Backend setup did not finish. The incomplete attempt will not be used; "
+        "retry setup when ready."
+    ),
+    "cleanup_blocked": (
+        "Backend cleanup could not be confirmed. Save your work and restart Blender "
+        "before trying again."
+    ),
+}
+
+
+class WindowsCacheError(BundleError):
+    """Fixed safe diagnostic; owner retains any uncertain original resources."""
+
+    def __init__(self, code, *, owner=None, surface=None, length=None, limit=None):
+        self.code = code if code in _MESSAGES else "windows_cache_access_denied"
+        self.owner = owner
+        message = _MESSAGES[self.code]
+        self.surface, self.length, self.limit = None, None, None
+        if (
+            surface
+            in {
+                "cache file",
+                "cache directory",
+                "installed file",
+                "installed directory",
+                "staging file",
+                "staging directory",
+                "path component",
+            }
+            and type(length) is int
+            and length >= 0
+            and type(limit) is int
+            and limit > 0
+        ):
+            self.surface, self.length, self.limit = surface, length, limit
+            message += f" ({surface}: {length} UTF-16 units; limit {limit}.)"
+        super().__init__(message)
+
+
+class WindowsCacheCancelled(WindowsCacheError):
+    def __init__(self, code="cancelled", *, owner=None):
+        super().__init__("cancelled", owner=owner)
+
+
+def _windows_path(value, *, directory=False):
+    """The frozen launch leaf's ordinary-DOS policy, without a reverse import."""
+    if type(value) is not str or not value or "\0" in value:
+        raise WindowsCacheError("windows_cache_unsupported_location")
+    drive, tail = ntpath.splitdrive(value)
+    if (
+        len(drive) != 2
+        or drive[1] != ":"
+        or drive[0] not in "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+        or not tail.startswith("\\")
+        or "/" in value
+        or "%" in value
+        or ntpath.normpath(value) != value
+    ):
+        raise WindowsCacheError("windows_cache_unsupported_location")
+    try:
+        length = len(value.encode("utf-16-le", "strict")) // 2
+        if length >= (248 if directory else 260):
+            raise WindowsCacheError(
+                "windows_cache_path_too_long",
+                surface="cache directory" if directory else "cache file",
+                length=length,
+                limit=247 if directory else 259,
+            )
+        if tail != "\\":
+            validate_path(
+                tail[1:].replace("\\", "/"), BundleLimits(max_path_bytes=4096, max_path_depth=128)
+            )
+    except WindowsCacheError:
+        raise
+    except (UnicodeError, BundleError) as exc:
+        raise WindowsCacheError("windows_cache_unsupported_location") from exc
+    return value
+
+
+@dataclass(frozen=True, slots=True)
+class WindowsCacheLocation:
+    known_folder: str
+    cache_root: str
+
+    def __post_init__(self):
+        _windows_path(self.known_folder, directory=True)
+        _windows_path(self.cache_root, directory=True)
+        if self.cache_root != ntpath.join(self.known_folder, "MechanicalCAD", "r"):
+            raise WindowsCacheError("windows_cache_binding_mismatch")
+
+
+@dataclass
+class _Resource:
+    kind: str
+    value: object
+    attempted: bool = False
+    closed: bool = False
+
+
+def query_windows_cache_location(*, api=None) -> WindowsCacheLocation:
+    """Query current LocalAppData once; free the original shell output once."""
+    if api is None:
+        if sys.platform != "win32":
+            raise WindowsCacheError("windows_known_folder_unavailable")
+        try:
+            api = _WindowsAPI()
+        except Exception as exc:
+            raise WindowsCacheError("windows_known_folder_unavailable") from exc
+    output = ctypes.c_void_p()
+    allocation = _Resource("cotask", output)
+    try:
+        result = api.known_folder(output)
+        if type(result) is not int or result < 0 or result > 0x7FFFFFFF or not output.value:
+            raise WindowsCacheError("windows_known_folder_unavailable")
+        value = api.read_known_folder(output.value)
+        return WindowsCacheLocation(value, ntpath.join(value, "MechanicalCAD", "r"))
+    except WindowsCacheError:
+        raise
+    except Exception as exc:
+        raise WindowsCacheError("windows_known_folder_unavailable") from exc
+    finally:
+        if output.value:
+            allocation.attempted = True
+            try:
+                # CoTaskMemFree is void. A fake return value is not a success test.
+                api.co_task_mem_free(output.value)
+                allocation.closed = True
+            except BaseException as exc:
+                raise WindowsCacheError("cleanup_blocked", owner=allocation) from exc
+
+
+@dataclass(frozen=True)
+class _Info:
+    identity: tuple
+    path: str
+    attributes: int
+    disk: bool
+    directory: bool
+    links: int
+    inheritable: bool = False
+
+
+@dataclass(frozen=True)
+class _Volume:
+    filesystem: str
+    persistent_acls: bool
+    maximum_component: int
+    fixed: bool
+
+
+@dataclass(frozen=True)
+class _Ace:
+    sid: bytes
+    mask: int
+    flags: int = 0
+    kind: int = 0
+
+
+@dataclass(frozen=True)
+class _Security:
+    owner: bytes
+    present: bool
+    protected: bool
+    aces: tuple | None
+
+
+@dataclass
+class _Anchor:
+    path: str
+    resource: _Resource
+    directory: bool
+    private: bool
+    protected: bool
+    info: _Info | None = None
+
+
+def _sid_text(sid):
+    if (
+        type(sid) is not bytes
+        or len(sid) < 8
+        or sid[0] != 1
+        or sid[1] > 15
+        or len(sid) != 8 + 4 * sid[1]
+    ):
+        raise WindowsCacheError("windows_cache_not_private")
+    authority = int.from_bytes(sid[2:8], "big")
+    parts = [int.from_bytes(sid[n : n + 4], "little") for n in range(8, len(sid), 4)]
+    return "S-1-" + str(authority) + "".join("-" + str(n) for n in parts)
+
+
+_SYSTEM = bytes.fromhex("010100000000000512000000")
+_ADMINISTRATORS = bytes.fromhex("01020000000000052000000020020000")
+
+
+def _private_security(security, user, *, directory, protected=False):
+    """Finite allow-only policy, not a general Windows effective-access engine."""
+    _sid_text(user)
+    if (
+        type(security) is not _Security
+        or security.owner != user
+        or type(security.owner) is not bytes
+        or security.present is not True
+        or type(security.protected) is not bool
+        or (protected and not security.protected)
+        or type(security.aces) is not tuple
+        or not 1 <= len(security.aces) <= _MAX_ACES
+    ):
+        raise WindowsCacheError("windows_cache_not_private")
+    effective, propagating = 0, 0
+    for ace in security.aces:
+        if (
+            type(ace) is not _Ace
+            or type(ace.kind) is not int
+            or ace.kind != 0
+            or type(ace.sid) is not bytes
+            or ace.sid not in (user, _SYSTEM, _ADMINISTRATORS)
+            or type(ace.mask) is not int
+            or ace.mask <= 0
+            or ace.mask & ~_FILE_ALL_ACCESS
+            or type(ace.flags) is not int
+            or ace.flags < 0
+            or ace.flags & ~(_INHERIT | _NO_PROPAGATE | _INHERIT_ONLY | _INHERITED)
+        ):
+            raise WindowsCacheError("windows_cache_not_private")
+        if ace.sid == user:
+            if not ace.flags & _INHERIT_ONLY:
+                effective |= ace.mask
+            if ace.flags & _INHERIT == _INHERIT and not ace.flags & _NO_PROPAGATE:
+                propagating |= ace.mask
+    if effective != _FILE_ALL_ACCESS or (directory and propagating != _FILE_ALL_ACCESS):
+        raise WindowsCacheError("windows_cache_not_private")
+
+
+def _path_string(value):
+    # Concrete pathlib objects are required by the existing materializer. Never
+    # invoke an arbitrary caller-controlled __fspath__ or overridden __str__.
+    if type(value) is str:
+        return value
+    if type(value) in (PosixPath, WindowsPath):
+        return str(value)
+    raise WindowsCacheError("windows_cache_binding_mismatch")
+
+
+def _release_record(release):
+    if type(release) is not ReleaseManifest:
+        raise WindowsCacheError("windows_cache_binding_mismatch")
+    values = vars(release)
+    if any(type(value) is not str for key, value in values.items() if key != "payload_size"):
+        raise WindowsCacheError("windows_cache_binding_mismatch")
+    try:
+        expected = bundle_identity(
+            release.source_commit, release.runtime_lock_sha256, release.platform
+        )
+    except BundleError as exc:
+        raise WindowsCacheError("windows_cache_binding_mismatch") from exc
+    if (
+        release.platform != "windows-x64"
+        or release.bundle_id != expected
+        or release.manifest_path != f"_backend/{expected}/bundle-manifest.json"
+        or release.payload_path != f"_backend/{expected}/payload.zip"
+        or re.fullmatch(r"[0-9a-f]{64}", release.manifest_sha256) is None
+        or re.fullmatch(r"[0-9a-f]{64}", release.payload_sha256) is None
+        or type(release.payload_size) is not int
+        or release.payload_size < 0
+    ):
+        raise WindowsCacheError("windows_cache_binding_mismatch")
+
+
+class WindowsCacheOwner:
+    """One exact cache recipe and release, acquired/retired on its original worker."""
+
+    def __init__(self, location, *, package_root, expected_platform, release, api=None):
+        if type(self) is not WindowsCacheOwner or type(location) is not WindowsCacheLocation:
+            raise WindowsCacheError("windows_cache_binding_mismatch")
+        # Revalidate the concrete frozen record without accepting path-like callbacks.
+        WindowsCacheLocation(location.known_folder, location.cache_root)
+        if type(package_root) is not str or type(expected_platform) is not str:
+            raise WindowsCacheError("windows_cache_binding_mismatch")
+        if expected_platform != "windows-x64":
+            raise WindowsCacheError("windows_cache_binding_mismatch")
+        _release_record(release)
+        self._location = WindowsCacheLocation(location.known_folder, location.cache_root)
+        self._package_root = package_root
+        self._expected_platform = expected_platform
+        self._release = ReleaseManifest(**vars(release))
+        self._api = api
+        self._state, self._thread = "new", None
+        self._resources, self._anchors, self._created_paths = [], [], []
+        self._maximum_components, self._volume_serials = {}, {}
+        self._cancelled = lambda: False
+        self._owned_stage_path = None
+        self._stage_anchor, self._rename_identity = None, None
+        self._user = None
+        self.check_installed_paths(package_root, release)
+        self._fixed_budgets()
+
+    @property
+    def location(self):
+        return self._location
+
+    @property
+    def package_root(self):
+        return self._package_root
+
+    @property
+    def cache_root(self):
+        return self._location.cache_root
+
+    @property
+    def expected_platform(self):
+        return self._expected_platform
+
+    @property
+    def release(self):
+        return self._release
+
+    @property
+    def owned_stage_path(self):
+        # This is a creation-location diagnostic, including after rename; no I/O.
+        return self._owned_stage_path
+
+    @property
+    def cleanup_uncertain(self):
+        return self._state == "uncertain"
+
+    def _worker(self):
+        if self._thread is None or threading.current_thread() is not self._thread:
+            raise WindowsCacheError("windows_cache_worker_required", owner=self)
+
+    def _checkpoint(self):
+        self._worker()
+        if self.cleanup_uncertain:
+            raise WindowsCacheError("cleanup_blocked", owner=self)
+        if self._cancelled():
+            raise WindowsCacheCancelled(owner=self)
+
+    def _binding(self, release):
+        if type(release) is not ReleaseManifest or release != self.release:
+            raise WindowsCacheError("windows_cache_binding_mismatch", owner=self)
+
+    def _budget(self, path, *, directory=False, installed=False, surface=None):
+        try:
+            _windows_path(path, directory=directory)
+            drive, tail = ntpath.splitdrive(path)
+            maximum = self._maximum_components.get(drive)
+            if maximum is not None:
+                for part in tail[1:].split("\\"):
+                    length = len(part.encode("utf-16-le", "strict")) // 2
+                    if length > maximum:
+                        raise WindowsCacheError(
+                            "windows_cache_path_too_long",
+                            owner=self,
+                            surface="path component",
+                            length=length,
+                            limit=maximum,
+                        )
+        except WindowsCacheError as exc:
+            if exc.code == "windows_cache_path_too_long":
+                label = surface or (
+                    ("installed " if installed else "cache ")
+                    + ("directory" if directory else "file")
+                )
+                if exc.surface == "path component":
+                    label = exc.surface
+                raise WindowsCacheError(
+                    "windows_install_path_too_long" if installed else exc.code,
+                    owner=self,
+                    surface=label,
+                    length=exc.length,
+                    limit=exc.limit,
+                ) from exc
+            raise
+        return path
+
+    def _file_budget(self, root, relative, *, installed=False):
+        validate_path(relative, BundleLimits(max_path_bytes=4096, max_path_depth=128))
+        parts = relative.split("/")
+        staging = ntpath.basename(root).startswith(".stage-")
+        directory_surface = "staging directory" if staging else None
+        self._budget(root, directory=True, installed=installed, surface=directory_surface)
+        for size in range(1, len(parts)):
+            self._budget(
+                ntpath.join(root, *parts[:size]),
+                directory=True,
+                installed=installed,
+                surface=directory_surface,
+            )
+        self._budget(
+            ntpath.join(root, *parts),
+            installed=installed,
+            surface="staging file" if staging else None,
+        )
+
+    def _fixed_budgets(self):
+        for path in (self.location.known_folder, ntpath.dirname(self.cache_root), self.cache_root):
+            self._budget(path, directory=True)
+        self._budget(ntpath.join(self.cache_root, self.release.bundle_id), directory=True)
+        self._file_budget(self.cache_root, ".bundle-pins/" + self.release.bundle_id + ".lock")
+
+    def check_installed_paths(self, package_root, release):
+        """Pure exact binding/budgets, suitable before any materializer root I/O."""
+        self._binding(release)
+        if _path_string(package_root) != self.package_root:
+            raise WindowsCacheError("windows_cache_binding_mismatch", owner=self)
+        self._budget(self.package_root, directory=True, installed=True)
+        for relative in (
+            "standalone_launch_constants.py",
+            "release_identity.json",
+            release.manifest_path,
+            release.payload_path,
+        ):
+            self._file_budget(self.package_root, relative, installed=True)
+
+    def _own(self, kind, value):
+        resource = _Resource(kind, value)
+        self._resources.append(resource)
+        return resource
+
+    def _finish(self, resource, *, cleanup_checkpoint=None):
+        try:
+            if cleanup_checkpoint is not None:
+                if not callable(cleanup_checkpoint):
+                    raise TypeError("cleanup checkpoint must be callable")
+                if self.cleanup_uncertain:
+                    raise WindowsCacheError("cleanup_blocked", owner=self)
+            if resource.closed:
+                return
+            if resource.attempted:
+                raise WindowsCacheError("cleanup_blocked", owner=self)
+            if cleanup_checkpoint is not None:
+                cleanup_checkpoint()
+            resource.attempted = True
+            if resource.kind == "local":
+                # Unlike CoTaskMemFree, LocalFree has a meaningful NULL success result.
+                result = self._api.local_free(resource.value)
+                if result is not None and not (type(result) is int and result == 0):
+                    raise OSError("LocalFree did not confirm cleanup")
+            else:
+                self._api.close_handle(resource.value)
+            # A late return cannot undo a confirmed release or authorize a retry.
+            resource.closed = True
+            if cleanup_checkpoint is not None:
+                cleanup_checkpoint()
+        except BaseException as exc:
+            self._state = "uncertain"
+            raise WindowsCacheError("cleanup_blocked", owner=self) from exc
+
+    def _allocation(self, operation, *args):
+        output = ctypes.c_void_p()
+        resource = None
+        try:
+            result = operation(*args, output)
+        finally:
+            # Also retain unusual failure outputs, before any validation/parsing.
+            if output.value:
+                resource = self._own("local", output.value)
+        if type(result) is not int or result != 0 or resource is None:
+            raise WindowsCacheError("windows_cache_not_private", owner=self)
+        return resource
+
+    def _security(self, handle, *, directory, protected=False):
+        resource = self._allocation(self._api.security_descriptor, handle)
+        try:
+            observation = self._api.parse_security(resource.value)
+            _private_security(observation, self._user, directory=directory, protected=protected)
+        finally:
+            self._finish(resource)
+
+    def _create(self, path, *, stage=False):
+        sddl = (
+            "O:" + _sid_text(self._user) + "D:P"
+            "(A;OICI;FA;;;" + _sid_text(self._user) + ")"
+            "(A;OICI;FA;;;SY)(A;OICI;FA;;;BA)"
+        )
+        resource = self._allocation(self._api.convert_descriptor, sddl)
+        try:
+            _private_security(
+                self._api.parse_security(resource.value),
+                self._user,
+                directory=True,
+                protected=True,
+            )
+            created = self._api.create_directory(path, resource.value)
+            if created is True:
+                # Absolutely no post-success API/cleanup/checkpoint precedes this record.
+                if stage:
+                    self._owned_stage_path = path
+                self._created_paths.append(path)
+            elif created is not False:
+                raise WindowsCacheError("windows_cache_access_denied", owner=self)
+        finally:
+            self._finish(resource)
+        return created
+
+    def _validate_info(self, info, path, *, directory):
+        if (
+            type(info) is not _Info
+            or type(info.identity) is not tuple
+            or len(info.identity) != 2
+            or any(type(n) is not int or n < 0 for n in info.identity)
+            or type(info.attributes) is not int
+            or info.attributes < 0
+            or info.attributes & (_REPARSE | _OFFLINE)
+            or info.disk is not True
+            or info.inheritable is not False
+            or type(info.directory) is not bool
+            or info.directory != directory
+            or bool(info.attributes & _DIRECTORY) != directory
+            or info.path != path
+            or (not directory and (type(info.links) is not int or info.links != 1))
+        ):
+            raise WindowsCacheError("windows_cache_unsupported_location", owner=self)
+        self._budget(info.path, directory=directory)
+        serial = self._volume_serials.get(ntpath.splitdrive(path)[0])
+        if serial is not None and info.identity[0] != serial:
+            raise WindowsCacheError("windows_cache_unsupported_location", owner=self)
+
+    def _volume(self, handle, path):
+        value = self._api.volume(handle, path)
+        if (
+            type(value) is not _Volume
+            or value.fixed is not True
+            or value.filesystem != "NTFS"
+            or value.persistent_acls is not True
+            or type(value.maximum_component) is not int
+            or not 1 <= value.maximum_component <= 32767
+        ):
+            raise WindowsCacheError("windows_cache_unsupported_location", owner=self)
+        drive = ntpath.splitdrive(path)[0]
+        previous = self._maximum_components.get(drive)
+        if previous is not None and previous != value.maximum_component:
+            raise WindowsCacheError("windows_cache_unsupported_location", owner=self)
+        self._maximum_components[drive] = value.maximum_component
+        self._budget(path, directory=True)
+
+    def _open_anchor(self, path, *, directory=True, private=False, protected=False):
+        self._checkpoint()
+        self._budget(path, directory=directory)
+        before = self._api.attributes(path)
+        handle = self._api.open_entry(path, security=private)
+        resource = self._own("handle", handle)
+        anchor = _Anchor(path, resource, directory, private, protected)
+        self._anchors.append(anchor)
+        actual = self._api.info(handle)
+        self._validate_info(actual, path, directory=directory)
+        after = self._api.attributes(path)
+        if type(before) is not int or type(after) is not int or before != after:
+            raise WindowsCacheError("windows_cache_unsupported_location", owner=self)
+        if actual.attributes != after:
+            raise WindowsCacheError("windows_cache_unsupported_location", owner=self)
+        if directory:
+            drive = ntpath.splitdrive(path)[0]
+            serial = self._volume_serials.setdefault(drive, actual.identity[0])
+            if serial != actual.identity[0]:
+                raise WindowsCacheError("windows_cache_unsupported_location", owner=self)
+            self._volume(handle, path)
+        if private:
+            self._security(handle, directory=directory, protected=protected)
+        anchor.info = actual
+        self._checkpoint()
+        return anchor
+
+    def acquire(self, *, cancelled=lambda: False):
+        return self._acquire(cancelled, create=True)
+
+    def acquire_existing(self, *, cancelled=lambda: False):
+        return self._acquire(cancelled, create=False)
+
+    def _acquire(self, cancelled, *, create):
+        if threading.current_thread() is threading.main_thread():
+            raise WindowsCacheError("windows_cache_worker_required", owner=self)
+        if self._state != "new" or not callable(cancelled):
+            raise WindowsCacheError("windows_cache_not_held", owner=self)
+        self._thread = threading.current_thread()
+        self._state, self._cancelled = "acquiring", cancelled
+        try:
+            self._checkpoint()
+            self.check_installed_paths(self.package_root, self.release)
+            self._fixed_budgets()
+            if self._api is None:
+                if sys.platform != "win32":
+                    raise WindowsCacheError("windows_cache_unsupported_location", owner=self)
+                self._api = _WindowsAPI()
+            output = ctypes.c_void_p()
+            token = None
+            try:
+                self._api.open_token(output)
+            finally:
+                if output.value:
+                    token = self._own("handle", output.value)
+            if token is None:
+                raise WindowsCacheError("windows_cache_access_denied", owner=self)
+            try:
+                self._user = self._api.token_user(token.value)
+                _sid_text(self._user)
+            finally:
+                self._finish(token)
+            drive, tail = ntpath.splitdrive(self.location.known_folder)
+            paths = [drive + "\\"]
+            for component in tail[1:].split("\\"):
+                if component:
+                    paths.append(ntpath.join(paths[-1], component))
+            for path in paths:
+                self._open_anchor(path)
+            installed_drive = ntpath.splitdrive(self.package_root)[0]
+            if installed_drive not in self._maximum_components:
+                self._open_anchor(installed_drive + "\\")
+            self.check_installed_paths(self.package_root, self.release)
+            self._fixed_budgets()
+            for path in (ntpath.dirname(self.cache_root), self.cache_root):
+                self._checkpoint()
+                if create:
+                    self._create(path)
+                self._open_anchor(path, private=True, protected=True)
+            self._state = "held"
+            self.assert_held()
+            return self
+        except WindowsCacheError:
+            if not self.cleanup_uncertain:
+                self._state = "revoked"
+            raise
+        except Exception as exc:
+            if not self.cleanup_uncertain:
+                self._state = "revoked"
+            raise WindowsCacheError("windows_cache_access_denied", owner=self) from exc
+
+    def assert_held(self):
+        self._checkpoint()
+        if self._state != "held":
+            raise WindowsCacheError("windows_cache_not_held", owner=self)
+        try:
+            for anchor in self._anchors:
+                if anchor.resource.closed:
+                    continue
+                self._checkpoint()
+                actual = self._api.info(anchor.resource.value)
+                self._validate_info(actual, anchor.path, directory=anchor.directory)
+                if actual != anchor.info or self._api.attributes(anchor.path) != actual.attributes:
+                    raise WindowsCacheError("windows_cache_unsupported_location", owner=self)
+                if anchor.private:
+                    self._security(
+                        anchor.resource.value,
+                        directory=anchor.directory,
+                        protected=anchor.protected,
+                    )
+        except BaseException:
+            if not self.cleanup_uncertain:
+                self._state = "revoked"
+            raise
+
+    def check_manifest_paths(self, release, manifest, stage=None):
+        self._binding(release)
+        if (
+            type(manifest) is not BundleManifest
+            or manifest.bundle_id != release.bundle_id
+            or manifest.platform != self.expected_platform
+            or type(manifest.files) is not tuple
+            or len(manifest.files) > 50000
+            or any(type(item) is not BundleFile for item in manifest.files)
+        ):
+            raise WindowsCacheError("windows_cache_binding_mismatch", owner=self)
+        self.assert_held()
+        final = ntpath.join(self.cache_root, release.bundle_id)
+        roots = [final]
+        if stage is not None:
+            stage = _path_string(stage)
+            if (
+                ntpath.dirname(stage) != self.cache_root
+                or re.fullmatch(
+                    r"\.stage-" + release.bundle_id + r"-[0-9a-f]{8}", ntpath.basename(stage)
+                )
+                is None
+            ):
+                raise WindowsCacheError("windows_cache_binding_mismatch", owner=self)
+            roots.append(stage)
+        for root in roots:
+            self._checkpoint()
+            self._budget(root, directory=True)
+            for relative in (manifest.python_path, manifest.bootstrap_path, ".bundle-ready.json"):
+                self._file_budget(root, relative)
+            for item in manifest.files:
+                self._checkpoint()
+                self._file_budget(root, item.path)
+
+    def create_stage(self, release, manifest):
+        self._binding(release)
+        if self._owned_stage_path is not None or self._stage_anchor is not None:
+            raise WindowsCacheError("windows_cache_stage_unavailable", owner=self)
+        for _ in range(16):
+            self._checkpoint()
+            candidate = ntpath.join(
+                self.cache_root, ".stage-" + release.bundle_id + "-" + secrets.token_hex(4)
+            )
+            self.check_manifest_paths(release, manifest, candidate)
+            if not self._create(candidate, stage=True):
+                continue
+            self._checkpoint()
+            self._stage_anchor = self._open_anchor(candidate, private=True)
+            # Exact actual created spelling and complete descendants are checked again.
+            self.check_manifest_paths(release, manifest, self._stage_anchor.info.path)
+            return candidate
+        raise WindowsCacheError("windows_cache_stage_unavailable", owner=self)
+
+    def _private_path(self, path, *, directory):
+        path = _path_string(path)
+        self._budget(path, directory=directory)
+        if path != self.cache_root and not path.startswith(self.cache_root + "\\"):
+            raise WindowsCacheError("windows_cache_binding_mismatch", owner=self)
+        return path
+
+    def check_private_entry(self, path, *, directory):
+        self.assert_held()
+        path = self._private_path(path, directory=directory)
+        anchor = None
+        # _open_anchor records every successful handle even when it never returns.
+        start = len(self._resources)
+        try:
+            anchor = self._open_anchor(path, directory=directory, private=True)
+        finally:
+            for resource in reversed(self._resources[start:]):
+                if resource.kind == "handle" and not resource.attempted:
+                    self._finish(resource)
+        if anchor is None:
+            raise WindowsCacheError("windows_cache_access_denied", owner=self)
+
+    def check_private_handle(self, borrowed_handle, expected_path, *, directory):
+        self.assert_held()
+        expected_path = self._private_path(expected_path, directory=directory)
+        # No pathname reopen and no close of a borrowed (possibly delete-on-close) handle.
+        before = self._api.info(borrowed_handle)
+        self._validate_info(before, expected_path, directory=directory)
+        self._security(borrowed_handle, directory=directory)
+        after = self._api.info(borrowed_handle)
+        if after != before:
+            raise WindowsCacheError("windows_cache_unsupported_location", owner=self)
+
+    def before_stage_rename(self, stage, final):
+        self.assert_held()
+        if (
+            _path_string(stage) != self._owned_stage_path
+            or _path_string(final) != ntpath.join(self.cache_root, self.release.bundle_id)
+            or self._stage_anchor is None
+            or self._stage_anchor.resource.attempted
+            or self._rename_identity is not None
+        ):
+            raise WindowsCacheError("windows_cache_binding_mismatch", owner=self)
+        self._rename_identity = self._stage_anchor.info.identity
+        # A deny-delete stage anchor would prevent the materializer's existing rename.
+        self._finish(self._stage_anchor.resource)
+        self._checkpoint()
+
+    def after_stage_rename(self, final):
+        self.assert_held()
+        final = _path_string(final)
+        if (
+            final != ntpath.join(self.cache_root, self.release.bundle_id)
+            or self._rename_identity is None
+            or self._stage_anchor is None
+            or not self._stage_anchor.resource.closed
+        ):
+            raise WindowsCacheError("windows_cache_binding_mismatch", owner=self)
+        anchor = self._open_anchor(final, private=True)
+        if anchor.info.identity != self._rename_identity:
+            self._state = "revoked"
+            raise WindowsCacheError("windows_cache_unsupported_location", owner=self)
+        self._rename_identity = None
+
+    def close(self, *, cleanup_checkpoint=None):
+        """Close original owned resources once; never remove any directory or file."""
+        if self._thread is not None:
+            self._worker()
+        if cleanup_checkpoint is not None:
+            try:
+                if not callable(cleanup_checkpoint):
+                    raise TypeError("cleanup checkpoint must be callable")
+                if self.cleanup_uncertain:
+                    raise WindowsCacheError("cleanup_blocked", owner=self)
+                cleanup_checkpoint()
+                if self._state != "closed":
+                    self._state = "closing"
+                    for resource in reversed(self._resources):
+                        if not resource.attempted:
+                            self._finish(resource, cleanup_checkpoint=cleanup_checkpoint)
+                cleanup_checkpoint()
+            except BaseException as exc:
+                self._state = "uncertain"
+                raise WindowsCacheError("cleanup_blocked", owner=self) from exc
+            self._state = "closed"
+            return
+        if self._state == "closed":
+            return
+        if self.cleanup_uncertain:
+            raise WindowsCacheError("cleanup_blocked", owner=self)
+        failure = None
+        self._state = "closing"
+        for resource in reversed(self._resources):
+            if not resource.attempted:
+                try:
+                    self._finish(resource)
+                except BaseException as exc:
+                    failure = failure or exc
+        if failure is not None:
+            self._state = "uncertain"
+            raise WindowsCacheError("cleanup_blocked", owner=self) from failure
+        self._state = "closed"
+
+
+# Fixed-width Win32 ABI. No DLL is bound until an explicit Windows API action.
+_DWORD = ctypes.c_uint32
+_WORD = ctypes.c_uint16
+_BYTE = ctypes.c_ubyte
+_HANDLE = ctypes.c_void_p
+_BOOL = ctypes.c_int32
+
+
+class _GUID(ctypes.Structure):
+    _fields_ = [("a", _DWORD), ("b", _WORD), ("c", _WORD), ("d", _BYTE * 8)]
+
+
+_LOCAL_APP_DATA = _GUID(
+    0xF1B32785, 0x6FBA, 0x4FCF, (_BYTE * 8)(0x9D, 0x55, 0x7B, 0x8E, 0x7F, 0x15, 0x70, 0x91)
+)
+
+
+class _FileInformation(ctypes.Structure):
+    _fields_ = [
+        ("attributes", _DWORD),
+        ("creation", _DWORD * 2),
+        ("access", _DWORD * 2),
+        ("write", _DWORD * 2),
+        ("serial", _DWORD),
+        ("size_high", _DWORD),
+        ("size_low", _DWORD),
+        ("links", _DWORD),
+        ("index_high", _DWORD),
+        ("index_low", _DWORD),
+    ]
+
+
+class _SecurityAttributes(ctypes.Structure):
+    _fields_ = [("length", _DWORD), ("descriptor", _HANDLE), ("inherit", _BOOL)]
+
+
+class _TokenUser(ctypes.Structure):
+    _fields_ = [("sid", _HANDLE), ("attributes", _DWORD)]
+
+
+class _Acl(ctypes.Structure):
+    _fields_ = [
+        ("revision", _BYTE),
+        ("reserved", _BYTE),
+        ("size", _WORD),
+        ("count", _WORD),
+        ("reserved2", _WORD),
+    ]
+
+
+class _AceHeader(ctypes.Structure):
+    _fields_ = [("kind", _BYTE), ("flags", _BYTE), ("size", _WORD)]
+
+
+class _WindowsAPI:
+    """Narrow raw-allocation leaves plus bounded observations; never a cleanup owner."""
+
+    def __init__(self):
+        if sys.platform != "win32":
+            raise WindowsCacheError("windows_cache_unsupported_location")
+        self.kernel = ctypes.WinDLL("kernel32", use_last_error=True)
+        self.advapi = ctypes.WinDLL("advapi32", use_last_error=True)
+        self.shell = ctypes.WinDLL("shell32", use_last_error=True)
+        self.ole = ctypes.WinDLL("ole32", use_last_error=True)
+        self._bind()
+
+    def _bind(self):
+        pointer = ctypes.POINTER
+        declarations = (
+            (
+                self.shell,
+                "SHGetKnownFolderPath",
+                ctypes.c_int32,
+                [pointer(_GUID), _DWORD, _HANDLE, pointer(_HANDLE)],
+            ),
+            (self.ole, "CoTaskMemFree", None, [_HANDLE]),
+            (self.kernel, "LocalFree", _HANDLE, [_HANDLE]),
+            (self.kernel, "GetCurrentProcess", _HANDLE, []),
+            (self.kernel, "CloseHandle", _BOOL, [_HANDLE]),
+            (
+                self.kernel,
+                "CreateFileW",
+                _HANDLE,
+                [ctypes.c_wchar_p, _DWORD, _DWORD, _HANDLE, _DWORD, _DWORD, _HANDLE],
+            ),
+            (
+                self.kernel,
+                "CreateDirectoryW",
+                _BOOL,
+                [ctypes.c_wchar_p, pointer(_SecurityAttributes)],
+            ),
+            (self.kernel, "GetFileAttributesW", _DWORD, [ctypes.c_wchar_p]),
+            (self.kernel, "GetFileType", _DWORD, [_HANDLE]),
+            (self.kernel, "GetHandleInformation", _BOOL, [_HANDLE, pointer(_DWORD)]),
+            (
+                self.kernel,
+                "GetFileInformationByHandle",
+                _BOOL,
+                [_HANDLE, pointer(_FileInformation)],
+            ),
+            (
+                self.kernel,
+                "GetFinalPathNameByHandleW",
+                _DWORD,
+                [_HANDLE, ctypes.c_wchar_p, _DWORD, _DWORD],
+            ),
+            (
+                self.kernel,
+                "GetVolumeInformationByHandleW",
+                _BOOL,
+                [
+                    _HANDLE,
+                    ctypes.c_wchar_p,
+                    _DWORD,
+                    pointer(_DWORD),
+                    pointer(_DWORD),
+                    pointer(_DWORD),
+                    ctypes.c_wchar_p,
+                    _DWORD,
+                ],
+            ),
+            (self.kernel, "GetDriveTypeW", _DWORD, [ctypes.c_wchar_p]),
+            (self.advapi, "OpenProcessToken", _BOOL, [_HANDLE, _DWORD, pointer(_HANDLE)]),
+            (
+                self.advapi,
+                "GetTokenInformation",
+                _BOOL,
+                [_HANDLE, _DWORD, _HANDLE, _DWORD, pointer(_DWORD)],
+            ),
+            (
+                self.advapi,
+                "ConvertStringSecurityDescriptorToSecurityDescriptorW",
+                _BOOL,
+                [ctypes.c_wchar_p, _DWORD, pointer(_HANDLE), pointer(_DWORD)],
+            ),
+            (
+                self.advapi,
+                "GetSecurityInfo",
+                _DWORD,
+                [
+                    _HANDLE,
+                    _DWORD,
+                    _DWORD,
+                    pointer(_HANDLE),
+                    pointer(_HANDLE),
+                    pointer(_HANDLE),
+                    pointer(_HANDLE),
+                    pointer(_HANDLE),
+                ],
+            ),
+            (self.advapi, "IsValidSecurityDescriptor", _BOOL, [_HANDLE]),
+            (self.advapi, "GetSecurityDescriptorLength", _DWORD, [_HANDLE]),
+            (
+                self.advapi,
+                "GetSecurityDescriptorOwner",
+                _BOOL,
+                [_HANDLE, pointer(_HANDLE), pointer(_BOOL)],
+            ),
+            (
+                self.advapi,
+                "GetSecurityDescriptorDacl",
+                _BOOL,
+                [_HANDLE, pointer(_BOOL), pointer(_HANDLE), pointer(_BOOL)],
+            ),
+            (
+                self.advapi,
+                "GetSecurityDescriptorControl",
+                _BOOL,
+                [_HANDLE, pointer(_WORD), pointer(_DWORD)],
+            ),
+            (self.advapi, "IsValidSid", _BOOL, [_HANDLE]),
+            (self.advapi, "GetLengthSid", _DWORD, [_HANDLE]),
+            (self.advapi, "IsValidAcl", _BOOL, [_HANDLE]),
+            (self.advapi, "GetAce", _BOOL, [_HANDLE, _DWORD, pointer(_HANDLE)]),
+        )
+        for library, name, restype, argtypes in declarations:
+            function = getattr(library, name)
+            function.restype, function.argtypes = restype, argtypes
+
+    def known_folder(self, output):
+        return self.shell.SHGetKnownFolderPath(
+            ctypes.byref(_LOCAL_APP_DATA), 0x4000, None, ctypes.byref(output)
+        )
+
+    def read_known_folder(self, pointer):
+        units = ctypes.cast(pointer, ctypes.POINTER(_WORD))
+        raw = bytearray()
+        for index in range(4097):
+            unit = units[index]
+            if unit == 0:
+                return bytes(raw).decode("utf-16-le", "strict")
+            if index == 4096:
+                break
+            raw.extend(int(unit).to_bytes(2, "little"))
+        raise WindowsCacheError("windows_known_folder_unavailable")
+
+    def co_task_mem_free(self, pointer):
+        self.ole.CoTaskMemFree(pointer)
+
+    def local_free(self, pointer):
+        return self.kernel.LocalFree(pointer)
+
+    def close_handle(self, handle):
+        if not self.kernel.CloseHandle(handle):
+            raise WindowsCacheError("cleanup_blocked")
+
+    def open_token(self, output):
+        if not self.advapi.OpenProcessToken(
+            self.kernel.GetCurrentProcess(), 0x0008, ctypes.byref(output)
+        ):
+            raise WindowsCacheError("windows_cache_access_denied")
+
+    @staticmethod
+    def _inside(pointer, size, base, length):
+        if not pointer or size < 0 or pointer < base or pointer + size > base + length:
+            raise WindowsCacheError("windows_cache_not_private")
+
+    def _sid_bytes(self, pointer, base, length):
+        self._inside(pointer, 8, base, length)
+        head = ctypes.string_at(pointer, 8)
+        size = 8 + head[1] * 4
+        if head[0] != 1 or head[1] > 15:
+            raise WindowsCacheError("windows_cache_not_private")
+        self._inside(pointer, size, base, length)
+        if not self.advapi.IsValidSid(pointer) or self.advapi.GetLengthSid(pointer) != size:
+            raise WindowsCacheError("windows_cache_not_private")
+        return ctypes.string_at(pointer, size)
+
+    def token_user(self, handle):
+        flags = _DWORD()
+        if not self.kernel.GetHandleInformation(handle, ctypes.byref(flags)) or flags.value & 1:
+            raise WindowsCacheError("windows_cache_access_denied")
+        needed = _DWORD()
+        result = self.advapi.GetTokenInformation(handle, 1, None, 0, ctypes.byref(needed))
+        if (
+            result
+            or ctypes.get_last_error() != 122
+            or not ctypes.sizeof(_TokenUser) <= needed.value <= 4096
+        ):
+            raise WindowsCacheError("windows_cache_access_denied")
+        buffer = ctypes.create_string_buffer(needed.value)
+        capacity = len(buffer)
+        if (
+            not self.advapi.GetTokenInformation(handle, 1, buffer, capacity, ctypes.byref(needed))
+            or not ctypes.sizeof(_TokenUser) <= needed.value <= capacity
+        ):
+            raise WindowsCacheError("windows_cache_access_denied")
+        token = _TokenUser.from_buffer(buffer)
+        return self._sid_bytes(token.sid, ctypes.addressof(buffer), needed.value)
+
+    def convert_descriptor(self, sddl, output):
+        size = _DWORD()
+        succeeded = self.advapi.ConvertStringSecurityDescriptorToSecurityDescriptorW(
+            sddl, 1, ctypes.byref(output), ctypes.byref(size)
+        )
+        # The owner records output before using this result or parsing the descriptor.
+        return 0 if succeeded else 1
+
+    def security_descriptor(self, handle, output):
+        return self.advapi.GetSecurityInfo(
+            handle, 1, 0x00000005, None, None, None, None, ctypes.byref(output)
+        )
+
+    def parse_security(self, pointer):
+        if not self.advapi.IsValidSecurityDescriptor(pointer):
+            raise WindowsCacheError("windows_cache_not_private")
+        length = self.advapi.GetSecurityDescriptorLength(pointer)
+        if not 20 <= length <= _MAX_DESCRIPTOR:
+            raise WindowsCacheError("windows_cache_not_private")
+        owner, dacl = _HANDLE(), _HANDLE()
+        defaulted, present = _BOOL(), _BOOL()
+        control, revision = _WORD(), _DWORD()
+        if not self.advapi.GetSecurityDescriptorOwner(
+            pointer, ctypes.byref(owner), ctypes.byref(defaulted)
+        ):
+            raise WindowsCacheError("windows_cache_not_private")
+        owner_bytes = self._sid_bytes(owner.value, pointer, length)
+        if not self.advapi.GetSecurityDescriptorDacl(
+            pointer, ctypes.byref(present), ctypes.byref(dacl), ctypes.byref(defaulted)
+        ) or not self.advapi.GetSecurityDescriptorControl(
+            pointer, ctypes.byref(control), ctypes.byref(revision)
+        ):
+            raise WindowsCacheError("windows_cache_not_private")
+        if revision.value != 1:
+            raise WindowsCacheError("windows_cache_not_private")
+        if not present.value or not dacl.value:
+            return _Security(
+                owner_bytes, bool(present.value), bool(control.value & _DACL_PROTECTED), None
+            )
+        self._inside(dacl.value, ctypes.sizeof(_Acl), pointer, length)
+        acl = _Acl.from_address(dacl.value)
+        if acl.revision not in (2, 4) or acl.count > _MAX_ACES or acl.size < ctypes.sizeof(_Acl):
+            raise WindowsCacheError("windows_cache_not_private")
+        self._inside(dacl.value, acl.size, pointer, length)
+        if not self.advapi.IsValidAcl(dacl.value):
+            raise WindowsCacheError("windows_cache_not_private")
+        aces = []
+        for index in range(acl.count):
+            ace_pointer = _HANDLE()
+            if not self.advapi.GetAce(dacl.value, index, ctypes.byref(ace_pointer)):
+                raise WindowsCacheError("windows_cache_not_private")
+            self._inside(ace_pointer.value, 8, dacl.value, acl.size)
+            header = _AceHeader.from_address(ace_pointer.value)
+            if header.kind != 0 or header.size < 16:
+                raise WindowsCacheError("windows_cache_not_private")
+            self._inside(ace_pointer.value, header.size, dacl.value, acl.size)
+            mask = _DWORD.from_address(ace_pointer.value + 4).value
+            sid = self._sid_bytes(ace_pointer.value + 8, ace_pointer.value, header.size)
+            if header.size != 8 + len(sid):
+                raise WindowsCacheError("windows_cache_not_private")
+            aces.append(_Ace(sid, mask, header.flags, header.kind))
+        return _Security(owner_bytes, True, bool(control.value & _DACL_PROTECTED), tuple(aces))
+
+    def create_directory(self, path, descriptor):
+        attributes = _SecurityAttributes(ctypes.sizeof(_SecurityAttributes), descriptor, False)
+        if self.kernel.CreateDirectoryW(path, ctypes.byref(attributes)):
+            return True
+        if ctypes.get_last_error() == 183:
+            return False
+        raise WindowsCacheError("windows_cache_access_denied")
+
+    def open_entry(self, path, *, security):
+        handle = self.kernel.CreateFileW(
+            path,
+            0x80 | (0x20000 if security else 0),
+            0x03,
+            None,
+            3,
+            0x02000000 | 0x00200000,
+            None,
+        )
+        if handle is None or handle == 0 or handle == ctypes.c_void_p(-1).value:
+            raise WindowsCacheError("windows_cache_access_denied")
+        return handle
+
+    def attributes(self, path):
+        value = self.kernel.GetFileAttributesW(path)
+        if value == 0xFFFFFFFF:
+            raise WindowsCacheError("windows_cache_access_denied")
+        return value
+
+    def info(self, handle):
+        value = _FileInformation()
+        flags = _DWORD()
+        if not self.kernel.GetHandleInformation(handle, ctypes.byref(flags)):
+            raise WindowsCacheError("windows_cache_access_denied")
+        if not self.kernel.GetFileInformationByHandle(handle, ctypes.byref(value)):
+            raise WindowsCacheError("windows_cache_access_denied")
+        buffer = ctypes.create_unicode_buffer(4097)
+        count = self.kernel.GetFinalPathNameByHandleW(handle, buffer, len(buffer), 0)
+        if not 0 < count < len(buffer):
+            raise WindowsCacheError("windows_cache_unsupported_location")
+        path = buffer.value
+        # Only parse the documented observation prefix; never use it for filesystem I/O.
+        if path.startswith("\\\\?\\"):
+            path = path[4:]
+        _windows_path(path, directory=bool(value.attributes & _DIRECTORY))
+        return _Info(
+            (value.serial, (value.index_high << 32) | value.index_low),
+            path,
+            value.attributes,
+            self.kernel.GetFileType(handle) == 1,
+            bool(value.attributes & _DIRECTORY),
+            value.links,
+            bool(flags.value & 1),
+        )
+
+    def volume(self, handle, path):
+        name, filesystem = ctypes.create_unicode_buffer(261), ctypes.create_unicode_buffer(32)
+        serial, maximum, flags = _DWORD(), _DWORD(), _DWORD()
+        if not self.kernel.GetVolumeInformationByHandleW(
+            handle,
+            name,
+            len(name),
+            ctypes.byref(serial),
+            ctypes.byref(maximum),
+            ctypes.byref(flags),
+            filesystem,
+            len(filesystem),
+        ):
+            raise WindowsCacheError("windows_cache_unsupported_location")
+        drive = ntpath.splitdrive(path)[0] + "\\"
+        return _Volume(
+            filesystem.value,
+            bool(flags.value & 0x08),
+            maximum.value,
+            self.kernel.GetDriveTypeW(drive) == 3,
+        )
