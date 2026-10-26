@@ -18,6 +18,8 @@ LEAVES = {
     "windows_process",
     "windows_runtime",
     "windows_cache",
+    "windows_package_cache",
+    "windows_package_host",
     "runtime_bundle_manifest",
     "runtime_bundle_materialize",
     "runtime_bundle_pin",
@@ -54,7 +56,8 @@ IMPORT_EDGES = {
     ),
     "runtime_bundle_prepare.py": (
         "from .windows_cache import "
-        "WindowsCacheCancelled, WindowsCacheLocation, WindowsCacheOwner, _windows_path",
+        "WindowsCacheCancelled, WindowsCacheError, WindowsCacheLocation, WindowsCacheOwner, "
+        "_windows_path, query_windows_automatic_cache_location",
         "from .runtime_bundle_manifest import "
         "PLATFORMS, BundleDescriptor, BundleLimits, parse_release_manifest",
         "from .runtime_bundle_materialize import BundleCancelled, materialize_bundle",
@@ -70,6 +73,11 @@ IMPORT_EDGES = {
         "from .runtime_bundle_manifest import "
         "BundleError, BundleFile, BundleLimits, BundleManifest, ReleaseManifest, "
         "bundle_identity, validate_path",
+        "from .windows_package_cache import PackageCacheAPI, PackageCacheCleanupError",
+        "from .windows_package_host import WindowsPackageHost",
+    ),
+    "windows_package_host.py": (
+        "from .windows_package_cache import PackageCacheCleanupError",
     ),
     "windows_runtime.py": (
         "from .windows_cache import WindowsCacheOwner",
@@ -1687,12 +1695,26 @@ def assert_windows_cache_dependency_leaf(root):
         "backend_runtime",
         "registration",
     }
-    for node in ast.walk(ast.parse(path.read_bytes())):
+    tree = ast.parse(path.read_bytes())
+    parents = {child: node for node in ast.walk(tree) for child in ast.iter_child_nodes(node)}
+    relative_imports = []
+    for node in ast.walk(tree):
         if isinstance(node, ast.Import):
             assert all(alias.name.split(".")[0] in sys.stdlib_module_names for alias in node.names)
         elif isinstance(node, ast.ImportFrom):
             if node.level:
-                assert node.level == 1 and node.module == "runtime_bundle_manifest"
+                assert node.level == 1
+                statement = ast.unparse(node)
+                assert statement in IMPORT_EDGES["windows_cache.py"]
+                parent = parents[node]
+                scopes = []
+                while parent in parents:
+                    if isinstance(parent, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+                        scopes.append(parent.name)
+                    parent = parents[parent]
+                assert scopes == (["query_windows_automatic_cache_location"]
+                                  if node.module == "windows_package_host" else [])
+                relative_imports.append(statement)
             else:
                 assert (node.module or "").split(".")[0] in sys.stdlib_module_names
         elif isinstance(node, ast.Call):
@@ -1704,6 +1726,7 @@ def assert_windows_cache_dependency_leaf(root):
             )
         elif isinstance(node, ast.Constant) and type(node.value) is str:
             assert not consumers.intersection(node.value.split("."))
+    assert sorted(relative_imports) == sorted(IMPORT_EDGES["windows_cache.py"])
 
 
 def test_windows_cache_has_only_standard_library_and_exact_lower_manifest_edges():
@@ -1956,15 +1979,27 @@ def test_windows_cache_fifth_function_constant_and_import_changes_reject(tmp_pat
 def assert_windows_cache_query_is_dormant(root):
     name = "query_windows_cache_location"
     definitions = []
+    calls = []
     for prefix in ("src", "blender_addon"):
         for path in (root / prefix).rglob("*.py"):
             tree = ast.parse(path.read_bytes())
+            parents = {child: node for node in ast.walk(tree) for child in ast.iter_child_nodes(node)}
             for node in ast.walk(tree):
                 if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name == name:
                     definitions.append(path.relative_to(root).as_posix())
                     assert node in tree.body and not node.decorator_list
                 if isinstance(node, ast.Name):
-                    assert node.id != name, path
+                    if node.id == name:
+                        parent = parents[node]
+                        assert isinstance(parent, ast.Call) and parent.func is node, path
+                        assert ast.unparse(parent) == "query_windows_cache_location(api=shell_api)"
+                        scopes = []
+                        while parent in parents:
+                            parent = parents[parent]
+                            if isinstance(parent, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+                                scopes.append(parent.name)
+                        assert scopes == ["query_windows_automatic_cache_location"], path
+                        calls.append(path.relative_to(root).as_posix())
                 elif isinstance(node, ast.Attribute):
                     assert node.attr != name, path
                 elif isinstance(node, ast.alias):
@@ -1972,6 +2007,7 @@ def assert_windows_cache_query_is_dormant(root):
                 elif isinstance(node, ast.Constant) and type(node.value) is str:
                     assert name not in node.value, path
     assert definitions == ["blender_addon/mechanical_cad_blender/windows_cache.py"]
+    assert calls == definitions
 
 
 def test_windows_cache_known_folder_query_has_no_production_caller_alias_or_dynamic_name():
