@@ -29,6 +29,12 @@ NAMES = itertools.count()
 
 @pytest.fixture
 def host(monkeypatch, tmp_path):
+    # These owners consume real GuardedEvidence, including resolved source and
+    # interpreter identity. Do not substitute the pure history stamp or relax
+    # acceptance types. The external/manual identity is Linux-qualified only;
+    # Windows bundled admission/transport/cache have their own active suites.
+    if sys.platform != "linux":
+        pytest.skip("real Linux manual-backend filesystem/evidence identity fixture")
     ports.PACKAGE = "mcad_geometry3_owner_tests_" + str(next(NAMES))
     modules = ports.load_owners()
     lease = importlib.import_module(ports.PACKAGE + ".execution_lease")

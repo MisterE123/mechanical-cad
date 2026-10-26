@@ -6,7 +6,7 @@ import importlib
 import json
 import sys
 import types
-from dataclasses import replace
+from dataclasses import dataclass, replace
 from pathlib import Path
 
 import pytest
@@ -54,11 +54,38 @@ def inert(*args, **kwargs):
     return None
 
 
+@dataclass(frozen=True)
+class PureHistoryBackendStamp:
+    """Reducer identity only: deliberately not a launchable BackendSelection."""
+
+    generation: int = 1
+    lifetime_id: str = "pure-gesture-port"
+    project_root: str = "pure-history://project"
+    python_executable: str = "pure-history://not-an-executable"
+    python_executable_target: str = "pure-history://not-an-executable"
+    timeout: float = 60.0
+
+    def launch_environment(self):
+        raise AssertionError("Pure history stamps cannot supply a launch environment")
+
+
 @pytest.fixture
 def host(monkeypatch):
+    yield from _owner_host(monkeypatch, PureHistoryBackendStamp())
+
+
+@pytest.fixture
+def native_backend_host(monkeypatch):
+    """Real Linux manual identity for receipt validation, never a fake-type waiver."""
+    if sys.platform != "linux":
+        pytest.skip("recorded driver-chain validation requires the qualified Linux manual identity")
     selected = selections.BackendSelection.capture(
         str(ROOT), sys.executable, generation=1, lifetime_id="pure-gesture-port", environment={}
     )
+    yield from _owner_host(monkeypatch, selected)
+
+
+def _owner_host(monkeypatch, selected):
     current = [selected]
     stubs = {
         "assembly_job_ui": {"ensure_supervisor": inert},
@@ -603,6 +630,7 @@ def test_new_general_entry_accepts_arc_graph_but_rectangle_keeps_legacy_boundary
 
 def _recorded_evidence(host, request, inner):
     """Synthetic receipt around unchanged recorded native inner, no launch."""
+    assert type(host.current[0]) is selections.BackendSelection
     contracts = load("backend_contracts")
     prepared = contracts.prepare_request(request)
     required = prepared.guarded_request()["backend_contract"]["required_capabilities"]
@@ -641,7 +669,8 @@ def _recorded_evidence(host, request, inner):
 
 
 @pytest.mark.parametrize("version", [2, 3])
-def test_ui_clone_preserves_full_guarded_driver_chain_and_native_status(host, version):
+def test_ui_clone_preserves_full_guarded_driver_chain_and_native_status(native_backend_host, version):
+    host = native_backend_host
     fixtures = ROOT / "tests/fixtures/arc_authoring_evidence"
     if version == 3:
         request = json.loads((fixtures / "radius_edit_5_0_solve_sketch.operation.json").read_text())
@@ -699,6 +728,26 @@ def test_ui_clone_preserves_full_guarded_driver_chain_and_native_status(host, ve
     assert host.owner.current_native_build_status == "not_checked"
     host.current[0] = old
     assert host.owner.current_native_build_status == "not_checked"
+
+
+def test_pure_history_stamp_is_immutable_and_cannot_authorize_transport_or_evidence(host):
+    selected = host.current[0]
+    assert type(selected) is PureHistoryBackendStamp
+    with pytest.raises((AttributeError, TypeError)):
+        selected.generation = 2
+    assert replace(selected, generation=2) != selected
+    with pytest.raises(AssertionError, match="cannot supply"):
+        selected.launch_environment()
+    contracts = load("backend_contracts")
+    prepared = contracts.prepare_request(
+        {"protocol_version": 1, "action": "canonical_snapshot", "document": json.loads(BASE)}
+    )
+    evidence = load("guarded_evidence")
+    with pytest.raises(contracts.BackendContractError, match="captured backend selection"):
+        evidence.accept_response(prepared, {}, selected, owner_token=host.owner.owner_token)
+    jobs = load("sidecar_job")
+    with pytest.raises(jobs.bridge.BridgeError, match="prepared request and selection"):
+        jobs.SidecarJob.from_selection(prepared, selected)
 
 
 def test_picker_sentinel_cannot_collide_with_imported_real_point_id(host):

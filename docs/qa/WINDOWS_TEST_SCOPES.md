@@ -34,3 +34,29 @@ authorization checks or unknown-field rejection rules were relaxed. The previous
 denied Techbox hard-link/symlink operations were not retried; platform collection
 uses no test bodies and the bounded Windows executions omit Linux filesystem-link
 tests through their explicit native-host markers.
+
+## Shared history and owner fixtures
+
+The shared gesture/history fixture now uses an immutable
+`PureHistoryBackendStamp` for reducers, row routing, fillet ports and picker state.
+Its paths are explicit non-executable `pure-history://` identifiers. It is not a
+`BackendSelection`, cannot supply a launch environment, and fails the unchanged
+production type checks for guarded transport and evidence acceptance. Generation
+changes remain explicit dataclass replacements; canonical model inputs and all
+owner/rollback assertions remain unchanged.
+
+The two recorded driver-chain cases instead request `native_backend_host`, which
+uses the real Linux manual selection. Receipt acceptance, publication consumption
+and revocation/currentness still execute unchanged against real captured identity.
+Only those cases are Linux-scoped; the mixed gesture module and pure history
+consumers execute on Windows.
+
+The `test_geometry3_owner.host` fixture and its current-read/history-draw/panel
+consumers validate actual source/interpreter filesystem identity and real
+`GuardedEvidence`. They retain a Linux-qualified manual-backend fixture, with an
+explicit skip on unsupported hosts rather than a fake identity or acceptance
+waiver. Tests not requesting that fixture remain eligible on Windows. This does
+not establish Windows row-presentation/freshness qualification. Windows bundled
+public selection, manual rejection, admission, transport and runtime-cache suites
+remain separate active counterparts; their API leaves/receipts are synthetic
+where documented, not evidence of a launched native backend.
