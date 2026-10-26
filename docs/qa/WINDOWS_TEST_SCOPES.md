@@ -127,3 +127,9 @@ native leaves. The original real-child test bodies and assertions are retained;
 `test_windows_transport.py` separately executes Windows process-owner composition
 against explicit fake OS/API leaves. Neither suite relabels mocks as a native
 Windows child or Blender qualification.
+
+The captured-record factory is registered in the unit directory's `conftest.py`.
+Pytest resolves dependencies of an imported fixture in the importing test's
+fixture namespace, so the compact-status and saved-sketch-extrusion consumers
+must be able to find it too. Registration is opt-in; it does not introduce an
+automatic fixture, change capture behavior, or add native work during collection.
