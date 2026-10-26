@@ -9,6 +9,10 @@ from pathlib import Path
 
 import pytest
 
+LINUX = pytest.mark.skipif(
+    sys.platform != "linux", reason="qualified Linux external/venv backend identity"
+)
+
 ROOT = Path(__file__).resolve().parents[2]
 PACKAGE = "mcad_backend_selection_tests"
 package = types.ModuleType(PACKAGE)
@@ -29,6 +33,7 @@ def capture(**kwargs):
     return selection.BackendSelection.capture(**values)
 
 
+@LINUX
 def test_captured_environment_is_detached_nonlogging_and_matches_launch_policy():
     environment = {"SECRET_TEST_VALUE": "do-not-show-this", "PYTHONHOME": "/wrong", "PATH": "/bin"}
     value = capture(environment=environment)
@@ -47,6 +52,7 @@ def test_captured_environment_is_detached_nonlogging_and_matches_launch_policy()
         value.timeout = 2
 
 
+@LINUX
 def test_defaults_captured_once_and_explicit_values_override_environment(monkeypatch):
     defaults = {"MCAD_ROOT": str(ROOT), "MCAD_PYTHON": sys.executable}
     value = capture(project_root="", python_executable="", environment=defaults)
@@ -58,6 +64,7 @@ def test_defaults_captured_once_and_explicit_values_override_environment(monkeyp
     assert explicit.project_root == str(ROOT)
 
 
+@LINUX
 def test_symlink_venv_invocation_is_not_collapsed_to_shared_base(tmp_path):
     a, b = tmp_path / "venv a \u00e9", tmp_path / "venv b"
     a.mkdir()
@@ -75,6 +82,7 @@ def test_symlink_venv_invocation_is_not_collapsed_to_shared_base(tmp_path):
     assert lexical == first
 
 
+@LINUX
 def test_root_symlink_resolves_and_linux_case_is_not_folded(tmp_path):
     link = tmp_path / "project link"
     link.symlink_to(ROOT, target_is_directory=True)
@@ -82,6 +90,7 @@ def test_root_symlink_resolves_and_linux_case_is_not_folded(tmp_path):
     assert selection.lexical_path("/tmp/Python") != selection.lexical_path("/tmp/python")
 
 
+@LINUX
 @pytest.mark.parametrize(
     "changes",
     [
@@ -100,11 +109,13 @@ def test_current_selection_checks_generation_epoch_timeout_and_effective_environ
         first.assert_current(replace(first, generation=2))  # A -> B -> A still differs.
 
 
+@LINUX
 @pytest.mark.parametrize("timeout,expected", [(-1, 1), (0, 1), (30, 30), (500, 300)])
 def test_timeout_clamps_once(timeout, expected):
     assert capture(timeout=timeout).timeout == expected
 
 
+@LINUX
 @pytest.mark.parametrize(
     "changes",
     [
@@ -125,16 +136,15 @@ def test_invalid_capture_is_before_launch_failure(changes):
         capture(**changes)
 
 
-def test_nonexecutable_file_and_unqualified_platform_rejected(tmp_path, monkeypatch):
+@LINUX
+def test_nonexecutable_file_rejected_on_linux(tmp_path):
     executable = tmp_path / "python"
     executable.write_text("not executable")
     with pytest.raises(selection.SelectionError):
         capture(python_executable=str(executable))
-    monkeypatch.setattr(selection.sys, "platform", "win32")
-    with pytest.raises(selection.SelectionError, match="Linux"):
-        capture()
 
 
+@LINUX
 def test_tilde_defaults_use_supplied_environment_without_rereading_live_home(tmp_path, monkeypatch):
     home = tmp_path / "captured home"
     home.mkdir()
@@ -146,3 +156,21 @@ def test_tilde_defaults_use_supplied_environment_without_rereading_live_home(tmp
     )
     assert selected.project_root == str(ROOT)
     assert selected.python_executable == str(home / "python")
+
+
+@pytest.mark.parametrize(
+    "platform,expected", [(None, 60.0), ("linux-x64", 60.0), ("windows-x64", 240.0)]
+)
+def test_platform_defaults_are_portable_data(platform, expected):
+    assert selection.default_timeout_seconds(bundled_platform=platform) == expected
+
+
+@pytest.mark.skipif(sys.platform != "win32", reason="native Windows manual-backend admission guard")
+def test_native_windows_external_backend_is_rejected_before_configuration_or_path_io(monkeypatch):
+    class UnreadableEnvironment:
+        def keys(self):
+            pytest.fail("unqualified manual backend read its environment")
+
+    monkeypatch.setattr(selection, "Path", lambda *a: pytest.fail("unqualified path lookup"))
+    with pytest.raises(selection.SelectionError, match="Linux only"):
+        capture(environment=UnreadableEnvironment())
