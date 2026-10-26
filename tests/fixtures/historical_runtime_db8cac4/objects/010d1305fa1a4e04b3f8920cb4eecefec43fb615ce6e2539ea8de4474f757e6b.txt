@@ -1,0 +1,550 @@
+"""Data-only v3 synthetic controls; no solver or CAD-kernel execution."""
+
+from __future__ import annotations
+
+import copy
+import json
+import math
+import os
+import subprocess
+import sys
+from dataclasses import replace
+from pathlib import Path
+from types import SimpleNamespace
+
+import pytest
+
+from mechanical_cad import profile_adapter_v3 as adapter
+from mechanical_cad import sketch_protocol_v3 as protocol
+from mechanical_cad import sketch_service_v3 as service
+from mechanical_cad.errors import CADException
+from mechanical_cad.model import Document, Feature
+from mechanical_cad.outputs import AvailableProfile, OpenProfile
+from mechanical_cad.part_snapshot import input_fingerprint
+from mechanical_cad.result_policy_v3 import validate_replay_v3, validate_result_version_v3
+from mechanical_cad.sketch_model import (
+    Arc,
+    Constraint,
+    Line,
+    Plane,
+    Point,
+    SketchDefinition,
+    resolve_sketch,
+)
+
+ROOT = Path(__file__).resolve().parents[2]
+
+
+def definition(*, radius=5, direction="ccw", end=None):
+    return SketchDefinition(
+        "sector",
+        (Point("center", 0, 0), Point("start", radius, 0), Point("end", *(end or (0, radius)))),
+        (Line("radial_start", "center", "start"), Line("radial_end", "end", "center")),
+        (),
+        schema_version=3,
+        arcs=(Arc("rim", "center", "start", "end", direction),),
+    )
+
+
+def document(sketch=None, *, height=10, extra=()):
+    features = (Feature("profile", "sketch_constrained", "Sector", sketch=sketch or definition()),)
+    if height is not None:
+        features += (Feature("pad", "extrude", "Pad", {"length": height}, {"profile": "profile"}),)
+    features += extra
+    return Document(
+        "part", "Sector example", {"height": 7}, features, features[-1].id, schema_version=2
+    )
+
+
+def numeric(sketch=None):
+    return resolve_sketch(sketch or definition(), {})
+
+
+def fake_evaluation(sketch, *, success=True):
+    report = SimpleNamespace(
+        success=success,
+        sketch=sketch if success else None,
+        status=SimpleNamespace(name="OKAY" if success else "INCONSISTENT"),
+        failed_constraints=() if success else ("dimension",),
+    )
+    evidence = {
+        "solver": "libslvs",
+        "solver_version": "3.2",
+        "status": "okay" if success else "inconsistent",
+        "remaining_dof": 6 if success else None,
+        "failed_constraints": [] if success else ["dimension"],
+        "redundant_constraints": [],
+        "max_residual_mm": 0.0,
+        "solved": sketch.to_dict() if success else None,
+        "dimensions": {},
+    }
+    return report, evidence
+
+
+@pytest.mark.parametrize("version", [None, True, False, 1, 2, 3.0, "3", 4])
+def test_version_three_is_never_inferred(version):
+    with pytest.raises(CADException) as error:
+        validate_result_version_v3(document(), version)
+    assert error.value.code == "unsupported_result_version"
+
+
+@pytest.mark.parametrize("height", [None, 1, 1000, "height", "height + 1"])
+def test_sector_replay_preflight_uses_actual_height(height):
+    source = document(height=height)
+    before = source.to_json()
+    validate_replay_v3(source, 3)
+    assert source.to_json() == before
+
+
+@pytest.mark.parametrize("height", [0, -1, math.nextafter(1, 0), math.nextafter(1000, math.inf)])
+def test_sector_replay_preflight_rejects_height_neighbors(height):
+    with pytest.raises(CADException) as error:
+        validate_replay_v3(document(height=height), 3)
+    assert error.value.code == "unsupported_profile_scale"
+
+
+@pytest.mark.parametrize(
+    "extra",
+    [
+        (Feature("independent", "sketch_rectangle", "Independent", {"width": 2, "height": 3}),),
+        (Feature("other", "sketch_constrained", "Other", sketch=definition()),),
+        (Feature("pad2", "extrude", "Pad 2", {"length": 2}, {"profile": "profile"}),),
+    ],
+)
+def test_arc_graph_rejects_independent_and_multiple_consumers(extra):
+    with pytest.raises(CADException) as error:
+        validate_replay_v3(document(extra=extra), 3)
+    assert error.value.code == "unsupported_profile_graph"
+
+
+def test_legacy_and_arc_empty_graphs_keep_ordinary_replay_scope():
+    source = Document.from_dict(json.loads((ROOT / "examples/drilled_plate.mcad.json").read_text()))
+    validate_replay_v3(source, 3)
+    empty = replace(definition(), arcs=())
+    validate_replay_v3(document(empty, height=0.1), 3)
+
+
+@pytest.mark.parametrize("radius", [1, 5, 5.1, 1000])
+@pytest.mark.parametrize("direction", ["cw", "ccw"])
+def test_genuine_numeric_sector_is_pure_ready(radius, direction):
+    sketch = numeric(definition(radius=radius, direction=direction))
+    before = sketch.to_json()
+    assert adapter.profile_check_v3(sketch) == {"ready": True, "error": None}
+    assert sketch.to_json() == before
+
+
+@pytest.mark.parametrize(
+    "sketch,code",
+    [
+        (definition(radius=0.5), "unsupported_profile_scale"),
+        (definition(radius=1001), "unsupported_profile_scale"),
+        (definition(end=(3, 4)), "unsupported_profile_sweep"),
+        (replace(definition(), lines=(Line("chord", "start", "end"),)), "unsupported_profile_form"),
+        (replace(definition(), lines=()), "unsupported_profile_form"),
+    ],
+)
+def test_unsupported_sectors_are_never_open_profiles(sketch, code):
+    check = adapter.profile_check_v3(numeric(sketch))
+    assert check["ready"] is False and check["error"]["code"] == code
+
+
+def test_coincidence_alias_keeps_distinct_diagnostic():
+    source = definition()
+    source = replace(
+        source,
+        points=source.points + (Point("alias", 5, 0),),
+        lines=(Line("radial_start", "center", "alias"), source.lines[1]),
+        constraints=(Constraint("join", "coincident", ("alias", "start")),),
+    )
+    assert (
+        adapter.profile_check_v3(numeric(source))["error"]["code"]
+        == "unsupported_profile_coincidence"
+    )
+
+
+@pytest.mark.parametrize("quaternion", [(0.5, 0.5, 0.5, 0.5), (0.6, 0, 0, 0.8)])
+def test_arbitrary_valid_frame_and_origin_are_pure_ready(quaternion):
+    source = replace(definition(), plane=Plane(origin=(1, 2, 3), quaternion=quaternion, id="frame"))
+    assert adapter.profile_check_v3(numeric(source))["ready"]
+
+
+def test_numerical_ambiguity_is_distinct_and_keeps_underlying_stage(monkeypatch):
+    monkeypatch.setattr(
+        adapter,
+        "classify_sector",
+        lambda _: SimpleNamespace(
+            status="numerical_ambiguity", stage="CELLS", code="operation_limit"
+        ),
+    )
+    check = adapter.profile_check_v3(numeric())
+    assert check["error"]["code"] == "numerically_ambiguous_profile"
+    assert "CELLS" in check["error"]["message"] and "operation_limit" in check["error"]["message"]
+
+
+@pytest.mark.parametrize("name", ["viewport_rectangle", "open_line_sketch", "circle_sketch_part"])
+def test_arc_empty_view_retains_real_source_schema_and_legacy_geometry(name):
+    data = json.loads((ROOT / f"examples/{name}.mcad.json").read_text())
+    source = Document.from_dict(data)
+    definition_ = source.features[0].sketch
+    from mechanical_cad.expressions import resolve_parameters
+    from mechanical_cad.sketch_service import profile_check
+
+    old = resolve_sketch(definition_, resolve_parameters(source.parameters))
+    actual = replace(old, schema_version=3)
+    before = actual.to_json()
+    assert adapter.profile_check_v3(actual) == profile_check(old)
+    assert actual.schema_version == 3 and actual.to_json() == before
+
+
+def test_solve_success_readiness_failure_is_still_success(monkeypatch):
+    source = document(definition(radius=0.5))
+    solved = numeric(source.features[0].sketch)
+    report, evidence = fake_evaluation(solved)
+    monkeypatch.setattr(service, "evaluate_sketch", lambda *args: (report, evidence))
+    response = service.solve_sketch_v3(source, "profile")
+    assert response["ok"] and response["error"] is None
+    assert response["result"]["sketch"] is evidence
+    assert response["result"]["profile_check"]["error"]["code"] == "unsupported_profile_scale"
+    assert response["result"]["sketch"]["solved"]["schema_version"] == 3
+
+
+def test_solve_failure_retains_unavailable_algebra_without_profile_call(monkeypatch):
+    report, evidence = fake_evaluation(numeric(), success=False)
+    monkeypatch.setattr(service, "evaluate_sketch", lambda *args: (report, evidence))
+    monkeypatch.setattr(
+        service, "profile_check_v3", lambda _: pytest.fail("failed solve classified")
+    )
+    response = service.solve_sketch_v3(document(), "profile")
+    assert not response["ok"] and response["error"]["code"] == "sketch_solve_failed"
+    assert response["result"]["profile_check"] is None
+    assert response["result"]["sketch"] is evidence
+    assert evidence["remaining_dof"] is None and evidence["solved"] is None
+
+
+def test_solve_does_not_preflight_downstream_height_or_graph(monkeypatch):
+    report, evidence = fake_evaluation(numeric())
+    monkeypatch.setattr(service, "evaluate_sketch", lambda *args: (report, evidence))
+    source = document(height=-1, extra=(Feature("other", "sketch_circle", "Other", {"radius": 2}),))
+    before = source.to_json()
+    response = service.solve_sketch_v3(source, "profile")
+    assert response["ok"] and response["result"]["profile_check"]["ready"]
+    assert source.to_json() == before
+
+
+@pytest.mark.parametrize(
+    "feature_id,code",
+    [
+        (True, "invalid_feature"),
+        ("", "invalid_feature"),
+        ("missing", "missing_feature"),
+        ("pad", "invalid_feature"),
+    ],
+)
+def test_invalid_selection_fails_before_solver(monkeypatch, feature_id, code):
+    monkeypatch.setattr(service, "evaluate_sketch", lambda *args: pytest.fail("solver started"))
+    with pytest.raises(CADException) as error:
+        service.solve_sketch_v3(document(), feature_id)
+    assert error.value.code == code
+
+
+class RecordingKernel:
+    def __init__(self):
+        self.calls = []
+        self.shape = object()
+
+    def sector_profile(self, sketch):
+        self.calls.append(("sector", sketch))
+        return self.shape
+
+    def polygon(self, *args, **kwargs):
+        self.calls.append(("polygon", args, kwargs))
+        return self.shape
+
+    def circle_profile(self, *args, **kwargs):
+        self.calls.append(("circle", args, kwargs))
+        return self.shape
+
+
+def test_sector_replay_adapter_does_not_reclassify_before_native(monkeypatch):
+    solved = numeric()
+    monkeypatch.setattr(adapter, "evaluate_sketch", lambda *args: fake_evaluation(solved))
+    monkeypatch.setattr(adapter, "classify_sector", lambda _: pytest.fail("double classification"))
+    kernel, item = RecordingKernel(), {}
+    output = adapter.sketch_output_v3(document().features[0], {}, kernel, item, legacy_output=None)
+    assert kernel.calls == [("sector", solved)]
+    assert output.solved_sketch is solved and output.profile.shape is kernel.shape
+    assert isinstance(output.profile, AvailableProfile)
+    assert output.profile.region_kind == "curve_loop"
+    assert set(output.profile.boundary_ids) == {"rim", "radial_start", "radial_end"}
+    assert item["sketch"]["solved"]["schema_version"] == 3
+
+
+@pytest.mark.parametrize("version", [1, 2])
+def test_legacy_replay_delegates_original_objects(version):
+    original = replace(definition(), schema_version=version, arcs=())
+    feature, kernel, item, values = document(original).features[0], object(), {}, {}
+    result = object()
+
+    def legacy(*args):
+        assert args == (feature, values, kernel, item)
+        return result
+
+    assert adapter.sketch_output_v3(feature, values, kernel, item, legacy_output=legacy) is result
+
+
+def test_arc_empty_open_output_keeps_original_solved_schema(monkeypatch):
+    solved = numeric(replace(definition(), arcs=()))
+    monkeypatch.setattr(adapter, "evaluate_sketch", lambda *args: fake_evaluation(solved))
+    kernel, item = RecordingKernel(), {}
+    output = adapter.sketch_output_v3(document().features[0], {}, kernel, item, legacy_output=None)
+    assert isinstance(output.profile, OpenProfile) and kernel.calls == []
+    assert output.solved_sketch is solved and item["sketch"]["solved"]["schema_version"] == 3
+
+
+@pytest.mark.parametrize(
+    "name,kind,method",
+    [("viewport_rectangle", "line_loop", "polygon"), ("circle_sketch_part", "circle", "circle")],
+)
+def test_arc_empty_available_output_keeps_original_schema(monkeypatch, name, kind, method):
+    from mechanical_cad.expressions import resolve_parameters
+
+    source = Document.from_dict(json.loads((ROOT / f"examples/{name}.mcad.json").read_text()))
+    feature = replace(
+        source.features[0], sketch=replace(source.features[0].sketch, schema_version=3)
+    )
+    solved = resolve_sketch(feature.sketch, resolve_parameters(source.parameters))
+    monkeypatch.setattr(adapter, "evaluate_sketch", lambda *args: fake_evaluation(solved))
+    kernel, item = RecordingKernel(), {}
+    output = adapter.sketch_output_v3(feature, {}, kernel, item, legacy_output=None)
+    assert kernel.calls[0][0] == method
+    assert output.profile.region_kind == kind and output.profile.shape is kernel.shape
+    assert output.solved_sketch is solved and item["sketch"]["solved"]["schema_version"] == 3
+
+
+def test_replay_solve_failure_keeps_report_before_raising(monkeypatch):
+    report, evidence = fake_evaluation(numeric(), success=False)
+    monkeypatch.setattr(adapter, "evaluate_sketch", lambda *args: (report, evidence))
+    kernel, item = RecordingKernel(), {}
+    with pytest.raises(CADException) as error:
+        adapter.sketch_output_v3(document().features[0], {}, kernel, item, legacy_output=None)
+    assert error.value.code == "sketch_solve_failed" and item["sketch"] is evidence
+    assert kernel.calls == []
+
+
+def sector_error(code):
+    error_type = type(
+        "_CurveProfileError", (ValueError,), {"__module__": "mechanical_cad.kernel_ocp"}
+    )
+    error = error_type("native details")
+    error.code = code
+    return error
+
+
+@pytest.mark.parametrize("code", ["unsupported_native_frame", "native_prism_constructor_failed"])
+def test_exact_sector_error_is_preserved(code):
+    def call():
+        raise sector_error(code)
+
+    with pytest.raises(CADException) as error:
+        adapter.sector_native_call(call)
+    assert error.value.code == code
+
+
+@pytest.mark.parametrize(
+    "code", [None, True, [], "", "a" * 97, "not safe", "Upper", "bad\ncode", "é"]
+)
+def test_malformed_native_error_code_keeps_original_exception(code):
+    original = sector_error(code)
+
+    def call():
+        raise original
+
+    with pytest.raises(ValueError) as error:
+        adapter.sector_native_call(call)
+    assert error.value is original and not isinstance(error.value, CADException)
+
+
+def test_unrelated_coded_exception_is_not_promoted():
+    original = RuntimeError("ordinary kernel defect")
+    original.code = "unsupported_native_frame"
+
+    def call():
+        raise original
+
+    with pytest.raises(RuntimeError) as error:
+        adapter.sector_native_call(call)
+    assert error.value is original
+
+
+def test_unrelated_exception_diagnostic_property_is_never_read():
+    class UnrelatedError(RuntimeError):
+        @property
+        def code(self):
+            pytest.fail("unrelated exception code was inspected")
+
+    original = UnrelatedError("ordinary defect")
+
+    def call():
+        raise original
+
+    with pytest.raises(UnrelatedError) as error:
+        adapter.sector_native_call(call)
+    assert error.value is original
+
+
+def solve_request():
+    return {
+        "protocol_version": 1,
+        "action": "solve_sketch",
+        "result_version": 3,
+        "document": document().to_dict(),
+        "feature_id": "profile",
+    }
+
+
+def test_solve_envelope_binds_original_request_and_canonical_document(monkeypatch):
+    request = solve_request()
+    original = copy.deepcopy(request)
+    monkeypatch.setattr(service, "evaluate_sketch", lambda *args: fake_evaluation(numeric()))
+    response = protocol.process_sketch_request_v3(request)
+    assert set(response) == {
+        "protocol_version",
+        "action",
+        "result_version",
+        "input_fingerprint",
+        "ok",
+        "result",
+        "error",
+    }
+    assert response["ok"] and response["result_version"] == 3
+    assert response["input_fingerprint"] == input_fingerprint(request)
+    assert (
+        response["result"]["document_hash"] == Document.from_dict(request["document"]).content_hash
+    )
+    assert request == original
+
+
+@pytest.mark.parametrize(
+    "changes",
+    [
+        {"result_version": 3.0},
+        {"protocol_version": True},
+        {"destination": "x"},
+        {"options": {}},
+        {"action": "replay"},
+        {"kind": "assembly"},
+    ],
+)
+def test_solve_envelope_rejects_before_evaluation(monkeypatch, changes):
+    monkeypatch.setattr(service, "evaluate_sketch", lambda *args: pytest.fail("solver started"))
+    response = protocol.process_sketch_request_v3({**solve_request(), **changes})
+    assert response["ok"] is False and response["result"] is None
+
+
+@pytest.mark.parametrize(
+    "entry", [protocol.process_sketch_request_v3, protocol.process_replay_request_v3]
+)
+@pytest.mark.parametrize(
+    "variant", ["cycle", "shared_dag", "deep", "nonfinite", "large", "integer"]
+)
+def test_request_budget_precedes_every_model_copy_or_walk(monkeypatch, entry, variant):
+    request = solve_request()
+    if variant == "cycle":
+        request["probe"] = request
+    elif variant == "shared_dag":
+        shared = [0]
+        for _ in range(24):
+            shared = [shared, shared]
+        request["probe"] = shared
+    elif variant == "deep":
+        deep = 0
+        for _ in range(40):
+            deep = [deep]
+        request["probe"] = deep
+    elif variant == "nonfinite":
+        request["probe"] = float("nan")
+    elif variant == "large":
+        request["probe"] = "x" * (2 * 1024 * 1024)
+    else:
+        request["probe"] = 10**200
+    monkeypatch.setattr(protocol.Document, "from_dict", lambda _: pytest.fail("model parsed"))
+    with pytest.raises(CADException) as error:
+        entry(request)
+    assert error.value.code in {"document_too_large", "invalid_json", "resource_limit"}
+
+
+@pytest.mark.parametrize("value", [None, [], True, 3])
+def test_protocol_requires_an_exact_request_object(value):
+    for entry in (protocol.process_sketch_request_v3, protocol.process_replay_request_v3):
+        with pytest.raises(CADException) as error:
+            entry(value)
+        assert error.value.code == "invalid_request"
+
+
+@pytest.mark.parametrize(
+    "action",
+    [
+        "solve_sketch",
+        "check_geometry",
+        "export_step",
+        "export_stl",
+        "canonical_snapshot",
+        "assembly_replay",
+    ],
+)
+def test_replay_protocol_does_not_accept_other_actions(action):
+    with pytest.raises(CADException) as error:
+        protocol.process_replay_request_v3(
+            {
+                "protocol_version": 1,
+                "action": action,
+                "result_version": 3,
+                "document": document().to_dict(),
+            }
+        )
+    assert error.value.code == "invalid_action"
+
+
+@pytest.mark.parametrize("value", [True, 0, 0.0009, 10.01, "0.1"])
+def test_replay_tolerance_rejects_before_native_import(value):
+    with pytest.raises(CADException) as error:
+        protocol.process_replay_request_v3(
+            {
+                "protocol_version": 1,
+                "result_version": 3,
+                "document": document().to_dict(),
+                "options": {"linear_deflection": value},
+            }
+        )
+    assert error.value.code == "invalid_tolerance"
+
+
+def test_solve_module_import_and_rejected_protocol_are_native_free():
+    script = """
+import builtins, importlib.abc, sys
+blocked = {'OCP', 'slvs', 'bpy', 'kernel_ocp', 'engine'}
+original = builtins.__import__
+def checked(name, *args, **kwargs):
+    if blocked.intersection(name.split('.')):
+        raise AssertionError('forbidden import: ' + name)
+    return original(name, *args, **kwargs)
+class Blocked(importlib.abc.MetaPathFinder):
+    def find_spec(self, fullname, *args):
+        if blocked.intersection(fullname.split('.')):
+            raise AssertionError('forbidden import: ' + fullname)
+builtins.__import__ = checked
+sys.meta_path.insert(0, Blocked())
+from mechanical_cad import sketch_service_v3, sketch_protocol_v3
+reply = sketch_protocol_v3.process_sketch_request_v3({'protocol_version':1, 'action':'solve_sketch', 'result_version':3, 'document':None, 'feature_id':'profile'})
+assert not reply['ok'] and reply['result'] is None
+print('V3_SOLVE_NATIVE_FREE')
+"""
+    result = subprocess.run(
+        [sys.executable, "-B", "-S", "-c", script],
+        capture_output=True,
+        text=True,
+        timeout=10,
+        env={**os.environ, "PYTHONPATH": str(ROOT / "src")},
+    )
+    assert result.returncode == 0, result.stderr
+    assert result.stdout.strip() == "V3_SOLVE_NATIVE_FREE"

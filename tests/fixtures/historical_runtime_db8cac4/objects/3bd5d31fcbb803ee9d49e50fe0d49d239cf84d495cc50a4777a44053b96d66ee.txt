@@ -1,0 +1,601 @@
+"""Explicit assembly authoring; all accepted candidates use the isolated sidecar."""
+
+import textwrap
+from pathlib import Path
+
+import bpy
+from bpy.props import BoolProperty, EnumProperty, StringProperty
+from bpy.types import Operator
+from bpy_extras.io_utils import ExportHelper
+
+from . import assembly_edit as edit
+from . import (
+    assembly_export_owner,
+    assembly_files,
+    bridge,
+    display,
+    document_state,
+    operation_contracts,
+    workspace,
+)
+from . import assembly_state as state_api
+from .assembly_operator_helpers import (
+    JOINT_KINDS,
+    AssemblyEdit,
+    activate_assembly_workspace,
+    assembly,
+    canonical_working_part,
+    child_frames,
+    degrees_from_quaternion,
+    help_lines,
+    instance_choices,
+    joint_choices,
+    joint_fields,
+    parent_frames,
+    part_choices,
+    quaternion_from_degrees,
+    reject,
+    rows,
+    state,
+    unit_text,
+    unit_value,
+    vector,
+)
+
+
+def working_part_capture_reason(context):
+    """Working-Part capture policy only; accepted Assembly reuse is independent."""
+    try:
+        operation_contracts.result_version_for(
+            document_state._read_document(context.scene.mechanical_cad),
+            action="canonical_snapshot",
+        )
+    except (ValueError, RuntimeError, TypeError, KeyError, AttributeError) as exc:
+        return str(exc)
+    return ""
+
+
+def _capture_poll(cls, context):
+    reason = working_part_capture_reason(context)
+    if reason and callable(getattr(cls, "poll_message_set", None)):
+        cls.poll_message_set(reason)
+    return not reason
+
+
+def _require_capture(context):
+    reason = working_part_capture_reason(context)
+    if reason:
+        raise bridge.BridgeError(reason)
+
+
+def _draw_capture_reason(layout, context):
+    reason = working_part_capture_reason(context)
+    if reason:
+        # Short explicit explanation also remains visible when a control is disabled.
+        layout.label(text="Working Part capture/update unavailable", icon="INFO")
+        for line in textwrap.wrap(reason, width=64):
+            layout.label(text=line)
+    return reason
+
+
+class MCAD_OT_assembly_new(AssemblyEdit, Operator):
+    bl_idname = "mcad.assembly_new"
+    bl_label = "New Assembly from Part"
+    bl_description = "Capture the working Part snapshot and explicitly ground its first instance"
+    bl_options = {"REGISTER", "UNDO"}
+    name: StringProperty(name="Assembly name", default="Assembly")
+    instance_name: StringProperty(name="Grounded instance name", default="Base")
+    grounded: BoolProperty(name="Ground first instance at world origin", default=False)
+    show_help: BoolProperty(default=False, options={"SKIP_SAVE"})
+
+    @classmethod
+    def poll(cls, context):
+        return (
+            context.mode == "OBJECT"
+            and bool(context.scene.mechanical_cad.document_json)
+            and _capture_poll(cls, context)
+        )
+
+    def invoke(self, context, event):
+        self.grounded = False
+        return super().invoke(context, event)
+
+    def draw(self, context):
+        layout = self.layout
+        layout.label(text="Source: " + context.scene.mechanical_cad.document_name, icon="MESH_CUBE")
+        layout.prop(self, "name")
+        layout.prop(self, "instance_name")
+        layout.prop(self, "grounded")
+        if state(context).document_json:
+            layout.label(
+                text="Apply replaces the current assembly. Save it first if needed.", icon="ERROR"
+            )
+        help_lines(
+            layout,
+            self,
+            [
+                "The first instance is the fixed root of a rooted tree.",
+                "The working Part stays separate and unchanged.",
+                "Part snapshots are embedded; there are no external file links.",
+            ],
+        )
+
+    def execute(self, context):
+        try:
+            _require_capture(context)
+            if not self.grounded:
+                raise bridge.BridgeError("Explicitly confirm grounding the first instance.")
+            self.require_same_working_part(context)
+            result = self.apply(
+                context,
+                edit.new_from_part(
+                    canonical_working_part(context),
+                    name=self.name,
+                    instance_name=self.instance_name,
+                ),
+            )
+            state(context).document_path = ""
+            activate_assembly_workspace(context)
+            return result
+        except Exception as exc:
+            return reject(self, context, exc)
+
+
+class MCAD_OT_assembly_insert(AssemblyEdit, Operator):
+    bl_idname = "mcad.assembly_insert"
+    bl_label = "Insert Child Instance"
+    bl_description = (
+        "Insert a reused or working Part with explicit parent, named frames and one joint"
+    )
+    bl_options = {"REGISTER", "UNDO"}
+    use_working_part: BoolProperty(name="Capture working Part", default=False)
+    part_id: EnumProperty(name="Reusable definition", items=part_choices)
+    parent: EnumProperty(name="Parent instance", items=instance_choices)
+    parent_frame: EnumProperty(name="Parent mate frame", items=parent_frames)
+    child_frame: EnumProperty(name="Child mate frame", items=child_frames)
+    name: StringProperty(name="Instance name", default="Child")
+    joint_name: StringProperty(name="Joint name", default="Joint")
+    kind: EnumProperty(name="Joint", items=JOINT_KINDS)
+    coordinate: StringProperty(default="0")
+    use_limits: BoolProperty(name="Explicit limits")
+    lower: StringProperty(default="-90")
+    upper: StringProperty(default="90")
+    show_help: BoolProperty(default=False, options={"SKIP_SAVE"})
+
+    def invoke(self, context, event):
+        data = assembly(context)
+        if not self.properties.is_property_set("part_id"):
+            selected = state(context).selected_part_id
+            if selected in {p["id"] for p in data["parts"]}:
+                self.part_id = selected
+        if not self.properties.is_property_set("parent"):
+            selected = state(context).selected_instance_id
+            self.parent = (
+                selected
+                if selected in {i["id"] for i in data["instances"]}
+                else data["grounded_instance"]
+            )
+        return super().invoke(context, event)
+
+    def draw(self, context):
+        layout = self.layout
+        reason = _draw_capture_reason(layout, context)
+        capture = layout.row()
+        capture.enabled = not reason or self.use_working_part
+        capture.prop(self, "use_working_part")
+        if self.use_working_part:
+            layout.label(text="Working Part: " + context.scene.mechanical_cad.document_name)
+        else:
+            layout.prop(self, "part_id")
+        for key in ("name", "parent", "parent_frame", "child_frame", "joint_name", "kind"):
+            layout.prop(self, key)
+        joint_fields(layout, self, self.kind)
+        help_lines(
+            layout,
+            self,
+            [
+                "The child and incoming joint are accepted together.",
+                "Named literal frames belong to reusable definitions.",
+                "Right-hand revolute rotation / slider motion uses local +Z.",
+                "Revolute degrees are stored as radians. Cancel changes nothing.",
+            ],
+        )
+
+    def execute(self, context):
+        try:
+            candidate, part_id = assembly(context), self.part_id
+            if self.use_working_part:
+                _require_capture(context)
+                self.require_same_working_part(context)
+                candidate, part_id = edit.capture_definition(
+                    candidate, canonical_working_part(context)
+                )
+            limits = (
+                [unit_value(self.lower, self.kind), unit_value(self.upper, self.kind)]
+                if self.use_limits and self.kind != "fixed"
+                else None
+            )
+            candidate = edit.insert_instance(
+                candidate,
+                part_id,
+                parent=self.parent,
+                parent_frame=self.parent_frame,
+                child_frame=self.child_frame,
+                kind=self.kind,
+                coordinate=0.0 if self.kind == "fixed" else unit_value(self.coordinate, self.kind),
+                limits=limits,
+                name=self.name,
+                joint_name=self.joint_name,
+            )
+            return self.apply(context, candidate)
+        except Exception as exc:
+            return reject(self, context, exc)
+
+
+class MCAD_OT_assembly_frame(AssemblyEdit, Operator):
+    bl_idname = "mcad.assembly_frame"
+    bl_label = "Edit Literal Mate Frame"
+    bl_description = "Add or edit a named literal frame: XYZ millimetres, XYZ rotation degrees or advanced unit WXYZ"
+    bl_options = {"REGISTER", "UNDO"}
+    part_id: EnumProperty(name="Part definition", items=part_choices)
+    frame_id: StringProperty(options={"HIDDEN", "SKIP_SAVE"})
+    name: StringProperty(name="Frame name", default="Mate frame")
+    xyz: StringProperty(name="XYZ (mm)", default="0, 0, 0")
+    rotation_degrees: StringProperty(name="XYZ rotation (degrees)", default="0, 0, 0")
+    advanced_quaternion: BoolProperty(name="Advanced: enter unit WXYZ quaternion", default=False)
+    wxyz: StringProperty(name="WXYZ quaternion", default="1, 0, 0, 0")
+    _original_orientation = None
+    show_help: BoolProperty(default=False, options={"SKIP_SAVE"})
+
+    def invoke(self, context, event):
+        if not self.properties.is_property_set("part_id") or not self.part_id:
+            selected = state(context).selected_part_id
+            valid = {p["id"] for p in rows(context, "parts")}
+            self.part_id = selected if selected in valid else rows(context, "parts")[0]["id"]
+        if self.frame_id:
+            part = next(p for p in rows(context, "parts") if p["id"] == self.part_id)
+            frame = next(f for f in part["mate_frames"] if f["id"] == self.frame_id)
+            self.name = frame["name"]
+            self.xyz = ", ".join(map(repr, frame["placement"]["xyz_mm"]))
+            original = frame["placement"]["wxyz"]
+            self.wxyz = ", ".join(map(repr, original))
+            self.rotation_degrees = degrees_from_quaternion(original)
+            self._original_orientation = (self.rotation_degrees, self.wxyz, original)
+        return super().invoke(context, event)
+
+    def draw(self, context):
+        layout = self.layout
+        row = layout.row()
+        row.enabled = not bool(self.frame_id)
+        row.prop(self, "part_id")
+        for key in ("name", "xyz"):
+            layout.prop(self, key)
+        layout.prop(self, "advanced_quaternion")
+        layout.prop(self, "wxyz" if self.advanced_quaternion else "rotation_degrees")
+        layout.label(text="Literal part-local frame; affects every instance of this definition.")
+        help_lines(
+            layout,
+            self,
+            [
+                "XYZ: three comma-separated millimetre values.",
+                "XYZ rotation: right-hand degrees, X then Y then Z.",
+                "Advanced WXYZ requires four already unit-length values.",
+                "No normalization or face attachment is inferred.",
+                "Local +Z is the joint axis; local XY fixes zero rotation.",
+            ],
+        )
+
+    def execute(self, context):
+        try:
+            orientation = (
+                vector(self.wxyz, 4)
+                if self.advanced_quaternion
+                else quaternion_from_degrees(self.rotation_degrees)
+            )
+            if self._original_orientation:
+                angles, quaternion, original = self._original_orientation
+                if (self.advanced_quaternion and self.wxyz == quaternion) or (
+                    not self.advanced_quaternion and self.rotation_degrees == angles
+                ):
+                    orientation = original
+            return self.apply(
+                context,
+                edit.edit_frame(
+                    assembly(context),
+                    self.part_id,
+                    frame_id=self.frame_id,
+                    name=self.name,
+                    placement={"xyz_mm": vector(self.xyz, 3), "wxyz": orientation},
+                ),
+            )
+        except Exception as exc:
+            return reject(self, context, exc)
+
+
+class MCAD_OT_assembly_joint(AssemblyEdit, Operator):
+    bl_idname = "mcad.assembly_joint"
+    bl_label = "Edit Joint Coordinate"
+    bl_description = (
+        "Edit the canonical joint coordinate and explicit limits; never read mesh transforms"
+    )
+    bl_options = {"REGISTER", "UNDO"}
+    joint_id: StringProperty(options={"HIDDEN", "SKIP_SAVE"})
+    coordinate: StringProperty(default="0")
+    use_limits: BoolProperty(name="Explicit limits")
+    lower: StringProperty(default="-90")
+    upper: StringProperty(default="90")
+    show_help: BoolProperty(default=False, options={"SKIP_SAVE"})
+    _original = None
+
+    @classmethod
+    def poll(cls, context):
+        return super().poll(context) and bool(joint_choices(None, context))
+
+    def invoke(self, context, event):
+        moving = [j for j in rows(context, "joints") if j["kind"] != "fixed"]
+        if self.joint_id not in {j["id"] for j in moving}:
+            current = state(context)
+            selected = next((j for j in moving if j["id"] == current.selected_joint_id), None)
+            selected = selected or next(
+                (j for j in moving if j["child"] == current.selected_instance_id), None
+            )
+            self.joint_id = (selected or moving[0])["id"]
+        joint = next(j for j in moving if j["id"] == self.joint_id)
+        self.coordinate = unit_text(joint["coordinate"], joint["kind"])
+        self.use_limits = joint["limits"] is not None
+        if self.use_limits:
+            self.lower, self.upper = (unit_text(v, joint["kind"]) for v in joint["limits"])
+        self._original = (self.coordinate, self.lower, self.upper, joint)
+        return super().invoke(context, event)
+
+    def draw(self, context):
+        joint = next((j for j in rows(context, "joints") if j["id"] == self.joint_id), {})
+        self.layout.label(text=joint.get("name", "Joint"), icon="CONSTRAINT")
+        joint_fields(self.layout, self, joint.get("kind", "slider"))
+        help_lines(
+            self.layout,
+            self,
+            [
+                "Coordinates must lie inside inclusive authored limits.",
+                "Lower must be strictly less than upper. No silent clamp.",
+                "Revolute: right-hand degrees about local +Z; saved radians.",
+                "Slider: millimetres along local +Z.",
+            ],
+        )
+
+    def execute(self, context):
+        try:
+            joint = next(j for j in rows(context, "joints") if j["id"] == self.joint_id)
+            coordinate = unit_value(self.coordinate, joint["kind"])
+            limits = (
+                [unit_value(self.lower, joint["kind"]), unit_value(self.upper, joint["kind"])]
+                if self.use_limits
+                else None
+            )
+            if self._original:
+                old_coord, old_lower, old_upper, old = self._original
+                if self.coordinate == old_coord:
+                    coordinate = old["coordinate"]
+                if limits and old["limits"]:
+                    limits = [
+                        old["limits"][n] if value == old_value else limits[n]
+                        for n, (value, old_value) in enumerate(
+                            ((self.lower, old_lower), (self.upper, old_upper))
+                        )
+                    ]
+            return self.apply(
+                context,
+                edit.edit_joint(
+                    assembly(context), self.joint_id, coordinate=coordinate, limits=limits
+                ),
+            )
+        except Exception as exc:
+            return reject(self, context, exc)
+
+
+class MCAD_OT_assembly_open_part(AssemblyEdit, Operator):
+    bl_idname = "mcad.assembly_open_part"
+    bl_label = "Open Embedded Source as Working Part"
+    bl_description = (
+        "Explicitly replace the working Part with this embedded source; assembly stays unchanged"
+    )
+    bl_options = {"REGISTER", "UNDO"}
+    part_id: EnumProperty(name="Source definition", items=part_choices)
+    confirmed: BoolProperty(name="Replace my current working Part", default=False)
+    show_help: BoolProperty(default=False, options={"SKIP_SAVE"})
+
+    def invoke(self, context, event):
+        self.confirmed = False
+        if not self.properties.is_property_set("part_id"):
+            selected = state(context).selected_part_id
+            if selected in {p["id"] for p in rows(context, "parts")}:
+                self.part_id = selected
+        return super().invoke(context, event)
+
+    def draw(self, context):
+        layout = self.layout
+        layout.prop(self, "part_id")
+        layout.label(text="Current working Part: " + context.scene.mechanical_cad.document_name)
+        layout.label(
+            text="Save the working Part first if you want to retain its edits.", icon="ERROR"
+        )
+        layout.prop(self, "confirmed")
+        help_lines(
+            layout,
+            self,
+            [
+                "Only the working Part is replaced after confirmation.",
+                "Assembly keeps its accepted embedded source revision.",
+                "After editing Part, use Update All Instances explicitly.",
+            ],
+        )
+
+    def execute(self, context):
+        try:
+            state_api.require_idle(context)
+            if not self.confirmed:
+                raise bridge.BridgeError(
+                    "Confirm replacing the working Part before opening a source."
+                )
+            self.require_same_working_part(context)
+            if self._expected is not None and state(context).document_json != self._expected:
+                raise bridge.BridgeError("The assembly changed. Reopen this dialog.")
+            document_state._commit_candidate(
+                context, edit.working_copy(assembly(context), self.part_id)
+            )
+            if not bpy.app.background:
+                try:
+                    workspace.request_workspace(context, "PART", on_ready=display._focus_display)
+                except RuntimeError as exc:
+                    state(context).last_action_error = "Part opened; switch to Part: " + str(exc)
+            return {"FINISHED"}
+        except Exception as exc:
+            return reject(self, context, exc)
+
+
+class MCAD_OT_assembly_update_source(AssemblyEdit, Operator):
+    bl_idname = "mcad.assembly_update_source"
+    bl_label = "Update All Instances"
+    bl_description = (
+        "Validate the working Part revision and update every affected assembly instance atomically"
+    )
+    bl_options = {"REGISTER", "UNDO"}
+    show_help: BoolProperty(default=False, options={"SKIP_SAVE"})
+
+    @classmethod
+    def poll(cls, context):
+        return super().poll(context) and _capture_poll(cls, context)
+
+    def draw(self, context):
+        layout = self.layout
+        updates = state_api.source_updates(context)
+        data = assembly(context)
+        for update in updates:
+            layout.label(text="Accepted revision: " + update["accepted_digest"][:12])
+            layout.label(text="Working draft: " + update["working_digest"][:12])
+            for instance in data["instances"]:
+                if instance["id"] in update["instance_ids"]:
+                    layout.label(text="Update: " + instance["name"], icon="MESH_CUBE")
+        if not updates:
+            layout.label(text="No changed working Part source is available.", icon="INFO")
+        layout.label(
+            text="Literal frames stay at their authored coordinates.", icon="ORIENTATION_LOCAL"
+        )
+        help_lines(
+            layout,
+            self,
+            [
+                "All affected instances update together, or none do.",
+                "Frame locations do not follow changed faces or thickness.",
+                "Previous verification becomes stale; check again.",
+                "Cancel retains the accepted source and every instance.",
+            ],
+        )
+
+    def execute(self, context):
+        try:
+            _require_capture(context)
+            self.require_same_working_part(context)
+            candidate, _ = edit.update_source(assembly(context), canonical_working_part(context))
+            return self.apply(context, candidate)
+        except Exception as exc:
+            return reject(self, context, exc)
+
+
+class MCAD_OT_assembly_replay(AssemblyEdit, Operator):
+    bl_idname = "mcad.assembly_replay"
+    bl_label = "Replay Assembly"
+    bl_description = (
+        "Rebuild disposable instances and visible mate frames from the accepted assembly"
+    )
+    bl_options = {"REGISTER", "UNDO"}
+
+    def invoke(self, context, event):
+        return self.execute(context)
+
+    def execute(self, context):
+        try:
+            state_api.replay(context)
+            return {"FINISHED"}
+        except Exception as exc:
+            return reject(self, context, exc)
+
+
+class MCAD_OT_assembly_export_step(Operator, ExportHelper):
+    bl_idname = "mcad.assembly_export_step"
+    bl_label = "Export Assembly STEP"
+    bl_description = (
+        "Freshly check the saved Assembly pose, then export named reusable Parts and placements"
+    )
+    bl_options = {"REGISTER"}
+    filename_ext = ".step"
+    filter_glob: StringProperty(default="*.step;*.stp", options={"HIDDEN"})
+    check_existing: BoolProperty(default=True, options={"HIDDEN"})
+
+    @classmethod
+    def poll(cls, context):
+        reason = (
+            "Switch to Object Mode before exporting the Assembly."
+            if context.mode != "OBJECT"
+            else assembly_export_owner.availability_reason(context)
+        )
+        if reason and callable(getattr(cls, "poll_message_set", None)):
+            cls.poll_message_set(reason)
+        return not reason
+
+    def invoke(self, context, event):
+        try:
+            self._export_snapshot = assembly_export_owner.capture(context)
+            if not self.filepath:
+                name = bpy.path.clean_name(self._export_snapshot["assembly"]["name"]) or "assembly"
+                self.filepath = name + self.filename_ext
+            return ExportHelper.invoke(self, context, event)
+        except Exception as exc:
+            self.report({"ERROR"}, str(exc)[:1000])
+            return {"CANCELLED"}
+
+    def execute(self, context):
+        try:
+            if not self.filepath.strip():
+                raise bridge.BridgeError("Choose an explicit Assembly STEP file path.")
+            path = Path(bpy.path.abspath(self.filepath)).expanduser().absolute()
+            if path.suffix.lower() not in (".step", ".stp"):
+                path = path.with_name(path.name + self.filename_ext)
+            response = assembly_export_owner.run_export(
+                context, str(path), snapshot=getattr(self, "_export_snapshot", None)
+            )
+            self.report({"INFO"} if response["ok"] else {"WARNING"}, state(context).export_message)
+            return {"FINISHED"} if response["ok"] else {"CANCELLED"}
+        except Exception as exc:
+            # The owner already records honest file outcomes, including a write
+            # followed by stale settings or unavailable RNA. Never overwrite it
+            # with a generic claim that the destination was not written.
+            try:
+                state(context).last_action_error = str(exc)
+            except (AttributeError, ReferenceError, RuntimeError):
+                pass
+            self.report({"ERROR"}, str(exc)[:1000])
+            return {"CANCELLED"}
+
+    def cancel(self, context):
+        self._export_snapshot = None
+
+    def draw(self, context):
+        self.layout.label(text="Fresh saved-pose check; named Parts and placements in millimetres.")
+        self.layout.label(text="Shared Parts remain reusable STEP definitions.")
+        self.layout.label(text="No feature history or editable joints are stored in STEP.")
+        self.layout.label(
+            text="Existing files require confirmation; Blender Undo does not undo files."
+        )
+
+
+CLASSES = (
+    MCAD_OT_assembly_new,
+    MCAD_OT_assembly_insert,
+    MCAD_OT_assembly_frame,
+    MCAD_OT_assembly_joint,
+    MCAD_OT_assembly_open_part,
+    MCAD_OT_assembly_update_source,
+    MCAD_OT_assembly_replay,
+    MCAD_OT_assembly_export_step,
+) + assembly_files.CLASSES

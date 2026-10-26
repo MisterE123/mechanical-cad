@@ -1,0 +1,271 @@
+"""Pure JSON candidates for user-authored parts and assembly trees.
+
+These helpers never publish state or certify geometry. The isolated assembly
+service must validate each complete candidate before a Blender transaction accepts
+it. All operations copy input data; existing stable IDs remain unchanged.
+"""
+
+from __future__ import annotations
+
+import copy
+import hashlib
+import json
+import uuid
+
+from .bridge import BridgeError
+
+
+def canonical_digest(value):
+    """Hash an already canonical schema snapshot, never an arbitrary mesh/cache."""
+    return hashlib.sha256(
+        (json.dumps(value, sort_keys=True, indent=2, allow_nan=False) + "\n").encode()
+    ).hexdigest()
+
+
+def identity(prefix):
+    return prefix + "_" + uuid.uuid4().hex
+
+
+def origin_frame():
+    return {"xyz_mm": [0.0, 0.0, 0.0], "wxyz": [1.0, 0.0, 0.0, 0.0]}
+
+
+def _part_source(document):
+    if type(document) is not dict or not document.get("id"):
+        raise BridgeError("Choose a current canonical Part document first.")
+    output = document.get("active_feature")
+    feature = next((f for f in document.get("features", []) if f.get("id") == output), None)
+    if not feature or feature.get("kind") not in {"extrude", "cut"}:
+        raise BridgeError("Display a solid feature before using this Part in an assembly.")
+    return {
+        "source_document_id": document["id"],
+        "source_digest": canonical_digest(document),
+        "document": copy.deepcopy(document),
+    }, output
+
+
+def _definition(source, output, name):
+    return {
+        "id": identity("part"),
+        "name": name or source["document"]["name"],
+        "source_document_id": source["source_document_id"],
+        "source_digest": source["source_digest"],
+        "output_feature_id": output,
+        "mate_frames": [{"id": "origin", "name": "Part origin", "placement": origin_frame()}],
+    }
+
+
+def new_from_part(document, *, name="Assembly", part_name="", instance_name=""):
+    """Explicitly ground the first captured part at the assembly origin."""
+    source, output = _part_source(document)
+    definition = _definition(source, output, part_name)
+    instance = {
+        "id": identity("instance"),
+        "part_id": definition["id"],
+        "name": instance_name or definition["name"],
+    }
+    return {
+        "kind": "assembly",
+        "assembly_schema_version": 1,
+        "id": identity("assembly"),
+        "name": name or "Assembly",
+        "length_unit": "mm",
+        "angle_unit": "rad",
+        "part_sources": [source],
+        "parts": [definition],
+        "instances": [instance],
+        "joints": [],
+        "grounded_instance": instance["id"],
+        "ground": origin_frame(),
+        "verification_presets": [],
+        "active_verification_preset": None,
+    }
+
+
+def capture_definition(assembly, document, *, name=""):
+    """Prepare a definition; caller MUST insert its instance in the same Apply.
+
+    An already accepted identical source/output reuses its definition. Working
+    edits to an accepted source require an explicit source-wide update instead.
+    """
+    candidate = copy.deepcopy(assembly)
+    source, output = _part_source(document)
+    accepted = next(
+        (s for s in candidate["part_sources"] if s["source_document_id"] == document["id"]), None
+    )
+    if accepted and accepted["source_digest"] != source["source_digest"]:
+        raise BridgeError(
+            "This Part has an update available. Explicitly update all its assembly instances, "
+            "or fork an independent Part before inserting it."
+        )
+    existing = next(
+        (
+            p
+            for p in candidate["parts"]
+            if p["source_document_id"] == document["id"] and p["output_feature_id"] == output
+        ),
+        None,
+    )
+    if existing:
+        return candidate, existing["id"]
+    if accepted is None:
+        candidate["part_sources"].append(source)
+    definition = _definition(source, output, name)
+    candidate["parts"].append(definition)
+    return candidate, definition["id"]
+
+
+def insert_instance(
+    assembly,
+    part_id,
+    *,
+    parent,
+    parent_frame,
+    child_frame,
+    kind,
+    coordinate=0.0,
+    limits=None,
+    name="",
+    joint_name="",
+):
+    """Build child plus its incoming joint atomically; never save an orphan."""
+    candidate = copy.deepcopy(assembly)
+    part = next((p for p in candidate["parts"] if p["id"] == part_id), None)
+    if part is None:
+        raise BridgeError("Choose an existing reusable part definition.")
+    child = {"id": identity("instance"), "part_id": part_id, "name": name or part["name"]}
+    joint = {
+        "id": identity("joint"),
+        "name": joint_name or kind.title(),
+        "kind": kind,
+        "parent": parent,
+        "child": child["id"],
+        "parent_frame": parent_frame,
+        "child_frame": child_frame,
+    }
+    if kind != "fixed":
+        joint["coordinate"] = coordinate
+        if limits is not None:
+            joint["limits"] = list(limits)
+    candidate["instances"].append(child)
+    candidate["joints"].append(joint)
+    return candidate
+
+
+def edit_frame(assembly, part_id, *, frame_id="", name="", placement):
+    """Explicit literal datum; no geometry attachment is inferred."""
+    candidate = copy.deepcopy(assembly)
+    part = next((p for p in candidate["parts"] if p["id"] == part_id), None)
+    if part is None:
+        raise BridgeError("Choose a part definition before editing a mate frame.")
+    if frame_id:
+        frame = next((f for f in part["mate_frames"] if f["id"] == frame_id), None)
+        if frame is None:
+            raise BridgeError("The selected mate frame no longer exists.")
+        frame.update(name=name or frame["name"], placement=copy.deepcopy(placement))
+    else:
+        part["mate_frames"].append(
+            {
+                "id": identity("frame"),
+                "name": name or "Mate frame",
+                "placement": copy.deepcopy(placement),
+            }
+        )
+    return candidate
+
+
+def edit_joint(assembly, joint_id, *, coordinate, limits):
+    candidate = copy.deepcopy(assembly)
+    joint = next((j for j in candidate["joints"] if j["id"] == joint_id), None)
+    if joint is None or joint["kind"] == "fixed":
+        raise BridgeError("Choose an existing revolute or slider joint.")
+    joint["coordinate"] = coordinate
+    if limits is None:
+        joint.pop("limits", None)
+    else:
+        joint["limits"] = list(limits)
+    return candidate
+
+
+def update_source(assembly, document):
+    """Preview an all-instance source update without moving literal datum frames."""
+    candidate = copy.deepcopy(assembly)
+    source, _ = _part_source(document)
+    accepted = next(
+        (
+            s
+            for s in candidate["part_sources"]
+            if s["source_document_id"] == source["source_document_id"]
+        ),
+        None,
+    )
+    if accepted is None:
+        raise BridgeError("This working Part is not an accepted assembly source.")
+    accepted.update(source)
+    parts = []
+    for part in candidate["parts"]:
+        if part["source_document_id"] == document["id"]:
+            part["source_digest"] = source["source_digest"]
+            parts.append(part["id"])
+    affected = [i["id"] for i in candidate["instances"] if i["part_id"] in parts]
+    return candidate, affected
+
+
+def working_copy(assembly, part_id):
+    """Return embedded source without overwriting any current working Part."""
+    part = next((p for p in assembly["parts"] if p["id"] == part_id), None)
+    if part is None:
+        raise BridgeError("Choose an existing part definition.")
+    source = next(
+        s for s in assembly["part_sources"] if s["source_document_id"] == part["source_document_id"]
+    )
+    return copy.deepcopy(source["document"])
+
+
+def edit_verification_preset(
+    assembly, *, preset_id="", name, kind, policy, pair=None, minimum_mm=None, requirement_name=""
+):
+    """Explicitly create/update a named policy; pair updates keep stable row IDs.
+
+    Editing one pair never drops the other authored engineering requirements.
+    Choosing interference-only explicitly removes the selected preset's clearance
+    requirements; the confirmation dialog must explain that intent change.
+    """
+    candidate = copy.deepcopy(assembly)
+    presets = candidate.setdefault("verification_presets", [])
+    preset = next((p for p in presets if p["id"] == preset_id), None) if preset_id else None
+    if preset_id and preset is None:
+        raise BridgeError("The selected verification preset no longer exists.")
+    if preset is None:
+        preset = {"id": identity("preset"), "requirements": []}
+        presets.append(preset)
+    preset.update(name=name, kind=kind, policy=copy.deepcopy(policy))
+    if kind == "interference_only":
+        preset["requirements"] = []
+    elif kind == "clearance":
+        if pair is None or len(pair) != 2 or pair[0] == pair[1]:
+            raise BridgeError("Choose two distinct instances for the clearance requirement.")
+        pair = sorted(pair)
+        requirement = next(
+            (r for r in preset["requirements"] if sorted(r["instances"]) == pair), None
+        )
+        if requirement is None:
+            requirement = {"id": identity("requirement")}
+            preset["requirements"].append(requirement)
+        requirement.update(
+            name=requirement_name or "Minimum clearance", instances=pair, minimum_mm=minimum_mm
+        )
+    else:
+        raise BridgeError("Choose clearance or interference-only verification.")
+    candidate["active_verification_preset"] = preset["id"]
+    return candidate
+
+
+def select_verification_preset(assembly, preset_id):
+    candidate = copy.deepcopy(assembly)
+    if preset_id is not None and not any(
+        p["id"] == preset_id for p in candidate["verification_presets"]
+    ):
+        raise BridgeError("Choose an existing verification preset, or clear the selection.")
+    candidate["active_verification_preset"] = preset_id
+    return candidate

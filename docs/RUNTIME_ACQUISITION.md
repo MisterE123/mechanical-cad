@@ -1,12 +1,12 @@
 # Reproducible Linux runtime acquisition
 
-This adapter realizes **runtime bytes only**, not a qualified installer, complete recipient materials, legal clearance, or a Windows runtime. It uses public HTTPS inputs and Python standard-library archive readers. It never runs archive scripts, pip installers, Debian maintainer scripts, or the downloaded interpreter.
+This adapter realizes **runtime bytes only**, not a qualified installer, complete recipient materials, or legal clearance. It uses public HTTPS inputs and Python standard-library archive readers. It never runs archive scripts, pip installers, Debian maintainer scripts, or the downloaded interpreter. This page describes the Linux lock; a separate [Windows-target acquisition recipe](WINDOWS_RUNTIME_ACQUISITION.md) is data-only and remains natively unqualified.
 
 Ubuntu 24.04 is the intended Linux qualification host. Bundled Expat requires GLIBC 2.36; the OCP manylinux tag alone does not establish Ubuntu 22.04 support.
 
 ## Trusted input and invocation
 
-The reviewed, source-controlled lock is the input authority. The adapter accepts structurally valid Linux locks, not only the current six-archive lock. Do not supply an unreviewed replacement lock and treat its internally consistent hashes as independent authentication. Confirm the lock's identity against the intended source commit or another separately reviewed manifest.
+The reviewed, source-controlled lock is the input authority. The adapter accepts structurally valid Linux or Windows x64 target locks, not only the current six-archive Linux lock. Do not supply an unreviewed replacement lock and treat its internally consistent hashes as independent authentication. Confirm the lock's identity against the intended source commit or another separately reviewed manifest.
 
 ```sh
 python scripts/acquire_release_inputs.py \

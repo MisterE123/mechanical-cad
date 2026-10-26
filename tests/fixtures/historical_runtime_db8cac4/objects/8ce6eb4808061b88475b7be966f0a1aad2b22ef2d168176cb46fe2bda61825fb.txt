@@ -1,0 +1,493 @@
+"""Native-free per-operation capability request/receipt contract (ADR 0008).
+
+This is an opt-in leaf. Legacy requests, operation fingerprints and canonical
+model serializers are untouched. Capability names are requirements, not an
+advertisement that this add-on implements an arc/result-3 evidence validator.
+"""
+
+from __future__ import annotations
+
+import hashlib
+import json
+import os
+import re
+import uuid
+from dataclasses import dataclass
+from pathlib import Path
+
+from . import request_contracts
+from .backend_selection import BackendSelection, SelectionError, lexical_path, resolved_path
+
+BASELINE = "mcad.backend-contract/1"
+SOLVER_GUARD = "mcad.solver-dof-cycle-guard/1"
+SKETCH_ARCS = "mcad.sketch-arcs/1"
+SNAPSHOT_SKETCH3 = "mcad.snapshot-sketch3/1"
+ASSEMBLY_STEP_EXPORT = "mcad.assembly-step-export/1"
+MAX_CONTRACT_BYTES = 4 * 1024
+MAX_CONTRACT_NODES = 36
+MAX_RECEIPT_BYTES = 64 * 1024
+MAX_GUARDED_REQUEST_BYTES = request_contracts.MAX_DOCUMENT_BYTES + MAX_CONTRACT_BYTES
+MAX_GUARDED_REQUEST_NODES = request_contracts.MAX_REQUEST_NODES + MAX_CONTRACT_NODES
+ACTIONS = frozenset(
+    {
+        "replay",
+        "canonical_snapshot",
+        "solve_sketch",
+        "check_geometry",
+        "export_step",
+        "export_stl",
+        "assembly_replay",
+        "assembly_check",
+        "assembly_sample",
+        "assembly_export_step",
+    }
+)
+_CAPABILITY = re.compile(r"[a-z0-9][a-z0-9._/-]{0,95}\Z", re.ASCII)
+_NONCE = re.compile(r"[0-9a-f]{32}\Z", re.ASCII)
+_DIGEST = re.compile(r"[0-9a-f]{64}\Z", re.ASCII)
+_RECEIPT_FIELDS = {
+    "version",
+    "request_id",
+    "request_fingerprint",
+    "required_capabilities",
+    "confirmed_capabilities",
+    "missing_capabilities",
+    "phase",
+    "backend",
+}
+_BACKEND_FIELDS = {
+    "core_version",
+    "project_root",
+    "core_origin",
+    "solver_origin",
+    "python_executable",
+    "python_executable_target",
+    "python_prefix",
+    "python_base_prefix",
+    "python_version",
+}
+
+
+class BackendContractError(ValueError):
+    """A bounded contract error; transports add launched-export uncertainty."""
+
+    def __init__(self, message: str, *, code: str = "backend_contract_invalid"):
+        super().__init__(message)
+        self.code = code
+
+
+def _require(condition, message, *, code="backend_contract_invalid"):
+    if not condition:
+        raise BackendContractError(message, code=code)
+
+
+def _encode(value, *, compact=False):
+    options = {"sort_keys": True, "separators": (",", ":")} if compact else {}
+    return json.dumps(value, allow_nan=False, ensure_ascii=True, **options).encode("utf-8")
+
+
+def _snapshot(value, **limits):
+    try:
+        return request_contracts.snapshot_request(value, **limits)
+    except (ValueError, TypeError, OverflowError, RecursionError) as exc:
+        raise BackendContractError(str(exc)) from exc
+
+
+def _capabilities(value, *, nonempty=False):
+    _require(
+        type(value) is list
+        and (1 if nonempty else 0) <= len(value) <= 32
+        and all(type(name) is str and _CAPABILITY.fullmatch(name) for name in value),
+        "Capabilities must be bounded exact lowercase names.",
+    )
+    _require(value == sorted(set(value)), "Capabilities must be sorted and duplicate-free.")
+    return value
+
+
+def _no_nested_contract(operation):
+    pending = [operation]
+    seen = set()
+    while pending:
+        item = pending.pop()
+        if type(item) not in (dict, list) or id(item) in seen:
+            continue
+        seen.add(id(item))
+        if type(item) is dict:
+            _require("backend_contract" not in item, "Nested backend contracts are forbidden.")
+            pending.extend(item.values())
+        else:
+            pending.extend(item)
+
+
+def _schema(record, allowed, label):
+    if type(record) is dict and "schema_version" in record:
+        value = record["schema_version"]
+        _require(type(value) is int and value in allowed, f"Unsupported {label} schema.")
+        return value
+    return None
+
+
+def _has_sketch3(document):
+    _schema(document, (1, 2), "Part")
+    if type(document) is not dict or type(document.get("features")) is not list:
+        return False
+    found = False
+    for feature in document["features"]:
+        if type(feature) is dict and type(feature.get("sketch")) is dict:
+            found |= _schema(feature["sketch"], (1, 2, 3), "embedded sketch") == 3
+    return found
+
+
+def _minimum(operation):
+    _no_nested_contract(operation)
+    _require(
+        type(operation.get("protocol_version")) is int and operation["protocol_version"] == 1,
+        "Guarded requests require exact protocol version 1.",
+    )
+    action = operation.get("action", "replay")
+    _require(type(action) is str and action in ACTIONS, "Unsupported guarded action.")
+    if action.startswith("assembly_"):
+        _require(operation.get("kind") == "assembly", "Assembly actions require kind=assembly.")
+    else:
+        _require("kind" not in operation, "Non-assembly actions cannot select assembly routing.")
+    sketch3 = _has_sketch3(operation.get("document"))
+    assembly = operation.get("assembly")
+    if type(assembly) is dict and "assembly_schema_version" in assembly:
+        schema = assembly["assembly_schema_version"]
+        _require(type(schema) is int and schema == 1, "Unsupported assembly schema.")
+    if type(assembly) is dict and type(assembly.get("part_sources")) is list:
+        for source in assembly["part_sources"]:
+            if type(source) is dict:
+                sketch3 |= _has_sketch3(source.get("document"))
+    required = {BASELINE}
+    if action == "canonical_snapshot":
+        _require("result_version" not in operation, "Snapshots have no result-version argument.")
+        if sketch3:
+            required.add(SNAPSHOT_SKETCH3)
+        return sorted(required)
+    version = operation.get("result_version")
+    _require(
+        type(version) is int and version in (2, 3),
+        "Guarded operations require explicit typed result 2 or reviewed result 3.",
+    )
+    _require(not sketch3 or version == 3, "Schema-3 sources require explicit result 3.")
+    required.add(SOLVER_GUARD)
+    if action == "assembly_export_step":
+        required.add(ASSEMBLY_STEP_EXPORT)
+    if version == 3:
+        required.add(SKETCH_ARCS)
+        if action == "solve_sketch":
+            required.add("mcad.solve-result/3")
+        elif action.startswith("assembly_"):
+            required.update(("mcad.part-result/3", "mcad.assembly-result/3"))
+        else:
+            required.add("mcad.part-result/3")
+            if action != "replay":
+                required.add("mcad.geometry-result/3")
+    return sorted(required)
+
+
+def minimum_capabilities(operation):
+    """Derive policy only after independently bounding the ordinary request O."""
+    return _minimum(_snapshot(operation))
+
+
+def _guarded_snapshot(guarded_request):
+    guarded = _snapshot(
+        guarded_request,
+        max_bytes=MAX_GUARDED_REQUEST_BYTES,
+        max_nodes=MAX_GUARDED_REQUEST_NODES,
+    )
+    _require("backend_contract" in guarded, "A guarded request requires backend_contract.")
+    contract = guarded["backend_contract"]
+    _require(type(contract) is dict, "backend_contract must be an object.")
+    _snapshot(contract, max_bytes=MAX_CONTRACT_BYTES, max_nodes=MAX_CONTRACT_NODES, max_depth=2)
+    _require(
+        len(_encode({"backend_contract": contract})) <= MAX_CONTRACT_BYTES,
+        "Backend contract exceeds its 4 KiB metadata budget.",
+    )
+    _require(
+        set(contract) == {"version", "request_id", "required_capabilities"},
+        "Unknown or missing backend contract field.",
+    )
+    _require(
+        type(contract["version"]) is int and contract["version"] == 1,
+        "Unsupported backend contract version.",
+    )
+    _require(
+        type(contract["request_id"]) is str and _NONCE.fullmatch(contract["request_id"]),
+        "Backend request ID must be 32 lowercase hexadecimal characters.",
+    )
+    required = _capabilities(contract["required_capabilities"], nonempty=True)
+    operation = _snapshot(
+        {key: value for key, value in guarded.items() if key != "backend_contract"}
+    )
+    _require(
+        set(_minimum(operation)) <= set(required), "Required minimum capabilities are missing."
+    )
+    return guarded, operation
+
+
+def validate_request(guarded_request):
+    """Validate G and return detached O, stripping only the known top-level field."""
+    return _guarded_snapshot(guarded_request)[1]
+
+
+def compose_request(operation, *, required_capabilities=None):
+    """Create a fresh operation nonce without changing O's authored data or types."""
+    ordinary = _snapshot(operation)
+    minimum = _minimum(ordinary)
+    required = minimum if required_capabilities is None else required_capabilities
+    guarded = {
+        **ordinary,
+        "backend_contract": {
+            "version": 1,
+            "request_id": uuid.uuid4().hex,
+            "required_capabilities": required,
+        },
+    }
+    return _guarded_snapshot(guarded)[0]
+
+
+def request_fingerprint(guarded_request):
+    """Hash full G with exact finite compact ASCII JSON, separately from O."""
+    guarded, _ = _guarded_snapshot(guarded_request)
+    return hashlib.sha256(_encode(guarded, compact=True)).hexdigest()
+
+
+@dataclass(frozen=True, slots=True, init=False)
+class PreparedRequest:
+    """Immutable bounded wire bytes and exact O/G projections for one operation."""
+
+    payload: bytes
+    _operation_payload: bytes
+    request_id: str
+    fingerprint: str
+    action: str
+
+    def guarded_request(self):
+        return json.loads(self.payload)
+
+    def operation_request(self):
+        return json.loads(self._operation_payload)
+
+
+def prepare_request(operation, *, required_capabilities=None):
+    guarded = compose_request(operation, required_capabilities=required_capabilities)
+    return prepare_guarded_request(guarded)
+
+
+def prepare_guarded_request(guarded_request):
+    """Capture an existing G without generating another nonce or changing O."""
+    guarded, ordinary = _guarded_snapshot(guarded_request)
+    prepared = object.__new__(PreparedRequest)
+    for name, value in {
+        "payload": _encode(guarded),
+        "_operation_payload": _encode(ordinary),
+        "request_id": guarded["backend_contract"]["request_id"],
+        "fingerprint": hashlib.sha256(_encode(guarded, compact=True)).hexdigest(),
+        "action": ordinary.get("action", "replay"),
+    }.items():
+        object.__setattr__(prepared, name, value)
+    return prepared
+
+
+def response_snapshot(response):
+    """Use the existing response tree/node/depth budget before any recursive copy."""
+    try:
+        return request_contracts.snapshot_request(
+            response,
+            max_bytes=request_contracts.MAX_RESPONSE_BYTES,
+            max_nodes=4_000_000,
+            max_depth=32,
+        )
+    except (ValueError, TypeError, OverflowError, RecursionError) as exc:
+        raise BackendContractError(str(exc), code="backend_response_invalid") from exc
+
+
+def project_response(response):
+    """Remove only receipt metadata; arbitrary extra fields must survive to reject."""
+    snapshot = response_snapshot(response)
+    return {key: value for key, value in snapshot.items() if key != "backend_receipt"}
+
+
+def _error(error):
+    _require(
+        type(error) is dict
+        and set(error) == {"code", "message"}
+        and type(error["code"]) is str
+        and 0 < len(error["code"]) <= 128
+        and type(error["message"]) is str
+        and 0 < len(error["message"]) <= 100_000,
+        "Failure requires bounded exact code/message fields.",
+    )
+
+
+def common_failure(operation, response, *, contract_level=False):
+    """Strict failure-only envelope; never operation or publication authority."""
+    expected = {"protocol_version", "ok", "result", "error"}
+    if not contract_level and operation.get("action", "replay") != "canonical_snapshot":
+        expected.add("result_version")
+        _require(
+            type(response.get("result_version")) is int
+            and response["result_version"] == operation["result_version"],
+            "Failure result-version stamp differs from request.",
+        )
+    _require(
+        set(response) == expected
+        and response.get("ok") is False
+        and response.get("result") is None
+        and type(response.get("protocol_version")) is int
+        and response["protocol_version"] == 1,
+        "Invalid common failure-only envelope.",
+    )
+    _error(response["error"])
+    return response
+
+
+def _absolute_path(value):
+    _require(
+        type(value) is str
+        and 0 < len(value) <= 4096
+        and "\0" not in value
+        and os.path.isabs(value),
+        "Backend paths must be bounded absolute strings.",
+    )
+
+
+def _identity(backend, selection, *, phase, action):
+    _require(
+        type(backend) is dict and set(backend) == _BACKEND_FIELDS,
+        "Unknown or missing backend identity fields.",
+    )
+    _require(
+        type(backend["core_version"]) is str and 0 < len(backend["core_version"]) <= 64,
+        "Invalid observed core version.",
+    )
+    version = backend["python_version"]
+    _require(
+        type(version) is list
+        and len(version) == 3
+        and all(type(item) is int and 0 <= item <= 1000 for item in version),
+        "Invalid observed Python version.",
+    )
+    for key in _BACKEND_FIELDS - {"core_version", "python_version", "solver_origin"}:
+        _absolute_path(backend[key])
+    solver = backend["solver_origin"]
+    if solver is not None:
+        _absolute_path(solver)
+    if phase == "dispatched":
+        _require(
+            (solver is None) == (action == "canonical_snapshot"),
+            "Dispatched solver origin contradicts the action contract.",
+        )
+    _require(type(selection) is BackendSelection, "A captured backend selection is required.")
+    try:
+        core_origin = resolved_path(backend["core_origin"])
+        matches = (
+            resolved_path(backend["project_root"]) == selection.project_root
+            and core_origin == resolved_path(selection.core_origin)
+            and lexical_path(backend["python_executable"]) == selection.python_executable
+            and resolved_path(backend["python_executable_target"])
+            == selection.python_executable_target
+        )
+        if solver is not None:
+            module = Path(resolved_path(solver))
+            matches = (
+                matches and module.is_relative_to(Path(core_origin)) and module != Path(core_origin)
+            )
+        _require(
+            matches,
+            "Observed backend differs from the captured root/interpreter selection.",
+            code="backend_identity_mismatch",
+        )
+    except SelectionError as exc:
+        raise BackendContractError(str(exc), code="backend_identity_mismatch") from exc
+
+
+def validate_receipt(guarded_request, response, selection):
+    """Validate full-G correspondence, phase and actual selected backend identity."""
+    guarded, operation = _guarded_snapshot(guarded_request)
+    bounded = response_snapshot(response)
+    if "backend_receipt" not in bounded:
+        raise BackendContractError(
+            "Selected backend did not provide the required capability receipt.",
+            code="backend_contract_unavailable",
+        )
+    try:
+        _require(
+            type(bounded.get("protocol_version")) is int
+            and bounded["protocol_version"] == 1
+            and type(bounded.get("ok")) is bool,
+            "Invalid guarded response envelope.",
+        )
+        receipt = bounded["backend_receipt"]
+        _require(
+            type(receipt) is dict and set(receipt) == _RECEIPT_FIELDS,
+            "Unknown or missing backend receipt fields.",
+        )
+        _snapshot(
+            {"backend_receipt": receipt},
+            max_bytes=MAX_RECEIPT_BYTES,
+            max_depth=32,
+            max_nodes=4_000_000,
+        )
+        _require(
+            type(receipt["version"]) is int and receipt["version"] == 1,
+            "Unsupported backend receipt version.",
+        )
+        contract = guarded["backend_contract"]
+        _require(
+            type(receipt["request_id"]) is str
+            and _NONCE.fullmatch(receipt["request_id"])
+            and receipt["request_id"] == contract["request_id"],
+            "Receipt belongs to a different operation nonce.",
+        )
+        _require(
+            type(receipt["request_fingerprint"]) is str
+            and _DIGEST.fullmatch(receipt["request_fingerprint"])
+            and receipt["request_fingerprint"]
+            == hashlib.sha256(_encode(guarded, compact=True)).hexdigest(),
+            "Receipt belongs to a different complete guarded request.",
+        )
+        requested = _capabilities(receipt["required_capabilities"], nonempty=True)
+        confirmed = _capabilities(receipt["confirmed_capabilities"])
+        missing = _capabilities(receipt["missing_capabilities"])
+        _require(requested == contract["required_capabilities"], "Receipt requirements changed.")
+        phase = receipt["phase"]
+        _require(
+            type(phase) is str and phase in {"dispatched", "rejected_before_dispatch"},
+            "Unknown backend receipt phase.",
+        )
+        _require(
+            not (set(confirmed) & set(missing)) and sorted(confirmed + missing) == requested,
+            "Receipt capability partition contradicts the request.",
+        )
+        if phase == "dispatched":
+            _require(
+                confirmed == requested and not missing, "Dispatched receipt lacks a requirement."
+            )
+        else:
+            failure = common_failure(operation, project_response(bounded), contract_level=True)
+            code = failure["error"]["code"]
+            _require(
+                code
+                in {
+                    "backend_capability_missing",
+                    "backend_contract_invalid",
+                    "backend_identity_mismatch",
+                },
+                "Unknown pre-dispatch contract failure.",
+            )
+            _require(
+                code != "backend_capability_missing" or bool(missing),
+                "Missing-capability rejection has no missing requirements.",
+            )
+        _identity(
+            receipt["backend"], selection, phase=phase, action=operation.get("action", "replay")
+        )
+        return receipt
+    except BackendContractError as exc:
+        if exc.code == "backend_identity_mismatch":
+            raise
+        raise BackendContractError(str(exc), code="backend_response_invalid") from exc

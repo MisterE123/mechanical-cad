@@ -1,0 +1,442 @@
+"""Fresh canonical geometry checks and explicit atomic file exports.
+
+These operators are reusable by future workspace tools. They deliberately add no
+sidebar layout. Export paths come only from the caller/file selector, never from
+saved model data, and no Blender mesh or retained cache becomes an export source.
+"""
+
+import json
+from pathlib import Path
+
+import bpy
+from bpy.props import BoolProperty, StringProperty
+from bpy.types import Operator
+from bpy_extras.io_utils import ExportHelper
+
+from . import (
+    backend_contracts,
+    backend_runtime,
+    bridge,
+    document_state,
+    execution_lease,
+    guarded_transport,
+    workspace,
+)
+from .common import _state
+from .display import _hide_owned, _preflight_owned_display, _set_failure
+from .guarded_evidence import GuardedEvidence
+
+
+def _error_message(response):
+    error = response.get("error") or {}
+    return f"{error.get('code', 'geometry_action_failed')}: {error.get('message', 'Geometry action failed.')}"
+
+
+def _report_metadata(response):
+    """Detached historical facts; no saved value grants current authority."""
+    result = response.get("result") or {}
+    report = {
+        key: response.get(key)
+        for key in ("ok", "action", "geometry_check", "export", "error", "requested_destination")
+    }
+    report["document_hash"] = result.get("document_hash")
+    report["active_feature"] = result.get("active_feature")
+    version = response.get("result_version")
+    if type(version) is int and version in (2, 3):
+        report["result_version"] = version
+    return report
+
+
+def _record_report(state, snapshot, response, *, status=None, extra=""):
+    """Persist full-precision numeric metadata, never the native or display mesh."""
+    result = response.get("result") or {}
+    state.geometry_report_json = json.dumps(_report_metadata(response), allow_nan=False)
+    state.geometry_document_json = snapshot
+    state.geometry_status = status or ("PASSED" if response.get("ok") else "FAILED")
+    checks = response.get("geometry_check") or {}
+    lines = []
+    if response.get("ok"):
+        lines.append(
+            f"Geometry checks passed for {result.get('active_feature', 'the active solid')}."
+        )
+    else:
+        lines.append(_error_message(response))
+    if checks:
+        brep = checks.get("brep") or {}
+        volume = brep.get("volume")
+        if volume is not None:
+            # RNA floats are float32. Format the sidecar's double directly.
+            lines.append(f"B-rep volume: {volume!r} mm³.")
+        lines.append(
+            "One valid solid; seam-welded tessellation is closed, oriented and vertex-manifold."
+        )
+        lines.append(f"Tessellation tolerance: {checks.get('linear_deflection_mm')!r} mm.")
+    exported = response.get("export")
+    if exported:
+        lines.append(
+            f"{exported['format']} written: {exported['destination']} ({exported['bytes']} bytes)."
+        )
+        if exported["format"] == "STL":
+            lines.append(
+                "STL has no stored units. Select millimetres in the receiving application."
+            )
+        lines.append(
+            "File exports are not reversed by Blender Undo. Save .mcad.json for editable history."
+        )
+    if not exported and response.get("requested_destination"):
+        lines.append(f"Selected destination: {response['requested_destination']}")
+    if extra:
+        lines.append(extra)
+    lines.append(
+        "These checks do not certify manufacturing, wall thickness, loads or assembly motion."
+    )
+    state.geometry_message = "\n".join(lines)
+
+
+def _prepare_action(document, action, destination, binding, result_version):
+    result_version = document_state._result_version(document, result_version, action=action)
+    if action not in {"check_geometry", "export_step", "export_stl"}:
+        raise bridge.BridgeError("Unsupported geometry action.")
+    if action == "check_geometry":
+        if destination is not None:
+            raise bridge.BridgeError("Geometry checks cannot have an export destination.")
+    elif (
+        type(destination) is not str
+        or not destination.strip()
+        or "\0" in destination
+        or not Path(destination).is_absolute()
+    ):
+        raise bridge.BridgeError("Choose an explicit absolute export file path.")
+    return backend_contracts.prepare_request(
+        {
+            "protocol_version": 1,
+            "action": action,
+            "document": document,
+            "result_version": result_version,
+            "options": {"linear_deflection": binding["deflection"]},
+            **({"destination": destination} if destination is not None else {}),
+        }
+    )
+
+
+def _historical_projection(evidence, prepared, binding, action):
+    """Validate exact intended bytes without asserting current configuration.
+
+    This projection is a historical fact only; every current sink separately
+    checks the live selection, native context and one-shot publication claim.
+    """
+    version = binding.get("result_version")
+    if (
+        type(prepared) is not backend_contracts.PreparedRequest
+        or type(version) is not int
+        or version not in (2, 3)
+        or prepared.operation_request().get("result_version") != version
+        or prepared.action != action
+        or action not in {"check_geometry", "export_step", "export_stl"}
+        or binding.get("prepared") != prepared
+        or binding.get("request_fingerprint") != prepared.fingerprint
+        or type(evidence) is not GuardedEvidence
+        or backend_contracts.request_fingerprint(evidence.guarded_request()) != prepared.fingerprint
+    ):
+        raise bridge.BridgeError("Geometry action requires its exact guarded completion.")
+    return evidence.revalidate(
+        binding["selection"],
+        owner_token=binding["owner_token"],
+        expected_action=action,
+        expected_result_version=version,
+    )
+
+
+def run_geometry_action(context, action, *, destination=None, result_version=None):
+    """Fresh guarded operation, one publication, and separate historical file facts.
+
+    A validated export receipt remains a historical write after publication fails.
+    Lost or invalid post-launch replies remain UNKNOWN. Neither case retries.
+    """
+    document_state.require_no_sketch_draft(context)
+    scene = context.scene
+    state = scene.mechanical_cad
+    snapshot = state.document_json
+    document = document_state._read_document(state)
+    # Unsupported sources must not acquire a lease or revoke current Part/report trust.
+    version = document_state._result_version(document, result_version, action=action)
+    with document_state.replay_guard(context):
+        _preflight_owned_display(scene)
+        binding = None
+        prepared = None
+        response = None
+        validated_completion = None
+        historical_report_json = None
+        completed = False
+        scene_key = document_state._scene_key(scene)
+        document_state._RUNTIME.pop(scene_key, None)
+        document_state._GEOMETRY_RUNTIME.pop(scene_key, None)
+        state.status = "BUILDING"
+        state.geometry_status = "CHECKING"
+        _hide_owned(scene)
+        try:
+            binding = document_state._capture_binding(context)
+            prepared = _prepare_action(document, action, destination, binding, version)
+            binding["request_fingerprint"] = prepared.fingerprint
+            binding["prepared"] = prepared
+            prepared_version = prepared.operation_request().get("result_version")
+            if type(prepared_version) is not int or prepared_version != version:
+                raise bridge.BridgeError(
+                    "Geometry operation differs from its selected result version."
+                )
+            binding["result_version"] = version
+            evidence = guarded_transport.execute(
+                prepared,
+                binding["selection"],
+                owner_token=binding["owner_token"],
+                current_selection=lambda: backend_runtime.capture(context),
+            )
+            completed = True
+            # Retain history before checking current scene/settings, but reject
+            # even genuine evidence when it belongs to another launch.
+            response = _historical_projection(evidence, prepared, binding, action)
+            validated_completion = evidence
+            if version == 3:
+                historical_report_json = json.dumps(
+                    _report_metadata({**response, "requested_destination": destination}),
+                    allow_nan=False,
+                )
+            document_state._evidence_projection(context, document, evidence, binding)
+            document_state._assert_binding(context, binding)
+            displayed = document_state._apply_result(context, document, evidence, binding)
+            report_response = {**response, "requested_destination": destination}
+            _record_report(state, snapshot, report_response)
+            document_state._assert_binding(context, binding)
+            document_state._evidence_projection(context, document, evidence, binding)
+            if response["ok"] and displayed:
+                document_state._remember_evidence(context, evidence, binding, geometry=True)
+            else:
+                state.last_action_error = state.geometry_message
+            return bool(response["ok"] and displayed)
+        except Exception as exc:
+            historical = getattr(exc, "historical_export", None)
+            if type(historical) is GuardedEvidence:
+                # The transport validated this write before discovering stale
+                # selection. Projection here records history, never current CAD.
+                try:
+                    response = _historical_projection(historical, prepared, binding, action)
+                    validated_completion = historical
+                    if version == 3:
+                        historical_report_json = json.dumps(
+                            _report_metadata({**response, "requested_destination": destination}),
+                            allow_nan=False,
+                        )
+                except (ValueError, RuntimeError, TypeError, AttributeError):
+                    response = None
+                    completed = True
+            if version == 3:
+                # Revoke only this launch's authority before any fallible RNA or
+                # report/display write. The original scene key was captured live;
+                # a removed scene or a successor record must not widen cleanup.
+                if (
+                    prepared is not None
+                    and binding is not None
+                    and validated_completion is not None
+                ):
+                    for records in (document_state._RUNTIME, document_state._GEOMETRY_RUNTIME):
+                        record = records.get(scene_key)
+                        if (
+                            type(record) is dict
+                            and record.get("prepared") == prepared
+                            and record.get("request_fingerprint") == prepared.fingerprint
+                            and record.get("owner_token") is binding["owner_token"]
+                            and record.get("evidence") is validated_completion
+                        ):
+                            same_scene = record.get("scene") is scene
+                            if not same_scene:
+                                try:
+                                    # RNA may expose distinct wrappers for one scene.
+                                    # Do not reacquire a pointer during teardown.
+                                    same_scene = bool(record.get("scene") == scene)
+                                except Exception:
+                                    same_scene = False
+                            if same_scene:
+                                records.pop(scene_key, None)
+                if validated_completion is not None:
+                    # Its exact historical response is already retained above.
+                    # Never cancel a substituted completion or a consumed claim.
+                    validated_completion.publication.cancel()
+            if response is not None:
+                try:
+                    if version == 3:
+                        state.geometry_report_json = historical_report_json
+                        state.geometry_document_json = snapshot
+                        state.geometry_status = "OUTDATED"
+                    state.status = "DIRTY"
+                    state.error = str(exc)
+                    try:
+                        _hide_owned(scene)
+                        _record_report(
+                            state,
+                            snapshot,
+                            {**response, "requested_destination": destination},
+                            status="OUTDATED",
+                            extra=(
+                                "Current CAD verification was rejected: "
+                                + str(exc)
+                                + " This report and any confirmed export belong to the earlier request; "
+                                "run the action again deliberately."
+                            ),
+                        )
+                    finally:
+                        if version == 3:
+                            # Rendering may fail after partial report writes. Retain
+                            # the validated file fact, never a current success label.
+                            state.geometry_report_json = historical_report_json
+                            state.geometry_document_json = snapshot
+                            state.geometry_status = "OUTDATED"
+                except Exception as report_error:
+                    exported = (
+                        json.loads(historical_report_json).get("export")
+                        if version == 3 and historical_report_json is not None
+                        else None
+                    )
+                    if exported and validated_completion is not None:
+                        raise guarded_transport.GuardedOperationError(
+                            f"Confirmed {exported['format']} written: {exported['destination']}. "
+                            "Current CAD verification was rejected. Historical report storage or "
+                            f"rendering failed: {report_error}. The file is not undone; inspect it "
+                            "before deliberately running another export.",
+                            historical_export=validated_completion,
+                        ) from report_error
+                    raise
+            else:
+                uncertain = getattr(exc, "outcome_unknown", False) or (
+                    completed and action in {"export_step", "export_stl"}
+                )
+                message = str(exc)
+                if uncertain and not getattr(exc, "outcome_unknown", False):
+                    message = str(bridge._transport_error({"action": action}, message))
+                _set_failure(scene, message)
+                _record_report(
+                    state,
+                    snapshot,
+                    {
+                        "ok": False,
+                        "action": action,
+                        "requested_destination": destination,
+                        "error": {"code": "sidecar_error", "message": message},
+                    },
+                    status="UNKNOWN" if uncertain else "FAILED",
+                )
+            state.last_action_error = state.geometry_message
+            return False
+
+
+def _show_report(operator, context, success):
+    state = _state(context)
+    level = {"INFO"} if success and state.status == "READY" else {"WARNING"}
+    operator.report(level, state.geometry_message[:1000])
+    if not bpy.app.background and context.window is not None:
+        try:
+            bpy.ops.mcad.help(
+                "INVOKE_DEFAULT", topic="geometry.actions", detail=state.geometry_message
+            )
+        except RuntimeError:
+            # A missing popup context does not alter a confirmed file outcome.
+            pass
+    # This records an undoable display update for Check Geometry. Files never
+    # participate in Blender Undo; export operators deliberately omit UNDO.
+    return {"FINISHED"}
+
+
+class _GeometryActionOperator:
+    @classmethod
+    def poll(cls, context):
+        if not (
+            context.mode == "OBJECT"
+            and bool(_state(context).document_json)
+            and not document_state._REPLAY_RUNNING
+            and not execution_lease.is_busy()
+            and not workspace.has_draft(context)
+        ):
+            return False
+        try:
+            document_state._result_version(
+                document_state._read_document(_state(context)), action="check_geometry"
+            )
+        except (ValueError, bridge.BridgeError) as exc:
+            if callable(getattr(cls, "poll_message_set", None)):
+                cls.poll_message_set(str(exc))
+            return False
+        return True
+
+    def _execute_action(self, context, action, *, destination=None):
+        try:
+            success = run_geometry_action(context, action, destination=destination)
+        except Exception as exc:
+            _state(context).last_action_error = str(exc)
+            self.report({"ERROR"}, str(exc)[:1000])
+            return {"CANCELLED"}
+        return _show_report(self, context, success)
+
+
+class MCAD_OT_check_geometry(_GeometryActionOperator, Operator):
+    bl_idname = "mcad.check_geometry"
+    bl_label = "Check CAD Geometry"
+    bl_description = "Rebuild the current document and check one valid solid plus its closed oriented manifold mesh"
+    bl_options = {"REGISTER", "UNDO"}
+
+    def execute(self, context):
+        return self._execute_action(context, "check_geometry")
+
+
+class _GeometryExportOperator(_GeometryActionOperator):
+    def invoke(self, context, event):
+        try:
+            document_state._result_version(
+                document_state._read_document(_state(context)), action=self.action
+            )
+        except (ValueError, bridge.BridgeError) as exc:
+            self.report({"ERROR"}, str(exc))
+            return {"CANCELLED"}
+        if not self.filepath:
+            name = bpy.path.clean_name(_state(context).document_name) or "part"
+            self.filepath = name + self.filename_ext
+        # ExportHelper's native selector checks the final filename and asks
+        # before replacement via check_existing=True.
+        return ExportHelper.invoke(self, context, event)
+
+    def execute(self, context):
+        if not self.filepath.strip():
+            self.report({"ERROR"}, "Choose an explicit export file path")
+            return {"CANCELLED"}
+        path = Path(bpy.path.abspath(self.filepath)).expanduser().absolute()
+        if path.suffix.lower() != self.filename_ext:
+            path = path.with_name(path.name + self.filename_ext)
+        return self._execute_action(context, self.action, destination=str(path))
+
+    def draw(self, context):
+        self.layout.label(text="Fresh canonical solid; millimetre coordinates.", icon="INFO")
+        self.layout.label(text="Existing files require confirmation in this selector.")
+        self.layout.label(text="Exported files are not reversed by Blender Undo.")
+        self.layout.label(text="A symlink destination is replaced, not followed.")
+        if self.action == "export_stl":
+            self.layout.label(text="STL import units must be millimetres.")
+
+
+class MCAD_OT_export_step(_GeometryExportOperator, Operator, ExportHelper):
+    bl_idname = "mcad.export_step"
+    bl_label = "Export CAD STEP"
+    bl_description = "Rebuild and check the current solid, then atomically export exact B-rep STEP to a selected file"
+    bl_options = {"REGISTER"}
+    filename_ext = ".step"
+    action = "export_step"
+    filter_glob: StringProperty(default="*.step;*.stp", options={"HIDDEN"})
+    check_existing: BoolProperty(default=True, options={"HIDDEN"})
+
+
+class MCAD_OT_export_stl(_GeometryExportOperator, Operator, ExportHelper):
+    bl_idname = "mcad.export_stl"
+    bl_label = "Export CAD STL"
+    bl_description = "Rebuild and check the current solid, then atomically export checked binary STL in millimetres"
+    bl_options = {"REGISTER"}
+    filename_ext = ".stl"
+    action = "export_stl"
+    filter_glob: StringProperty(default="*.stl", options={"HIDDEN"})
+    check_existing: BoolProperty(default=True, options={"HIDDEN"})

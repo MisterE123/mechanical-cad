@@ -120,7 +120,18 @@ def test_committed_v1_v2_canonical_bytes_and_hashes_stay_frozen(version, record_
 @pytest.mark.parametrize("record_type", [Sketch, SketchDefinition])
 def test_arc_and_keyword_only_sketch_api_keep_existing_positional_constructors(record_type):
     arc = Arc("arc", "center", "start", "end", "cw")
-    assert [field.name for field in fields(arc)] == ["id", "center", "start", "end", "direction"]
+    assert [field.name for field in fields(arc)] == [
+        "id", "center", "start", "end", "direction", "construction", "fillet_intent"
+    ]
+    # Construction and explicit fillet intent extend the record without changing
+    # existing five-argument callers or silently adding metadata to old arcs.
+    assert arc.construction is False and arc.fillet_intent is None
+    assert inspect.signature(Arc).parameters["fillet_intent"].kind is inspect.Parameter.KEYWORD_ONLY
+    with pytest.raises(TypeError):
+        Arc("arc", "center", "start", "end", "cw", False, None)
+    assert arc_sketch(record_type).to_dict()["arcs"] == [
+        {"id": "arc", "center": "center", "start": "start", "end": "end", "direction": "ccw"}
+    ]
     assert inspect.signature(record_type).parameters["arcs"].kind is inspect.Parameter.KEYWORD_ONLY
     legacy = record_type("old", (), (), (), Plane(), "mm")
     assert legacy.schema_version == SKETCH_SCHEMA_VERSION == 1

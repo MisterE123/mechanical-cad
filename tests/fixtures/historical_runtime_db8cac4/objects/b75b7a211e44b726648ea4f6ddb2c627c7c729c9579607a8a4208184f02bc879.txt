@@ -1,0 +1,927 @@
+"""Pure production input contracts, without Blender or the proof's fake session."""
+
+from __future__ import annotations
+
+import importlib
+import itertools
+import json
+import random
+import subprocess
+import sys
+import types
+import unittest
+from dataclasses import FrozenInstanceError, replace
+from pathlib import Path
+from unittest.mock import Mock, patch
+
+ROOT = Path(__file__).resolve().parents[2]
+PACKAGE = "mcad_dimension_input_tests"
+package = types.ModuleType(PACKAGE)
+package.__path__ = [str(ROOT / "blender_addon/mechanical_cad_blender")]
+sys.modules[PACKAGE] = package
+module = importlib.import_module(PACKAGE + ".dimension_input")
+buffer_module = importlib.import_module(PACKAGE + ".dimension_text_buffer")
+DimensionInput = module.DimensionInput
+InputEvent = module.InputEvent
+InputAction = module.InputAction
+InputResult = module.InputResult
+EditLease = module.EditLease
+MAX_COUNTER = module.MAX_COUNTER
+MAX_RAW_TEXT_BYTES = module.MAX_RAW_TEXT_BYTES
+LEASE = EditLease("owner_1", "dimension_1", 1, 1)
+
+
+def editor(raw="abc", **kwargs):
+    return DimensionInput(raw, lease=kwargs.pop("lease", LEASE), **kwargs)
+
+
+def event(kind, value="PRESS", **kwargs):
+    return InputEvent(kind, value, **kwargs)
+
+
+def key(controller, kind, **kwargs):
+    return controller.handle(event(kind, **kwargs))
+
+
+def state(controller):
+    return controller.snapshot()["buffer"]
+
+
+def kinds(result):
+    return [action.kind for action in result.actions]
+
+
+class IdentityAndInputTests(unittest.TestCase):
+    def test_explicit_immutable_bounded_lease(self):
+        controller = editor(lease=LEASE)
+        self.assertIs(controller.lease, LEASE)
+        self.assertEqual(LEASE.field_id, "dimension_1")
+        with self.assertRaises(FrozenInstanceError):
+            LEASE.token = 5
+        for index, bad in itertools.product(range(4), (None, True, [], {}, -1, "", "é")):
+            values = ["owner", "field", 1, 1]
+            values[index] = bad
+            with self.subTest(index=index, bad=bad), self.assertRaises(ValueError):
+                EditLease(*values)
+        for name in ("owner_id", "field_id"):
+            for bad in ("x" * 129, "a/b", "a b", "\ud800", "a\n", ".bad"):
+                values = dict(owner_id="owner", field_id="field", generation=1, token=1)
+                values[name] = bad
+                with self.subTest(name=name, bad=repr(bad)), self.assertRaises(ValueError):
+                    EditLease(**values)
+        for index in (2, 3):
+            values = ["owner", "field", 1, 1]
+            values[index] = MAX_COUNTER + 1
+            with self.assertRaises(ValueError):
+                EditLease(*values)
+        self.assertEqual(EditLease("a" * 128, "f", 0, MAX_COUNTER).token, MAX_COUNTER)
+        for bad in (None, {}, ("owner", "field", 1, 1)):
+            with self.assertRaises(TypeError):
+                editor(lease=bad)
+
+    def test_raw_and_limit_inherit_exact_buffer_contract(self):
+        for raw, limit, error in (
+            (None, 2, TypeError),
+            ("é", 1, ValueError),
+            ("\ud800", 4, ValueError),
+            ("", True, TypeError),
+            ("", MAX_RAW_TEXT_BYTES + 1, ValueError),
+        ):
+            with self.subTest(raw=repr(raw), limit=limit), self.assertRaises(error):
+                editor(raw, limit=limit)
+        self.assertEqual(editor("", limit=0).raw, "")
+        self.assertEqual(editor("x" * MAX_RAW_TEXT_BYTES).raw, "x" * MAX_RAW_TEXT_BYTES)
+
+    def test_event_validation_and_detached_result(self):
+        for name in ("type", "value"):
+            for bad in (None, True, "", "press", "X" * 65, "A\n"):
+                args = dict(type="A", value="PRESS")
+                args[name] = bad
+                with self.subTest(name=name, bad=bad), self.assertRaises(ValueError):
+                    InputEvent(**args)
+        for name in ("ctrl", "shift", "alt", "is_repeat"):
+            for bad in (0, 1, None, "yes"):
+                with self.subTest(name=name, bad=bad), self.assertRaises(TypeError):
+                    InputEvent("A", **{name: bad})
+        with self.assertRaises(TypeError):
+            InputEvent("A", unicode=None)
+        controller = editor()
+        result = key(controller, "D", unicode="d")
+        self.assertEqual(kinds(result), ["raw_changed"])
+        action = result.actions[0]
+        self.assertEqual((action.lease, action.raw, action.revision), (LEASE, "abcd", 1))
+        with self.assertRaises(FrozenInstanceError):
+            result.handled = False
+        with self.assertRaises(FrozenInstanceError):
+            action.raw = "changed"
+        snapshot = controller.snapshot()
+        snapshot["buffer"]["selection"][0] = 999
+        snapshot["lease"]["owner_id"] = "elsewhere"
+        snapshot["tail_keys"].append("ESC")
+        self.assertEqual(state(controller)["selection"], [4, 4])
+        self.assertIs(controller.lease, LEASE)
+        json.dumps(controller.snapshot(), allow_nan=False)
+        self.assertEqual(action.raw, "abcd")
+        key(controller, "E", unicode="e")
+        self.assertEqual(action.raw, "abcd")
+
+    def test_invalid_routing_options_are_atomic(self):
+        controller = editor()
+        before = controller.snapshot()
+        cases = [
+            ({}, TypeError),
+            ({"outside": 1}, TypeError),
+            ({"caret_index": True}, TypeError),
+            ({"caret_index": 1.5}, TypeError),
+            ({"outside": True}, ValueError),
+        ]
+        for index, (kwargs, error) in enumerate(cases):
+            with self.subTest(kwargs=kwargs), self.assertRaises(error):
+                controller.handle({} if index == 0 else event("A"), **kwargs)
+            self.assertEqual(controller.snapshot(), before)
+        with self.assertRaises(ValueError):
+            controller.handle(event("LEFTMOUSE"), outside=True, caret_index=1)
+        for bad in ("", "a" * 129, "\ud800", 1):
+            with self.assertRaises(ValueError):
+                controller.suspend(bad)
+        self.assertEqual(controller.snapshot(), before)
+
+    def test_no_blender_native_or_proof_imports(self):
+        script = f"""
+import importlib, sys, types
+p = types.ModuleType("isolated_input")
+p.__path__ = [{str(ROOT / "blender_addon/mechanical_cad_blender")!r}]
+sys.modules[p.__name__] = p
+m = importlib.import_module(p.__name__ + ".dimension_input")
+e = m.DimensionInput("  invalid +  ", lease=m.EditLease("owner", "field", 1, 1))
+assert e.handle(m.InputEvent("RET")).actions[0].raw == "  invalid +  "
+assert not any(name.split(".")[0] in {{"bpy", "blf", "gpu", "OCP", "slvs", "mechanical_cad"}} for name in sys.modules)
+assert not any("dimension_editor_spike" in str(getattr(value, "__file__", "")) for value in sys.modules.values())
+"""
+        result = subprocess.run(
+            [sys.executable, "-B", "-c", script], capture_output=True, text=True
+        )
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+
+class TextRoutingTests(unittest.TestCase):
+    def test_exact_unicode_arrows_selection_deletion_and_history(self):
+        controller = editor("aΩe\u0301👩\u200d🔬z")
+        key(controller, "HOME")
+        key(controller, "RIGHT_ARROW")
+        key(controller, "RIGHT_ARROW", shift=True)
+        key(controller, "RIGHT_ARROW", shift=True)
+        self.assertEqual(state(controller)["selection"], [1, 3])
+        self.assertEqual(state(controller)["revision"], 0)
+        result = key(controller, "Q", unicode=" 1,20\t\r\n ")
+        self.assertEqual(kinds(result), ["raw_changed"])
+        self.assertEqual(controller.raw, "a 1,20\t\r\n \u0301👩\u200d🔬z")
+        key(controller, "Z", ctrl=True)
+        self.assertEqual(controller.raw, "aΩe\u0301👩\u200d🔬z")
+        self.assertEqual(state(controller)["selection"], [1, 3])
+        key(controller, "Z", ctrl=True, shift=True)
+        self.assertEqual(controller.raw, "a 1,20\t\r\n \u0301👩\u200d🔬z")
+        key(controller, "END")
+        key(controller, "BACK_SPACE")
+        self.assertTrue(controller.raw.endswith("🔬"))
+        key(controller, "HOME")
+        key(controller, "DEL")
+        self.assertTrue(controller.raw.startswith(" 1,20"))
+
+    def test_directional_collapse_home_end_and_scalar_mouse_placement(self):
+        controller = editor("aΩ👩\u200d🔬z")
+        controller.handle(event("LEFTMOUSE"), caret_index=1)
+        controller.handle(event("LEFTMOUSE", shift=True), caret_index=5)
+        self.assertEqual(state(controller)["selection"], [1, 5])
+        key(controller, "LEFT_ARROW")
+        self.assertEqual(state(controller)["selection"], [1, 1])
+        controller.handle(event("MOUSEMOVE", "NOTHING"), caret_index=5)
+        key(controller, "RIGHT_ARROW")
+        self.assertEqual(state(controller)["selection"], [5, 5])
+        key(controller, "HOME", shift=True)
+        self.assertEqual(state(controller)["selection"], [0, 5])
+        key(controller, "END", shift=True)
+        self.assertEqual(state(controller)["selection"], [5, 6])
+        controller.handle(event("LEFTMOUSE"), caret_index=-100)
+        controller.handle(event("INBETWEEN_MOUSEMOVE", "NOTHING"), caret_index=10**50)
+        self.assertEqual(state(controller)["selection"], [0, 6])
+        result = key(controller, "A", ctrl=True)
+        self.assertEqual(kinds(result), [])
+        self.assertFalse(result.changed)
+        self.assertEqual(state(controller)["revision"], 0)
+
+    def test_invalid_unicode_exact_retention_and_error_distinct_from_noop(self):
+        controller = editor("exact  Ω \r\n", limit=32)
+        key(controller, "A", ctrl=True)
+        before = state(controller)
+        for bad in ("\ud800", "a\udfffz", "x" * 33, "💡" * 9, "\ud800"):
+            result = controller.handle(event("Q", unicode=bad))
+            self.assertEqual(kinds(result), ["input_error"])
+            after = state(controller)
+            for name in ("raw", "caret", "anchor", "revision", "selection", "can_undo", "can_redo"):
+                self.assertEqual(after[name], before[name])
+            self.assertTrue(result.actions[0].detail)
+        # Identical replacement and boundary deletion are no-ops, not errors.
+        result = controller.handle(event("Q", unicode=controller.raw))
+        self.assertEqual(result.actions, ())
+        self.assertTrue(result.changed)  # Selection collapses only.
+        result = key(controller, "DEL")
+        self.assertEqual(result.actions, ())
+        self.assertFalse(result.changed)
+        self.assertIsNotNone(state(controller)["error"])
+        key(controller, "Q", unicode="x")
+        self.assertIsNone(state(controller)["error"])
+
+    def test_raw_budget_is_not_formula_budget(self):
+        raw = "  = bad formula\n" + "é" * 300
+        controller = editor("")
+        result = key(controller, "TEXTINPUT", unicode=raw)
+        self.assertEqual(controller.raw, raw)
+        self.assertEqual(kinds(result), ["raw_changed"])
+        key(controller, "A", ctrl=True)
+        before = state(controller)
+        result = key(controller, "TEXTINPUT", unicode="é" * (MAX_RAW_TEXT_BYTES // 2 + 1))
+        self.assertEqual(kinds(result), ["input_error"])
+        self.assertEqual(controller.raw, raw)
+        self.assertEqual(state(controller)["revision"], before["revision"])
+
+    def test_modifier_shortcuts_and_release_are_consumed_without_text(self):
+        controller = editor()
+        for kind in ("X", "G", "F3", "TAB", "MIDDLEMOUSE", "WHEELUPMOUSE", "UNKNOWN"):
+            with self.subTest(kind=kind):
+                before = controller.snapshot()
+                result = key(controller, kind)
+                self.assertTrue(result.handled)
+                self.assertEqual(result.actions, ())
+                self.assertEqual(controller.snapshot(), before)
+        for kwargs in ({"ctrl": True}, {"alt": True}, {"ctrl": True, "alt": True}):
+            key(controller, "Q", unicode="ignored", **kwargs)
+        controller.handle(event("Q", "RELEASE", unicode="ignored"))
+        self.assertEqual(controller.raw, "abc")
+        key(controller, "Q", shift=True, unicode="Ω")
+        self.assertEqual(controller.raw, "abcΩ")
+        for kind in module._TIMER:
+            self.assertFalse(key(controller, kind).handled)
+
+    def test_repeated_text_navigation_and_deletion_remain_bounded(self):
+        controller = editor("", limit=5)
+        for _ in range(8):
+            key(controller, "Q", unicode="é", is_repeat=True)
+        self.assertEqual(controller.raw, "éé")
+        self.assertEqual(state(controller)["revision"], 2)
+        for _ in range(8):
+            key(controller, "LEFT_ARROW", is_repeat=True)
+        self.assertEqual(state(controller)["caret"], 0)
+        for _ in range(8):
+            key(controller, "DEL", is_repeat=True)
+        self.assertEqual(controller.raw, "")
+        self.assertEqual(state(controller)["revision"], 4)
+
+
+class ClipboardTests(unittest.TestCase):
+    def test_clipboard_never_accessed_without_explicit_supported_command(self):
+        controller = editor()
+        getter = Mock(side_effect=AssertionError("unexpected read"))
+        setter = Mock(side_effect=AssertionError("unexpected write"))
+        for kind in ("Q", "C", "V", "X", "F3", "HOME", "END", "LEFTMOUSE", "MOUSEMOVE"):
+            for value in ("PRESS", "RELEASE"):
+                controller.handle(event(kind, value), clipboard_get=getter, clipboard_set=setter)
+        for kind in ("C", "V", "X"):
+            controller.handle(
+                event(kind, ctrl=True, alt=True), clipboard_get=getter, clipboard_set=setter
+            )
+            controller.handle(
+                event(kind, "RELEASE", ctrl=True), clipboard_get=getter, clipboard_set=setter
+            )
+        for kind in ("C", "X"):
+            controller.handle(event(kind, ctrl=True), clipboard_get=getter, clipboard_set=setter)
+        getter.assert_not_called()
+        setter.assert_not_called()
+
+    def test_copy_cut_paste_undo_redo_and_scalar_selection(self):
+        controller = editor("aΩ👩\u200d🔬z")
+        controller.handle(event("LEFTMOUSE"), caret_index=1)
+        controller.handle(event("MOUSEMOVE"), caret_index=5)
+        clipboard = []
+        getter = Mock(return_value="\n  exact Ω \t")
+        before = controller.snapshot()
+        controller.handle(event("C", ctrl=True), clipboard_set=clipboard.append)
+        self.assertEqual(clipboard, ["Ω👩\u200d🔬"])
+        self.assertEqual(controller.snapshot(), before)
+        result = controller.handle(event("X", ctrl=True), clipboard_set=clipboard.append)
+        self.assertEqual(kinds(result), ["raw_changed"])
+        self.assertEqual(controller.raw, "az")
+        self.assertEqual(clipboard, ["Ω👩\u200d🔬"] * 2)
+        controller.handle(event("V", ctrl=True), clipboard_get=getter)
+        getter.assert_called_once_with()
+        self.assertEqual(controller.raw, "a\n  exact Ω \tz")
+        key(controller, "Z", ctrl=True)
+        self.assertEqual(controller.raw, "az")
+        key(controller, "Z", ctrl=True)
+        self.assertEqual(controller.raw, "aΩ👩\u200d🔬z")
+        self.assertEqual(state(controller)["selection"], [1, 5])
+        key(controller, "Z", ctrl=True, shift=True)
+        self.assertEqual(controller.raw, "az")
+
+    def test_callbacks_are_not_saved_and_missing_clipboard_is_an_error(self):
+        controller = editor()
+        key(controller, "A", ctrl=True)
+        before = controller.snapshot()
+        for kind in ("C", "X", "V"):
+            result = key(controller, kind, ctrl=True)
+            self.assertEqual(kinds(result), ["input_error"])
+            self.assertEqual(controller.snapshot(), before)
+        getter = Mock(return_value="x")
+        controller.handle(event("V", ctrl=True), clipboard_get=getter)
+        result = key(controller, "V", ctrl=True)
+        self.assertEqual(kinds(result), ["input_error"])
+        getter.assert_called_once_with()
+
+    def test_clipboard_failures_and_invalid_results_preserve_live_field(self):
+        for kind in ("C", "X", "V"):
+            for error in (RuntimeError, MemoryError):
+                controller = editor()
+                key(controller, "A", ctrl=True)
+                before = controller.snapshot()
+                callback = Mock(side_effect=error("clipboard unavailable"))
+                with self.subTest(kind=kind, error=error), self.assertRaises(error):
+                    controller.handle(
+                        event(kind, ctrl=True), clipboard_get=callback, clipboard_set=callback
+                    )
+                self.assertEqual(controller.snapshot(), before)
+                callback.assert_called_once()
+        for bad in (None, 123, [], b"bytes"):
+            controller = editor()
+            before = controller.snapshot()
+            with self.subTest(bad=bad), self.assertRaises(TypeError):
+                controller.handle(event("V", ctrl=True), clipboard_get=lambda bad=bad: bad)
+            self.assertEqual(controller.snapshot(), before)
+        controller = editor()
+        key(controller, "A", ctrl=True)
+        before = state(controller)
+        for bad in ("\ud800", "Ω" * MAX_RAW_TEXT_BYTES):
+            result = controller.handle(event("V", ctrl=True), clipboard_get=lambda bad=bad: bad)
+            self.assertEqual(kinds(result), ["input_error"])
+            self.assertEqual(controller.raw, before["raw"])
+            self.assertEqual(state(controller)["selection"], before["selection"])
+
+    def test_cut_checks_all_local_allocations_and_revision_before_copy(self):
+        controller = editor()
+        key(controller, "A", ctrl=True)
+        controller._buffer._revision = MAX_COUNTER
+        before = controller.snapshot()
+        setter = Mock()
+        with self.assertRaises(OverflowError):
+            controller.handle(event("X", ctrl=True), clipboard_set=setter)
+        setter.assert_not_called()
+        self.assertEqual(controller.snapshot(), before)
+        controller._buffer._revision = 0
+        before = controller.snapshot()
+        with patch.object(module, "InputResult", side_effect=MemoryError("result allocation")):
+            with self.assertRaises(MemoryError):
+                controller.handle(event("X", ctrl=True), clipboard_set=setter)
+        setter.assert_not_called()
+        self.assertEqual(controller.snapshot(), before)
+
+    def test_failed_owner_cut_keeps_field_but_successful_copy_is_not_rolled_back(self):
+        controller = editor()
+        key(controller, "A", ctrl=True)
+        before = controller.snapshot()
+        copied = []
+        result = controller.handle(
+            event("X", ctrl=True), clipboard_set=copied.append, approve_raw=lambda _: False
+        )
+        self.assertEqual(copied, ["abc"])
+        self.assertEqual(controller.snapshot(), before)
+        self.assertEqual(kinds(result), ["owner_rejected"])
+
+
+class TerminationTests(unittest.TestCase):
+    def test_enter_once_then_readonly_until_explicit_rejection(self):
+        controller = editor("  not valid +  ")
+        result = key(controller, "RET")
+        self.assertEqual(kinds(result), ["accept"])
+        self.assertEqual(result.actions[0].raw, "  not valid +  ")
+        self.assertTrue(controller.accept_requested)
+        before = state(controller)
+        callbacks = dict(
+            approve_raw=Mock(side_effect=AssertionError),
+            clipboard_get=Mock(side_effect=AssertionError),
+            clipboard_set=Mock(side_effect=AssertionError),
+        )
+        for kind in (
+            "Q",
+            "DEL",
+            "BACK_SPACE",
+            "LEFT_ARROW",
+            "HOME",
+            "END",
+            "A",
+            "C",
+            "X",
+            "V",
+            "Z",
+        ):
+            result = controller.handle(event(kind, ctrl=True, unicode="wrong"), **callbacks)
+            self.assertTrue(result.handled)
+            self.assertEqual(result.actions, ())
+        controller.handle(event("LEFTMOUSE"), caret_index=0)
+        controller.handle(event("MOUSEMOVE"), caret_index=0)
+        for _ in range(20):
+            self.assertEqual(key(controller, "RET", is_repeat=True).actions, ())
+            self.assertEqual(key(controller, "NUMPAD_ENTER", is_repeat=True).actions, ())
+        self.assertEqual(state(controller), before)
+        self.assertTrue(controller.reject_accept())
+        self.assertFalse(controller.reject_accept())
+        self.assertEqual(key(controller, "RET", is_repeat=True).actions, ())
+        self.assertEqual(key(controller, "RET").actions, ())  # Held duplicate.
+        self.assertEqual(controller.handle(event("RET", "RELEASE")).actions, ())
+        key(controller, "Q", unicode="x")
+        self.assertEqual(controller.raw, "  not valid +  x")
+        self.assertEqual(kinds(key(controller, "RET")), ["accept"])
+
+    def test_repeat_without_initial_press_never_requests_accept_or_cancel(self):
+        for kind in ("RET", "NUMPAD_ENTER", "ESC"):
+            controller = editor()
+            self.assertEqual(key(controller, kind, is_repeat=True).actions, ())
+            self.assertEqual(controller.handle(event(kind, "RELEASE")).actions, ())
+            self.assertFalse(controller.closed)
+            self.assertFalse(controller.accept_requested)
+            self.assertEqual(
+                kinds(key(controller, kind)), ["cancel" if kind == "ESC" else "accept"]
+            )
+
+    def test_close_drains_enter_release_exactly_once_and_no_general_keys(self):
+        for kind in ("RET", "NUMPAD_ENTER"):
+            controller = editor()
+            key(controller, kind)
+            controller.close()
+            self.assertTrue(controller.closed)
+            self.assertFalse(controller.retired)
+            self.assertFalse(controller.accept_requested)
+            for _ in range(5):
+                self.assertTrue(key(controller, kind, is_repeat=True).handled)
+            self.assertFalse(key(controller, "F3").handled)
+            self.assertFalse(key(controller, "Q", unicode="q").handled)
+            self.assertEqual(controller.raw, "abc")
+            self.assertTrue(controller.handle(event(kind, "RELEASE")).handled)
+            self.assertTrue(controller.retired)
+            self.assertFalse(controller.handle(event(kind, "RELEASE")).handled)
+            self.assertFalse(key(controller, kind).handled)
+
+    def test_overlapping_enter_keys_and_escape_each_release_only_once(self):
+        for order in itertools.permutations(("RET", "NUMPAD_ENTER", "ESC")):
+            controller = editor()
+            key(controller, "RET")
+            key(controller, "NUMPAD_ENTER")
+            self.assertEqual(kinds(key(controller, "ESC")), ["cancel"])
+            self.assertEqual(controller.snapshot()["tail_keys"], ["ESC", "NUMPAD_ENTER", "RET"])
+            for index, kind in enumerate(order):
+                self.assertTrue(key(controller, kind, is_repeat=True).handled)
+                self.assertTrue(controller.handle(event(kind, "RELEASE")).handled)
+                self.assertFalse(controller.handle(event(kind, "RELEASE")).handled)
+                self.assertEqual(controller.retired, index == 2)
+            self.assertTrue(controller.closed)
+
+    def test_new_physical_key_after_dismissal_not_eaten_even_if_release_missing(self):
+        for terminal in ("RET", "NUMPAD_ENTER", "ESC", "LEFTMOUSE", "RIGHTMOUSE"):
+            controller = editor()
+            if terminal == "LEFTMOUSE":
+                controller.handle(event(terminal), outside=True)
+            else:
+                key(controller, terminal)
+                controller.close()
+            self.assertFalse(key(controller, "F3").handled)
+            fresh = key(controller, terminal)
+            self.assertFalse(fresh.handled)
+            self.assertEqual(fresh.actions, ())
+            self.assertTrue(controller.retired)
+            self.assertFalse(controller.handle(event(terminal, "RELEASE")).handled)
+
+    def test_outside_click_suspends_retains_raw_and_consumes_that_click(self):
+        controller = editor("  invalid\nraw  ")
+        key(controller, "Q", unicode="Ω")
+        before = state(controller)
+        result = controller.handle(event("LEFTMOUSE"), outside=True)
+        self.assertTrue(result.handled)
+        self.assertEqual(kinds(result), ["suspend"])
+        self.assertEqual(result.actions[0].detail, "outside")
+        self.assertEqual(result.actions[0].raw, "  invalid\nraw  Ω")
+        self.assertEqual(state(controller), before)
+        self.assertTrue(controller.closed)
+        self.assertTrue(controller.handle(event("LEFTMOUSE", "RELEASE")).handled)
+        self.assertFalse(key(controller, "G").handled)
+        self.assertFalse(controller.reject_accept())
+        resumed = editor(controller.raw, lease=EditLease("owner_1", "dimension_1", 1, 2))
+        self.assertFalse(resumed.accept_requested)
+        self.assertEqual(resumed.raw, controller.raw)
+        self.assertEqual(resumed.snapshot()["down_keys"], [])
+        self.assertEqual(resumed.snapshot()["tail_keys"], [])
+        self.assertEqual(key(resumed, "TIMER").actions, ())
+        self.assertEqual(kinds(key(resumed, "RET")), ["accept"])
+        self.assertNotEqual(resumed.lease, controller.lease)
+
+    def test_escape_and_repeated_outside_callbacks_do_not_duplicate_actions(self):
+        for first in ("ESC", "LEFTMOUSE", "RIGHTMOUSE", "APP", "WINDOW_DEACTIVATE"):
+            controller = editor()
+            if first == "LEFTMOUSE":
+                result = controller.handle(event(first), outside=True)
+            else:
+                result = key(controller, first)
+            self.assertEqual(len(result.actions), 1)
+            before = state(controller)
+            for kind, value, repeat in itertools.product(
+                ("ESC", "RET", "NUMPAD_ENTER", "LEFTMOUSE", "RIGHTMOUSE", "Q"),
+                ("PRESS", "RELEASE"),
+                (False, True),
+            ):
+                result = controller.handle(event(kind, value, is_repeat=repeat, unicode="bad"))
+                self.assertEqual(result.actions, ())
+                self.assertEqual(state(controller), before)
+            self.assertEqual(controller.suspend("workspace").actions, ())
+            controller.close()
+            self.assertFalse(controller.reject_accept())
+
+    def test_focus_loss_retire_and_explicit_lifecycle_suspension(self):
+        for finish in (
+            lambda c: c.close(),
+            lambda c: c.suspend("workspace"),
+            lambda c: key(c, "ESC"),
+        ):
+            controller = editor()
+            key(controller, "RET")
+            finish(controller)
+            self.assertFalse(controller.retired)
+            self.assertTrue(key(controller, "WINDOW_DEACTIVATE").handled)
+            self.assertTrue(controller.retired)
+            self.assertFalse(controller.handle(event("RET", "RELEASE")).handled)
+        controller = editor()
+        key(controller, "RET")
+        result = key(controller, "WINDOW_DEACTIVATE")
+        self.assertEqual(kinds(result), ["suspend"])
+        self.assertEqual(result.actions[0].detail, "deactivate")
+        self.assertTrue(controller.retired)
+        controller = editor()
+        key(controller, "RET")
+        controller.retire()
+        self.assertTrue(controller.retired)
+        self.assertFalse(key(controller, "RET", is_repeat=True).handled)
+        self.assertFalse(controller.handle(event("RET", "RELEASE")).handled)
+
+    def test_no_callbacks_after_close_or_retire(self):
+        for finish in (
+            lambda c: c.close(),
+            lambda c: c.retire(),
+            lambda c: c.suspend("disabled"),
+            lambda c: key(c, "ESC"),
+        ):
+            controller = editor()
+            key(controller, "A", ctrl=True)
+            key(controller, "RET")
+            finish(controller)
+            callback = Mock(side_effect=AssertionError("retired callback"))
+            for kind in ("C", "X", "V", "Q", "Z", "RET", "ESC"):
+                result = controller.handle(
+                    event(kind, ctrl=True, unicode="bad"),
+                    approve_raw=callback,
+                    clipboard_get=callback,
+                    clipboard_set=callback,
+                )
+                self.assertEqual(result.actions, ())
+            callback.assert_not_called()
+            self.assertEqual(controller.raw, "abc")
+
+    def test_adversarial_terminal_event_sequences_have_one_request_until_reopened(self):
+        events = [
+            event("RET"),
+            event("RET", is_repeat=True),
+            event("RET", "RELEASE"),
+            event("NUMPAD_ENTER"),
+            event("NUMPAD_ENTER", "RELEASE"),
+            event("Q", unicode="q"),
+            event("ESC"),
+            event("ESC", is_repeat=True),
+            event("ESC", "RELEASE"),
+        ]
+        for sequence in itertools.product(events, repeat=4):
+            controller = editor()
+            accepts = cancels = 0
+            locked_raw = None
+            for item in sequence:
+                result = controller.handle(item)
+                accepts += kinds(result).count("accept")
+                cancels += kinds(result).count("cancel")
+                self.assertLessEqual(accepts, 1)
+                self.assertLessEqual(cancels, 1)
+                if locked_raw is not None:
+                    self.assertEqual(controller.raw, locked_raw)
+                if controller.accept_requested or controller.closed:
+                    locked_raw = controller.raw
+
+
+class AtomicityTests(unittest.TestCase):
+    def test_owner_receives_exact_prepared_change_before_live_replacement(self):
+        controller = editor()
+        before = controller.snapshot()
+        observed = []
+
+        def approve(action):
+            self.assertEqual(controller.snapshot(), before)
+            self.assertEqual(
+                (action.kind, action.lease, action.raw, action.revision),
+                ("raw_changed", LEASE, "abcd", 1),
+            )
+            observed.append(action)
+            return True
+
+        result = controller.handle(event("D", unicode="d"), approve_raw=approve)
+        self.assertEqual(result.actions, tuple(observed))
+        self.assertEqual(controller.raw, "abcd")
+        self.assertEqual(state(controller)["revision"], 1)
+
+    def test_false_owner_decision_or_exception_preserves_buffer_history_and_error(self):
+        for decision in (False, None, 0, 1, "True"):
+            controller = editor()
+            key(controller, "Q", unicode="q")
+            key(controller, "Z", ctrl=True)
+            key(controller, "A", ctrl=True)
+            key(controller, "Q", unicode="\ud800")
+            before = controller.snapshot()
+            callback = Mock(return_value=decision)
+            result = controller.handle(event("D", unicode="d"), approve_raw=callback)
+            self.assertEqual(kinds(result), ["owner_rejected"])
+            self.assertFalse(result.changed)
+            self.assertEqual(controller.snapshot(), before)
+            callback.assert_called_once()
+        for error in (ValueError, RuntimeError, OverflowError, MemoryError):
+            controller = editor()
+            key(controller, "A", ctrl=True)
+            before = controller.snapshot()
+            with self.subTest(error=error), self.assertRaises(error):
+                controller.handle(
+                    event("D", unicode="d"), approve_raw=Mock(side_effect=error("owner failed"))
+                )
+            self.assertEqual(controller.snapshot(), before)
+            key(controller, "D", unicode="d")  # Dispatch guard resets after exception.
+            self.assertEqual(controller.raw, "d")
+
+    def test_undo_redo_delete_and_backspace_are_owner_transactions(self):
+        for kind, modifiers in (("Z", {"ctrl": True}), ("BACK_SPACE", {}), ("DEL", {})):
+            controller = editor()
+            key(controller, "D", unicode="d")
+            key(controller, "A", ctrl=True)
+            before = controller.snapshot()
+            result = controller.handle(event(kind, **modifiers), approve_raw=lambda _: False)
+            self.assertEqual(kinds(result), ["owner_rejected"])
+            self.assertEqual(controller.snapshot(), before)
+        controller = editor()
+        key(controller, "D", unicode="d")
+        key(controller, "Z", ctrl=True)
+        before = controller.snapshot()
+        result = controller.handle(event("Z", ctrl=True, shift=True), approve_raw=lambda _: False)
+        self.assertEqual(kinds(result), ["owner_rejected"])
+        self.assertEqual(controller.snapshot(), before)
+        key(controller, "Z", ctrl=True, shift=True)
+        self.assertEqual(controller.raw, "abcd")
+
+    def test_owner_not_called_for_navigation_noops_errors_or_acceptance(self):
+        controller = editor()
+        callback = Mock(side_effect=AssertionError("not a raw mutation"))
+        for item in (
+            event("HOME"),
+            event("BACK_SPACE"),
+            event("END"),
+            event("DEL"),
+            event("A", ctrl=True),
+            event("TEXTINPUT", unicode="abc"),
+            event("TEXTINPUT", unicode="\ud800"),
+            event("Z", ctrl=True),
+            event("RET"),
+            event("ESC"),
+        ):
+            controller.handle(item, approve_raw=callback)
+        callback.assert_not_called()
+
+    def test_allocations_fail_before_owner_or_live_mutation(self):
+        for target, name in (
+            (module, "_clone_buffer"),
+            (module.copy, "copy"),
+            (buffer_module, "_push"),
+            (buffer_module, "_utf8_size"),
+            (module, "InputAction"),
+            (module, "InputResult"),
+        ):
+            controller = editor()
+            key(controller, "A", ctrl=True)
+            before = controller.snapshot()
+            approve = Mock(return_value=True)
+            with self.subTest(name=name), patch.object(target, name, side_effect=MemoryError(name)):
+                with self.assertRaises(MemoryError):
+                    controller.handle(event("D", unicode="d"), approve_raw=approve)
+            approve.assert_not_called()
+            self.assertEqual(controller.snapshot(), before)
+
+    def test_all_results_including_rejection_are_allocated_before_approval(self):
+        controller = editor()
+        before = controller.snapshot()
+        approve = Mock(return_value=True)
+        original = module.InputResult
+        calls = 0
+
+        def allocate(*args, **kwargs):
+            nonlocal calls
+            calls += 1
+            if calls == 2:
+                raise MemoryError("rejection result allocation")
+            return original(*args, **kwargs)
+
+        with (
+            patch.object(module, "InputResult", side_effect=allocate),
+            self.assertRaises(MemoryError),
+        ):
+            controller.handle(event("D", unicode="d"), approve_raw=approve)
+        self.assertEqual(calls, 2)
+        approve.assert_not_called()
+        self.assertEqual(controller.snapshot(), before)
+
+    def test_terminal_action_allocation_failure_does_not_close_or_lock(self):
+        for item, kwargs in (
+            (event("RET"), {}),
+            (event("ESC"), {}),
+            (event("LEFTMOUSE"), {"outside": True}),
+            (event("WINDOW_DEACTIVATE"), {}),
+        ):
+            for name in ("InputAction", "InputResult"):
+                controller = editor()
+                before = controller.snapshot()
+                with (
+                    self.subTest(item=item, name=name),
+                    patch.object(module, name, side_effect=MemoryError("terminal allocation")),
+                    self.assertRaises(MemoryError),
+                ):
+                    controller.handle(item, **kwargs)
+                self.assertEqual(controller.snapshot(), before)
+        controller = editor()
+        before = controller.snapshot()
+        with (
+            patch.object(module, "InputResult", side_effect=MemoryError),
+            self.assertRaises(MemoryError),
+        ):
+            controller.suspend("workspace")
+        self.assertEqual(controller.snapshot(), before)
+
+    def test_revision_exhaustion_keeps_full_state_and_does_not_call_owner(self):
+        for item in (event("D", unicode="d"), event("BACK_SPACE"), event("Z", ctrl=True)):
+            controller = editor()
+            key(controller, "D", unicode="d")
+            controller._buffer._revision = MAX_COUNTER
+            before = controller.snapshot()
+            approve = Mock(return_value=True)
+            with self.assertRaises(OverflowError):
+                controller.handle(item, approve_raw=approve)
+            self.assertEqual(controller.snapshot(), before)
+            approve.assert_not_called()
+        controller = editor()
+        key(controller, "D", unicode="d")
+        key(controller, "Z", ctrl=True)
+        controller._buffer._revision = MAX_COUNTER
+        before = controller.snapshot()
+        with self.assertRaises(OverflowError):
+            key(controller, "Z", ctrl=True, shift=True)
+        self.assertEqual(controller.snapshot(), before)
+        key(controller, "HOME")
+        self.assertEqual(state(controller)["caret"], 0)
+        key(controller, "RET")
+        self.assertTrue(controller.accept_requested)
+
+    def test_callbacks_cannot_reenter_or_close_the_controller(self):
+        actions = [
+            lambda c: key(c, "Q", unicode="q"),
+            lambda c: c.close(),
+            lambda c: c.retire(),
+            lambda c: c.reject_accept(),
+            lambda c: c.suspend("workspace"),
+        ]
+        for action in actions:
+            controller = editor()
+            before = controller.snapshot()
+            with self.assertRaisesRegex(RuntimeError, "reenter"):
+                controller.handle(
+                    event("D", unicode="d"),
+                    approve_raw=lambda _, action=action, controller=controller: action(controller),
+                )
+            self.assertEqual(controller.snapshot(), before)
+        controller = editor()
+        before = controller.snapshot()
+        with self.assertRaisesRegex(RuntimeError, "reenter"):
+            controller.handle(event("V", ctrl=True), clipboard_get=lambda: controller.retire())
+        self.assertEqual(controller.snapshot(), before)
+
+    def test_real_command_draft_update_failure_preserves_both_fields(self):
+        draft_module = importlib.import_module(PACKAGE + ".general_sketch_draft")
+        base = json.dumps(
+            {
+                "schema_version": 1,
+                "id": "doc",
+                "name": "Part",
+                "units": "mm",
+                "parameters": {},
+                "features": [],
+                "active_feature": None,
+            }
+        )
+        draft = draft_module.GeneralSketchDraft(base)
+        _, circle = draft.execute(
+            draft_module.AddCircle(draft_module.PointSeed(0, 0), 5)
+        ).entity_ids
+        relation = draft.execute(
+            draft_module.AddRelation("radius", (circle,), value="5 + 0")
+        ).constraint_id
+        pending = draft.begin_edit(relation)
+        controller = editor(pending.raw_text)
+        original_sketch = draft.sketch
+
+        def approve(action):
+            self.assertEqual(action.lease, LEASE)
+            draft.update_edit(action.raw)
+            return True
+
+        result = controller.handle(event("Q", unicode="  "), approve_raw=approve)
+        self.assertEqual(kinds(result), ["raw_changed"])
+        self.assertEqual(draft.pending_edit.raw_text, controller.raw)
+        self.assertEqual(draft.sketch, original_sketch)
+        self.assertEqual(draft.document_json, base)
+        draft._pending = replace(draft.pending_edit, input_revision=MAX_COUNTER)
+        before_controller = controller.snapshot()
+        before_draft = draft.checkpoint_payload()
+        with self.assertRaises(draft_module.DraftError):
+            controller.handle(event("Q", unicode="bad"), approve_raw=approve)
+        self.assertEqual(controller.snapshot(), before_controller)
+        self.assertEqual(draft.checkpoint_payload(), before_draft)
+        self.assertEqual(draft.pending_edit.raw_text, controller.raw)
+        # Staging failure in the actual owner's immutable pending record also
+        # cannot expose an edited controller buffer.
+        draft._pending = replace(draft.pending_edit, input_revision=1)
+        before_draft = draft.checkpoint_payload()
+        with (
+            patch.object(draft_module, "replace", side_effect=MemoryError),
+            self.assertRaises(MemoryError),
+        ):
+            controller.handle(event("Q", unicode="bad"), approve_raw=approve)
+        self.assertEqual(controller.snapshot(), before_controller)
+        self.assertEqual(draft.checkpoint_payload(), before_draft)
+
+    def test_randomized_local_history_with_rejected_updates(self):
+        rng = random.Random(1729)
+        controller = editor("", limit=32)
+        expected = ""
+        accepted_history = []
+        redo = []
+        revision = 0
+        for _ in range(1000):
+            operation = rng.choice(("append", "append", "backspace", "undo", "redo"))
+            permit = rng.choice((True, True, False))
+            key(controller, "END")
+            if operation == "append":
+                text = rng.choice(("a", "Ω", " ", "👩", "\n"))
+                proposed = expected + text
+                item = event("Q", unicode=text)
+                possible = len(proposed.encode("utf-8")) <= 32
+            elif operation == "backspace":
+                proposed = expected[:-1]
+                item = event("BACK_SPACE")
+                possible = proposed != expected
+            elif operation == "undo":
+                proposed = accepted_history[-1] if accepted_history else expected
+                item = event("Z", ctrl=True)
+                possible = bool(accepted_history)
+            else:
+                proposed = redo[-1] if redo else expected
+                item = event("Z", ctrl=True, shift=True)
+                possible = bool(redo)
+            before = state(controller)
+            result = controller.handle(item, approve_raw=lambda _, permit=permit: permit)
+            if possible and permit:
+                if operation == "undo":
+                    accepted_history.pop()
+                    redo.append(expected)
+                elif operation == "redo":
+                    redo.pop()
+                    accepted_history.append(expected)
+                else:
+                    accepted_history.append(expected)
+                    redo.clear()
+                accepted_history = accepted_history[-128:]
+                expected = proposed
+                revision += 1
+                self.assertEqual(kinds(result), ["raw_changed"])
+            elif possible:
+                self.assertEqual(state(controller), before)
+                self.assertEqual(kinds(result), ["owner_rejected"])
+            self.assertEqual(controller.raw, expected)
+            self.assertEqual(state(controller)["revision"], revision)
+            self.assertLessEqual(len(controller._buffer._undo) + len(controller._buffer._redo), 128)
+
+
+if __name__ == "__main__":
+    unittest.main()

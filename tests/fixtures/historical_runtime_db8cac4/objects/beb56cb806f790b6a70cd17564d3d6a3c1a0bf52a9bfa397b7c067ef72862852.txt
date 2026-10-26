@@ -1,0 +1,140 @@
+"""One-shot, fresh configured Assembly STEP export at the canonical saved pose.
+
+The complete ordinary check response stays public; checked native shapes exist
+only inside this invocation and are never supplied by the caller or replayed a
+second time. A STEP assembly preserves reusable definitions and occurrences.
+"""
+
+from .assembly_model import AssemblyDocument
+from .assembly_policy import fingerprint
+from .assembly_service import _run_assembly_action_with_native
+from .errors import CADException
+
+ASSEMBLY_STEP_ACTION = "assembly_export_step"
+BACKEND_CAPABILITIES = frozenset({"mcad.assembly-step-export/1"})
+
+
+def run_assembly_step_export(request, *, kernel=None):
+    """Validate the exact export request, check once, then atomically write STEP."""
+    fields = {
+        "protocol_version",
+        "kind",
+        "assembly_protocol_version",
+        "assembly",
+        "action",
+        "path",
+        "result_version",
+    }
+    if type(request) is not dict or set(request) != fields:
+        raise CADException("invalid_request", "Assembly STEP export requires its exact envelope.")
+    if (
+        type(request["protocol_version"]) is not int
+        or request["protocol_version"] != 1
+        or request["kind"] != "assembly"
+        or type(request["assembly_protocol_version"]) is not int
+        or request["assembly_protocol_version"] != 1
+    ):
+        raise CADException("unsupported_protocol", "Only assembly protocol 1 is supported.")
+    if type(request["action"]) is not str or request["action"] != ASSEMBLY_STEP_ACTION:
+        raise CADException("invalid_action", "Select the explicit Assembly STEP export action.")
+    result_version = request["result_version"]
+    if type(result_version) is not int or result_version not in (2, 3):
+        raise CADException(
+            "unsupported_result_version", "Assembly STEP export requires result version 2 or 3."
+        )
+    original_path = request["path"]
+    if type(original_path) is not str or original_path.endswith(("/", "/.", "/..")):
+        raise CADException("invalid_destination", "Choose an explicit absolute export file path.")
+    # Legacy Assembly rejection and capability observation never need Part exports.
+    from .actions import _atomic_export, _destination
+
+    destination = _destination(original_path)
+    if not destination.is_absolute() or destination.is_dir():
+        raise CADException("invalid_destination", "Choose an explicit absolute export file path.")
+    assembly = AssemblyDocument.from_dict(request["assembly"])
+    if assembly.active_verification_preset is None:
+        raise CADException(
+            "verification_required",
+            "Assembly STEP export requires a saved active verification preset.",
+        )
+    check_request = {
+        "protocol_version": 1,
+        "kind": "assembly",
+        "assembly_protocol_version": 1,
+        "assembly": request["assembly"],
+        "action": "assembly_check",
+        "result_version": result_version,
+    }
+    response = {
+        "protocol_version": 1,
+        "kind": "assembly",
+        "assembly_protocol_version": 1,
+        "action": ASSEMBLY_STEP_ACTION,
+        "result_version": result_version,
+        "input_fingerprint": fingerprint(request),
+        "ok": False,
+        "error": None,
+        "result": None,
+        "export": None,
+    }
+    check, native = _run_assembly_action_with_native(
+        assembly, "assembly_check", result_version=result_version, kernel=kernel
+    )
+    response["result"] = {
+        "protocol_version": 1,
+        "kind": "assembly",
+        "assembly_protocol_version": 1,
+        "input_fingerprint": fingerprint(check_request),
+        **check,
+    }
+    try:
+        if native is None:
+            raise CADException(
+                "assembly_export_blocked",
+                "The fresh saved-pose check must completely pass the active verification preset.",
+            )
+        referenced = {instance.part_id for instance in assembly.instances}
+        parts = [
+            {"id": part.id, "name": part.name, "shape": native.shapes[part.id]}
+            for part in assembly.parts
+            if part.id in referenced
+        ]
+        instances = [
+            {
+                "id": instance.id,
+                "name": instance.name,
+                "part_id": instance.part_id,
+                "frame": native.transforms[instance.id],
+            }
+            for instance in assembly.instances
+        ]
+        # Prepare every fallible identity/count lookup before replacing a file.
+        metadata = {
+            "format": "STEP",
+            "units": "mm",
+            "path": original_path,
+            "atomic_write": True,
+            "bytes_written": 0,
+            "definition_count": len(parts),
+            "instance_count": len(instances),
+            "assembly_digest": assembly.content_hash,
+            "pose_digest": check["report"]["poses"][0]["pose"]["pose_digest"],
+            "preset_id": assembly.active_verification_preset,
+            "request_fingerprint": check["request_fingerprint"],
+            "report_fingerprint": check["report_fingerprint"],
+        }
+        _, size = _atomic_export(
+            destination,
+            lambda temporary: native.kernel.export_assembly_step(
+                assembly.name, parts, instances, temporary
+            ),
+        )
+        metadata["bytes_written"] = size
+        response.update(ok=True, export=metadata)
+    except Exception as exc:
+        response["error"] = (
+            exc.to_dict()
+            if isinstance(exc, CADException)
+            else {"code": "assembly_export_failed", "message": f"{type(exc).__name__}: {exc}"}
+        )
+    return response

@@ -1,0 +1,554 @@
+"""Explicit native constraint controls using the existing general-sketch owner.
+
+The popup retains a single prepared action across confirmation. UI selection uses
+an independent wrapper over the *same* command draft, so it cannot drop current
+solver evidence, replay history, or acquire a native execution lease. This module
+owns no lifecycle handlers, timers, geometry caches, or command implementation.
+"""
+
+import copy
+import textwrap
+
+from bpy.props import EnumProperty, IntProperty, StringProperty
+from bpy.types import Operator
+
+from . import constraint_actions, constraint_selection, draft_dispatch, sketch_session
+from .general_session import DraftError, GeneralSession
+
+PAGE_SIZE = 6
+ACTION_ITEMS = (
+    (
+        "horizontal",
+        "Horizontal",
+        "Constrain the selected line horizontally, or inspect its existing relation",
+    ),
+    (
+        "vertical",
+        "Vertical",
+        "Constrain the selected line vertically, or inspect its existing relation",
+    ),
+    (
+        "fix_here",
+        "Fix here",
+        "Anchor the selected point at its current validated solved coordinates",
+    ),
+    (
+        "fix_origin",
+        "Fix at origin",
+        "Explicitly anchor this point at sketch-plane (0, 0); geometry may move",
+    ),
+    (
+        "remove_relation",
+        "Remove relation",
+        "Release only the selected relation using current solved positions",
+    ),
+    (
+        "recover_remove_relation",
+        "Remove using authored positions",
+        "Remove only this relation without a current solution; authored positions are retained",
+    ),
+)
+
+
+def active(context=None):
+    owner = sketch_session.active_session(context)
+    return owner if type(owner) is GeneralSession else None
+
+
+def _require_ui_idle(owner, context=None):
+    if type(owner) is not GeneralSession or active(context) is not owner:
+        raise DraftError("Choose the active general sketch in its original window and scene.")
+    owner._require_idle()
+    if context is not None and (
+        context.area != owner.area
+        or context.workspace != owner.workspace
+        or context.view_layer != owner.window.view_layer
+    ):
+        raise DraftError("Use the original sketch viewport for this selection or action.")
+    if owner.commands.pending_edit is not None:
+        raise DraftError("Accept or cancel the retained dimension text first.")
+    if owner.draft.proposal is not None or owner.proposal_capture:
+        raise DraftError("Continue or cancel the unfinished line, circle or arc first.")
+    if (
+        owner.annotation_drag is not None
+        or owner.publication is not None
+        or getattr(owner, "gesture_intent", None) is not None
+    ):
+        raise DraftError("Finish the active sketch gesture or publication first.")
+
+
+def select_bindings(owner, targets, *, context=None):
+    """Checkpoint exact UI identities atomically without replacing command state.
+
+    A shallow wrapper copy is intentional: ``select`` validates into a detached
+    UI payload, while the original command object and its evidence remain owned
+    by this same session. No field of the original wrapper is changed on failure.
+    """
+    _require_ui_idle(owner, context)
+    original = owner.draft
+    candidate = copy.copy(original)
+    if not candidate.select(targets):
+        return False
+    draft_dispatch.dumps(candidate)
+    owner.draft = candidate
+    try:
+        owner.checkpoint()
+    except Exception:
+        owner.draft = original
+        raise
+    sketch_session._tag_redraw(owner)
+    return True
+
+
+def action_available(context, action):
+    """Read-only capability for contextual palettes; prepare grants no authority."""
+    owner = active(context)
+    try:
+        _require_ui_idle(owner, context)
+        intent = constraint_actions.prepare(owner, action)
+        return intent.state in {"eligible", "existing"}
+    except (ValueError, TypeError, KeyError, AttributeError, ReferenceError):
+        return False
+
+
+def _error(operator, exc):
+    operator.report({"WARNING"}, str(exc))
+    return {"CANCELLED"}
+
+
+def _clear_intent(operator):
+    operator._prepared_intent = None
+    operator._prepared_owner = None
+    operator._confirmation_pending = False
+
+
+class MCAD_OT_constraint_action(Operator):
+    bl_idname = "mcad.constraint_action"
+    bl_label = "Sketch constraint"
+    bl_description = "Apply an explicit relation to the exact selected sketch identities"
+    bl_options = {"INTERNAL"}
+
+    action: EnumProperty(name="Action", items=ACTION_ITEMS, default="horizontal")
+
+    @classmethod
+    def poll(cls, context):
+        return active(context) is not None
+
+    @classmethod
+    def description(cls, context, properties):
+        return next(
+            (item[2] for item in ACTION_ITEMS if item[0] == properties.action), cls.bl_description
+        )
+
+    def invoke(self, context, event):
+        _clear_intent(self)
+        try:
+            owner = active(context)
+            _require_ui_idle(owner, context)
+            intent = constraint_actions.prepare(owner, self.action)
+            self._prepared_intent = intent
+            self._prepared_owner = owner
+            if intent.requires_confirmation:
+                self._confirmation_pending = True
+                return context.window_manager.invoke_props_dialog(
+                    self, width=460, confirm_text="Apply"
+                )
+            return self.execute(context)
+        except Exception as exc:
+            _clear_intent(self)
+            return _error(self, exc)
+
+    def draw(self, context):
+        intent = getattr(self, "_prepared_intent", None)
+        if intent is None:
+            self.layout.label(text="This action has no prepared confirmation.", icon="ERROR")
+            return
+        title = next(item[1] for item in ACTION_ITEMS if item[0] == intent.action)
+        self.layout.label(text=title, icon="ERROR")
+        _wrapped(self.layout, intent.disclosure, width=62)
+        if intent.relation_ids:
+            _wrapped(self.layout, "Relation: " + ", ".join(intent.relation_ids), width=62)
+        if intent.refs:
+            _wrapped(self.layout, "References: " + ", ".join(intent.refs), width=62)
+        if intent.target is not None:
+            self.layout.label(text="Sketch-plane target: " + _target(intent.target) + " mm")
+
+    def execute(self, context):
+        # Only this instance's native invoke/confirmation path can supply the
+        # confirmation flag. It is not an RNA property that callers can set.
+        intent = getattr(self, "_prepared_intent", None)
+        prepared_owner = getattr(self, "_prepared_owner", None)
+        confirmed = bool(getattr(self, "_confirmation_pending", False))
+        _clear_intent(self)
+        try:
+            owner = active(context)
+            _require_ui_idle(owner, context)
+            if intent is None:
+                intent = constraint_actions.prepare(owner, self.action)
+                if intent.requires_confirmation:
+                    raise DraftError(
+                        "Use the confirmation dialog to review this exact action first."
+                    )
+                confirmed = False
+            elif prepared_owner is not owner or intent.action != self.action:
+                raise DraftError("The prepared constraint action changed. Review it again.")
+            result = constraint_actions.apply(owner, context, intent, confirmed=confirmed)
+            if intent.state == "existing" and len(result.relation_ids) == 1:
+                select_bindings(owner, (("constraint", result.relation_ids[0]),), context=context)
+            sketch_session._tag_redraw(owner)
+            return {"FINISHED"}
+        except Exception as exc:
+            return _error(self, exc)
+
+    def cancel(self, context):
+        _clear_intent(self)
+
+
+class MCAD_OT_constraint_select(Operator):
+    bl_idname = "mcad.constraint_select"
+    bl_label = "Inspect sketch identity"
+    bl_description = (
+        "Select this exact existing relation or point; never infer an overlapping endpoint"
+    )
+    bl_options = {"INTERNAL"}
+
+    kind: EnumProperty(
+        items=(("constraint", "Relation", ""), ("point", "Point", "")), default="constraint"
+    )
+    identifier: StringProperty(name="Stable ID", maxlen=256)
+    source_kind: EnumProperty(
+        items=(
+            ("NONE", "None", ""),
+            ("line", "Line", ""),
+            ("circle", "Circle", ""),
+            ("arc", "Arc", ""),
+        ),
+        default="NONE",
+    )
+    source_id: StringProperty(name="Source curve ID", maxlen=256)
+    source_role: EnumProperty(
+        items=(
+            ("NONE", "None", ""),
+            ("START", "Start", ""),
+            ("END", "End", ""),
+            ("CENTER", "Center", ""),
+        ),
+        default="NONE",
+    )
+
+    @classmethod
+    def poll(cls, context):
+        return active(context) is not None
+
+    def execute(self, context):
+        try:
+            owner = active(context)
+            _require_ui_idle(owner, context)
+            if self.source_role != "NONE":
+                kind = self.source_kind
+                allowed = {
+                    "line": {"START", "END"},
+                    "circle": {"CENTER"},
+                    "arc": {"CENTER", "START", "END"},
+                }
+                if (
+                    kind not in allowed
+                    or self.source_role not in allowed[kind]
+                    or self.kind != "point"
+                    or owner.draft.selection != [{"kind": kind, "id": self.source_id}]
+                ):
+                    raise DraftError("The selected curve changed. Choose its point again.")
+                record = next(
+                    (
+                        item
+                        for item in owner.commands.sketch.get(kind + "s", [])
+                        if item["id"] == self.source_id
+                    ),
+                    None,
+                )
+                role = self.source_role.lower()
+                if record is None or record[role] != self.identifier:
+                    raise DraftError("This curve point binding is unavailable. Choose it again.")
+            elif self.source_kind != "NONE" or self.source_id:
+                raise DraftError(
+                    "Choose an explicit source curve kind, ID and point role together."
+                )
+            select_bindings(owner, ((self.kind, self.identifier),), context=context)
+            return {"FINISHED"}
+        except Exception as exc:
+            return _error(self, exc)
+
+
+class MCAD_OT_constraint_history(Operator):
+    bl_idname = "mcad.constraint_history"
+    bl_label = "Local sketch history"
+    bl_description = "Undo or redo one local sketch action using the sketch journal"
+    bl_options = {"INTERNAL"}
+
+    direction: EnumProperty(
+        items=(("UNDO", "Undo sketch action", ""), ("REDO", "Redo sketch action", "")),
+        default="UNDO",
+    )
+
+    @classmethod
+    def poll(cls, context):
+        return active(context) is not None
+
+    def execute(self, context):
+        try:
+            owner = active(context)
+            _require_ui_idle(owner, context)
+            owner.local_history(context, redo=self.direction == "REDO")
+            return {"FINISHED"}
+        except Exception as exc:
+            return _error(self, exc)
+
+
+def _page_state(owner, scope, key, count):
+    current = getattr(owner, "_constraint_" + scope + "_page", None)
+    index = current[1] if current is not None and current[0] == key else 0
+    return max(0, min(index, max(0, (count - 1) // PAGE_SIZE)))
+
+
+def _candidate_ids(owner):
+    diagnostics = owner.current_diagnostics
+    if diagnostics is None:
+        return ()
+    return tuple(
+        dict.fromkeys(diagnostics.candidate_constraint_ids + diagnostics.redundant_constraint_ids)
+    )
+
+
+class MCAD_OT_constraint_page(Operator):
+    bl_idname = "mcad.constraint_page"
+    bl_label = "More sketch relations"
+    bl_description = "Browse bounded inspector rows; this does not edit the sketch"
+    bl_options = {"INTERNAL"}
+
+    scope: EnumProperty(
+        items=(("relations", "Relations", ""), ("conflicts", "Conflict candidates", "")),
+        default="relations",
+    )
+    delta: IntProperty(default=1, min=-1, max=1)
+
+    @classmethod
+    def poll(cls, context):
+        return active(context) is not None
+
+    def execute(self, context):
+        try:
+            owner = active(context)
+            _require_ui_idle(owner, context)
+            if self.scope == "conflicts":
+                key = _candidate_ids(owner)
+                count = len(key)
+            else:
+                contract = constraint_selection.selection_contract(
+                    owner.commands.sketch, owner.draft.selection
+                )
+                key = tuple((item.kind, item.id) for item in contract.selection)
+                count = len(contract.relations)
+            index = _page_state(owner, self.scope, key, count) + self.delta
+            index = max(0, min(index, max(0, (count - 1) // PAGE_SIZE)))
+            setattr(owner, "_constraint_" + self.scope + "_page", (key, index))
+            sketch_session._tag_redraw(owner)
+            return {"FINISHED"}
+        except Exception as exc:
+            return _error(self, exc)
+
+
+def _target(target):
+    return "(" + ", ".join(str(value) for value in target) + ")"
+
+
+def _relation_label(relation):
+    label = {"fixed": "Fixed point"}.get(relation.kind, relation.kind.capitalize())
+    if relation.source_value is not None:
+        label += ": " + str(relation.source_value)
+    elif relation.fixed_target is not None:
+        label += ": " + _target(relation.fixed_target)
+    return label
+
+
+def _wrapped(layout, text, *, width=38):
+    for line in textwrap.wrap(
+        str(text), width=width, break_long_words=True, break_on_hyphens=False
+    ) or [""]:
+        layout.label(text=line)
+
+
+def _selection_button(
+    layout, identifier, *, text, kind="constraint", source_kind="NONE", source_id="", role="NONE"
+):
+    operator = layout.operator("mcad.constraint_select", text=text, icon="RESTRICT_SELECT_OFF")
+    operator.kind = kind
+    operator.identifier = identifier
+    operator.source_kind = source_kind
+    operator.source_id = source_id
+    operator.source_role = role
+
+
+def _action_button(layout, context, action, label):
+    row = layout.row(align=True)
+    row.enabled = action_available(context, action)
+    row.operator_context = "INVOKE_DEFAULT"
+    row.operator("mcad.constraint_action", text=label).action = action
+
+
+def _pager(layout, owner, scope, key, count):
+    index = _page_state(owner, scope, key, count)
+    if count > PAGE_SIZE:
+        row = layout.row(align=True)
+        back = row.row(align=True)
+        back.enabled = index > 0
+        button = back.operator("mcad.constraint_page", text="", icon="TRIA_LEFT")
+        button.scope, button.delta = scope, -1
+        row.label(text=f"{index * PAGE_SIZE + 1}–{min(count, (index + 1) * PAGE_SIZE)} / {count}")
+        forward = row.row(align=True)
+        forward.enabled = (index + 1) * PAGE_SIZE < count
+        button = forward.operator("mcad.constraint_page", text="", icon="TRIA_RIGHT")
+        button.scope, button.delta = scope, 1
+    return slice(index * PAGE_SIZE, (index + 1) * PAGE_SIZE)
+
+
+def draw_inspector(layout, context, owner):
+    """Bounded contextual inspector. Diagnostic candidates remain inspection only."""
+    if type(owner) is not GeneralSession or active(context) is not owner:
+        return
+    box = layout.box()
+    title = box.row(align=True)
+    title.label(text="Sketch relations")
+    title.operator("mcad.help", text="", icon="QUESTION").topic = "sketch.constraints"
+    try:
+        _require_ui_idle(owner, context)
+        ready = True
+    except (ValueError, ReferenceError, AttributeError) as exc:
+        ready = False
+        _wrapped(box, str(exc))
+    history = box.row(align=True)
+    for redo, label in ((False, "Undo sketch"), (True, "Redo sketch")):
+        row = history.row(align=True)
+        row.enabled = ready and (owner.commands.can_redo if redo else owner.commands.can_undo)
+        row.operator(
+            "mcad.constraint_history", text=label, icon="LOOP_FORWARDS" if redo else "LOOP_BACK"
+        ).direction = "REDO" if redo else "UNDO"
+    try:
+        contract = constraint_selection.selection_contract(
+            owner.commands.sketch, owner.draft.selection
+        )
+    except (ValueError, TypeError, KeyError) as exc:
+        box.label(text="Selection binding unavailable", icon="ERROR")
+        _wrapped(box, str(exc))
+        missing = tuple(item for item in owner.draft.status.selection if not item.available)
+        for item in missing[:PAGE_SIZE]:
+            _wrapped(box, f"{item.identifier}: {item.state}")
+        if len(missing) > PAGE_SIZE:
+            box.label(text=f"{len(missing) - PAGE_SIZE} more unavailable selections")
+        contract = None
+    if contract is not None:
+        selected = contract.selection[0] if len(contract.selection) == 1 else None
+        controls = box.column(align=True)
+        controls.enabled = ready
+        if selected is None:
+            controls.label(text="Select one entity or relation to inspect.")
+        else:
+            controls.label(text=selected.kind.capitalize() + ": " + selected.id)
+            if selected.kind == "line":
+                row = controls.row(align=True)
+                _action_button(row, context, "horizontal", "Horizontal")
+                _action_button(row, context, "vertical", "Vertical")
+                line = next(
+                    item for item in owner.commands.sketch["lines"] if item["id"] == selected.id
+                )
+                row = controls.row(align=True)
+                for role in ("start", "end"):
+                    _selection_button(
+                        row,
+                        line[role],
+                        text=role.capitalize() + " point",
+                        kind="point",
+                        source_kind="line",
+                        source_id=selected.id,
+                        role=role.upper(),
+                    )
+            elif selected.kind in {"circle", "arc"}:
+                curve = next(
+                    item
+                    for item in owner.commands.sketch[selected.kind + "s"]
+                    if item["id"] == selected.id
+                )
+                for role in ("center", "start", "end") if selected.kind == "arc" else ("center",):
+                    _selection_button(
+                        controls,
+                        curve[role],
+                        text=role.capitalize() + " point",
+                        kind="point",
+                        source_kind=selected.kind,
+                        source_id=selected.id,
+                        role=role.upper(),
+                    )
+            elif selected.kind == "point":
+                row = controls.row(align=True)
+                _action_button(row, context, "fix_here", "Fix here")
+                _action_button(row, context, "fix_origin", "Fix at origin…")
+            elif selected.kind == "constraint":
+                if owner.commands.has_current_solution:
+                    _action_button(controls, context, "remove_relation", "Remove relation")
+                else:
+                    _action_button(
+                        controls,
+                        context,
+                        "recover_remove_relation",
+                        "Remove using authored positions…",
+                    )
+            key = tuple((item.kind, item.id) for item in contract.selection)
+            visible = _pager(controls, owner, "relations", key, len(contract.relations))
+            for relation in contract.relations[visible]:
+                detail = controls.box()
+                _selection_button(
+                    detail,
+                    relation.id,
+                    text=textwrap.shorten(_relation_label(relation), width=44, placeholder="…"),
+                )
+                _wrapped(detail, "Refs: " + ", ".join(relation.refs))
+                if selected.kind == "constraint":
+                    _wrapped(detail, "Stable ID: " + relation.id)
+                    _wrapped(detail, _relation_label(relation))
+            if not contract.relations:
+                controls.label(text="No incident relations.")
+    unavailable = tuple(item for item in owner.draft.status.conflicts if item.scope == "annotation")
+    if unavailable:
+        box.label(text="Unavailable annotation bindings", icon="ERROR")
+        for item in unavailable[:PAGE_SIZE]:
+            _wrapped(box, f"{item.identifier}: {item.state}")
+        if len(unavailable) > PAGE_SIZE:
+            box.label(text=f"{len(unavailable) - PAGE_SIZE} more retained bindings")
+    candidates = _candidate_ids(owner)
+    if candidates:
+        diagnostics = box.box()
+        diagnostics.label(text="Conflict candidates", icon="ERROR")
+        _wrapped(diagnostics, "Inspect these IDs. A candidate is not permission to delete it.")
+        visible = _pager(diagnostics, owner, "conflicts", candidates, len(candidates))
+        authored = {
+            item.id: item
+            for item in constraint_selection.relation_descriptors(owner.commands.sketch)
+        }
+        for identifier in candidates[visible]:
+            row = diagnostics.column(align=True)
+            row.enabled = ready and identifier in authored
+            label = (
+                identifier + ": " + _relation_label(authored[identifier])
+                if identifier in authored
+                else identifier + ": unavailable"
+            )
+            _selection_button(
+                row, identifier, text=textwrap.shorten(label, width=44, placeholder="…")
+            )
+
+
+CLASSES = (
+    MCAD_OT_constraint_action,
+    MCAD_OT_constraint_select,
+    MCAD_OT_constraint_history,
+    MCAD_OT_constraint_page,
+)

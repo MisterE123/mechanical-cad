@@ -1,0 +1,189 @@
+"""Current sidebar and feature-history presentation.
+
+Panel drawing is read-only; authoring and replay are explicit operators."""
+
+from bpy.types import Panel, UIList
+
+from . import assembly_job_ui, backend_runtime, document_state, operators, workspace
+from .common import _state
+from .display import _owned_objects
+from .help_ui import _diagnostic_button, _help_button, _panel_wrap
+from .workspace_ui import draw_part_limits, draw_suspended_draft
+
+
+class MCAD_UL_features(UIList):
+    def draw_item(self, context, layout, data, item, icon, active_data, active_propname, index):
+        state = _state(context)
+        row = layout.row(align=True)
+        result = document_state.current_part_result(context)
+        feature = next(
+            (
+                feature
+                for feature in (result or {}).get("features", ())
+                if feature["id"] == item.feature_id
+            ),
+            {},
+        )
+        status_icon = {"ok": "CHECKMARK", "failed": "ERROR", "blocked": "CANCEL"}.get(
+            feature.get("status"), "DOT"
+        )
+        row.label(text=item.label, icon=status_icon)
+        if item.feature_id == state.active_feature:
+            row.label(text="", icon="HIDE_OFF")
+
+
+class MCAD_PT_main(Panel):
+    bl_label = "Mechanical CAD"
+    bl_idname = "MCAD_PT_main"
+    bl_space_type = "VIEW_3D"
+    bl_region_type = "UI"
+    bl_category = "CAD"
+
+    @classmethod
+    def poll(cls, context):
+        return not workspace.is_cad_workspace(context)
+
+    def draw(self, context):
+        layout = self.layout
+        blocked = assembly_job_ui.draw_backend_failure(layout, context)
+        state = _state(context)
+        layout.operator(
+            "mcad.open_workspace", text="Open CAD Workspaces", icon="WORKSPACE"
+        ).role = "PART"
+        if state.sketch_notice:
+            box = layout.box()
+            box.label(text="Sketch notice", icon="INFO")
+            for line in _panel_wrap(context, state.sketch_notice):
+                box.label(text=line)
+        draw_suspended_draft(layout, context)
+        row = layout.row(align=True)
+        row.operator("mcad.new_document", text="New", icon="ADD")
+        row.operator("mcad.new_demo", text="Demo")
+        row = layout.row(align=True)
+        row.operator("mcad.load_document", text="Load", icon="FILE_FOLDER")
+        row.operator("mcad.save_document", text="Save", icon="FILE_TICK")
+        _help_button(row, "persistence")
+        row = layout.row(align=True)
+        _help_button(row, "workflow.overview", "Workflow")
+        _help_button(row, "roadmap", "Scope")
+        if state.last_action_error:
+            box = layout.box()
+            box.alert = True
+            for line in _panel_wrap(context, state.last_action_error):
+                box.label(text=line)
+            _diagnostic_button(box, state.last_action_error)
+        if not state.document_json:
+            layout.label(text="Start with New, Demo or load a CAD document.")
+            if backend_runtime.bundled_mode():
+                setup_state, message = backend_runtime.bundle_status()
+                if blocked and setup_state == "ready":
+                    message = "Bundled files prepared; native operations are blocked."
+                for line in _panel_wrap(context, message):
+                    layout.label(text=line, icon="INFO")
+                _help_button(layout, "setup.bundled", "Bundled backend")
+            else:
+                layout.label(text="Set the external Python path in preferences.", icon="INFO")
+                _help_button(layout, "setup.backend", "Backend setup")
+            return
+        layout.label(text=state.document_name, icon="MESH_CUBE")
+        current_result = document_state.current_part_result(context)
+        status = (
+            "UNVERIFIED" if state.status == "READY" and current_result is None else state.status
+        )
+        row = layout.row()
+        row.alert = status == "FAILED"
+        row.label(
+            text="Ready: CAD replay passed" if status == "READY" else f"Status: {status.title()}",
+            icon="ERROR" if status == "FAILED" else "INFO",
+        )
+        _help_button(row, "verification.geometry")
+        if state.status == "FAILED":
+            if any(obj.get("mechanical_cad_stale") for obj in _owned_objects(context.scene)):
+                layout.label(text="STALE: last-good wireframe", icon="ERROR")
+                layout.label(text="Not the current CAD output.")
+            _help_button(layout, "error.rebuild", "How to fix this")
+        if state.error:
+            box = layout.box()
+            for line in _panel_wrap(context, state.error):
+                box.label(text=line)
+            if state.status == "FAILED":
+                _diagnostic_button(box, state.error, failed=True)
+        if context.mode != "OBJECT":
+            layout.label(text="Return to Object Mode to regenerate.", icon="ERROR")
+        layout.operator("mcad.regenerate", icon="FILE_REFRESH")
+        row = layout.row(align=True)
+        row.operator("mcad.focus_result", text="Focus Result", icon="VIEWZOOM")
+        row.operator("mcad.show_scene", text="Whole Scene")
+        box = layout.box()
+        box.enabled = not workspace.has_draft(context)
+        row = box.row(align=True)
+        row.label(text="Parameters · millimetres")
+        _help_button(row, "sketch.dimensions")
+        for parameter in state.parameters:
+            row = box.row(align=True)
+            row.prop(
+                parameter, "expression" if parameter.is_expression else "value", text=parameter.key
+            )
+            row.prop(parameter, "is_expression", text="", icon="DRIVER")
+        if not state.parameters:
+            box.label(text="This document has no named parameters.")
+        row = layout.row(align=True)
+        row.label(text="Feature history")
+        _help_button(row, "history.edit")
+        layout.template_list(
+            "MCAD_UL_features", "", state, "features", state, "feature_index", rows=5
+        )
+        if 0 <= state.feature_index < len(state.features):
+            feature = state.features[state.feature_index]
+            detail = layout.box()
+            detail.label(text=f"ID: {feature.feature_id}")
+            live_feature = next(
+                (
+                    item
+                    for item in (current_result or {}).get("features", ())
+                    if item["id"] == feature.feature_id
+                ),
+                {},
+            )
+            detail.label(text=f"{feature.kind} · {live_feature.get('status', 'unverified')}")
+            if feature.error:
+                for line in _panel_wrap(context, feature.error):
+                    detail.label(text=line)
+        layout.operator("mcad.activate_feature", icon="HIDE_OFF")
+        draw_part_limits(layout, context)
+        reasons = set()
+        for kind in ("sketch_rectangle", "sketch_circle", "extrude", "cut"):
+            reason = operators.feature_action_reason(context, kind)
+            if reason and reason not in reasons:
+                reasons.add(reason)
+                for line in _panel_wrap(context, reason):
+                    layout.label(text=line, icon="INFO")
+        row = layout.row(align=True)
+        row.enabled = context.mode == "OBJECT"
+        row.operator("mcad.add_rectangle", text="Rectangle")
+        _help_button(row, "sketch.rectangle")
+        row.operator("mcad.add_circle", text="Circle")
+        _help_button(row, "sketch.circle")
+        row = layout.row(align=True)
+        row.enabled = context.mode == "OBJECT"
+        row.operator("mcad.add_extrude", text="Extrude")
+        _help_button(row, "feature.extrude")
+        row.operator("mcad.add_cut", text="Cut")
+        _help_button(row, "feature.boolean_operands")
+        if current_result is not None and status == "READY":
+            active = next(
+                (
+                    item
+                    for item in current_result["features"]
+                    if item["id"] == current_result["active_feature"]
+                ),
+                {},
+            )
+            volume = (active.get("stats") or {}).get("volume", 0.0)
+            layout.label(text=f"Volume: {volume:,.3f} mm³")
+        layout.separator()
+        layout.label(text="Meshes are display-only.", icon="INFO")
+        layout.label(text="Edit parameters, then Regenerate.")
+        row = layout.row(align=True)
+        row.label(text="CAD mm → metres, respecting scene scale.")
+        _help_button(row, "units")

@@ -1,0 +1,600 @@
+"""Disposable instance displays with disjoint ownership and reversible publication.
+
+Never writes canonical scene JSON. A transaction retains old objects until the
+caller commits its canonical state and explicitly finalizes publication.
+"""
+
+from __future__ import annotations
+
+import hashlib
+import math
+import struct
+
+import bpy
+
+from . import assembly_bridge, bridge, guarded_evidence, operation_contracts
+
+OWNER_KEY = "mechanical_cad_assembly_owner"
+ASSEMBLY_KEY = "mechanical_cad_assembly_id"
+DEFINITION_KEY = "mechanical_cad_assembly_definition"
+INSTANCE_KEY = "mechanical_cad_assembly_instance"
+FRAME_KEY = "mechanical_cad_assembly_frame"
+ROLE_KEY = "mechanical_cad_assembly_role"
+FINGERPRINT_KEY = "mechanical_cad_assembly_display_fingerprint"
+ORIGIN_KEY = "mechanical_cad_assembly_origin_mm"
+PRECISION_KEY = "mechanical_cad_assembly_precision_warning"
+
+
+def owned_objects(scene, owner_id):
+    return [obj for obj in scene.objects if owner_id and obj.get(OWNER_KEY) == owner_id]
+
+
+def _collections(scene):
+    seen = set()
+
+    def visit(collection):
+        if collection in seen:
+            return
+        seen.add(collection)
+        for child in collection.children:
+            visit(child)
+
+    visit(scene.collection)
+    return seen
+
+
+def _links(scene, objects):
+    ours = _collections(scene)
+    elsewhere = set()
+    for other in bpy.data.scenes:
+        if other != scene:
+            elsewhere.update(_collections(other))
+    result = []
+    for obj in objects:
+        if obj.mode != "OBJECT":
+            raise bridge.BridgeError("Leave Edit Mode before replacing the assembly display.")
+        links = [collection for collection in obj.users_collection if collection in ours]
+        if any(collection in elsewhere for collection in links):
+            raise bridge.BridgeError(
+                "Assembly display belongs to a collection shared by multiple scenes. "
+                "Unlink that collection from this scene before replacing its display."
+            )
+        result.append((obj, links))
+    return result
+
+
+def _f32(value):
+    result = struct.unpack("f", struct.pack("f", value))[0]
+    if not math.isfinite(result):
+        raise bridge.BridgeError("Assembly display exceeds Blender coordinate precision limits.")
+    return result
+
+
+def _quaternion(value):
+    # Use double arithmetic for the rotated recentering origin. mathutils performs
+    # float32 arithmetic and would lose the far-origin residual before transfer.
+    norm = math.sqrt(sum(q * q for q in value))
+    return tuple(q / norm for q in value)
+
+
+def _rotate(q, point):
+    w, x, y, z = _quaternion(q)
+    a, b, c = point
+    return (
+        (1 - 2 * (y * y + z * z)) * a + 2 * (x * y - w * z) * b + 2 * (x * z + w * y) * c,
+        2 * (x * y + w * z) * a + (1 - 2 * (x * x + z * z)) * b + 2 * (y * z - w * x) * c,
+        2 * (x * z - w * y) * a + 2 * (y * z + w * x) * b + (1 - 2 * (x * x + y * y)) * c,
+    )
+
+
+def _compose(a, b):
+    aw, ax, ay, az = _quaternion(a["wxyz"])
+    bw, bx, by, bz = _quaternion(b["wxyz"])
+    q = (
+        aw * bw - ax * bx - ay * by - az * bz,
+        aw * bx + ax * bw + ay * bz - az * by,
+        aw * by - ax * bz + ay * bw + az * bx,
+        aw * bz + ax * by - ay * bx + az * bw,
+    )
+    rotated = _rotate(a["wxyz"], b["xyz_mm"])
+    return {"wxyz": q, "xyz_mm": tuple(v + t for v, t in zip(rotated, a["xyz_mm"], strict=True))}
+
+
+def _mesh_hash(vertices, faces, edges):
+    digest = hashlib.sha256()
+    for values, code in ((vertices, "f"), (faces, "I"), (edges, "I")):
+        digest.update(struct.pack("Q", len(values)))
+        for row in values:
+            digest.update(struct.pack("I", len(row)))
+            digest.update(struct.pack(str(len(row)) + code, *row))
+    return digest.hexdigest()
+
+
+def _expected_edges(triangles):
+    # Blender's edge order is not stable; hashes below normalize edge order.
+    return sorted(
+        {
+            tuple(sorted((a, b)))
+            for tri in triangles
+            for a, b in zip(tri, tri[1:] + tri[:1], strict=True)
+        }
+    )
+
+
+def _geometry_hash(mesh):
+    return _mesh_hash(
+        [tuple(v.co) for v in mesh.vertices],
+        [tuple(p.vertices) for p in mesh.polygons],
+        sorted(tuple(sorted(e.vertices)) for e in mesh.edges),
+    )
+
+
+def _validated(evidence, owner_token, current_selection, *, consume=False):
+    if type(evidence) is not guarded_evidence.GuardedEvidence or not callable(current_selection):
+        raise bridge.BridgeError("Assembly display requires current guarded sidecar evidence.")
+    validate = evidence.publication.consume if consume else evidence.revalidate
+    try:
+        operation = evidence.operation_request()
+        result_version = operation_contracts.result_version_for_assembly(
+            operation.get("assembly"), action=operation.get("action")
+        )
+        return validate(
+            current_selection(),
+            owner_token=owner_token,
+            expected_action=assembly_bridge.ACTIONS,
+            expected_result_version=result_version,
+            require_success=True,
+        )
+    except ValueError as exc:
+        raise bridge.BridgeError(str(exc)) from exc
+
+
+def _plan(scene, evidence, pose_index, show_frames, owner_token, current_selection):
+    response = _validated(evidence, owner_token, current_selection)
+    if type(show_frames) is not bool:
+        raise bridge.BridgeError("Frame visibility must be a boolean.")
+    result, report = response["result"], response["report"]
+    if pose_index is None:
+        pose = report.get("base_pose")
+    elif type(pose_index) is int and 0 <= pose_index < len(report["poses"]):
+        pose = report["poses"][pose_index]["pose"]
+    else:
+        raise bridge.BridgeError("Choose an existing explicit pose sample.")
+    if not pose or pose["status"] != "evaluated":
+        raise bridge.BridgeError("A blocked pose has no current assembly display.")
+    parts = {p["id"]: p for p in result["parts"]}
+    if set(parts) != {p["id"] for p in result["canonical_assembly"]["parts"]}:
+        raise bridge.BridgeError("Assembly has no complete freshly replayed part display.")
+    scene_scale = float(scene.unit_settings.scale_length)
+    if not math.isfinite(scene_scale) or scene_scale <= 0:
+        raise bridge.BridgeError("Scene unit scale must be finite and positive.")
+    scale = 0.001 / scene_scale
+    revision = assembly_bridge.fingerprint(
+        {
+            "response": response._validated_fingerprint,
+            "pose_digest": pose["pose_digest"],
+            "scene_scale": scene_scale,
+            "show_frames": show_frames,
+        }
+    )
+    meshes = {}
+    for identifier, part in parts.items():
+        payload = part["mesh"]
+        lo = [min(point[i] for point in payload["vertices"]) for i in range(3)]
+        hi = [max(point[i] for point in payload["vertices"]) for i in range(3)]
+        origin = tuple(low / 2 + high / 2 for low, high in zip(lo, hi, strict=True))
+        vertices = [
+            tuple(_f32((v - o) * scale) for v, o in zip(point, origin, strict=True))
+            for point in payload["vertices"]
+        ]
+        faces = payload["triangles"]
+        extents = [high - low for low, high in zip(lo, hi, strict=True) if high > low]
+        meshes[identifier] = {
+            "vertices": vertices,
+            "triangles": faces,
+            "origin": origin,
+            "hash": _mesh_hash(vertices, faces, _expected_edges(faces)),
+            "smallest_extent_mm": min(extents) if extents else 0,
+        }
+    specs = []
+    for instance in result["instances"]:
+        identifier, definition = instance["id"], instance["part_id"]
+        placement = pose["transforms"][identifier]
+        mesh = meshes[definition]
+        rotated_origin = _rotate(placement["wxyz"], mesh["origin"])
+        translation = tuple(
+            _f32(scale * (o + t)) for o, t in zip(rotated_origin, placement["xyz_mm"], strict=True)
+        )
+        warning = ""
+        if (
+            mesh["smallest_extent_mm"]
+            and max(abs(v) for v in translation) * 2**-23
+            > scale * mesh["smallest_extent_mm"] * 0.01
+        ):
+            warning = "Large global coordinates limit Blender viewport placement precision. Local dimensions are preserved; canonical CAD remains full precision."
+        common = {
+            "instance": identifier,
+            "definition": definition,
+            "revision": revision,
+            "assembly": result["canonical_assembly"]["id"],
+        }
+        specs.append(
+            {
+                **common,
+                "role": "instance",
+                "frame": "",
+                "name": f"Assembly · {instance['name']}",
+                "location": translation,
+                "rotation": tuple(_f32(v) for v in placement["wxyz"]),
+                "origin": mesh["origin"],
+                "warning": warning,
+            }
+        )
+        if show_frames:
+            for frame in parts[definition]["mate_frames"]:
+                world = _compose(placement, frame["placement"])
+                specs.append(
+                    {
+                        **common,
+                        "role": "frame",
+                        "frame": frame["id"],
+                        "name": f"Datum · {instance['name']} · {frame['name']}",
+                        "location": tuple(_f32(scale * v) for v in world["xyz_mm"]),
+                        "rotation": tuple(_f32(v) for v in world["wxyz"]),
+                        "origin": (0, 0, 0),
+                        "warning": warning,
+                        "axis_size": _f32(5 * scale),
+                    }
+                )
+    return meshes, specs, scene_scale
+
+
+def _spec_key(spec):
+    return spec["role"], spec["instance"], spec["frame"]
+
+
+def _object_key(obj):
+    return obj.get(ROLE_KEY), obj.get(INSTANCE_KEY), obj.get(FRAME_KEY, "")
+
+
+def _configure(obj, spec, owner_id):
+    for key, value in (
+        (OWNER_KEY, owner_id),
+        (ASSEMBLY_KEY, spec["assembly"]),
+        (DEFINITION_KEY, spec["definition"]),
+        (INSTANCE_KEY, spec["instance"]),
+        (FRAME_KEY, spec["frame"]),
+        (ROLE_KEY, spec["role"]),
+        (FINGERPRINT_KEY, spec["revision"]),
+        (ORIGIN_KEY, list(spec["origin"])),
+        (PRECISION_KEY, spec["warning"]),
+    ):
+        obj[key] = value
+    obj["mechanical_cad_display_only"] = True
+    obj.rotation_mode = "QUATERNION"
+    obj.location = spec["location"]
+    obj.rotation_quaternion = spec["rotation"]
+    obj.scale = (1, 1, 1)
+    obj.lock_location = (True, True, True)
+    obj.lock_rotation = (True, True, True)
+    obj.lock_scale = (True, True, True)
+    if spec["role"] == "frame":
+        obj.empty_display_type = "ARROWS"
+        obj.empty_display_size = spec["axis_size"]
+        obj.show_in_front = True
+        obj.hide_render = True
+    else:
+        obj.color = (0.18, 0.42, 0.58, 1)
+
+
+def _neutral(obj):
+    return (
+        obj.mode == "OBJECT"
+        and obj.parent is None
+        and not obj.modifiers
+        and not obj.constraints
+        and obj.animation_data is None
+        and obj.rotation_mode == "QUATERNION"
+        and tuple(obj.scale) == (1, 1, 1)
+        and tuple(obj.delta_scale) == (1, 1, 1)
+        and tuple(obj.delta_location) == (0, 0, 0)
+        and tuple(obj.delta_rotation_euler) == (0, 0, 0)
+        and tuple(obj.delta_rotation_quaternion) == (1, 0, 0, 0)
+        and all(
+            obj.matrix_parent_inverse[i][j] == (1 if i == j else 0)
+            for i in range(4)
+            for j in range(4)
+        )
+    )
+
+
+def _matches(obj, spec, meshes, owner_id):
+    if not _neutral(obj) or obj.get(OWNER_KEY) != owner_id:
+        return False
+    for key, expected in (
+        (ASSEMBLY_KEY, spec["assembly"]),
+        (DEFINITION_KEY, spec["definition"]),
+        (INSTANCE_KEY, spec["instance"]),
+        (FRAME_KEY, spec["frame"]),
+        (ROLE_KEY, spec["role"]),
+        (FINGERPRINT_KEY, spec["revision"]),
+    ):
+        if obj.get(key) != expected:
+            return False
+    if tuple(obj.get(ORIGIN_KEY, ())) != spec["origin"]:
+        return False
+    if (
+        tuple(obj.location) != spec["location"]
+        or tuple(obj.rotation_quaternion) != spec["rotation"]
+    ):
+        return False
+    if spec["role"] == "instance":
+        if (
+            obj.type != "MESH"
+            or obj.data.shape_keys is not None
+            or obj.data.animation_data is not None
+        ):
+            return False
+        return (
+            obj.data.get(OWNER_KEY) == owner_id
+            and _geometry_hash(obj.data) == meshes[spec["definition"]]["hash"]
+        )
+    return (
+        obj.type == "EMPTY"
+        and obj.empty_display_type == "ARROWS"
+        and obj.empty_display_size == spec["axis_size"]
+    )
+
+
+def trusted_display(
+    scene,
+    owner_id,
+    evidence,
+    *,
+    owner_token=None,
+    current_selection=None,
+    pose_index=None,
+    show_frames=True,
+):
+    """Whether every cache still matches this validated snapshot, not a CAD check.
+
+    Native checks may themselves report incomplete/violations. A true return only
+    establishes that nobody has edited this disposable display since publication.
+    """
+    try:
+        meshes, specs, _ = _plan(
+            scene, evidence, pose_index, show_frames, owner_token, current_selection
+        )
+        objects = owned_objects(scene, owner_id)
+        by_key = {_object_key(obj): obj for obj in objects}
+        return len(objects) == len(by_key) == len(specs) and all(
+            _spec_key(spec) in by_key and _matches(by_key[_spec_key(spec)], spec, meshes, owner_id)
+            for spec in specs
+        )
+    except (bridge.BridgeError, ValueError, TypeError, KeyError, ReferenceError):
+        return False
+
+
+def _remove_orphans(objects, meshes, owner_id):
+    for obj in objects:
+        try:
+            if obj.get(OWNER_KEY) == owner_id and not obj.users_collection and obj.users == 0:
+                bpy.data.objects.remove(obj)
+        except ReferenceError:
+            pass
+    for mesh in meshes:
+        try:
+            if mesh.get(OWNER_KEY) == owner_id and mesh.users == 0:
+                bpy.data.meshes.remove(mesh)
+        except ReferenceError:
+            pass
+
+
+def _link(collection, obj):
+    collection.objects.link(obj)
+
+
+def _unlink(collection, obj):
+    collection.objects.unlink(obj)
+
+
+class DisplayTransaction:
+    """Stage all objects; publish reversibly; finalize only after canonical commit."""
+
+    def __init__(
+        self,
+        scene,
+        owner_id,
+        evidence,
+        *,
+        owner_token=None,
+        current_selection=None,
+        pose_index=None,
+        show_frames=True,
+    ):
+        if type(owner_id) is not str or not owner_id or len(owner_id) > 128:
+            raise bridge.BridgeError("Assembly display requires a nonempty independent owner ID.")
+        self.scene, self.owner_id = scene, owner_id
+        # Runtime-only authority; neither this token nor its callback is saved.
+        _validated(evidence, owner_token, current_selection)
+        self.evidence, self.pose_index, self.show_frames = evidence, pose_index, show_frames
+        self.owner_token, self.current_selection = owner_token, current_selection
+        self.objects, self.meshes = [], []
+        self.status = "staging"
+        self.cleanup_warnings = []
+        self.old_objects = owned_objects(scene, owner_id)
+        self.old_links = _links(scene, self.old_objects)
+        self.old_meshes = list({obj.data for obj in self.old_objects if obj.type == "MESH"})
+        mesh_plans, self.specs, self.scene_scale = _plan(
+            scene, evidence, pose_index, show_frames, owner_token, current_selection
+        )
+        try:
+            caches = {}
+            for identifier, mesh_plan in mesh_plans.items():
+                mesh = bpy.data.meshes.new(f"Assembly definition · {identifier}")
+                self.meshes.append(mesh)
+                mesh[OWNER_KEY] = owner_id
+                mesh[DEFINITION_KEY] = identifier
+                mesh.from_pydata(mesh_plan["vertices"], [], mesh_plan["triangles"])
+                mesh.update()
+                if mesh.validate(verbose=False) or _geometry_hash(mesh) != mesh_plan["hash"]:
+                    raise bridge.BridgeError(
+                        "Blender changed invalid assembly tessellation; publication rejected."
+                    )
+                caches[identifier] = mesh
+            for spec in self.specs:
+                mesh = caches[spec["definition"]] if spec["role"] == "instance" else None
+                obj = bpy.data.objects.new(spec["name"], mesh)
+                self.objects.append(obj)
+                obj[OWNER_KEY] = owner_id
+                _configure(obj, spec, owner_id)
+                if not _matches(obj, spec, mesh_plans, owner_id):
+                    raise bridge.BridgeError("Staged assembly display failed its integrity check.")
+            self.status = "staged"
+        except Exception:
+            _remove_orphans(self.objects, self.meshes, owner_id)
+            self.status = "discarded"
+            raise
+
+    def publish(self):
+        if self.status != "staged":
+            raise bridge.BridgeError("Only a staged assembly transaction can be published.")
+        _validated(self.evidence, self.owner_token, self.current_selection)
+        if float(self.scene.unit_settings.scale_length) != self.scene_scale or set(
+            owned_objects(self.scene, self.owner_id)
+        ) != set(self.old_objects):
+            raise bridge.BridgeError(
+                "Assembly display or scene units changed during staging; stage again."
+            )
+        current_links = _links(self.scene, self.old_objects)
+        if any(
+            set(a) != set(b) for (_, a), (_, b) in zip(current_links, self.old_links, strict=True)
+        ):
+            raise bridge.BridgeError(
+                "Assembly collection links changed during staging; stage again."
+            )
+        meshes, specs, _ = _plan(
+            self.scene,
+            self.evidence,
+            self.pose_index,
+            self.show_frames,
+            self.owner_token,
+            self.current_selection,
+        )
+        if not all(
+            _matches(obj, spec, meshes, self.owner_id)
+            for obj, spec in zip(self.objects, specs, strict=True)
+        ):
+            raise bridge.BridgeError("Staged assembly objects were edited; stage again.")
+        linked, unlinked = [], []
+        try:
+            _validated(self.evidence, self.owner_token, self.current_selection, consume=True)
+            for obj in self.objects:
+                _link(self.scene.collection, obj)
+                linked.append(obj)
+            for obj, collections in self.old_links:
+                for collection in collections:
+                    _unlink(collection, obj)
+                    unlinked.append((collection, obj))
+            _validated(self.evidence, self.owner_token, self.current_selection)
+        except Exception:
+            # Rollback uses direct native calls, not the failing publication hook.
+            for collection, obj in reversed(unlinked):
+                collection.objects.link(obj)
+            for obj in reversed(linked):
+                self.scene.collection.objects.unlink(obj)
+            raise
+        self.status = "published"
+        return list(self.objects)
+
+    def rollback(self):
+        if self.status == "staged":
+            self.discard()
+            return
+        if self.status != "published":
+            if self.status in {"rolled_back", "discarded"}:
+                return
+            raise bridge.BridgeError("A finalized assembly display cannot be rolled back.")
+        # All original datablocks still exist, including links in other scenes.
+        for obj, collections in self.old_links:
+            for collection in collections:
+                if obj.name not in collection.objects:
+                    collection.objects.link(obj)
+        for obj in self.objects:
+            if obj.name in self.scene.collection.objects:
+                self.scene.collection.objects.unlink(obj)
+        _remove_orphans(self.objects, self.meshes, self.owner_id)
+        self.status = "rolled_back"
+
+    def finalize(self):
+        if self.status == "finalized":
+            return list(self.objects)
+        if self.status != "published":
+            raise bridge.BridgeError("Publish the assembly display before finalizing it.")
+        # Canonical state is already accepted at this point. Orphan cleanup
+        # cannot turn a successful Apply into a failed, no-longer-rollbackable
+        # transaction after some old datablocks have been deleted.
+        self.status = "finalized"
+        try:
+            _remove_orphans(self.old_objects, self.old_meshes, self.owner_id)
+        except Exception as exc:
+            self.cleanup_warnings.append(
+                f"Assembly display was accepted, but old orphan cleanup is incomplete: {exc}"
+            )
+        return list(self.objects)
+
+    def discard(self):
+        if self.status == "published":
+            self.rollback()
+        elif self.status == "staged":
+            _remove_orphans(self.objects, self.meshes, self.owner_id)
+            self.status = "discarded"
+
+
+def stage(
+    scene,
+    owner_id,
+    evidence,
+    *,
+    owner_token=None,
+    current_selection=None,
+    pose_index=None,
+    show_frames=True,
+):
+    return DisplayTransaction(
+        scene,
+        owner_id,
+        evidence,
+        owner_token=owner_token,
+        current_selection=current_selection,
+        pose_index=pose_index,
+        show_frames=show_frames,
+    )
+
+
+def replace_display(
+    scene,
+    owner_id,
+    evidence,
+    *,
+    owner_token=None,
+    current_selection=None,
+    pose_index=None,
+    show_frames=True,
+):
+    """Convenience for display-only replacement, with no canonical state commit."""
+    transaction = stage(
+        scene,
+        owner_id,
+        evidence,
+        owner_token=owner_token,
+        current_selection=current_selection,
+        pose_index=pose_index,
+        show_frames=show_frames,
+    )
+    try:
+        transaction.publish()
+        return transaction.finalize()
+    except Exception:
+        transaction.discard()
+        raise

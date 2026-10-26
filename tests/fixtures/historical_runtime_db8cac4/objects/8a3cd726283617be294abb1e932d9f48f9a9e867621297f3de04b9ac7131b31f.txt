@@ -1,0 +1,603 @@
+"""Strict, native-free sketch evidence for the explicitly negotiated v2 boundary.
+
+Only stdlib dependencies belong here. The frozen legacy replay validator remains
+in bridge.py. These checks bind derived records to authored intent; they neither
+solve a sketch nor certify that a kernel actually constructed its reported face.
+"""
+
+from __future__ import annotations
+
+import json
+import math
+import re
+
+_ID = re.compile(r"^[A-Za-z0-9_][A-Za-z0-9_.-]{0,127}$")
+_SUCCESS = {"okay", "redundant_okay"}
+_STATUSES = _SUCCESS | {"inconsistent", "didnt_converge", "too_many_unknowns"}
+_SKETCH_FIELDS = {"schema_version", "id", "units", "plane", "points", "lines", "constraints"}
+_CONSTRAINT_FIELDS = {"id", "kind", "refs", "value", "target"}
+
+
+def _require(condition, message):
+    if not condition:
+        raise ValueError(message)
+
+
+def _keys(value, fields, required=None):
+    _require(type(value) is dict, "expected an object")
+    required = fields if required is None else required
+    _require(
+        len(value) <= len(fields) and required <= set(value) <= fields,
+        "unknown or missing fields",
+    )
+
+
+def _identifier(value):
+    _require(type(value) is str and _ID.fullmatch(value), "invalid stable sketch ID")
+
+
+def _number(value, *, minimum=None, bound=1e6):
+    _require(type(value) in (int, float), "expected a finite number, not a boolean")
+    _require(-bound <= value <= bound, "number outside the supported domain")
+    result = float(value)
+    _require(math.isfinite(result), "expected a finite number")
+    _require(minimum is None or result >= minimum, "number below the supported domain")
+    _require(result == value, "numeric normalization changed the authored value")
+    return result
+
+
+def _vector(value, length):
+    _require(type(value) is list and len(value) == length, "invalid sketch vector")
+    return [_number(item) for item in value]
+
+
+def _records(value, limit):
+    _require(type(value) is list and len(value) <= limit, "sketch record limit exceeded")
+    result = {}
+    for item in value:
+        _require(type(item) is dict, "sketch record must be an object")
+        _identifier(item.get("id"))
+        _require(item["id"] not in result, "duplicate sketch record ID")
+        result[item["id"]] = item
+    return result
+
+
+def _normalized_sketch(sketch, *, numeric=False):
+    """Validate a bounded record tree before constructing a detached normal form."""
+    _require(type(sketch) is dict, "sketch must be an object")
+    version = sketch.get("schema_version")
+    _require(type(version) is int and version in (1, 2), "unsupported sketch schema")
+    _keys(sketch, _SKETCH_FIELDS | ({"circles"} if version == 2 else set()))
+    _identifier(sketch["id"])
+    _require(sketch["units"] == "mm", "invalid sketch units")
+    plane = sketch["plane"]
+    _keys(plane, {"id", "origin", "quaternion"})
+    _identifier(plane["id"])
+    origin, quaternion = _vector(plane["origin"], 3), _vector(plane["quaternion"], 4)
+    _require(abs(sum(v * v for v in quaternion) - 1) <= 1e-9, "non-unit workplane quaternion")
+    points = _records(sketch["points"], 256)
+    lines = _records(sketch["lines"], 256)
+    circles = _records(sketch["circles"], 256) if version == 2 else {}
+    constraints = _records(sketch["constraints"], 512)
+    ids = [plane["id"], *points, *lines, *circles, *constraints]
+    _require(len(set(ids)) == len(ids), "duplicate shared entity/constraint/plane ID")
+    if version == 2:
+        _require(len(lines) + len(circles) <= 256, "aggregate curve limit exceeded")
+        _require(2 * len(points) + len(circles) <= 512, "active scalar limit exceeded")
+    result = {
+        "schema_version": version,
+        "id": sketch["id"],
+        "units": "mm",
+        "plane": {"id": plane["id"], "origin": origin, "quaternion": quaternion},
+        "points": [],
+        "lines": [],
+        "constraints": [],
+    }
+    for identifier, point in sorted(points.items()):
+        _keys(point, {"id", "u", "v"})
+        result["points"].append(
+            {"id": identifier, "u": _number(point["u"]), "v": _number(point["v"])}
+        )
+    for line in sorted(lines.values(), key=lambda item: item["id"]):
+        _keys(line, {"id", "start", "end"})
+        _identifier(line["start"])
+        _identifier(line["end"])
+        _require(
+            line["start"] in points and line["end"] in points and line["start"] != line["end"],
+            "line requires two distinct existing point references",
+        )
+        result["lines"].append(dict(line))
+    if version == 2:
+        result["circles"] = []
+        for circle in sorted(circles.values(), key=lambda item: item["id"]):
+            _keys(circle, {"id", "center", "radius"})
+            _identifier(circle["center"])
+            _require(circle["center"] in points, "circle requires an existing point center")
+            result["circles"].append({**circle, "radius": _number(circle["radius"], minimum=1e-6)})
+    for constraint in sorted(constraints.values(), key=lambda item: item["id"]):
+        _keys(
+            constraint,
+            _CONSTRAINT_FIELDS,
+            _CONSTRAINT_FIELDS if numeric else {"id", "kind", "refs"},
+        )
+        kind, refs = constraint["kind"], constraint["refs"]
+        _require(type(kind) is str, "constraint kind must be text")
+        _require(type(refs) is list and len(refs) <= 2, "invalid constraint references")
+        for reference in refs:
+            _identifier(reference)
+        if kind in ("horizontal", "vertical"):
+            valid = len(refs) == 1 and refs[0] in lines
+        elif kind in ("distance", "coincident"):
+            valid = len(refs) == 2 and refs[0] != refs[1] and all(r in points for r in refs)
+        elif kind == "fixed":
+            valid = len(refs) == 1 and refs[0] in points
+        elif kind == "radius" and version == 2:
+            valid = len(refs) == 1 and refs[0] in circles
+        else:
+            raise ValueError("unsupported constraint kind")
+        _require(valid, "invalid constraint references")
+        value, target = constraint.get("value"), constraint.get("target")
+        if kind in ("distance", "radius"):
+            if not numeric and type(value) is str:
+                _require(0 < len(value) <= 256, "invalid dimension expression length")
+                value.encode("utf-8")
+            else:
+                value = _number(value, minimum=1e-6)
+        else:
+            _require(value is None, "unexpected constraint value")
+        if kind == "fixed":
+            target = _vector(target, 2)
+        else:
+            _require(target is None, "unexpected constraint target")
+        result["constraints"].append(
+            {
+                "id": constraint["id"],
+                "kind": kind,
+                "refs": list(refs),
+                "value": value,
+                "target": target,
+            }
+        )
+    # Each field/container above has already been bounded. Encoding this shallow
+    # tree cannot recursively traverse a caller cycle or expand a shared DAG.
+    if version == 2:
+        _require(
+            len(json.dumps(sketch, separators=(",", ":"), allow_nan=False).encode("utf-8"))
+            <= 256 * 1024,
+            "sketch exceeds the 256 KiB limit",
+        )
+    return result
+
+
+def normalize_sketch_v2(sketch):
+    """Only allowlisted canonical v2 normalizations; never migrate a v1 payload."""
+    _require(
+        type(sketch) is dict
+        and type(sketch.get("schema_version")) is int
+        and sketch["schema_version"] == 2,
+        "expected explicit sketch schema 2",
+    )
+    return _normalized_sketch(sketch)
+
+
+def _residual(solved):
+    points = {p["id"]: (p["u"], p["v"]) for p in solved["points"]}
+    lines = {line["id"]: line for line in solved["lines"]}
+    circles = {circle["id"]: circle for circle in solved.get("circles", [])}
+    residuals = [0.0]
+    for constraint in solved["constraints"]:
+        kind, refs = constraint["kind"], constraint["refs"]
+        if kind in ("horizontal", "vertical"):
+            line = lines[refs[0]]
+            a, b = points[line["start"]], points[line["end"]]
+            axis = 1 if kind == "horizontal" else 0
+            value = abs(a[axis] - b[axis])
+        elif kind in ("distance", "coincident"):
+            a, b = (points[reference] for reference in refs)
+            length = math.hypot(a[0] - b[0], a[1] - b[1])
+            value = abs(length - (constraint["value"] if kind == "distance" else 0.0))
+        elif kind == "radius":
+            value = abs(circles[refs[0]]["radius"] - constraint["value"])
+        else:
+            point, target = points[refs[0]], constraint["target"]
+            value = math.hypot(point[0] - target[0], point[1] - target[1])
+        residuals.append(value)
+    return max(residuals)
+
+
+def validate_sketch_report_v2(feature, source):
+    """Reject malformed or mismatched derived evidence without importing core.
+
+    Source expressions remain authoritative in the request. Literal dimensions
+    are checked exactly. Formula results are bound to their named solved equations;
+    resolving project parameters belongs to the sidecar, not a second evaluator.
+    """
+    _require(type(feature) is dict and type(source) is dict, "missing source feature")
+    _identifier(feature.get("id"))
+    _identifier(source.get("id"))
+    _require(
+        type(feature.get("status")) is str and feature["status"] in {"ok", "failed", "blocked"},
+        "invalid feature status",
+    )
+    _require(
+        feature.get("id") == source.get("id") and feature.get("kind") == source.get("kind"),
+        "sketch feature identity differs from source",
+    )
+    report = feature.get("sketch")
+    if report is None:
+        _require(
+            not (feature.get("kind") == "sketch_constrained" and feature.get("status") == "ok"),
+            "successful constrained sketch is missing its solve report",
+        )
+        return
+    _require(feature.get("kind") == "sketch_constrained", "unexpected sketch solve report")
+    definition = _normalized_sketch(source.get("sketch"))
+    fields = {
+        "solver",
+        "solver_version",
+        "status",
+        "remaining_dof",
+        "failed_constraints",
+        "redundant_constraints",
+        "max_residual_mm",
+        "solved",
+        "dimensions",
+    }
+    _keys(report, fields)
+    _require(
+        report["solver"] == "libslvs"
+        and report["solver_version"] == "3.2"
+        and type(report["status"]) is str
+        and report["status"] in _STATUSES,
+        "unknown sketch solve report contract",
+    )
+    constraints = {item["id"]: item for item in definition["constraints"]}
+    for field in ("failed_constraints", "redundant_constraints"):
+        ids = report[field]
+        _require(
+            type(ids) is list
+            and len(ids) <= 512
+            and all(type(item) is str and item in constraints for item in ids)
+            and len(set(ids)) == len(ids),
+            "invalid sketch diagnostic constraint IDs",
+        )
+    success = report["status"] in _SUCCESS
+    _require(
+        report["status"] != "okay" or not report["redundant_constraints"],
+        "exact redundant equations must be visibly reported",
+    )
+    _require(
+        not success or not report["failed_constraints"],
+        "successful solve cannot report failed constraints",
+    )
+    residual = report["max_residual_mm"]
+    if residual is not None:
+        _number(residual, minimum=0, bound=1e12)
+    dimensions = report["dimensions"]
+    expected = {key for key, item in constraints.items() if item["kind"] in ("distance", "radius")}
+    _require(
+        type(dimensions) is dict and set(dimensions) == expected,
+        "invalid resolved sketch dimension IDs",
+    )
+    for identifier, value in dimensions.items():
+        _number(value, minimum=1e-6)
+        authored = constraints[identifier]["value"]
+        _require(
+            type(authored) is str or value == authored,
+            "resolved dimension changed an authored numeric target",
+        )
+    if not success:
+        _require(
+            report["remaining_dof"] is None
+            and report["solved"] is None
+            and feature.get("status") != "ok",
+            "failed sketch cannot publish current DoF or solved geometry",
+        )
+        return
+    dof = report["remaining_dof"]
+    ceiling = 2 * len(definition["points"]) + len(definition.get("circles", []))
+    _require(
+        type(dof) is int and 0 <= dof <= ceiling and residual is not None and residual <= 1e-7,
+        "invalid successful sketch DoF/residual",
+    )
+    solved = _normalized_sketch(report["solved"], numeric=True)
+    for field in ("schema_version", "id", "units", "plane", "lines"):
+        _require(
+            solved[field] == definition[field],
+            "solved sketch changed schema, identity, workplane or line endpoints",
+        )
+    _require(
+        [p["id"] for p in solved["points"]] == [p["id"] for p in definition["points"]],
+        "solved sketch point identities differ from source",
+    )
+    _require(
+        [(c["id"], c["center"]) for c in solved.get("circles", [])]
+        == [(c["id"], c["center"]) for c in definition.get("circles", [])],
+        "solved sketch circle identities or centers differ from source",
+    )
+    expected_constraints = [
+        {**item, "value": dimensions[item["id"]]} if item["id"] in dimensions else item
+        for item in definition["constraints"]
+    ]
+    _require(
+        solved["constraints"] == expected_constraints,
+        "solved sketch changed persistent constraint intent",
+    )
+    measured = _residual(solved)
+    _require(
+        measured <= 1e-7 and measured <= residual + 1e-12,
+        "solved sketch contradicts its independently checked residual",
+    )
+
+
+def _line_connectivity(sketch, *, closed):
+    """Verify the claimed graph type using identities/coincidence, never proximity."""
+    points = {p["id"]: (p["u"], p["v"]) for p in sketch["points"]}
+    parents = {identifier: identifier for identifier in points}
+
+    def root(identifier):
+        while parents[identifier] != identifier:
+            identifier = parents[identifier]
+        return identifier
+
+    for constraint in sketch["constraints"]:
+        if constraint["kind"] == "coincident":
+            left, right = sorted(root(identifier) for identifier in constraint["refs"])
+            parents[right] = left
+    for identifier in points:
+        _require(
+            math.dist(points[identifier], points[root(identifier)]) <= 1e-7,
+            "coincident point group exceeds the profile tolerance",
+        )
+    adjacency = {}
+    for line in sketch["lines"]:
+        a, b = root(line["start"]), root(line["end"])
+        _require(
+            a != b and math.dist(points[a], points[b]) >= 1e-6,
+            "profile contains a collapsed or too-short line",
+        )
+        adjacency.setdefault(a, []).append((line["id"], b))
+        adjacency.setdefault(b, []).append((line["id"], a))
+    _require(
+        adjacency and all(len(neighbors) <= 2 for neighbors in adjacency.values()),
+        "profile contains missing or branched linework",
+    )
+    ends = sum(len(neighbors) == 1 for neighbors in adjacency.values())
+    _require(ends == (0 if closed else 2), "profile availability contradicts line connectivity")
+    if closed:
+        _require(len(sketch["lines"]) >= 3, "a line loop requires at least three edges")
+    visited, pending = set(), [next(iter(adjacency))]
+    while pending:
+        point = pending.pop()
+        if point not in visited:
+            visited.add(point)
+            pending.extend(neighbor for _, neighbor in adjacency[point])
+    _require(len(visited) == len(adjacency), "profile contains disconnected line regions")
+    start = min(adjacency) if closed else min(p for p in adjacency if len(adjacency[p]) == 1)
+    current, used, vertices = start, set(), [points[start]]
+    while len(used) < len(sketch["lines"]):
+        available = sorted(
+            (line, neighbor) for line, neighbor in adjacency[current] if line not in used
+        )
+        _require(available, "incomplete profile traversal")
+        line, current = available[0]
+        used.add(line)
+        vertices.append(points[current])
+    if closed:
+        _require(current == start, "line loop does not close")
+    _line_geometry(vertices, closed=closed)
+
+
+def _cross(a, b, c):
+    return (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0])
+
+
+def _on_segment(a, b, p):
+    return abs(_cross(a, b, p)) <= 1e-7 * math.dist(a, b) and all(
+        min(a[axis], b[axis]) - 1e-7 <= p[axis] <= max(a[axis], b[axis]) + 1e-7 for axis in (0, 1)
+    )
+
+
+def _line_geometry(vertices, *, closed):
+    """Reject a forged ready/open classification of crossed or collapsed linework."""
+    count = len(vertices) - 1
+    for index, (a, b) in enumerate(zip(vertices, vertices[1:], strict=False)):
+        c = (
+            vertices[(index + 2) % count]
+            if closed
+            else (vertices[index + 2] if index + 2 < len(vertices) else None)
+        )
+        if c is not None:
+            overlap = (
+                abs(_cross(a, b, c)) <= 1e-7 * max(math.dist(a, b), math.dist(b, c))
+                and (a[0] - b[0]) * (c[0] - b[0]) + (a[1] - b[1]) * (c[1] - b[1]) > 0
+            )
+            _require(not overlap, "adjacent profile boundaries overlap")
+        for other in range(index + 2, count):
+            if closed and index == 0 and other == count - 1:
+                continue
+            c, d = vertices[other], vertices[other + 1]
+            crossing = (
+                _cross(a, b, c) * _cross(a, b, d) < 0 and _cross(c, d, a) * _cross(c, d, b) < 0
+            )
+            touching = any(
+                _on_segment(first, second, point)
+                for first, second, point in ((a, b, c), (a, b, d), (c, d, a), (c, d, b))
+            )
+            _require(not (crossing or touching), "nonadjacent profile boundaries cross or touch")
+    if closed:
+        area_twice = sum(
+            _cross(vertices[0], vertices[index], vertices[index + 1])
+            for index in range(1, count - 1)
+        )
+        _require(abs(area_twice) >= 2e-12, "closed profile has no usable area")
+
+
+def _mesh_evidence(feature, *, solid):
+    mesh, topology, stats = feature["mesh"], feature["topology"], feature["stats"]
+    _keys(mesh, {"vertices", "triangles", "triangle_face_ids"})
+    vertices, triangles, face_ids = mesh["vertices"], mesh["triangles"], mesh["triangle_face_ids"]
+    _require(
+        type(vertices) is list and 3 <= len(vertices) <= 100_000,
+        "available output requires a bounded nonempty mesh",
+    )
+    for vertex in vertices:
+        _require(type(vertex) is list and len(vertex) == 3, "invalid mesh vertex")
+        for value in vertex:
+            _number(value, bound=1e12)
+    _require(
+        type(triangles) is list and 1 <= len(triangles) <= 200_000,
+        "available output requires mesh triangles",
+    )
+    for triangle in triangles:
+        _require(
+            type(triangle) is list
+            and len(triangle) == 3
+            and all(type(index) is int and 0 <= index < len(vertices) for index in triangle)
+            and len(set(triangle)) == 3,
+            "invalid mesh triangle",
+        )
+    _require(
+        type(topology) is list and 1 <= len(topology) <= 200_000,
+        "available output requires face topology",
+    )
+    topology_ids = set()
+    for face in topology:
+        _require(
+            type(face) is dict
+            and type(face.get("id")) is str
+            and face["id"]
+            and face["id"] not in topology_ids
+            and type(face.get("feature_id")) is str
+            and bool(_ID.fullmatch(face["feature_id"]))
+            and face.get("kind") == "face",
+            "invalid output face topology",
+        )
+        if face["feature_id"] != feature["id"]:
+            provenance = face.get("provenance")
+            _require(
+                feature["kind"] == "cut"
+                and type(provenance) is dict
+                and provenance.get("operation") == "cut"
+                and provenance.get("operation_id") == feature["id"]
+                and provenance.get("modifying_feature_id") == feature["id"]
+                and provenance.get("relation") in {"unchanged", "modified", "generated"}
+                and type(provenance.get("source_id")) is str
+                and provenance["source_id"]
+                and type(provenance.get("source_count")) is int
+                and provenance["source_count"] == 1
+                and type(provenance.get("image_count")) is int
+                and provenance["image_count"] >= 1,
+                "inherited face lacks explicit cut provenance",
+            )
+        topology_ids.add(face["id"])
+    _require(
+        type(face_ids) is list
+        and len(face_ids) == len(triangles)
+        and all(type(identifier) is str and identifier in topology_ids for identifier in face_ids),
+        "mesh faces are not bound to output topology",
+    )
+    if not solid:
+        _require(stats is None, "profile output cannot claim solid statistics")
+        return
+    _keys(stats, {"valid", "volume", "area", "solids", "faces"})
+    _require(
+        stats["valid"] is True
+        and type(stats["solids"]) is int
+        and stats["solids"] == 1
+        and type(stats["faces"]) is int
+        and stats["faces"] == len(topology),
+        "solid output requires valid single-solid statistics",
+    )
+    _number(stats["volume"], minimum=0, bound=1e100)
+    _number(stats["area"], minimum=0, bound=1e100)
+    _require(stats["volume"] > 0 and stats["area"] > 0, "solid has no positive volume/area")
+
+
+def validate_output(feature, source):
+    """Validate the result-v2 discriminant and its permitted evidence combination."""
+    _require(type(feature) is dict and type(source) is dict, "missing output source")
+    _require(
+        feature.get("id") == source.get("id") and feature.get("kind") == source.get("kind"),
+        "output feature differs from source",
+    )
+    _require(
+        {"output", "status", "mesh", "stats", "topology", "error"} <= set(feature),
+        "output is missing its evidence fields",
+    )
+    status, output, kind = feature["status"], feature["output"], feature["kind"]
+    _require(
+        type(status) is str and status in {"ok", "failed", "blocked"}, "invalid feature status"
+    )
+    _require(
+        type(kind) is str
+        and kind in {"sketch_constrained", "sketch_rectangle", "sketch_circle", "extrude", "cut"},
+        "unsupported output feature kind",
+    )
+    validate_sketch_report_v2(feature, source)
+    if status != "ok":
+        _require(
+            output is None
+            and feature["mesh"] is None
+            and feature["stats"] is None
+            and feature["topology"] == [],
+            "failed/blocked feature publishes usable output",
+        )
+        _keys(feature["error"], {"code", "message"})
+        _require(
+            all(type(value) is str and value for value in feature["error"].values()),
+            "failed/blocked output requires a readable error",
+        )
+        return
+    _require(feature["error"] is None, "successful output also contains an error")
+    if kind != "sketch_constrained":
+        solid = kind in ("extrude", "cut")
+        _keys(output, {"kind", "display"})
+        _require(
+            output == {"kind": "solid" if solid else "profile", "display": "mesh"},
+            "output discriminant contradicts source kind",
+        )
+        _mesh_evidence(feature, solid=solid)
+        return
+    _keys(output, {"kind", "display", "profile"})
+    _require(
+        output["kind"] == "sketch" and output["display"] == "solved_sketch",
+        "invalid constrained-sketch output discriminant",
+    )
+    _require(feature["sketch"]["status"] in _SUCCESS, "sketch output requires successful solve")
+    solved = feature["sketch"]["solved"]
+    profile = output["profile"]
+    _require(type(profile) is dict, "missing sketch profile availability")
+    if profile.get("state") == "unavailable":
+        _keys(profile, {"state", "reason"})
+        _keys(profile["reason"], {"code", "message"})
+        _require(
+            profile["reason"]["code"] == "open_profile"
+            and type(profile["reason"]["message"]) is str
+            and 0 < len(profile["reason"]["message"]) <= 100_000,
+            "unsupported unavailable-profile reason",
+        )
+        _require(
+            solved["schema_version"] == 2 and not solved["circles"],
+            "open output requires explicit v2 linework",
+        )
+        _line_connectivity(solved, closed=False)
+        _require(
+            feature["mesh"] is None and feature["stats"] is None and feature["topology"] == [],
+            "open sketch cannot publish a mesh, statistics or topology",
+        )
+        return
+    _keys(profile, {"state", "region_kind"})
+    _require(profile["state"] == "available", "unknown sketch profile state")
+    if profile["region_kind"] == "circle":
+        _require(
+            len(solved.get("circles", [])) == 1 and not solved["lines"],
+            "circle profile contradicts source curves",
+        )
+    else:
+        _require(
+            profile["region_kind"] == "line_loop" and not solved.get("circles", []),
+            "unsupported available profile region",
+        )
+        _line_connectivity(solved, closed=True)
+    _mesh_evidence(feature, solid=False)

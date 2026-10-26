@@ -1,0 +1,201 @@
+"""Prepare point-input phases and commands without mutating live authoring intent.
+
+The caller owns the final owner/base/revision check and replacement. This module
+returns a detached candidate, never publishes a scene, solves, or grants evidence.
+"""
+
+from dataclasses import dataclass
+
+from . import draft_dispatch
+from .general_authoring import GeneralSketchAuthoringState
+from .general_draft_store import SnapshotError
+from .general_sketch_commands import (
+    AddArc,
+    AddCircle,
+    AddLine,
+    PointRef,
+    PointSeed,
+    _point,
+    _require,
+)
+
+
+@dataclass(frozen=True)
+class PointInputBinding:
+    """Exact transient point choice for one Line/Arc phase, never a saved field.
+
+    A source kind/ID/role labels the actual selected curve, not an inferred curve
+    from a point's coordinates or role. The later owner picker must additionally
+    bind its runtime identity, saved-slot generation and inactive capture state.
+    """
+
+    phase: tuple[str, str]
+    point: PointRef | PointSeed
+    source_kind: str | None = None
+    source_id: str | None = None
+    role: str | None = None
+
+    def require_current(self, state):
+        _require(state.point_input_phase == self.phase, "The point input phase changed; retry.")
+        _require(type(self.point) in (PointRef, PointSeed), "Choose an explicit point input.")
+        if type(self.point) is PointRef:
+            state.existing_point(
+                self.point.id,
+                source_kind=self.source_kind,
+                source_id=self.source_id,
+                role=self.role,
+            )
+        else:
+            _require(
+                self.source_kind is None and self.source_id is None and self.role is None,
+                "A new point has no existing curve source or role.",
+            )
+            _point((self.point.u, self.point.v))
+
+
+@dataclass(frozen=True)
+class ProposedCommand:
+    """Detached candidate plus exact source text for the eventual owner CAS."""
+
+    source_snapshot: str
+    candidate_snapshot: str
+    entity_ids: tuple[str, ...]
+    point_input: PointInputBinding | None = None
+
+    def replacement(self, current):
+        """Validate source identity again; callers still check native owner context."""
+        _require(type(current) is GeneralSketchAuthoringState, "Expected general authoring intent.")
+        _require(
+            _dumps(current) == self.source_snapshot,
+            "Sketch intent changed after this proposal was prepared; retry the explicit action.",
+        )
+        if self.point_input is not None:
+            self.point_input.require_current(current)
+        return _restore(self.candidate_snapshot, current.document_json)
+
+
+def _dumps(state):
+    try:
+        return draft_dispatch.dumps(state)
+    except draft_dispatch.SnapshotError as exc:
+        # Preserve the proposal API's existing recoverable persistence-error
+        # family while routing every version through the explicit dispatcher.
+        raise SnapshotError(str(exc)) from exc
+
+
+def _restore(snapshot, document_json):
+    try:
+        return draft_dispatch.restore(snapshot, document_json)
+    except draft_dispatch.SnapshotError as exc:
+        raise SnapshotError(str(exc)) from exc
+
+
+def _anchor(value):
+    if value["kind"] == "existing":
+        return PointRef(value["point_id"])
+    return PointSeed(*value["position"])
+
+
+def _accept(candidate, endpoint):
+    proposal = candidate.resume_proposal()
+    if proposal["kind"] == "arc":
+        _require(proposal["phase"] == "end", "Choose the arc start before accepting its end.")
+        if endpoint is None:
+            _require(proposal["observation"] is not None, "Observe an arc end before accepting.")
+            endpoint = _anchor(proposal["observation"])
+        _require(type(endpoint) in (PointRef, PointSeed), "Choose an explicit arc endpoint.")
+        command = AddArc(
+            _anchor(proposal["center"]),
+            _anchor(proposal["start"]),
+            endpoint,
+            proposal["direction"],
+        )
+    elif proposal["kind"] == "line":
+        if endpoint is None:
+            _require(proposal["endpoint"] is not None, "Observe a line endpoint before accepting.")
+            endpoint = PointSeed(*proposal["endpoint"])
+        _require(type(endpoint) in (PointRef, PointSeed), "Choose an explicit line endpoint.")
+        command = AddLine(_anchor(proposal["anchor"]), endpoint)
+    else:
+        _require(endpoint is None, "A circle proposal has no line endpoint override.")
+        _require(proposal["radius"] is not None, "Observe a radius before accepting the circle.")
+        command = AddCircle(_anchor(proposal["anchor"]), proposal["radius"])
+    receipt = candidate.command_draft.execute(command)
+    candidate.cancel_proposal()
+    return tuple(receipt.entity_ids)
+
+
+def prepare_proposal(state, *, endpoint=None):
+    """Stage one line/circle/arc command and clear its unfinished observation.
+
+    An optional line/arc endpoint is an explicit PointRef or PointSeed chosen by
+    the click adapter. With no override, the retained observation preserves its
+    exact new-coordinate/existing-ID choice. No proximity inference, implicit
+    relation or chained next gesture is created. Circle radius comes from the
+    retained observation, not formatted UI.
+
+    Counter/identity/geometry/combined-byte failures leave the original command
+    journal, proposal, raw fields and solver evidence untouched. The result has no
+    current native evidence, even when the original draft was validated.
+    """
+    _require(type(state) is GeneralSketchAuthoringState, "Expected general authoring intent.")
+    # Validate persistence before attempting a command, and use the exact same
+    # roundtrip boundary as suspend/resume. This also detaches every mutable value.
+    before = _dumps(state)
+    candidate = _restore(before, state.document_json)
+    entity_ids = _accept(candidate, endpoint)
+    after = _dumps(candidate)
+    return ProposedCommand(before, after, entity_ids)
+
+
+def prepare_point_input(
+    state,
+    point,
+    *,
+    expected_phase=None,
+    source_kind=None,
+    source_id=None,
+    role=None,
+):
+    """Stage an exact Line/Arc point choice for an initial or later phase.
+
+    Initial anchors and an arc's start update only detached UI intent, without
+    allocating IDs. A terminal point stages AddLine/AddArc and clears the proposal
+    in the same candidate checkpoint. The source remains untouched on all errors.
+    Source labels are retained in the immutable transient binding and revalidated
+    at replacement; they never become new persisted geometry or annotation fields.
+
+    This pure adapter does not capture input, repick a cursor, snap coordinates,
+    checkpoint a scene or launch Check. The owner must perform its normal runtime,
+    saved-slot, backend and capture CAS before installing the returned replacement.
+    """
+    _require(type(state) is GeneralSketchAuthoringState, "Expected general authoring intent.")
+    before = _dumps(state)
+    candidate = _restore(before, state.document_json)
+    phase = candidate.point_input_phase
+    _require(
+        phase
+        in {
+            ("line", "start"),
+            ("line", "end"),
+            ("arc", "center"),
+            ("arc", "start"),
+            ("arc", "end"),
+        },
+        "Choose a Line or Arc point input phase first.",
+    )
+    _require(
+        expected_phase is None or expected_phase == phase, "The point input phase changed; retry."
+    )
+    binding = PointInputBinding(phase, point, source_kind, source_id, role)
+    binding.require_current(candidate)
+    entity_ids = ()
+    if phase == ("line", "start"):
+        candidate.begin_line(point)
+    elif phase == ("arc", "center"):
+        candidate.begin_arc(point)
+    elif phase == ("arc", "start"):
+        candidate.choose_arc_start(point)
+    else:
+        entity_ids = _accept(candidate, point)
+    return ProposedCommand(before, _dumps(candidate), entity_ids, binding)

@@ -196,6 +196,77 @@ def test_offline_acquisition_and_no_clobber(tmp_path, monkeypatch):
     assert (work / "acquisition-receipt.json").read_bytes() == before
 
 
+@pytest.mark.parametrize("platform", ["linux-x64", "windows-x64"])
+def test_receipt_reports_target_not_host_without_execution(tmp_path, monkeypatch, platform):
+    path, artifact, row = fixture(tmp_path)
+    data = make_lock(artifact, row)
+    data["platform"] = platform
+    lock = tmp_path / "lock.json"
+    lock.write_text(json.dumps(data))
+    monkeypatch.setattr(a, "download", lambda artifact, cache: path)
+    receipt = a.acquire(lock, tmp_path / "acquired")
+    assert receipt["platform"] == platform
+    assert receipt["native_execution"] is False
+    assert receipt["status"] == "ACQUIRED_RUNTIME_ONLY_NOT_RELEASE_ADMISSION"
+    assert receipt["materials_status"] == (
+        "UNCHANGED_43_COMPONENTS_42_RETAINED_ISSUES"
+        if platform == "linux-x64"
+        else "WINDOWS_COMPONENT_MAPPING_NOT_REVIEWED"
+    )
+
+
+@pytest.mark.parametrize(
+    "platform", ["win32", "windows-arm64", "linux-arm64", "", None, True, [], {}]
+)
+def test_unsupported_target_rejected_before_write(tmp_path, platform):
+    _path, artifact, row = fixture(tmp_path)
+    data = make_lock(artifact, row)
+    data["platform"] = platform
+    lock = tmp_path / "lock.json"
+    lock.write_text(json.dumps(data))
+    with pytest.raises(a.AcquisitionError, match="unsupported lock"):
+        a.acquire(lock, tmp_path / "new")
+    assert not (tmp_path / "new").exists()
+
+
+def test_python_host_is_exact_and_https_only():
+    a.validate_url("https://www.python.org/ftp/python/3.12.10/Python-3.12.10.tar.xz")
+    for url in (
+        "http://www.python.org/ftp/python/archive",
+        "https://www.python.org.evil.invalid/archive",
+        "https://www.python.org@evil.invalid/archive",
+    ):
+        with pytest.raises(a.AcquisitionError, match="unapproved URL"):
+            a.validate_url(url)
+
+
+def test_reviewed_windows_mapping_is_source_stdlib_and_not_native_qualification():
+    lock = a.read_json(P.parents[1] / "release_inputs/windows-x64/acquisition-lock.json")
+    inventory = a.validate_lock(lock)
+    assert lock["platform"] == "windows-x64"
+    assert len(inventory) == 1050
+    assert sum(row["size"] for row in inventory) == 203923835
+    assert lock["inventory_sha256"] == (
+        "b7273d2776622fe5e16070be542bb3bcb07ff003200fb173bbd1b9f10b2dfb10"
+    )
+    by_path = {row["destination"]: row for row in lock["files"]}
+    assert not any(name.endswith((".pyc", ".pickle", "._pth")) for name in by_path)
+    assert "python/python312.zip" not in by_path
+    assert "python/pythonw.exe" not in by_path
+    assert "python/python.exe" in by_path
+    assert "python/DLLs/_ctypes.pyd" in by_path
+    assert "python/DLLs/libffi-8.dll" in by_path
+    for name in ("os.py", "encodings/__init__.py", "json/__init__.py"):
+        row = by_path["python/Lib/" + name]
+        assert row["archive"] == "Python-3.12.10.tar.xz"
+        assert row["member"] == "Python-3.12.10/Lib/" + name
+    assert "packages/OCP/OCP.cp312-win_amd64.pyd" in by_path
+    assert "packages/slvs/solvespace.pyd" in by_path
+    assert "packages/slvs-3.2.dist-info/licenses/COPYING.txt" in by_path
+    assert "python/LICENSE.txt" in by_path
+    assert not any(a_["inert_case_alias_prefixes"] for a_ in lock["archives"])
+
+
 def test_bad_inventory_binding_no_write(tmp_path):
     _path, artifact, row = fixture(tmp_path)
     data = make_lock(artifact, row)

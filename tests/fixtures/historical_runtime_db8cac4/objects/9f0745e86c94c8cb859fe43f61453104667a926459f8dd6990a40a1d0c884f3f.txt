@@ -1,0 +1,684 @@
+"""A01-A07: closed public Windows admission, using real production owner seams.
+
+These are inert Linux-host controls, not Windows/CAD/Blender qualification. Only
+the host observations, RNA objects and explicitly forbidden side effects are
+injected. Currentness, publication, request and receipt validation stay real.
+Registration rejects Windows before any generated import, package/cache path or timer work.
+"""
+
+import ast
+import importlib
+import json
+import os
+import sys
+import types
+from dataclasses import replace
+from pathlib import Path
+
+import pytest
+from test_windows_runtime import (
+    PACKAGE,
+    ROOT,
+    Fixture,
+    contracts,
+    digest,
+    encode,
+    jobs,
+    launch,
+    selection,
+    w,
+)
+from test_windows_runtime import m as manifests
+
+ADDON = ROOT / "blender_addon/mechanical_cad_blender"
+runtime = importlib.import_module(PACKAGE + ".backend_runtime")
+bridge = importlib.import_module(PACKAGE + ".bridge")
+assembly_bridge = importlib.import_module(PACKAGE + ".assembly_bridge")
+guarded = importlib.import_module(PACKAGE + ".guarded_evidence")
+operations = importlib.import_module(PACKAGE + ".operation_contracts")
+drafts = importlib.import_module(PACKAGE + ".sketch_draft")
+
+
+def forbidden(events, name):
+    def fail(*args, **kwargs):
+        events.append(name)
+        raise AssertionError("Forbidden public Windows side effect: " + name)
+
+    return fail
+
+
+class UnreadableEnvironment:
+    def __init__(self, events):
+        self.fail = forbidden(events, "environment")
+
+    def keys(self):
+        return self.fail()
+
+    def __iter__(self):
+        return self.fail()
+
+    def __getitem__(self, key):
+        return self.fail()
+
+
+def closed_io(monkeypatch, *, platform="win32", os_name="nt"):
+    """Module-local host facades never mutate global sys/platform/pathlib/os."""
+    events = []
+    host = types.SimpleNamespace(platform=platform)
+    environment = UnreadableEnvironment(events)
+    host_os = types.SimpleNamespace(
+        name=os_name,
+        environ=environment,
+        path=types.SimpleNamespace(
+            abspath=forbidden(events, "abspath"),
+            normpath=forbidden(events, "normpath"),
+            isabs=forbidden(events, "isabs"),
+        ),
+        access=forbidden(events, "access"),
+    )
+    for module in (selection, bridge, jobs):
+        monkeypatch.setattr(module, "sys", host)
+        monkeypatch.setattr(module, "os", host_os)
+        monkeypatch.setattr(module, "Path", forbidden(events, module.__name__ + ".Path"))
+    monkeypatch.setattr(runtime, "sys", host)
+    monkeypatch.setattr(selection, "resolved_path", forbidden(events, "resolve"))
+    monkeypatch.setattr(selection, "lexical_path", forbidden(events, "lexical"))
+    monkeypatch.setattr(bridge, "resolve_configuration", forbidden(events, "configuration"))
+    monkeypatch.setattr(
+        bridge, "subprocess", types.SimpleNamespace(run=forbidden(events, "subprocess.run"))
+    )
+    monkeypatch.setattr(
+        jobs, "subprocess", types.SimpleNamespace(Popen=forbidden(events, "subprocess.Popen"))
+    )
+    monkeypatch.setattr(
+        jobs, "tempfile", types.SimpleNamespace(TemporaryFile=forbidden(events, "temporary file"))
+    )
+    monkeypatch.setattr(runtime, "BundlePreparationJob", forbidden(events, "preparation"))
+    monkeypatch.setattr(w, "WindowsRuntimeAPI", forbidden(events, "Win32 runtime"))
+    monkeypatch.setattr(w, "Win32API", forbidden(events, "Win32 process"))
+    return events, environment
+
+
+@pytest.fixture(autouse=True)
+def isolated_runtime(monkeypatch):
+    values = dict(
+        _LIFETIME="public-windows-negative",
+        _GENERATION=0,
+        _OBSERVED=None,
+        _INVALIDATE=None,
+        _BUNDLE_REQUIRED=False,
+        _BUNDLE_ENABLED=False,
+        _BUNDLE_JOB=None,
+        _BUNDLE_JOB_REQUEST=None,
+        _BUNDLE_REQUEST=None,
+        _BUNDLE_POLICY=None,
+        _BUNDLE_STATE="external",
+        _BUNDLE_MESSAGE="external",
+    )
+    for name, value in values.items():
+        monkeypatch.setattr(runtime, name, value)
+
+
+def linux_policy():
+    """An exact inert Linux policy, without creating or reading any runtime tree."""
+    fixture = Fixture()
+    bundle = manifests.bundle_identity("a" * 40, "b" * 64, "linux-x64")
+    root = "/inert/cache/" + bundle
+    release = json.loads(fixture.release)
+    release.update(
+        bundle_id=bundle,
+        platform="linux-x64",
+        manifest_path=f"_backend/{bundle}/bundle-manifest.json",
+        payload_path=f"_backend/{bundle}/payload.zip",
+    )
+    release = encode(release)
+    constants = dict(fixture.constants)
+    constants.update(
+        BUNDLE_ID=bundle,
+        PLATFORM="linux-x64",
+        PYTHON_PATH="python/bin/python3.12",
+        RELEASE_IDENTITY_BYTES=release,
+        RELEASE_IDENTITY_SHA256=digest(release),
+    )
+    descriptor = replace(
+        fixture.descriptor,
+        bundle_id=bundle,
+        platform="linux-x64",
+        root=root,
+        python_path=root + "/python/bin/python3.12",
+        bootstrap_path=root + "/bootstrap.py",
+    )
+    return launch.capture_bundled_policy(
+        descriptor,
+        package_root="/inert/package",
+        cache_root="/inert/cache",
+        release_data=release,
+        constants=constants,
+    )
+
+
+@pytest.mark.parametrize("explicit_environment", [False, True])
+@pytest.mark.parametrize("settings", [("", ""), (object(), object())])
+def test_a01_public_capture_rejects_windows_before_any_io(
+    monkeypatch, explicit_environment, settings
+):
+    events, environment = closed_io(monkeypatch)
+    arguments = {"environment": environment} if explicit_environment else {}
+    with pytest.raises(selection.SelectionError, match="Linux"):
+        selection.BackendSelection.capture(
+            *settings, generation=0, lifetime_id="public", **arguments
+        )
+    assert events == []
+
+
+def test_a01_direct_nonbundled_selection_rejects_before_path_or_environment(monkeypatch):
+    events, _ = closed_io(monkeypatch)
+    with pytest.raises(selection.SelectionError, match="Linux"):
+        selection.BackendSelection(
+            "C:\\root", "C:\\python.exe", "C:\\python.exe", 5, 0, "direct", ()
+        )
+    assert events == []
+
+
+@pytest.mark.parametrize(
+    "platform,os_name,policy_kind",
+    [
+        ("win32", "nt", "windows"),
+        ("win32", "nt", "linux"),
+        ("win32", "nt", "invalid"),
+        ("linux", "posix", "windows"),
+        ("linux", "nt", "linux"),
+    ],
+)
+def test_a02_public_bundle_capture_has_no_lower_fallback_or_io(
+    monkeypatch, platform, os_name, policy_kind
+):
+    policy = {"windows": Fixture().policy, "linux": linux_policy, "invalid": object}[policy_kind]()
+    events, _ = closed_io(monkeypatch, platform=platform, os_name=os_name)
+    monkeypatch.setattr(
+        selection.BackendSelection,
+        "_capture_windows_bundled_transport",
+        classmethod(forbidden(events, "qualification constructor")),
+    )
+    monkeypatch.setattr(
+        launch.BundledLaunchPolicy, "launch_environment", forbidden(events, "policy environment")
+    )
+    with pytest.raises(selection.SelectionError, match="Linux"):
+        selection.BackendSelection.capture_bundled(policy, generation=0, lifetime_id="public")
+    assert events == []
+
+
+def context():
+    preferences = types.SimpleNamespace(
+        project_root="C:\\never-read",
+        python_executable="C:\\never-run.exe",
+        timeout_seconds=10.0,
+        linear_deflection=0.1,
+        enable_windows=True,
+        windows_qualified=True,
+    )
+    document = dict(
+        schema_version=2,
+        id="part",
+        name="Inert Part",
+        units="mm",
+        parameters={},
+        features=[],
+        active_feature=None,
+    )
+    state = types.SimpleNamespace(
+        document_json=json.dumps(document),
+        owner_id="owner",
+        status="READY",
+        sketch_draft_json="preserved draft",
+        geometry_report_json="saved report",
+        geometry_document_json=json.dumps(document),
+        geometry_status="PASSED",
+    )
+    scene = types.SimpleNamespace(
+        mechanical_cad=state,
+        as_pointer=lambda: 173,
+        unit_settings=types.SimpleNamespace(scale_length=1.0),
+    )
+    return types.SimpleNamespace(
+        scene=scene,
+        preferences=types.SimpleNamespace(
+            addons={PACKAGE: types.SimpleNamespace(preferences=preferences)}
+        ),
+        window=object(),
+        workspace=object(),
+        view_layer=object(),
+    )
+
+
+@pytest.mark.parametrize(
+    "platform,profile", [("win32", "windows"), ("win32", "linux"), ("linux", "windows")]
+)
+def test_a03_setup_rejects_without_preparation_and_revokes_before_callback(
+    monkeypatch, platform, profile
+):
+    fixture = Fixture()
+    policy = fixture.policy() if profile == "windows" else linux_policy()
+    selected = fixture.selected()
+    events, _ = closed_io(
+        monkeypatch, platform=platform, os_name="nt" if platform == "win32" else "posix"
+    )
+    runtime._BUNDLE_POLICY, runtime._OBSERVED = policy, ("old evidence",)
+    notifications = []
+    runtime.configure_invalidation(
+        lambda reason: notifications.append(
+            (runtime._BUNDLE_POLICY, runtime._OBSERVED, runtime.stamp(), reason)
+        )
+    )
+    assert not runtime.begin_bundled_setup(
+        policy.package_root,
+        policy.cache_root,
+        {name: getattr(policy.constants, name) for name in launch.LAUNCH_CONSTANT_FIELDS},
+    )
+    assert runtime.bundle_status()[0] == "failed"
+    assert "Windows" in runtime.bundle_status()[1]
+    assert runtime._BUNDLE_REQUIRED and runtime._BUNDLE_POLICY is None
+    assert runtime._BUNDLE_REQUEST is None and runtime._BUNDLE_JOB is None
+    assert len(notifications) == 1 and notifications[0][:2] == (None, None)
+    assert notifications[0][2] == ("public-windows-negative", 1)
+    assert not runtime.is_current(selected, context())
+    assert events == []
+
+
+@pytest.mark.parametrize("platform,bundled", [("win32", False), ("win32", True), ("linux", True)])
+def test_a03_configuration_and_currency_cannot_use_lower_windows_selection(
+    monkeypatch, platform, bundled
+):
+    selected = Fixture().selected()
+    ctx = context()
+    events, _ = closed_io(
+        monkeypatch, platform=platform, os_name="nt" if platform == "win32" else "posix"
+    )
+    runtime._BUNDLE_REQUIRED = runtime._BUNDLE_ENABLED = bundled
+    runtime._BUNDLE_POLICY = selected.bundled_policy if bundled else None
+    runtime._OBSERVED = ("previous valid evidence",)
+    notices = []
+    runtime.configure_invalidation(notices.append)
+    for action in (
+        lambda: runtime.configuration(ctx),
+        lambda: runtime.capture(ctx),
+        lambda: runtime.assert_current(selected, ctx),
+    ):
+        with pytest.raises(bridge.BridgeError, match="Linux"):
+            action()
+    assert not runtime.is_current(selected, ctx)
+    assert runtime._OBSERVED is None and runtime._GENERATION == 1 and len(notices) == 1
+    assert events == []
+
+
+def extracted(filename, names, namespace, *, class_name=None):
+    """Compile untouched production function ASTs; never imitate their decisions."""
+    path = ADDON / filename
+    tree = ast.parse(path.read_bytes(), filename=str(path))
+    source = (
+        tree.body
+        if class_name is None
+        else next(
+            node.body
+            for node in tree.body
+            if isinstance(node, ast.ClassDef) and node.name == class_name
+        )
+    )
+    nodes = [node for node in source if isinstance(node, ast.FunctionDef) and node.name in names]
+    assert {node.name for node in nodes} == set(names)
+    result = dict(namespace)
+    exec(compile(ast.Module(body=nodes, type_ignores=[]), str(path), "exec"), result)
+    return result
+
+
+def test_a04_registration_rejects_windows_before_any_setup_io(monkeypatch):
+    side_effects, _ = closed_io(monkeypatch)
+    source = ADDON / "registration.py"
+    namespace = extracted(
+        "registration.py",
+        {"_start_bundle_setup", "_poll_bundle_setup"},
+        dict(
+            __package__="bl_ext.user_default.mechanical_cad",
+            __file__=str(source),
+            sys=types.SimpleNamespace(platform="win32"),
+            Path=forbidden(side_effects, "package path"),
+            backend_runtime=runtime,
+            LAUNCH_CONSTANT_FIELDS=launch.LAUNCH_CONSTANT_FIELDS,
+            importlib=types.SimpleNamespace(
+                import_module=forbidden(side_effects, "generated module import")
+            ),
+            bpy=types.SimpleNamespace(
+                utils=types.SimpleNamespace(
+                    extension_path_user=forbidden(side_effects, "extension cache")
+                ),
+                app=types.SimpleNamespace(
+                    timers=types.SimpleNamespace(
+                        is_registered=forbidden(side_effects, "timer query"),
+                        register=forbidden(side_effects, "timer registration"),
+                    )
+                ),
+            ),
+        ),
+    )
+    namespace["_start_bundle_setup"]()
+    assert runtime.bundle_status()[0] == "failed"
+    assert "pending native qualification" in runtime.bundle_status()[1]
+    assert runtime._BUNDLE_JOB is None and runtime._BUNDLE_POLICY is None
+    assert side_effects == []
+
+
+def fabricated_completion(prepared, selected, owner):
+    """Attack input: exact class and success bit, but no valid backend receipt."""
+    evidence = object.__new__(guarded.GuardedEvidence)
+    for name, value in dict(
+        _prepared=prepared,
+        _response_payload=b'{"protocol_version":1,"ok":true}',
+        _projection_payload=b"{}",
+        selection=selected,
+        _owner_token=owner,
+    ).items():
+        object.__setattr__(evidence, name, value)
+    object.__setattr__(evidence, "_publication", guarded.EvidencePublication(evidence))
+    return evidence
+
+
+def part_namespace():
+    return extracted(
+        "document_state.py",
+        {
+            "_result_version",
+            "_scene_key",
+            "_read_document",
+            "_runtime_record",
+            "part_is_current",
+            "geometry_report_is_current",
+            "current_part_evidence",
+            "current_part_result",
+            "_evidence_projection",
+            "_assert_binding",
+            "_capture_binding",
+            "_publish_candidate_locked",
+        },
+        dict(
+            bridge=bridge,
+            backend_runtime=runtime,
+            backend_contracts=contracts,
+            GuardedEvidence=guarded.GuardedEvidence,
+            operation_contracts=operations,
+            json=json,
+            _PART_ACTIONS={"replay", "check_geometry", "export_step", "export_stl"},
+            _RUNTIME={},
+            _GEOMETRY_RUNTIME={},
+            _REPLAY_RUNNING=True,
+        ),
+    )
+
+
+def test_a04_real_part_read_and_publication_reject_lower_selection_and_fabricated_completion(
+    monkeypatch,
+):
+    selected, ctx, owner = Fixture().selected(), context(), object()
+    namespace = part_namespace()
+    document = json.loads(ctx.scene.mechanical_cad.document_json)
+    prepared = contracts.prepare_request(
+        dict(
+            protocol_version=1,
+            action="replay",
+            result_version=2,
+            document=document,
+            options={"linear_deflection": 0.1},
+        )
+    )
+    evidence = fabricated_completion(prepared, selected, owner)
+    binding = dict(
+        scene=ctx.scene,
+        owner_id="owner",
+        document_json=json.dumps(document),
+        scale=1.0,
+        selection=selected,
+        owner_token=owner,
+        deflection=0.1,
+        prepared=prepared,
+        request_fingerprint=prepared.fingerprint,
+        result_version=2,
+        evidence=evidence,
+    )
+    namespace["_RUNTIME"][173] = binding
+    namespace["_GEOMETRY_RUNTIME"][173] = binding
+    events, _ = closed_io(monkeypatch)
+    namespace["_preflight_owned_display"] = forbidden(events, "Part display staging")
+    before = vars(ctx.scene.mechanical_cad).copy()
+    for name in ("part_is_current", "geometry_report_is_current"):
+        assert namespace[name](ctx) is False
+    for name in ("current_part_result", "current_part_evidence"):
+        assert namespace[name](ctx) is None
+    for action in (
+        lambda: namespace["_capture_binding"](ctx, selection=selected),
+        lambda: namespace["_evidence_projection"](ctx, document, evidence, binding, consume=True),
+        lambda: namespace["_publish_candidate_locked"](
+            ctx, document, evidence, binding, json.dumps(document)
+        ),
+    ):
+        with pytest.raises(bridge.BridgeError, match="Linux"):
+            action()
+    assert evidence.publication._state == "available"
+    assert vars(ctx.scene.mechanical_cad) == before and events == []
+
+
+def sketch_namespace(ctx):
+    methods = extracted(
+        "viewport_sketch.py",
+        {
+            "_assert_owner",
+            "evidence_is_current",
+            "current_solver_report",
+            "has_current_solution",
+            "initialize_preview",
+        },
+        dict(
+            backend_runtime=runtime,
+            bpy=types.SimpleNamespace(context=ctx),
+            DraftError=drafts.DraftError,
+            document_state=types.SimpleNamespace(**part_namespace()),
+        ),
+        class_name="RectangleSession",
+    )
+    names = {
+        "_assert_owner",
+        "evidence_is_current",
+        "current_solver_report",
+        "has_current_solution",
+        "initialize_preview",
+    }
+    cls = type("ExtractedRectangleSession", (), {name: methods[name] for name in names})
+    session = cls()
+    session.alive, session.scene, session.window, session.workspace = (
+        True,
+        ctx.scene,
+        ctx.window,
+        ctx.workspace,
+    )
+    session.stored_snapshot = ctx.scene.mechanical_cad.sketch_draft_json
+    session.valid_context = lambda: True  # UI-context leaf only.
+    session.draft = drafts.RectangleDraft(ctx.scene.mechanical_cad.document_json)
+    session.draft.phase = "DIMENSIONS"
+    session.draft.seed_bounds = (0, 0), 2, 3
+    session.draft.fixed_target = (0, 0)
+    session.draft.width_text, session.draft.height_text = "2", "3"
+    return session
+
+
+def test_a04_real_sketch_preview_and_acceptance_never_gain_windows_authority(monkeypatch):
+    ctx, selected, owner = context(), Fixture().selected(), object()
+    session = sketch_namespace(ctx)
+    candidate = session.draft.candidate()
+    prepared = contracts.prepare_request(
+        dict(
+            protocol_version=1,
+            action="replay",
+            result_version=2,
+            document=candidate,
+        )
+    )
+    evidence = fabricated_completion(prepared, selected, owner)
+    events, _ = closed_io(monkeypatch)
+    # An exact-class fabricated completion fails the unmodified receipt validator
+    # even when a lower transport selection is supplied directly to the draft.
+    with pytest.raises(contracts.BackendContractError):
+        session.draft.accept_guarded_replay(
+            candidate, evidence, selected, owner_token=owner, consume=True
+        )
+    assert session.draft._guarded_evidence is None and not session.draft.validated_json
+    session.draft._guarded_evidence = evidence
+    session.draft._guarded_owner = owner
+    session.draft._guarded_candidate = json.dumps(candidate, sort_keys=True, allow_nan=False)
+    session.draft.validated_json = json.dumps(candidate)
+    assert session.evidence_is_current is False
+    assert session.current_solver_report() is None and not session.has_current_solution
+    assert session.draft._guarded_evidence is None and not session.draft.validated_json
+    assert evidence.publication._state == "available" and events == []
+
+
+def assembly_namespace():
+    display = extracted(
+        "assembly_display.py",
+        {"_validated", "_plan", "trusted_display"},
+        dict(
+            bridge=bridge,
+            guarded_evidence=guarded,
+            operation_contracts=operations,
+            assembly_bridge=assembly_bridge,
+        ),
+    )
+    return extracted(
+        "assembly_state.py",
+        {
+            "_key",
+            "_state",
+            "_working_part",
+            "_backend_context",
+            "_configuration",
+            "_current_selection",
+            "_assert_current",
+            "_preflight_assembly",
+            "_projection",
+            "_publish_report",
+            "display_is_current",
+            "report_is_current",
+            "_binding",
+        },
+        dict(
+            bridge=bridge,
+            backend_runtime=runtime,
+            backend_contracts=contracts,
+            guarded_evidence=guarded,
+            assembly_bridge=assembly_bridge,
+            assembly_display=types.SimpleNamespace(**display),
+            operation_contracts=operations,
+            SimpleNamespace=types.SimpleNamespace,
+            _RUNTIME={},
+            _EPOCHS={},
+        ),
+    )
+
+
+def test_a04_real_assembly_read_and_publication_reject_lower_selection_and_fabrication(monkeypatch):
+    ctx, selected, owner = context(), Fixture().selected(), object()
+    namespace = assembly_namespace()
+    assembly = {"kind": "assembly", "assembly_schema_version": 1, "part_sources": []}
+    prepared = contracts.prepare_request(
+        assembly_bridge.build_request(assembly, "assembly_check", result_version=2)
+    )
+    evidence = fabricated_completion(prepared, selected, owner)
+    state = types.SimpleNamespace(
+        owner_id="assembly-owner",
+        document_json=json.dumps(assembly),
+        display_status="CURRENT",
+        verification_status="CURRENT",
+    )
+    ctx.scene.mechanical_cad_assembly = state
+    snapshot = dict(selection=selected, prepared=prepared, owner_token=owner)
+    namespace["_RUNTIME"][173] = dict(
+        owner_id=state.owner_id,
+        display_document_json=state.document_json,
+        display_evidence=evidence,
+        display_owner_token=owner,
+    )
+    transaction = dict(state=state, snapshot=snapshot, wrote_state=False)
+    events, _ = closed_io(monkeypatch)
+    namespace["_write_fields"] = forbidden(events, "Assembly publication")
+    before = vars(state).copy()
+    assert not namespace["display_is_current"](ctx)
+    assert not namespace["report_is_current"](ctx)
+    for action in (
+        lambda: namespace["_current_selection"](ctx, snapshot),
+        lambda: namespace["_configuration"](ctx),
+        lambda: namespace["_projection"](
+            ctx, snapshot, evidence, actions={"assembly_check"}, consume=True
+        ),
+        lambda: namespace["_publish_report"](ctx, transaction, evidence),
+    ):
+        with pytest.raises(bridge.BridgeError, match="Linux"):
+            action()
+    assert vars(state) == before and not transaction["wrote_state"]
+    assert evidence.publication._state == "available" and events == []
+
+
+@pytest.mark.parametrize("platform,os_name", [("win32", "nt"), ("win32", "posix"), ("linux", "nt")])
+@pytest.mark.parametrize("entry", ["raw", "replay", "geometry", "assembly", "job"])
+def test_a05_raw_public_entries_reject_before_configuration_environment_or_launch(
+    monkeypatch, platform, os_name, entry
+):
+    events, _ = closed_io(monkeypatch, platform=platform, os_name=os_name)
+    calls = dict(
+        raw=lambda: bridge._exchange_raw({}, project_root="", python_executable="", timeout=10),
+        replay=lambda: bridge.replay({}),
+        geometry=lambda: bridge.geometry_action({}, "check_geometry"),
+        assembly=lambda: assembly_bridge.assembly_action({}),
+        job=lambda: jobs.SidecarJob({}),
+    )
+    with pytest.raises(bridge.BridgeError, match="Windows.*not yet qualified"):
+        calls[entry]()
+    assert events == []
+
+
+def test_a06_qualification_constructor_has_exactly_one_definition_and_no_production_reference():
+    target = "_capture_windows_bundled_transport"
+    definitions, references = [], []
+    paths = sorted(
+        path for root in (ADDON, ROOT / "src", ROOT / "scripts") for path in root.rglob("*.py")
+    )
+    for path in paths:
+        tree = ast.parse(path.read_bytes(), filename=str(path))
+        for node in ast.walk(tree):
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name == target:
+                definitions.append(path.relative_to(ROOT).as_posix())
+            if (
+                (isinstance(node, ast.Attribute) and node.attr == target)
+                or (isinstance(node, ast.Name) and node.id == target)
+                or (isinstance(node, ast.alias) and node.name == target)
+                or (isinstance(node, ast.Constant) and node.value == target)
+            ):
+                references.append((path.relative_to(ROOT).as_posix(), node.lineno))
+    assert definitions == ["blender_addon/mechanical_cad_blender/backend_selection.py"]
+    assert references == []
+
+
+def test_a07_linux_public_selection_still_captures_the_exact_external_and_bundled_profiles():
+    selected = selection.BackendSelection.capture(
+        str(ROOT), sys.executable, generation=3, lifetime_id="linux-control", environment={}
+    )
+    assert selected.project_root == str(ROOT)
+    assert selected.python_executable == os.path.abspath(sys.executable)
+    assert selected.launch_environment() == {
+        "PYTHONPATH": str(ROOT / "src"),
+        "PYTHONNOUSERSITE": "1",
+        "PYTHONIOENCODING": "utf-8",
+    }
+    policy = linux_policy()
+    bundled = selection.BackendSelection.capture_bundled(
+        policy, generation=3, lifetime_id="linux-control"
+    )
+    assert bundled.bundled_policy is policy and bundled.project_root == policy.descriptor.root
+    assert bundled.launch_environment() == policy.launch_environment()
+    assert bundled.core_origin == str(Path(policy.descriptor.root) / "src/mechanical_cad")

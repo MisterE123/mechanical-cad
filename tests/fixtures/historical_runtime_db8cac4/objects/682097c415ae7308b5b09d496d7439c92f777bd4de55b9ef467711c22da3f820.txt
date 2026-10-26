@@ -1,0 +1,34 @@
+"""Pure supported-result policy shared by replay and snapshot-only consumers.
+
+Importing this module never imports the engine, solver, profile classifier or a
+native dependency. Existing engine imports retain the public re-export.
+"""
+
+from __future__ import annotations
+
+from .errors import CADException
+from .model import Document
+
+
+def validate_result_version(document: Document, result_version: int) -> None:
+    """Reject unsupported output semantics before solving or building geometry."""
+    if type(result_version) is not int or result_version not in (1, 2):
+        raise CADException(
+            "unsupported_result_version", "Only replay result versions 1 and 2 are supported."
+        )
+    from .sketch_model import sketch_capabilities
+
+    required = max(
+        (
+            sketch_capabilities(feature.sketch.schema_version).required_result_version
+            for feature in document.features
+            if feature.sketch is not None
+        ),
+        default=1,
+    )
+    if result_version < required:
+        raise CADException(
+            "unsupported_result_version",
+            f"This document uses sketch schema {required}. Upgrade the add-on/sidecar "
+            f"together and request result_version {required}.",
+        )

@@ -1,0 +1,382 @@
+"""Pure fake-RNA registration ownership; installed Blender remains a separate gate.
+
+The dual-slot fixture follows the independently authored registration probe.
+"""
+
+import ast
+import types
+from pathlib import Path
+
+import pytest
+
+ROOT = Path(__file__).resolve().parents[2]
+SOURCE = ROOT / "blender_addon/mechanical_cad_blender/registration.py"
+NAMES = {
+    "_owns_scene_pointer",
+    "_owns_scene_registration",
+    "_has_scene_registration",
+    "register",
+    "unregister",
+}
+tree = ast.parse(SOURCE.read_bytes())
+body = [node for node in tree.body if isinstance(node, ast.FunctionDef) and node.name in NAMES]
+code = compile(ast.Module(body=body, type_ignores=[]), str(SOURCE), "exec")
+
+
+def fixture():
+    events = []
+    props = {}
+
+    class SceneMeta(type):
+        def __setattr__(self, name, value):
+            super().__setattr__(name, value)
+            if name in {"mechanical_cad", "mechanical_cad_assembly"}:
+                props[name] = value
+
+        def __delattr__(self, name):
+            super().__delattr__(name)
+            props.pop(name, None)
+
+    class Scene(metaclass=SceneMeta):
+        bl_rna = types.SimpleNamespace(properties=props)
+
+    class State:
+        is_registered = False
+        bl_rna = object()
+
+    class AssemblyState:
+        is_registered = False
+        bl_rna = object()
+
+    def register_class(cls):
+        events.append("register_class")
+        cls.is_registered = True
+
+    def unregister_class(cls):
+        events.append("unregister_class")
+        cls.is_registered = False
+
+    def noop(*args, **kwargs):
+        pass
+
+    helpers = types.SimpleNamespace(register=noop, unregister=noop, set_draft_handlers=noop)
+    timers = types.SimpleNamespace(is_registered=lambda f: False, register=noop, unregister=noop)
+    bpy = types.SimpleNamespace(
+        types=types.SimpleNamespace(Scene=Scene),
+        utils=types.SimpleNamespace(
+            register_class=register_class, unregister_class=unregister_class
+        ),
+        app=types.SimpleNamespace(
+            version=(5, 2, 2), handlers=types.SimpleNamespace(load_post=[]), timers=timers
+        ),
+    )
+    n = {
+        "bpy": bpy,
+        "MIN_BLENDER_VERSION": (5, 2, 0),
+        "CLASSES": (State, AssemblyState),
+        "MCAD_State": State,
+        "assembly_properties": types.SimpleNamespace(MCAD_AssemblyState=AssemblyState),
+        "_SCENE_POINTERS": (("mechanical_cad", State), ("mechanical_cad_assembly", AssemblyState)),
+        "PointerProperty": lambda **kwargs: types.SimpleNamespace(fixed_type=kwargs["type"].bl_rna),
+        "backend_runtime": types.SimpleNamespace(
+            configure_invalidation=noop, new_lifetime=noop, revoke=noop
+        ),
+        "workspace_ui": helpers,
+        "workspace": helpers,
+        "assembly_state": types.SimpleNamespace(clear_runtime=noop),
+        "document_state": types.SimpleNamespace(_REPLAY_RUNNING=False),
+        "_stop_bundle_setup": noop,
+        "_start_bundle_setup": noop,
+        "_retire_native_jobs": noop,
+        "_HISTORY_HANDLERS": (),
+        "_on_blend_load": noop,
+        "_deferred_rebind": noop,
+        "_invalidate_backend_evidence": noop,
+        "viewport_sketch": types.SimpleNamespace(
+            cancel_active=noop,
+            active_session=noop,
+            suspend_active=noop,
+            suspended_draft=noop,
+            draft_recovery_notice=noop,
+        ),
+    }
+    exec(code, n)
+    return n, Scene, State, AssemblyState, events
+
+
+@pytest.mark.parametrize("name", ["mechanical_cad", "mechanical_cad_assembly"])
+def test_foreign_slot_rejected_before_register_or_rollback(name):
+    n, scene, _state, _assembly, events = fixture()
+    foreign = types.SimpleNamespace(fixed_type=object())
+    setattr(scene, name, foreign)
+    with pytest.raises(RuntimeError, match="Another Mechanical CAD version"):
+        n["register"](rebind=lambda: True)
+    n["unregister"]()
+    assert getattr(scene, name) is foreign and not events
+
+
+def test_normal_dual_registration_is_idempotent_and_cleans_only_owned_slots():
+    n, scene, _state, _assembly, events = fixture()
+    n["register"](rebind=lambda: True)
+    assert n["_owns_scene_registration"]()
+    count = len(events)
+    n["register"](rebind=lambda: True)
+    assert len(events) == count
+    n["unregister"]()
+    assert not hasattr(scene, "mechanical_cad") and not hasattr(scene, "mechanical_cad_assembly")
+
+
+@pytest.mark.parametrize("name", ["mechanical_cad", "mechanical_cad_assembly"])
+def test_rollback_preserves_a_slot_replaced_by_foreign_owner(name):
+    n, scene, _state, _assembly, _events = fixture()
+    foreign = types.SimpleNamespace(fixed_type=object())
+
+    def rebind():
+        setattr(scene, name, foreign)
+        raise RuntimeError("injected rebind failure")
+
+    with pytest.raises(RuntimeError, match="injected rebind failure"):
+        n["register"](rebind=rebind)
+    assert getattr(scene, name) is foreign
+    other = "mechanical_cad" if name.endswith("assembly") else "mechanical_cad_assembly"
+    assert not hasattr(scene, other)
+
+
+def test_first_class_failure_does_not_delete_preexisting_unrelated_rna():
+    n, scene, _state, _assembly, _events = fixture()
+    scene.unrelated = object()
+    retained = scene.unrelated
+
+    def fail(cls):
+        raise RuntimeError("injected class registration failure")
+
+    n["bpy"].utils.register_class = fail
+    with pytest.raises(RuntimeError, match="class registration failure"):
+        n["register"](rebind=lambda: True)
+    assert scene.unrelated is retained
+    assert not hasattr(scene, "mechanical_cad") and not hasattr(scene, "mechanical_cad_assembly")
+
+
+def setup_fixture(package="bl_ext.user_default.mechanical_cad"):
+    names = {"_poll_bundle_setup", "_stop_bundle_setup", "_start_bundle_setup"}
+    nodes = [node for node in tree.body if isinstance(node, ast.FunctionDef) and node.name in names]
+    events = []
+    callbacks = set()
+
+    def register(callback, **kwargs):
+        callbacks.add(callback)
+        events.append(("timer", kwargs))
+
+    def unregister(callback):
+        callbacks.remove(callback)
+        events.append(("timer_remove",))
+
+    timers = types.SimpleNamespace(
+        is_registered=lambda f: f in callbacks, register=register, unregister=unregister
+    )
+    module = types.SimpleNamespace(PLATFORM="linux-x64", RELEASE_IDENTITY_BYTES=b"release")
+
+    def load(name):
+        events.append(("import", name))
+        return module
+
+    def begin(*args):
+        events.append(("begin", args))
+        return True
+
+    def fail(message):
+        events.append(("failure", message))
+
+    def cache(package, **kwargs):
+        events.append(("cache", package, kwargs))
+        return "/private/cache"
+
+    runtime = types.SimpleNamespace(
+        begin_bundled_setup=begin,
+        fail_bundled_setup=fail,
+        poll_bundled_setup=lambda: True,
+        stop_bundled_setup=lambda: events.append(("stop",)),
+    )
+    n = {
+        "__package__": package,
+        "sys": types.SimpleNamespace(platform="linux"),
+        "__file__": str(SOURCE),
+        "Path": Path,
+        "importlib": types.SimpleNamespace(import_module=load),
+        "backend_runtime": runtime,
+        "LAUNCH_CONSTANT_FIELDS": ("PLATFORM", "RELEASE_IDENTITY_BYTES"),
+        "bpy": types.SimpleNamespace(
+            app=types.SimpleNamespace(timers=timers),
+            utils=types.SimpleNamespace(extension_path_user=cache),
+        ),
+    }
+    exec(compile(ast.Module(body=nodes, type_ignores=[]), str(SOURCE), "exec"), n)
+    return n, events, callbacks, module
+
+
+def test_true_extension_uses_package_relative_literals_and_persistent_timer():
+    n, events, callbacks, _module = setup_fixture()
+    n["_start_bundle_setup"]()
+    assert events[0] == ("import", n["__package__"] + ".standalone_launch_constants")
+    assert events[1] == ("cache", n["__package__"], dict(path="backend_runtime", create=True))
+    assert events[2] == (
+        "begin",
+        (
+            str(SOURCE.parent.resolve()),
+            "/private/cache",
+            dict(PLATFORM="linux-x64", RELEASE_IDENTITY_BYTES=b"release"),
+        ),
+    )
+    assert events[3] == ("timer", dict(first_interval=0.1, persistent=True))
+    assert n["_poll_bundle_setup"] in callbacks and n["_poll_bundle_setup"]() == 0.1
+    n["backend_runtime"].poll_bundled_setup = lambda: False
+    assert n["_poll_bundle_setup"]() is None
+
+
+def test_legacy_namespace_does_not_start_automatic_preparation():
+    n, events, _callbacks, _module = setup_fixture("mechanical_cad_blender")
+    n["_start_bundle_setup"]()
+    assert events == []
+
+
+def test_missing_generated_constant_closes_extension_without_worker_or_fallback():
+    n, events, callbacks, module = setup_fixture()
+    del module.RELEASE_IDENTITY_BYTES
+    n["_start_bundle_setup"]()
+    assert [event[0] for event in events] == ["import", "failure"]
+    assert "Bundled backend setup failed" in events[-1][1] and not callbacks
+
+
+def test_cancel_failure_does_not_leave_timer_or_escape_native_retirement(capsys):
+    n, events, callbacks, _module = setup_fixture()
+    n["_start_bundle_setup"]()
+
+    def fail():
+        raise RuntimeError("injected setup cleanup failure")
+
+    n["backend_runtime"].stop_bundled_setup = fail
+    n["_stop_bundle_setup"]()
+    assert not callbacks and events[-1] == ("timer_remove",)
+    assert "setup cleanup failure" in capsys.readouterr().out
+
+
+def test_preferences_draw_has_no_manual_paths_in_bundle_mode():
+    prop_tree = ast.parse((SOURCE.parent / "properties.py").read_bytes())
+    cls = next(
+        n for n in prop_tree.body if isinstance(n, ast.ClassDef) and n.name == "MCAD_Preferences"
+    )
+    draw = next(n for n in cls.body if isinstance(n, ast.FunctionDef) and n.name == "draw")
+    from textwrap import wrap
+
+    called = []
+    runtime = types.SimpleNamespace(
+        bundled_mode=lambda: True, bundle_status=lambda: ("ready", "Bundled backend ready.")
+    )
+    n = {
+        "backend_runtime": runtime,
+        "wrap": wrap,
+        "assembly_job_ui": types.SimpleNamespace(
+            draw_backend_failure=lambda layout, context: False
+        ),
+    }
+    exec(compile(ast.Module(body=[draw], type_ignores=[]), "<preferences-draw>", "exec"), n)
+    credit_labels = []
+    credits = types.SimpleNamespace(label=lambda **kwargs: credit_labels.append(kwargs["text"]))
+    layout = types.SimpleNamespace(
+        prop=lambda obj, key: called.append(key), label=lambda **kwargs: None, box=lambda: credits
+    )
+    n["draw"](types.SimpleNamespace(layout=layout), None)
+    assert called == ["timeout_seconds", "linear_deflection"]
+    assert (
+        "This software contains paintlib code. paintlib is copyright (c) 1996-2002 "
+        "Ulrich von Zadow and other contributors."
+    ) in " ".join(credit_labels)
+    assert "Licenses and source: MATERIALS.md, licenses/ and sources/ in the ZIP." in credit_labels
+    bundled_credits = credit_labels[:]
+    called.clear()
+    credit_labels.clear()
+    runtime.bundled_mode = lambda: False
+    n["draw"](types.SimpleNamespace(layout=layout), None)
+    assert called == ["project_root", "python_executable", "timeout_seconds", "linear_deflection"]
+    assert credit_labels == bundled_credits
+
+
+def test_actual_lease_quarantine_survives_register_disable_and_reenable(monkeypatch):
+    """Real lease/runtime modules and actual registration control flow; fake RNA only."""
+    import importlib
+    import sys
+    import threading
+
+    name = "mcad_quarantined_registration_tests"
+    package = sys.modules.setdefault(name, types.ModuleType(name))
+    package.__path__ = [str(SOURCE.parent)]
+    lease = importlib.import_module(name + ".execution_lease")
+    runtime = importlib.import_module(name + ".backend_runtime")
+    transport = importlib.import_module(name + ".guarded_transport")
+    for key in ("_TOKEN", "_BOUND_TOKEN", "_QUARANTINE"):
+        monkeypatch.setattr(lease, key, None)
+    monkeypatch.setattr(lease, "_SCOPE", threading.local())
+    monkeypatch.setattr(runtime, "_INVALIDATE", None)
+    owner = object()  # No real process/handle is leaked by this regression.
+    token = lease.try_acquire()
+    with lease.synchronous(token):
+        assert lease.bind_transport() == (token, False)
+        assert lease.quarantine(token, owner)
+    n, _scene, _state, _assembly, _events = fixture()
+    n["backend_runtime"] = runtime
+    n["_stop_bundle_setup"] = runtime.stop_bundled_setup
+    starts = []
+
+    def forbidden_job(*args, **kwargs):
+        starts.append(True)
+        raise AssertionError("A successor job must not be constructed.")
+
+    monkeypatch.setattr(transport, "GuardedJob", forbidden_job)
+    for transition in (
+        lambda: n["register"](rebind=lambda: True),
+        n["unregister"],
+        lambda: n["register"](rebind=lambda: True),
+        n["unregister"],
+    ):
+        transition()
+        assert lease._QUARANTINE == (token, owner)
+        assert lease.cleanup_message() == lease.QUARANTINE_MESSAGE
+        assert lease.is_busy() and lease.try_acquire() is None
+        assert not lease.release(token)
+        with pytest.raises(transport.GuardedOperationError, match="restart Blender"):
+            transport.execute(None, None, owner_token=object(), current_selection=lambda: None)
+    assert starts == []
+
+
+def test_windows_extension_guard_precedes_all_setup_io_and_timer_work():
+    n, events, callbacks, _module = setup_fixture()
+    n["sys"].platform = "win32"
+
+    def forbidden(*args, **kwargs):
+        pytest.fail("closed Windows registration touched setup paths or timers")
+
+    n["Path"] = forbidden
+    n["importlib"].import_module = forbidden
+    n["bpy"].utils.extension_path_user = forbidden
+    n["backend_runtime"].begin_bundled_setup = forbidden
+    n["bpy"].app.timers.is_registered = forbidden
+    n["bpy"].app.timers.register = forbidden
+    n["_start_bundle_setup"]()
+    assert len(events) == 1 and events[0][0] == "failure"
+    assert "pending native qualification" in events[0][1]
+    assert not callbacks
+
+
+def test_windows_non_extension_preserves_original_no_setup_return():
+    n, events, callbacks, _module = setup_fixture("mechanical_cad_blender")
+    n["sys"].platform = "win32"
+    n["_start_bundle_setup"]()
+    assert events == [] and not callbacks
+
+
+def test_other_non_windows_platform_keeps_original_setup_sequence():
+    n, events, callbacks, _module = setup_fixture()
+    n["sys"].platform = "darwin"
+    n["_start_bundle_setup"]()
+    assert [event[0] for event in events] == ["import", "cache", "begin", "timer"]
+    assert callbacks

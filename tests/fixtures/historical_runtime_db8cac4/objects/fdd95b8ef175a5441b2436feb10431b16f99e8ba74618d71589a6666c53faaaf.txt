@@ -1,0 +1,334 @@
+"""Frozen ce5b50b legacy bytes, independent of Git and native CAD at test time.
+
+The recipe runs old-only public authoring operations. Its checked-in expected
+strings were captured from the verified immutable ce5b50b archive, never from
+the implementation under test. No solve result, owner token or native process is
+created. Regeneration is deliberately a separate, baseline-verifying script.
+"""
+
+import hashlib
+import importlib
+import json
+import sys
+import types
+from pathlib import Path
+
+import pytest
+
+ROOT = Path(__file__).resolve().parents[2]
+FIXTURE = ROOT / "tests/fixtures/arc_authoring/legacy_codec_ce5b50b.json"
+BASELINE_COMMIT = "ce5b50bb011b3949a6599c7cbc28d31024805e0a"
+BASE = (
+    '{ "units":"mm", "schema_version":1, "id":"legacy_bytes",\n'
+    '  "name":"Pièce Ω 🛠", "parameters":{"width":20,"radius_base":4.0},\n'
+    '  "features":[], "active_feature":null } \n\t'
+)
+# Deliberately noncanonical whitespace, key/record order, numeric types, -0.0,
+# schema-1 optional field absence and a generated-looking imported point ID.
+SCHEMA1_BASE = """{
+   "name": "Imported pièce Ω", "id": "legacy_imported", "schema_version": 2,
+   "units": "mm", "parameters": {"width": 12, "radius_base": 4.0},
+   "active_feature": "old_sketch", "features": [{
+      "label": "Ébauche 🛠", "id": "old_sketch", "kind": "sketch_constrained",
+      "inputs": {}, "params": {}, "sketch": {
+         "id": "old_geometry", "schema_version": 1, "units": "mm",
+         "plane": {"id": "xy", "quaternion": [1,0.0,0,0], "origin": [-0.0,0,0.0]},
+         "points": [{"v": 0, "id": "z0", "u": -0.0},
+                    {"id": "p_d900", "u": 12, "v": 0.0},
+                    {"u": 12.0, "v": 8, "id": "a0"}],
+         "lines": [{"end": "a0", "id": "edge_second", "start": "p_d900"},
+                   {"id": "edge_first", "start": "z0", "end": "p_d900"}],
+         "constraints": [{"refs": ["edge_second"], "kind": "vertical", "id": "v_old"},
+                         {"id": "fix_old", "kind": "fixed", "refs": ["z0"], "target": [-0.0,0]},
+                         {"id": "h_old", "kind": "horizontal", "refs": ["edge_first"]},
+                         {"id": "distance_old", "kind": "distance", "refs": ["z0","p_d900"], "value": " width + 0 "}]
+      }
+   }]
+} \n\t"""
+
+
+def load_pure_modules(source_root):
+    """Synthetic package paths avoid executing the Blender add-on __init__."""
+    source_root = Path(source_root).resolve()
+    suffix = hashlib.sha256(str(source_root).encode()).hexdigest()[:16]
+    package_name = "mcad_legacy_bytes_" + suffix
+    if package_name not in sys.modules:
+        package = types.ModuleType(package_name)
+        package.__path__ = [str(source_root / "blender_addon/mechanical_cad_blender")]
+        sys.modules[package_name] = package
+    names = (
+        "general_sketch_draft",
+        "general_authoring",
+        "general_draft_store",
+        "general_authoring_store",
+        "sketch_draft",
+        "draft_store",
+    )
+    return types.SimpleNamespace(
+        **{name: importlib.import_module(package_name + "." + name) for name in names}
+    )
+
+
+def canonical(value):
+    return json.dumps(
+        value, sort_keys=True, separators=(",", ":"), ensure_ascii=False, allow_nan=False
+    )
+
+
+def collect_cases(source_root):
+    """Replay deterministic legacy-only operations against the selected source."""
+    modules = load_pure_modules(source_root)
+    d, a = modules.general_sketch_draft, modules.general_authoring
+    v1, v2 = modules.general_draft_store, modules.general_authoring_store
+    rect, rect_store = modules.sketch_draft, modules.draft_store
+    cases = {}
+
+    def general(name, value):
+        state = (
+            value
+            if type(value) is a.GeneralSketchAuthoringState
+            else a.GeneralSketchAuthoringState(value)
+        )
+        command = state.command_draft
+        checkpoint = command.checkpoint_payload()
+        cases[name] = {
+            "kind": "general",
+            "base_json": command.document_json,
+            "candidate_json": d._json(command.candidate()),
+            "checkpoint_json": d._json(checkpoint),
+            "journal_json": d._json(checkpoint["journal"]),
+            "envelope_v1": v1.dumps(command),
+            "ui_v1_json": d._json(state.ui_payload()),
+            "envelope_v2": v2.dumps(state),
+        }
+
+    def rectangle(name, value):
+        cases[name] = {
+            "kind": "rectangle",
+            "base_json": value.document_json,
+            "candidate_json": canonical(value.candidate()) if value.phase == "DIMENSIONS" else None,
+            "envelope_v1": rect_store.dumps(value),
+        }
+
+    value = d.GeneralSketchDraft(BASE)
+    general("general_empty", value)
+    p0 = value.execute(d.AddPoint(d.PointSeed(-0.0, 7))).entity_ids[0]
+    general("general_add_point_numeric_types", value)
+    p1, line0 = value.execute(d.AddLine(d.PointRef(p0), d.PointSeed(10.5, 7))).entity_ids
+    p2, line1 = value.execute(d.AddLine(d.PointRef(p1), d.PointSeed(10.5, 15.0))).entity_ids
+    general("general_lines_shared_ids", value)
+    value.execute(d.AddRelation("horizontal", (line0,)))
+    value.execute(d.AddRelation("vertical", (line1,)))
+    fixed = value.execute(d.AddRelation("fixed", (p0,), target=(-0.0, 7))).constraint_id
+    distance = value.execute(
+        d.AddRelation("distance", (p0, p1), value="width / 2 + 0.5")
+    ).constraint_id
+    general("general_hv_fixed_distance_formula", value)
+    value.execute(d.EditFixedTarget(fixed, (0, 7.125)))
+    general("general_fixed_target_edit", value)
+    (circle,) = value.execute(d.AddCircle(d.PointRef(p0), 4)).entity_ids
+    radius = value.execute(
+        d.AddRelation("radius", (circle,), value=" radius_base * 2 ")
+    ).constraint_id
+    general("general_shared_circle_radius_formula", value)
+    state = a.GeneralSketchAuthoringState(value)
+    value = state.command_draft
+    state.select((("constraint", radius), ("line", line1), ("point", p2), ("circle", circle)))
+    state.place_annotation(distance, (-0.0, 3))
+    state.place_annotation(radius, (2, -3.0))
+    state.move_annotation(radius, (2.125, -4))
+    general("general_selection_annotations", state)
+    state.begin_line(d.PointSeed(-0.0, -2), (3.0, 4))
+    state.update_line((3.125, 4.0))
+    state.select_tool("Dimension")
+    general("general_retained_new_line_proposal", state)
+    state.cancel_proposal()
+    state.begin_line(d.PointRef(p1))
+    state.update_line((10.5, 17))
+    general("general_retained_existing_line_proposal", state)
+    state.cancel_proposal()
+    state.begin_circle(d.PointRef(p0), 0)
+    general("general_retained_zero_radius_circle_proposal", state)
+    state.update_circle(9.125)
+    state.select_tool("Select")
+    general("general_retained_existing_circle_proposal", state)
+    value.begin_edit(radius)
+    value.update_edit(" \t radius × 2 + ( 🛠 Ω\n ")
+    general("general_invalid_pending_unicode", state)
+    value.cancel_edit()
+    state.cancel_proposal()
+    state.begin_circle(d.PointSeed(1, -0.0))
+    general("general_retained_new_circle_proposal", state)
+    state.cancel_proposal()
+    value.begin_edit(distance)
+    value.update_edit("  width / 2 + 0.125 \n")
+    general("general_pending_distance_formula", state)
+    value.cancel_edit()
+    value.undo()
+    general("general_undo_radius_retains_ui_and_redo", state)
+    value.redo()
+    general("general_redo_radius_same_ids", state)
+    value.undo()
+    value.undo()
+    general("general_undo_circle_retains_bindings", state)
+    value.execute(d.AddCircle(d.PointRef(p2), 3.0))
+    general("general_branch_keeps_tombstone_ids", state)
+    value.execute(d.RecoverRemoveRelation(value.preview_delete((("constraint", fixed),))))
+    general("general_authored_position_relation_recovery", state)
+
+    imported = d.GeneralSketchDraft(SCHEMA1_BASE, "old_sketch", True)
+    general("general_imported_schema1_exact_source", imported)
+    (imported_circle,) = imported.execute(d.AddCircle(d.PointRef("p_d900"), 4)).entity_ids
+    general("general_circle_upgrades_schema1_to2", imported)
+    imported.undo()
+    general("general_upgrade_undo_restores_schema1_field_absence", imported)
+    imported.redo()
+    general("general_upgrade_redo_restores_exact_schema2", imported)
+    imported.execute(d.AddRelation("radius", (imported_circle,), value=4))
+    before = v1.dumps(imported)
+    duplicate = imported.execute(d.AddRelation("radius", (imported_circle,), value=4.0))
+    assert not duplicate.changed and v1.dumps(imported) == before
+    general("general_duplicate_numeric_relation_preserves_int", imported)
+    imported.begin_edit(imported.sketch["constraints"][-1]["id"])
+    imported.update_edit(" \t\n")
+    general("general_empty_pending_numeric_source", imported)
+    imported.cancel_edit()
+    imported.undo()
+    imported.undo()
+    imported.execute(d.AddPoint(d.PointSeed(-0.0, 1.0)))
+    general("general_upgrade_undo_branch_stays_schema1", imported)
+
+    pruned = d.GeneralSketchDraft(BASE)
+    center, curve = pruned.execute(d.AddCircle(d.PointSeed(-0.0, 0), 5.0)).entity_ids
+    driver = pruned.execute(d.AddRelation("radius", (curve,), value=5)).constraint_id
+    pruned_ui = a.GeneralSketchAuthoringState(pruned)
+    pruned = pruned_ui.command_draft
+    pruned_ui.select((("circle", curve), ("constraint", driver)))
+    pruned_ui.place_annotation(driver, (1, -0.0))
+    pruned_ui.begin_line(d.PointRef(center), (7, 0.0))
+    pruned.execute(d.RecoverRemoveRelation(pruned.preview_delete((("constraint", driver),))))
+    general("general_recovered_radius_retains_annotation", pruned_ui)
+    pruned.execute(d.DeleteBatch(pruned.preview_delete((("point", center),))))
+    general("general_delete_cascade_retains_missing_ui", pruned_ui)
+    for index in range(34):
+        (point,) = pruned.execute(d.AddPoint(d.PointSeed(index, -0.0))).entity_ids
+        pruned.execute(d.DeleteBatch(pruned.preview_delete((("point", point),))))
+    assert pruned.checkpoint_payload()["journal"]["anchor_sequence"] > 0
+    assert len(pruned.checkpoint_payload()["journal"]["entries"]) == 64
+    general("general_pruned_journal_keeps_unverified_tombstones", pruned_ui)
+    pruned.undo()
+    general("general_pruned_journal_undo", pruned_ui)
+    pruned.execute(d.AddPoint(d.PointSeed(-2, 3.0)))
+    general("general_pruned_journal_branch_reserves_ids", pruned_ui)
+
+    value = rect.RectangleDraft(BASE)
+    rectangle("rectangle_empty_first_point", value)
+    value.first_point((-0.0, 7))
+    value.move((40.125, 37.0))
+    rectangle("rectangle_second_point_preview", value)
+    assert value.second_point((40.125, 37.0))
+    rectangle("rectangle_placed_dimensions", value)
+    value.pending_dimensions = {
+        "width": "  width × 2 + ( 🛠\n",
+        "height": " NaN Ω ",
+        "fix_corner": False,
+    }
+    rectangle("rectangle_pending_raw_dialog", value)
+    value.set_dimensions("  width * 2 + 0.125  ", "\t30.123456789123456\n", fix_corner=False)
+    rectangle("rectangle_free_formula_dimensions", value)
+    value.anchor = (8.125, -0.0)
+    value.set_dimensions("  nonsense + ( 🛠 ", "30mm", fix_corner=True)
+    rectangle("rectangle_refixed_invalid_raw_dimensions", value)
+
+    edit_source = rect.RectangleDraft(BASE)
+    edit_source.first_point((-0.0, 0))
+    assert edit_source.second_point((40, 30.0))
+    document = edit_source.candidate()
+    document["parameters"]["sketch_1_width"] = 40
+    document["parameters"]["sketch_1_height"] = 30.123456789123456
+    document["features"].append({"id": "pad", "kind": "extrude", "inputs": {"profile": "sketch_1"}})
+    document["active_feature"] = "pad"
+    edit_base = json.dumps(document, indent=3, ensure_ascii=False) + " \n\t"
+    edit = rect.RectangleDraft(edit_base, "sketch_1", True)
+    rectangle("rectangle_edit_original_numeric_types_and_output", edit)
+    edit.set_dimensions("  width + 0.125 ", edit.height_text, fix_corner=False)
+    rectangle("rectangle_edit_untouched_double_and_free_seeds", edit)
+    return cases
+
+
+@pytest.fixture(scope="module")
+def frozen():
+    payload = json.loads(FIXTURE.read_text(encoding="utf-8"))
+    assert payload["baseline_commit"] == BASELINE_COMMIT
+    assert payload["format_version"] == 1
+    for case_name, case in payload["cases"].items():
+        for key, expected_hash in payload["sha256"][case_name].items():
+            assert hashlib.sha256(case[key].encode("utf-8")).hexdigest() == expected_hash
+    return payload["cases"]
+
+
+@pytest.fixture(scope="module")
+def current():
+    return collect_cases(ROOT)
+
+
+def test_all_frozen_legacy_operation_sequences_are_exact_bytes(frozen, current):
+    assert current.keys() == frozen.keys()
+    for case_name, expected in frozen.items():
+        assert current[case_name].keys() == expected.keys(), case_name
+        for field, expected_bytes in expected.items():
+            assert current[case_name][field] == expected_bytes, (case_name, field)
+
+
+def test_frozen_old_codecs_roundtrip_without_migration_or_evidence(frozen):
+    modules = load_pure_modules(ROOT)
+    d, a = modules.general_sketch_draft, modules.general_authoring
+    v1, v2 = modules.general_draft_store, modules.general_authoring_store
+    for case_name, case in frozen.items():
+        if case["kind"] == "rectangle":
+            restored = modules.draft_store.restore(
+                case["envelope_v1"], case["base_json"], modules.sketch_draft.RectangleDraft
+            )
+            assert modules.draft_store.dumps(restored) == case["envelope_v1"], case_name
+            assert restored.document_json == case["base_json"], case_name
+            assert restored.solver_report is None and restored.validated_json == ""
+            if case["candidate_json"] is not None:
+                assert canonical(restored.candidate()) == case["candidate_json"], case_name
+            continue
+        restored = v1.restore(case["envelope_v1"], case["base_json"])
+        assert v1.dumps(restored) == case["envelope_v1"], case_name
+        assert d._json(restored.checkpoint_payload()) == case["checkpoint_json"], case_name
+        assert d._json(restored.candidate()) == case["candidate_json"], case_name
+        assert not restored.has_current_solution and not restored.has_verified_trial
+        restored_ui = v2.restore(case["envelope_v2"], case["base_json"])
+        assert v2.dumps(restored_ui) == case["envelope_v2"], case_name
+        assert d._json(restored_ui.ui_payload()) == case["ui_v1_json"], case_name
+        assert v1.dumps(restored_ui.command_draft) == case["envelope_v1"], case_name
+        assert restored_ui.document_json == case["base_json"], case_name
+        assert not restored_ui.command_draft.has_current_solution
+        assert not restored_ui.command_draft.has_verified_trial
+        cloned = a.GeneralSketchAuthoringState(
+            d.GeneralSketchDraft.from_checkpoint_payload(json.loads(case["checkpoint_json"])),
+            json.loads(case["ui_v1_json"]),
+        )
+        assert v2.dumps(cloned) == case["envelope_v2"], case_name
+
+
+def test_frozen_bases_remain_exact_including_trailing_whitespace(frozen):
+    modules = load_pure_modules(ROOT)
+    for case_name, case in frozen.items():
+        assert case["base_json"].endswith(" \n\t"), case_name
+        if case["kind"] == "general":
+            for store, key in (
+                (modules.general_draft_store, "envelope_v1"),
+                (modules.general_authoring_store, "envelope_v2"),
+            ):
+                with pytest.raises(store.SnapshotError):
+                    store.restore(case[key], case["base_json"].rstrip())
+        else:
+            with pytest.raises(modules.draft_store.SnapshotError):
+                modules.draft_store.restore(
+                    case["envelope_v1"],
+                    case["base_json"].rstrip(),
+                    modules.sketch_draft.RectangleDraft,
+                )

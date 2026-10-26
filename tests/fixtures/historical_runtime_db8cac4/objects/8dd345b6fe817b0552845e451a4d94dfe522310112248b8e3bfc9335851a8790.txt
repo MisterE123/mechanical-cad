@@ -1,0 +1,935 @@
+"""Authoritative document edits, parameter callbacks and replay transactions.
+
+The isolated sidecar validates every candidate before commit. UI and operators
+call this layer; it depends on display caches but never on RNA class definitions."""
+
+import json
+import math
+import uuid
+from contextlib import contextmanager
+
+import bpy
+
+from . import (
+    backend_contracts,
+    backend_runtime,
+    bridge,
+    execution_lease,
+    guarded_transport,
+    operation_contracts,
+    workspace,
+)
+from .common import _state
+from .display import (
+    _CandidateDisplay,
+    _clear_last_good,
+    _display_feature,
+    _focus_display,
+    _hide_owned,
+    _mesh_payload,
+    _owned_objects,
+    _preflight_owned_display,
+    _remove_owned,
+    _set_failure,
+)
+from .guarded_evidence import GuardedEvidence
+
+_UI_LOCK = 0
+
+
+_REPLAY_RUNNING = False
+_RUNTIME = {}
+_GEOMETRY_RUNTIME = {}
+_PART_ACTIONS = frozenset({"replay", "check_geometry", "export_step", "export_stl"})
+
+
+def demo_document():
+    """A millimetre-scale plate with a real through-hole, not a display boolean."""
+    return {
+        "schema_version": 1,
+        "id": f"document_{uuid.uuid4().hex}",
+        "name": "Drilled plate",
+        "units": "mm",
+        "parameters": {"width": 40.0, "depth": 30.0, "height": 10.0, "hole_radius": 4.0},
+        "features": [
+            {
+                "id": "profile",
+                "kind": "sketch_rectangle",
+                "label": "Plate profile",
+                "params": {"width": "width", "height": "depth", "x": 0, "y": 0, "z": 0},
+                "inputs": {},
+            },
+            {
+                "id": "pad",
+                "kind": "extrude",
+                "label": "Plate",
+                "params": {"length": "height"},
+                "inputs": {"profile": "profile"},
+            },
+            {
+                "id": "hole_profile",
+                "kind": "sketch_circle",
+                "label": "Hole profile",
+                "params": {"radius": "hole_radius", "x": "width/2", "y": "depth/2", "z": 0},
+                "inputs": {},
+            },
+            {
+                "id": "hole_tool",
+                "kind": "extrude",
+                "label": "Hole tool",
+                "params": {"length": "height"},
+                "inputs": {"profile": "hole_profile"},
+            },
+            {
+                "id": "body",
+                "kind": "cut",
+                "label": "Drilled plate",
+                "params": {},
+                "inputs": {"base": "pad", "tool": "hole_tool"},
+            },
+        ],
+        "active_feature": "body",
+    }
+
+
+def _read_document(state):
+    if not state.document_json:
+        raise bridge.BridgeError("Create a demo or load a .mcad.json document first.")
+    try:
+        document = bridge.parse_document_json(state.document_json)
+    except ValueError as exc:
+        raise bridge.BridgeError(f"Stored CAD document is not valid JSON: {exc}") from exc
+    if not isinstance(document, dict):
+        raise bridge.BridgeError("CAD document must be a JSON object.")
+    return document
+
+
+def require_no_sketch_draft(context):
+    """Canonical edits cannot silently strand an active or suspended draft."""
+    if workspace.active_draft(context):
+        raise bridge.BridgeError(
+            "Finish or cancel the active sketch draft before editing the part."
+        )
+    if workspace.has_draft(context) or getattr(_state(context), "sketch_draft_json", ""):
+        raise bridge.BridgeError(
+            "Resume and finish the saved sketch draft, or explicitly discard it before editing the part."
+        )
+
+
+def _restore_parameter_during_draft(parameter, context, scene):
+    """RNA callbacks may still run via Python while disabled controls are hidden."""
+    global _UI_LOCK
+    state = scene.mechanical_cad
+    if not (workspace.has_draft(context) or getattr(state, "sketch_draft_json", "")):
+        return False
+    original = _read_document(state)["parameters"][parameter.key]
+    _UI_LOCK += 1
+    try:
+        parameter.is_expression = isinstance(original, str)
+        if parameter.is_expression:
+            parameter.expression = original
+        else:
+            parameter.value = original
+    finally:
+        _UI_LOCK -= 1
+    state.last_action_error = "Finish or discard the saved sketch draft before changing parameters."
+    return True
+
+
+def _parameter_changed(self, context):
+    if _UI_LOCK or context is None or context.scene is None:
+        return
+    scene = self.id_data if isinstance(self.id_data, bpy.types.Scene) else context.scene
+    state = scene.mechanical_cad
+    try:
+        if _restore_parameter_during_draft(self, context, scene):
+            return
+        document = _read_document(state)
+        document["parameters"][self.key] = self.expression if self.is_expression else self.value
+        state.document_json = json.dumps(document, allow_nan=False)
+        invalidate_geometry_report(state)
+        state.status = "DIRTY"
+        state.error = "Parameters changed. Regenerate to update the CAD model."
+        for row in state.features:
+            row.status = "pending"
+            row.error = ""
+            if row.sketch_report_json:
+                row.sketch_report_status = "OUTDATED"
+        _hide_owned(scene)
+    except (bridge.BridgeError, ValueError) as exc:
+        _set_failure(scene, str(exc))
+
+
+def _parameter_mode_changed(self, context):
+    """Switch numeric/formula presentation without inventing blank or zero data."""
+    global _UI_LOCK
+    if _UI_LOCK or context is None:
+        return
+    scene = self.id_data if isinstance(self.id_data, bpy.types.Scene) else context.scene
+    state = scene.mechanical_cad
+    if _restore_parameter_during_draft(self, context, scene):
+        return
+    document = _read_document(state)
+    original = document["parameters"][self.key]
+    if not self.is_expression and isinstance(original, str):
+        current_result = current_part_result(context)
+        resolved = None if current_result is None else current_result["parameters"].get(self.key)
+        if (
+            isinstance(resolved, bool)
+            or not isinstance(resolved, (int, float))
+            or not math.isfinite(resolved)
+        ):
+            _UI_LOCK += 1
+            try:
+                self.is_expression = True
+            finally:
+                _UI_LOCK -= 1
+            state.last_action_error = (
+                "Regenerate this formula successfully before converting it to a number."
+            )
+            return
+        exact_value = resolved
+    else:
+        exact_value = original
+    _UI_LOCK += 1
+    try:
+        if self.is_expression:
+            self.expression = str(original)
+        else:
+            self.value = exact_value
+    finally:
+        _UI_LOCK -= 1
+    _parameter_changed(self, context)
+    if not self.is_expression:
+        # The displayed RNA float is single precision; preserve the exact
+        # sidecar-resolved numeric value when switching presentation modes.
+        document = _read_document(state)
+        document["parameters"][self.key] = exact_value
+        state.document_json = json.dumps(document, allow_nan=False)
+
+
+def _populate_document(scene, document, path=""):
+    global _UI_LOCK
+    state = scene.mechanical_cad
+    _RUNTIME.pop(_scene_key(scene), None)
+    _GEOMETRY_RUNTIME.pop(_scene_key(scene), None)
+    _UI_LOCK += 1
+    try:
+        if not state.owner_id:
+            state.owner_id = uuid.uuid4().hex
+        state.document_json = json.dumps(document, allow_nan=False)
+        invalidate_geometry_report(state)
+        state.document_path = path
+        state.document_name = str(document.get("name", "Untitled CAD document"))
+        state.parameters.clear()
+        for name, value in document.get("parameters", {}).items():
+            row = state.parameters.add()
+            row.key = str(name)
+            row.is_expression = isinstance(value, str)
+            if row.is_expression:
+                row.expression = value
+            else:
+                row.value = float(value)
+        state.sketch_notice = ""
+        state.features.clear()
+        for feature in document.get("features", []):
+            row = state.features.add()
+            row.feature_id = feature["id"]
+            row.label = feature.get("label") or feature["id"]
+            row.kind = feature["kind"]
+            row.status = "pending"
+        state.feature_index = next(
+            (
+                i
+                for i, row in enumerate(state.features)
+                if row.feature_id == document.get("active_feature")
+            ),
+            0,
+        )
+        state.active_feature = str(document.get("active_feature", ""))
+        state.status = "DIRTY"
+        state.error = "Regenerate to build this document."
+        state.volume = 0.0
+    finally:
+        _UI_LOCK -= 1
+
+
+def _preferences(context):
+    addon = context.preferences.addons.get(__package__)
+    return addon.preferences if addon else None
+
+
+def _result_version(document, requested=None, *, action="replay"):
+    """Select the exact typed contract from the complete candidate and action."""
+    try:
+        selected = operation_contracts.result_version_for(document, action=action)
+        if requested is not None and (type(requested) is not int or requested != selected):
+            raise ValueError("Requested Part result version differs from the complete candidate.")
+        return selected
+    except (ValueError, TypeError, KeyError, OverflowError, RecursionError) as exc:
+        raise bridge.BridgeError(str(exc)) from exc
+
+
+def _scene_key(scene):
+    return scene.as_pointer()
+
+
+def invalidate_backend(reason, scene=None):
+    """Revoke runtime authority without changing canonical, draft or layout bytes."""
+    scenes = [scene] if scene is not None else list(bpy.data.scenes)
+    if scene is None:
+        _RUNTIME.clear()
+        _GEOMETRY_RUNTIME.clear()
+    for target in scenes:
+        try:
+            _RUNTIME.pop(_scene_key(target), None)
+            _GEOMETRY_RUNTIME.pop(_scene_key(target), None)
+            state = target.mechanical_cad
+            if state.document_json:
+                state.status = "DIRTY"
+                state.error = reason
+                state.volume = 0.0
+            for parameter in state.parameters:
+                parameter.resolved_text = ""
+                parameter.resolved_expression = ""
+            for row in state.features:
+                row.status = "unverified"
+                if row.sketch_report_json:
+                    row.sketch_report_status = "OUTDATED"
+            if state.geometry_report_json:
+                state.geometry_status = "OUTDATED"
+                state.geometry_message = reason
+            _hide_owned(target)
+        except (AttributeError, ReferenceError, RuntimeError):
+            # Restricted-data/load teardown may have already removed RNA.
+            continue
+
+
+def _runtime_record(context, records):
+    try:
+        scene = context.scene
+        record = records.get(_scene_key(scene))
+        if record is None:
+            return None
+        state = scene.mechanical_cad
+        if (
+            record["scene"] != scene
+            or record["owner_id"] != state.owner_id
+            or record["document_json"] != state.document_json
+            or record["scale"] != float(scene.unit_settings.scale_length)
+        ):
+            return None
+        response = _evidence_projection(
+            context,
+            _read_document(state),
+            record["evidence"],
+            record,
+            require_success=records is _GEOMETRY_RUNTIME,
+        )
+        # Geometry or file I/O may fail after a fully valid Part replay.
+        result = response["result"]
+        if result["status"] != "ok" or any(
+            feature["status"] != "ok" for feature in result["features"]
+        ):
+            return None
+        return record
+    except (
+        bridge.BridgeError,
+        ValueError,
+        ReferenceError,
+        AttributeError,
+        RuntimeError,
+        TypeError,
+        KeyError,
+    ):
+        return None
+
+
+def part_is_current(context):
+    """Saved READY/CURRENT labels alone never establish live Part authority."""
+    record = _runtime_record(context, _RUNTIME)
+    return record is not None and context.scene.mechanical_cad.status == "READY"
+
+
+def geometry_report_is_current(context):
+    record = _runtime_record(context, _GEOMETRY_RUNTIME)
+    if record is None:
+        return False
+    state = context.scene.mechanical_cad
+    return bool(
+        record is not None
+        and record["evidence"].action in {"check_geometry", "export_step", "export_stl"}
+        and record["report_json"] == state.geometry_report_json
+        and state.geometry_document_json == state.document_json
+        and state.geometry_status == "PASSED"
+    )
+
+
+def current_part_result(context):
+    """Read a validated live projection; saved rows and floats are only caches."""
+    if not part_is_current(context):
+        return None
+    record = _runtime_record(context, _RUNTIME)
+    if record is None:
+        return None
+    try:
+        return _evidence_projection(
+            context, _read_document(context.scene.mechanical_cad), record["evidence"], record
+        )["result"]
+    except (bridge.BridgeError, ValueError, RuntimeError, AttributeError, ReferenceError, KeyError):
+        return None
+
+
+def current_part_evidence(context):
+    """Read the live exact-document association, never reconstruct saved receipts."""
+    if not part_is_current(context):
+        return None
+    record = _runtime_record(context, _RUNTIME)
+    return None if record is None else (record["evidence"], record["owner_token"])
+
+
+def _remember_evidence(context, evidence, binding, *, geometry=False):
+    state = context.scene.mechanical_cad
+    record = {
+        "scene": context.scene,
+        "owner_id": state.owner_id,
+        "document_json": state.document_json,
+        "scale": float(context.scene.unit_settings.scale_length),
+        "evidence": evidence,
+        "owner_token": binding["owner_token"],
+        "selection": binding["selection"],
+        "deflection": binding["deflection"],
+        "prepared": binding["prepared"],
+        "request_fingerprint": binding["request_fingerprint"],
+        "result_version": binding["result_version"],
+    }
+    # Retain the independently captured operation, not an expectation copied
+    # from the evidence handed to a writer or from saved RNA status fields.
+    _evidence_projection(context, _read_document(state), evidence, record)
+    if geometry:
+        record["report_json"] = state.geometry_report_json
+    (_GEOMETRY_RUNTIME if geometry else _RUNTIME)[_scene_key(context.scene)] = record
+
+
+def _evidence_projection(
+    context, document, evidence, binding, *, consume=False, require_success=False
+):
+    """One explicit version/G boundary shared by publishers and current readers."""
+    if type(evidence) is not GuardedEvidence:
+        raise bridge.BridgeError("Part publication requires immutable guarded evidence.")
+    prepared = binding.get("prepared")
+    if type(prepared) is not backend_contracts.PreparedRequest:
+        raise bridge.BridgeError("Part evidence requires its independently prepared operation.")
+    verified = backend_contracts.prepare_guarded_request(prepared.guarded_request())
+    if (
+        verified != prepared
+        or prepared.fingerprint != binding.get("request_fingerprint")
+        or backend_contracts.request_fingerprint(evidence.guarded_request()) != prepared.fingerprint
+    ):
+        raise bridge.BridgeError("Guarded evidence belongs to a different fresh Part operation.")
+    if prepared.action not in _PART_ACTIONS:
+        raise bridge.BridgeError("Guarded evidence is not a Part operation.")
+    version = _result_version(document, binding.get("result_version"), action=prepared.action)
+    if type(binding.get("result_version")) is not int or binding["result_version"] != version:
+        raise bridge.BridgeError("Part evidence is missing its captured result version.")
+    current = backend_runtime.assert_current(binding["selection"], context)
+    operation = prepared.operation_request()
+    if (
+        operation.get("result_version") != version
+        or json.dumps(operation.get("document"), sort_keys=True, allow_nan=False)
+        != json.dumps(document, sort_keys=True, allow_nan=False)
+        or operation.get("options", {}).get("linear_deflection") != binding["deflection"]
+    ):
+        raise bridge.BridgeError("Guarded evidence differs from the exact Part candidate.")
+    method = evidence.publication.consume if consume else evidence.revalidate
+    try:
+        return method(
+            current,
+            owner_token=binding["owner_token"],
+            expected_action=prepared.action,
+            expected_result_version=version,
+            require_success=require_success,
+        )
+    except ValueError as exc:
+        raise bridge.BridgeError(f"Part replay evidence was rejected: {exc}") from exc
+
+
+def _run_sidecar(context, document, *, binding=None, result_version=None):
+    binding = _capture_binding(context) if binding is None else binding
+    prepared = backend_contracts.prepare_request(
+        {
+            "protocol_version": 1,
+            "action": "replay",
+            "result_version": _result_version(document, result_version),
+            "document": document,
+            "options": {"linear_deflection": binding["deflection"]},
+        }
+    )
+    binding["prepared"] = prepared
+    binding["request_fingerprint"] = prepared.fingerprint
+    binding["result_version"] = prepared.operation_request()["result_version"]
+    evidence = guarded_transport.execute(
+        prepared,
+        binding["selection"],
+        owner_token=binding["owner_token"],
+        current_selection=lambda: backend_runtime.capture(context),
+    )
+    _evidence_projection(context, document, evidence, binding)
+    return evidence
+
+
+def _apply_result(context, document, evidence, binding, validate_publication=None):
+    """The only Part write sink; consume once, then revalidate after all writes."""
+    _assert_binding(context, binding)
+    response = _evidence_projection(context, document, evidence, binding, consume=True)
+    result = response["result"]
+    _RUNTIME.pop(_scene_key(context.scene), None)
+
+    def write_result():
+        state = _state(context)
+        invalidate_geometry_report(state)
+        for parameter in state.parameters:
+            resolved = result.get("parameters", {}).get(parameter.key)
+            if isinstance(resolved, (int, float)) and math.isfinite(resolved):
+                parameter.resolved_text = repr(resolved)
+                source = document.get("parameters", {}).get(parameter.key)
+                parameter.resolved_expression = source if isinstance(source, str) else ""
+        by_id = {
+            feature.get("id"): feature
+            for feature in result["features"]
+            if isinstance(feature, dict)
+        }
+        for row in state.features:
+            feature = by_id.get(row.feature_id)
+            row.status = str(feature.get("status", "unverified")) if feature else "unverified"
+            sketch_report = feature.get("sketch") if feature else None
+            if isinstance(sketch_report, dict):
+                row.sketch_report_json = json.dumps(sketch_report, allow_nan=False)
+                row.sketch_document_json = state.document_json
+                row.sketch_report_status = "CURRENT"
+            else:
+                row.sketch_report_json = ""
+                row.sketch_document_json = ""
+                row.sketch_report_status = "UNVERIFIED"
+            error = feature.get("error") if feature else None
+            row.error = (
+                str(error.get("message", error.get("code", "Unknown feature error")))
+                if isinstance(error, dict)
+                else ""
+            )
+        active_id = document.get("active_feature")
+        state.active_feature = str(active_id or "")
+        active = by_id.get(active_id)
+        if active_id is None and result.get("status") == "ok":
+            _remove_owned(context.scene)
+            _clear_last_good(context.scene)
+            state.status = "READY"
+            state.error = ""
+            state.volume = 0.0
+            return True
+        failed = [
+            feature for feature in by_id.values() if feature.get("status") in {"failed", "blocked"}
+        ]
+        if (
+            result.get("status") in {"failed", "blocked"}
+            or failed
+            or not active
+            or active.get("status") != "ok"
+        ):
+            first = next(
+                (feature for feature in failed if feature.get("status") == "failed"), active or {}
+            )
+            error = first.get("error") or {}
+            message = f"{first.get('id', 'Replay')}: {error.get('message', 'Feature regeneration failed.')}"
+            _set_failure(context.scene, message)
+            return False
+        _display_feature(context, document, active, result_version=binding["result_version"])
+        stats = active.get("stats") or {}
+        state.volume = float(stats.get("volume", 0.0))
+        state.status = "READY"
+        state.error = ""
+        output = active.get("output") or {}
+        profile = output.get("profile") or {}
+        if profile.get("state") == "unavailable":
+            state.sketch_notice = (
+                "Open sketch: solving succeeded. Profile unavailable ("
+                + profile["reason"]["code"]
+                + "). "
+                + profile["reason"]["message"]
+                + " This editable wire has no solid or volume; geometry checks and export require a solid."
+            )
+        elif state.sketch_notice.startswith("Open sketch: solving succeeded."):
+            state.sketch_notice = ""
+        state.last_action_error = next(
+            (
+                obj.get("mechanical_cad_precision_warning", "")
+                for obj in _owned_objects(context.scene)
+            ),
+            "",
+        )
+        return True
+
+    try:
+        success = write_result()
+        _assert_binding(context, binding)
+        if success and validate_publication is not None:
+            validate_publication()
+            _assert_binding(context, binding)
+        _evidence_projection(context, document, evidence, binding)
+        if success:
+            _remember_evidence(context, evidence, binding)
+        return success
+    except Exception:
+        invalidate_backend("Part publication is unverified; regenerate again.", binding["scene"])
+        raise
+
+
+@contextmanager
+def replay_guard(context):
+    """Serialize all canonical replay/check/export work in this Blender process."""
+    global _REPLAY_RUNNING
+    if _REPLAY_RUNNING:
+        raise bridge.BridgeError("A CAD operation is already in progress.")
+    if context.mode != "OBJECT":
+        raise bridge.BridgeError("Return to Object Mode before running a CAD operation.")
+    token = execution_lease.try_acquire()
+    if token is None:
+        raise bridge.BridgeError(execution_lease.BUSY_MESSAGE)
+    _REPLAY_RUNNING = True
+    try:
+        with execution_lease.synchronous(token):
+            yield
+    finally:
+        _REPLAY_RUNNING = False
+        execution_lease.release(token)
+
+
+def invalidate_geometry_report(state, *, force=False):
+    """Retain historical details while clearly invalidating a changed draft."""
+    if state.geometry_report_json and (
+        force or state.geometry_document_json != state.document_json
+    ):
+        state.geometry_status = "OUTDATED"
+        state.geometry_message = "The document or session changed. Run Check Geometry again."
+
+
+def _capture_binding(context, *, selection=None, owner_token=None):
+    scene = context.scene
+    current, deflection = backend_runtime.configuration(context)
+    if selection is None:
+        selection = current
+    else:
+        selection.assert_current(current)
+    return {
+        "scene": scene,
+        "selection": selection,
+        "deflection": deflection,
+        "owner_token": object() if owner_token is None else owner_token,
+        "window": getattr(context, "window", None),
+        "view_layer": context.view_layer,
+        "workspace": getattr(context, "workspace", None),
+        "document_json": scene.mechanical_cad.document_json,
+        "owner_id": scene.mechanical_cad.owner_id,
+        "scale": float(scene.unit_settings.scale_length),
+    }
+
+
+def _assert_binding(context, binding, *, document_json=None, owner_id=None):
+    backend_runtime.assert_current(binding["selection"], context)
+    if (
+        context.scene != binding["scene"]
+        or getattr(context, "window", None) != binding["window"]
+        or context.view_layer != binding["view_layer"]
+        or getattr(context, "workspace", None) != binding["workspace"]
+    ):
+        raise bridge.BridgeError(
+            "The active scene or window changed during validation; the late result was rejected."
+        )
+    state = binding["scene"].mechanical_cad
+    expected = binding["document_json"] if document_json is None else document_json
+    expected_owner = binding["owner_id"] if owner_id is None else owner_id
+    if (
+        state.document_json != expected
+        or state.owner_id != expected_owner
+        or float(binding["scene"].unit_settings.scale_length) != binding["scale"]
+    ):
+        raise bridge.BridgeError(
+            "The document or scene units changed during validation; the late result was rejected."
+        )
+
+
+def _snapshot_fields(state):
+    result = {}
+    for prop in state.bl_rna.properties:
+        if prop.identifier == "rna_type":
+            continue
+        value = getattr(state, prop.identifier)
+        if prop.type == "COLLECTION":
+            value = [_snapshot_fields(row) for row in value]
+        elif getattr(prop, "is_array", False):
+            value = tuple(value)
+        result[prop.identifier] = value
+    return result
+
+
+def _restore_fields(state, snapshot):
+    global _UI_LOCK
+    _UI_LOCK += 1
+    try:
+        for name, value in snapshot.items():
+            if state.bl_rna.properties[name].type == "COLLECTION":
+                collection = getattr(state, name)
+                collection.clear()
+                for row in value:
+                    _restore_fields(collection.add(), row)
+            else:
+                setattr(state, name, value)
+    finally:
+        _UI_LOCK -= 1
+
+
+def regenerate(context, *, result_version=None):
+    """Public helper used by operators and the real Blender integration test."""
+    with replay_guard(context):
+        return _regenerate_locked(context, result_version=result_version)
+
+
+def _regenerate_locked(context, *, result_version=None):
+    """Preserve direct replay semantics after the caller acquires execution."""
+    if not _REPLAY_RUNNING:
+        raise bridge.BridgeError("Regeneration requires the active replay transaction.")
+    state = _state(context)
+    scene = context.scene
+    _RUNTIME.pop(_scene_key(scene), None)
+    _GEOMETRY_RUNTIME.pop(_scene_key(scene), None)
+    try:
+        binding = _capture_binding(context)
+        document = _read_document(state)
+        state.status = "BUILDING"
+        _hide_owned(binding["scene"])
+        arguments = {} if result_version is None else {"result_version": result_version}
+        result = _run_sidecar(context, document, binding=binding, **arguments)
+        _assert_binding(context, binding)
+        return _apply_result(context, document, result, binding)
+    except Exception as exc:
+        _set_failure(scene, str(exc))
+        return False
+
+
+def _commit_candidate(context, document, path="", *, result_version=None):
+    """Validate and commit under the shared sidecar operation lock."""
+    require_no_sketch_draft(context)
+    with replay_guard(context):
+        return _commit_candidate_locked(context, document, path, result_version=result_version)
+
+
+def _commit_candidate_locked(
+    context,
+    document,
+    path="",
+    *,
+    validate_result=None,
+    result_version=None,
+    validate_publication=None,
+):
+    """Replay once, optionally validate that fresh result, then commit atomically.
+
+    The private callback can enforce an editor's supported geometry before any
+    canonical mutation. It cannot provide a cached result. Exact base/candidate
+    snapshots reject changes during replay or validation.
+    """
+    if not _REPLAY_RUNNING:
+        raise bridge.BridgeError("A candidate commit requires the active replay transaction.")
+    _preflight_owned_display(context.scene)
+    binding = _capture_binding(context)
+    candidate_json = json.dumps(document, allow_nan=False)
+    arguments = {} if result_version is None else {"result_version": result_version}
+    result = _run_sidecar(context, document, binding=binding, **arguments)
+    try:
+        if validate_result is not None:
+            validate_result(result, binding)
+        _assert_binding(context, binding)
+        if json.dumps(document, allow_nan=False) != candidate_json:
+            raise bridge.BridgeError(
+                "The document changed during validation; the candidate was not committed."
+            )
+        return _publish_candidate_locked(
+            context,
+            document,
+            result,
+            binding,
+            candidate_json,
+            path,
+            validate_publication=validate_publication,
+        )
+    finally:
+        # A failed candidate or callback cannot recycle an available replay
+        # claim. Successfully published evidence remains consumed and readable.
+        result.publication.cancel()
+
+
+def _publish_candidate_locked(
+    context,
+    document,
+    evidence,
+    binding,
+    candidate_json,
+    path="",
+    *,
+    validate_publication=None,
+    verify_publication=None,
+):
+    """Publish a validated exact candidate under the existing main-thread guard.
+
+    Synchronous replay and completed async intent share this sole mutation and
+    exact-datablock rollback seam. This function launches no native execution.
+    """
+    if not _REPLAY_RUNNING:
+        raise bridge.BridgeError("Candidate publication requires the active replay transaction.")
+    _assert_binding(context, binding)
+    _preflight_owned_display(binding["scene"])
+    if json.dumps(document, allow_nan=False) != candidate_json:
+        raise bridge.BridgeError("The exact candidate changed before publication.")
+    response = _evidence_projection(context, document, evidence, binding)
+    result = response["result"]
+    state = _state(context)
+    failed = [feature for feature in result["features"] if feature.get("status") != "ok"]
+    if not response["ok"] or result.get("status") != "ok" or failed:
+        first = next(
+            (feature for feature in failed if feature.get("status") == "failed"),
+            failed[0] if failed else {},
+        )
+        raise bridge.BridgeError(
+            f"{first.get('id', 'document')}: {(first.get('error') or {}).get('message', 'replay failed')}"
+        )
+    active = next(
+        (
+            feature
+            for feature in result["features"]
+            if feature.get("id") == document.get("active_feature")
+        ),
+        None,
+    )
+    if active:
+        source = next(item for item in document["features"] if item["id"] == active["id"])
+        _mesh_payload(active, source=source, result_version=binding["result_version"])
+    _assert_binding(context, binding)
+    previous_state = _snapshot_fields(state)
+    runtime_key = _scene_key(binding["scene"])
+    previous_runtime = _RUNTIME.get(runtime_key)
+    previous_geometry = _GEOMETRY_RUNTIME.get(runtime_key)
+    publication = _CandidateDisplay(context)
+    try:
+        publication.detach()
+        _populate_document(binding["scene"], document, path)
+        published_owner = binding["owner_id"] or state.owner_id
+        _assert_binding(context, binding, document_json=candidate_json, owner_id=published_owner)
+        state.last_action_error = ""
+        published_binding = {
+            **binding,
+            "document_json": candidate_json,
+            "owner_id": published_owner,
+        }
+        success = _apply_result(
+            context,
+            document,
+            evidence,
+            published_binding,
+            validate_publication,
+        )
+        _assert_binding(context, published_binding)
+        if verify_publication is not None:
+            verify_publication()
+            _assert_binding(context, published_binding)
+        _evidence_projection(context, document, evidence, binding)
+        if not success:
+            raise bridge.BridgeError("Candidate display did not publish a current replay.")
+    except Exception as primary:
+        # Recover independent resources even if Blender cleanup itself fails.
+        # Never restore READY metadata over an incompletely restored display.
+        failures = []
+        for label, recover in (
+            ("Display rollback", publication.rollback),
+            ("Canonical restoration", lambda: _restore_fields(state, previous_state)),
+        ):
+            try:
+                recover()
+            except Exception as exc:
+                failures.append(label + ": " + str(exc))
+        _RUNTIME.pop(runtime_key, None)
+        _GEOMETRY_RUNTIME.pop(runtime_key, None)
+        if not failures and backend_runtime.is_current(binding["selection"], context):
+            if previous_runtime is not None:
+                _RUNTIME[runtime_key] = previous_runtime
+            if previous_geometry is not None:
+                _GEOMETRY_RUNTIME[runtime_key] = previous_geometry
+        if failures or not part_is_current(context):
+            invalidate_backend(
+                "Restored Part evidence is stale; regenerate again.", binding["scene"]
+            )
+        if failures:
+            message = str(primary) + " Recovery is incomplete. " + " ".join(failures)
+            state.status = "FAILED"
+            state.error = state.last_action_error = message
+            state.volume = 0.0
+            if state.geometry_report_json:
+                state.geometry_status = "OUTDATED"
+            for row in state.features:
+                row.status = "unverified"
+                if row.sketch_report_json:
+                    row.sketch_report_status = "OUTDATED"
+            try:
+                publication.hide_rejected()
+                _hide_owned(binding["scene"])
+            except Exception as exc:
+                state.error += " Display hiding failed: " + str(exc)
+            raise bridge.BridgeError(state.error) from primary
+        raise
+    publication.finalize()
+    if success:
+        try:
+            _focus_display(context)
+        except RuntimeError:
+            # Viewport context problems must never turn a committed valid
+            # model into a misleading 'candidate rejected' operation.
+            state.last_action_error = (
+                "CAD built successfully. Use Focus Result in a 3D Viewport to inspect it."
+            )
+    return success
+
+
+def _next_feature_id(context, kind):
+    used = {row.feature_id for row in _state(context).features}
+    prefix = kind.removeprefix("sketch_")
+    index = 1
+    while f"{prefix}_{index}" in used:
+        index += 1
+    return f"{prefix}_{index}"
+
+
+def _append_feature(context, feature):
+    state = _state(context)
+    document = _read_document(state)
+    # Every newly entered dimension gets a visible, independently editable
+    # project parameter. No hand-edited JSON is needed to revise a fresh model.
+    for name, value in list(feature["params"].items()):
+        key = f"{feature['id']}_{name}"
+        if key in document["parameters"]:
+            raise bridge.BridgeError(
+                f"Parameter {key} already exists; choose a different feature name."
+            )
+        document["parameters"][key] = value
+        feature["params"][name] = key
+    document["features"].append(feature)
+    document["active_feature"] = feature["id"]
+    return _commit_candidate(context, document, state.document_path)
+
+
+def _new_feature(context, kind, params, inputs, label):
+    return {
+        "id": _next_feature_id(context, kind),
+        "kind": kind,
+        "label": label,
+        "params": params,
+        "inputs": inputs,
+    }

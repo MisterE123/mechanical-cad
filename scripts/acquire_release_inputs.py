@@ -1,4 +1,4 @@
-"""Data-only, checksum-locked Linux runtime acquisition. Not release admission."""
+"""Data-only, checksum-locked runtime acquisition. Not release admission."""
 
 from __future__ import annotations
 
@@ -21,6 +21,7 @@ MAX_EXPANDED = 1_000_000_000
 MAX_MEMBER = 200_000_000
 MAX_ENTRIES = 20000
 HOSTS = {
+    "www.python.org",
     "files.pythonhosted.org",
     "github.com",
     "release-assets.githubusercontent.com",
@@ -132,7 +133,8 @@ def validate_lock(lock):
     require(
         type(lock["schema"]) is int
         and lock["schema"] == 1
-        and lock["platform"] == "linux-x64",
+        and type(lock["platform"]) is str
+        and lock["platform"] in {"linux-x64", "windows-x64"},
         "unsupported lock",
     )
     require(
@@ -449,7 +451,7 @@ def acquire(lock_path, work_root, download_cache=None):
     receipt = {
         "schema": 1,
         "status": "ACQUIRED_RUNTIME_ONLY_NOT_RELEASE_ADMISSION",
-        "platform": "linux-x64",
+        "platform": lock["platform"],
         "acquisition_lock_sha256": lock_digest,
         "runtime_inventory_sha256": digest,
         "runtime_file_count": len(inventory),
@@ -458,7 +460,11 @@ def acquire(lock_path, work_root, download_cache=None):
             {"filename": a["filename"], "sha256": a["sha256"], "size": a["size"]}
             for a in lock["archives"]
         ],
-        "materials_status": "UNCHANGED_43_COMPONENTS_42_RETAINED_ISSUES",
+        "materials_status": (
+            "UNCHANGED_43_COMPONENTS_42_RETAINED_ISSUES"
+            if lock["platform"] == "linux-x64"
+            else "WINDOWS_COMPONENT_MAPPING_NOT_REVIEWED"
+        ),
         "native_execution": False,
     }
     with (work / "runtime-inventory.json").open("xb") as stream:

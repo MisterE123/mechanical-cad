@@ -1,0 +1,510 @@
+"""Real SidecarJob/adapter/process-owner composition with only narrow fake OS leaves."""
+
+import pytest
+from test_windows_runtime import install, jobs, prepared, run_job, w
+
+
+def test_exact_composed_success_reads_both_streams_then_closes_every_owner(monkeypatch):
+    env = install(monkeypatch)
+    job = run_job(env)
+    assert job.state == "ready", (job.state, job._error, env.events)
+    assert job.result() == {"protocol_version": 1, "ok": True}
+    assert job.done and env.pin.releases == 1 and not env.pin.held
+    assert (
+        env.events.index("acquire_pin")
+        < env.events.index("verify_tree")
+        < env.events.index("create")
+    )
+    assert env.events.index("stream_info") < env.events.index("create")
+    assert env.events.index("read_file1") < env.events.index("close_file1")
+    assert env.events.index("read_file2") < env.events.index("close_file2")
+    assert env.events.index("rmdir") < env.events.index("pin_release")
+    assert len(env.process.files) == 4 and len(env.process.close_calls) == len(
+        set(env.process.close_calls)
+    )
+    assert env.process.contents["file0"] == job._payload
+    assert env.process.contents["file3"] == env.fixture.policy().descriptor_bytes()
+
+
+def test_exact_composed_invalid_response_still_cleans_without_success(monkeypatch):
+    env = install(monkeypatch)
+    env.process.response = b"invalid json"
+    job = run_job(env)
+    assert job.state == "failed"
+    assert env.pin.releases == 1 and not env.pin.held
+    assert "invalid JSON" in str(job._error)
+
+
+@pytest.mark.parametrize("phase", ["verify", "inputs", "anchor", "create", "wait", "read"])
+def test_original_deadline_is_checked_after_every_late_return(monkeypatch, phase):
+    env = install(monkeypatch)
+    if phase in {"verify", "inputs"}:
+        name = "_verify_cached_tree" if phase == "verify" else "_read_launch_inputs"
+        original = getattr(w, name)
+
+        def delayed(*args, **kwargs):
+            value = original(*args, **kwargs)
+            env.clock.now += 11
+            return value
+
+        monkeypatch.setattr(w, name, delayed)
+    elif phase == "anchor":
+        env.runtime.hook = lambda event: (
+            setattr(env.clock, "now", env.clock.now + 11) if event == "anchor_info" else None
+        )
+    else:
+        event_name = {"create": "create", "wait": "wait", "read": "read_file1"}[phase]
+        env.process.hook = lambda event: (
+            setattr(env.clock, "now", env.clock.now + 11) if event == event_name else None
+        )
+    job = run_job(env)
+    assert job.state in {"failed", "cleanup_uncertain"}
+    assert job._response is None and not job._cancel_requested.is_set()
+    if job.done:
+        assert "timed out" in str(job._error)
+        assert env.pin.releases == 1
+
+
+@pytest.mark.parametrize(
+    "phase", ["verify", "inputs", "anchor", "create", "observe", "resume", "wait"]
+)
+def test_cancel_at_each_acquisition_and_execution_barrier(monkeypatch, phase):
+    env = install(monkeypatch)
+    job = jobs.SidecarJob.from_selection(prepared(), env.fixture.selected())
+    if phase in {"verify", "inputs"}:
+        name = "_verify_cached_tree" if phase == "verify" else "_read_launch_inputs"
+        original = getattr(w, name)
+
+        def cancel(*args, **kwargs):
+            value = original(*args, **kwargs)
+            job.cancel()
+            return value
+
+        monkeypatch.setattr(w, name, cancel)
+    elif phase == "anchor":
+        env.runtime.hook = lambda event: job.cancel() if event == "anchor_info" else None
+    else:
+        env.process.hook = lambda event: job.cancel() if event == phase else None
+    job.start()
+    assert job.wait(5)
+    assert job.state == "cancelled" and job._response is None
+    assert env.pin.releases == 1
+    if phase in {"verify", "inputs", "anchor"}:
+        assert "create" not in env.events
+
+
+def test_unstarted_cancel_never_acquires_and_ready_cancel_wins_once(monkeypatch):
+    env = install(monkeypatch)
+    job = jobs.SidecarJob.from_selection(prepared(), env.fixture.selected())
+    job.cancel()
+    job.start()
+    assert job.wait(0) and not env.events
+    with pytest.raises(jobs.bridge.BridgeError, match="cancelled"):
+        job.result()
+    with pytest.raises(jobs.bridge.BridgeError, match="consumed"):
+        job.result()
+    job = run_job(env)
+    assert job.state == "ready" and job.cancel()
+    with pytest.raises(jobs.bridge.BridgeError, match="cancelled"):
+        job.result()
+
+
+def test_root_json_with_descendants_is_never_success(monkeypatch):
+    env = install(monkeypatch)
+    env.process.complete_on_resume = False
+    env.process.kill_completes = False
+
+    def descendants(event):
+        if event == "wait":
+            env.process.root_signaled, env.process.active = True, 1
+
+    env.process.hook = descendants
+    job = run_job(env)
+    assert job.state == "cleanup_uncertain" and not job.done
+    assert "kill_job" in env.events and "read_file1" not in env.events
+    assert env.pin.held and env.pin.releases == 0
+    assert env.clock.now >= 105
+
+
+def test_descendants_are_terminated_and_confirmed_before_clean_failure(monkeypatch):
+    env = install(monkeypatch)
+    env.process.complete_on_resume = False
+    once = []
+
+    def descendants(event):
+        if event == "wait" and not once:
+            once.append(True)
+            env.process.root_signaled, env.process.active = True, 1
+
+    env.process.hook = descendants
+    job = run_job(env)
+    assert job.state == "failed" and env.pin.releases == 1
+    assert "kill_job" in env.events and "read_file1" not in env.events
+
+
+@pytest.mark.parametrize(
+    "target",
+    ["file0", "file1", "file2", "file3", "100", "200", "201", "10", "11", "12", "13", "attributes"],
+)
+def test_each_ambiguous_process_resource_close_retains_anchors_pin_and_owner(monkeypatch, target):
+    env = install(monkeypatch)
+    env.process.fault = "close_" + target
+    job = run_job(env)
+    assert job.state == "cleanup_uncertain" and not job.done and not job.wait(0)
+    assert env.pin.held and env.pin.releases == 0
+    assert env.runtime.closed == [] and "rmdir" not in env.events
+    assert len(env.process.close_calls) == len(set(env.process.close_calls))
+    before = list(env.events)
+    assert not job.cancel()
+    with pytest.raises(jobs.bridge.BridgeError):
+        job.result()
+    with pytest.raises(jobs.bridge.BridgeError):
+        job.start()
+    assert env.events == before
+
+
+@pytest.mark.parametrize("target", ["close_anchor", "rmdir"])
+def test_ambiguous_validation_retirement_is_not_retried(monkeypatch, target):
+    env = install(monkeypatch)
+
+    def fault(event):
+        if event == target:
+            raise RuntimeError("inert retirement fault")
+
+    env.runtime.hook = fault
+    job = run_job(env)
+    assert job.state == "cleanup_uncertain" and env.pin.held and env.pin.releases == 0
+    before = env.events.count(target)
+    with pytest.raises(w.BundleCleanupUncertain):
+        job._bundle_owner.cleanup()
+    assert env.events.count(target) == before == 1
+
+
+def test_transient_query_failure_does_not_renew_cleanup_budget(monkeypatch):
+    env = install(monkeypatch)
+    env.process.complete_on_resume = False
+    env.process.kill_completes = False
+    env.process.fault = "active"
+    job = run_job(env)
+    assert job.state == "cleanup_uncertain" and env.pin.held
+    assert 105 <= env.clock.now < 105.1
+    assert len(env.clock.sleeps) <= 501
+
+
+def test_transient_query_failure_can_be_collected_under_original_handles(monkeypatch):
+    env = install(monkeypatch)
+    env.process.fault = "active"
+    job = run_job(env)
+    assert job.state == "failed" and job.done
+    assert env.pin.releases == 1 and env.events.count("create") == 1
+
+
+@pytest.mark.parametrize(
+    "response,stderr,code",
+    [
+        (b"{}", b"", 0),
+        (b'{"protocol_version":1,"ok":1}', b"", 0),
+        (b'{"protocol_version":1,"ok":true}', b"", 3),
+        (b'{"protocol_version":1,"ok":true}', b"x" * (64 * 1024 + 1), 0),
+        (b"{\xff", b"diagnostic" * 1000, 0),
+    ],
+)
+def test_common_response_failures_never_escape_cleanup(monkeypatch, response, stderr, code):
+    env = install(monkeypatch)
+    env.process.response, env.process.stderr, env.process.return_code = response, stderr, code
+    job = run_job(env)
+    assert job.state == "failed" and env.pin.releases == 1
+    assert len(str(job._error)) < 1900
+
+
+def test_output_stream_growth_during_read_revokes_response(monkeypatch):
+    env = install(monkeypatch)
+
+    def grow(event):
+        if event == "read_file1":
+            env.process.contents["file2"] = b"x" * (64 * 1024 + 1)
+
+    env.process.hook = grow
+    job = run_job(env)
+    assert job.state == "failed" and env.pin.releases == 1
+
+
+def test_acquisition_owner_is_visible_and_constructor_failure_keeps_local_ownership(monkeypatch):
+    env = install(monkeypatch)
+    job = jobs.SidecarJob.from_selection(prepared(), env.fixture.selected())
+    acquire = w.pins.acquire_bundle_pin
+
+    def observed(*args, **kwargs):
+        assert type(job._bundle_owner) is w.WindowsOperationOwner
+        return acquire(*args, **kwargs)
+
+    monkeypatch.setattr(w.pins, "acquire_bundle_pin", observed)
+    # A genuine constructor rejects a changed mode after API construction.
+    old_init = w.Win32API.__init__
+
+    def api_init(self, **kwargs):
+        old_init(self, **kwargs)
+        env.pin.mode = "exclusive"
+
+    monkeypatch.setattr(w.Win32API, "__init__", api_init)
+    job.start()
+    assert job.wait(5) and job.state == "failed"
+    assert not job._bundle_owner._transferred and env.pin.releases == 1
+    assert "create" not in env.events
+
+
+def test_late_local_pin_release_is_cleanup_uncertain(monkeypatch):
+    env = install(monkeypatch)
+    monkeypatch.setattr(w, "_verify_cached_tree", lambda *args: None)
+    original = env.pin.release
+
+    def slow_release():
+        original()
+        env.clock.now += 6
+
+    env.pin.release = slow_release
+    job = run_job(env)
+    assert job.state == "cleanup_uncertain" and not job.done
+    assert env.pin.releases == 1 and job._bundle_owner is not None
+
+
+def test_export_failure_keeps_outcome_unknown_and_never_retries(monkeypatch):
+    env = install(monkeypatch)
+    env.process.response = b"invalid"
+    job = run_job(env, prepared("export_step"))
+    assert job.state == "failed" and job._error.outcome_unknown
+    assert env.events.count("create") == 1
+
+
+@pytest.mark.parametrize(
+    "event",
+    [
+        "open_file0",
+        "initialize_file0",
+        "open_file1",
+        "initialize_file1",
+        "open_file2",
+        "initialize_file2",
+        "open_file3",
+        "initialize_file3",
+        "create_job",
+        "configure_job",
+        "duplicate0",
+        "duplicate1",
+        "duplicate2",
+        "duplicate3",
+        "create_attributes",
+        "set_handles",
+        "set_job",
+        "create",
+        "membership",
+        "observe",
+        "resume",
+        "wait",
+        "exit_code",
+        "active",
+        "size_file1",
+        "size_file2",
+        "read_file1",
+        "read_file2",
+    ],
+)
+def test_every_process_acquisition_query_and_read_fault_is_composed(monkeypatch, event):
+    env = install(monkeypatch)
+    env.process.fault = event
+    job = run_job(env)
+    assert env.process.fault is None, event
+    assert job.state == "failed", (event, job.state, env.events)
+    assert env.pin.releases == 1 and not env.pin.held
+    assert len(env.process.close_calls) == len(set(env.process.close_calls))
+    assert all(handle in env.process.closed for handle in env.process.acquired)
+
+
+def test_actual_guarded_execute_quarantines_composed_owner_and_blocks_successor(monkeypatch):
+    import importlib
+
+    from test_windows_runtime import PACKAGE
+
+    env = install(monkeypatch)
+    transport = importlib.import_module(PACKAGE + ".guarded_transport")
+    lease = transport.execution_lease
+    selected = env.fixture.selected()
+    env.process.fault = "close_file1"
+    # This is an inert lower-transport driver with no production publication.
+    # Real selection equality, response validation and quarantine code remain in use.
+    with pytest.raises(transport.GuardedOperationError, match="restart Blender"):
+        transport.execute(
+            prepared(), selected, owner_token=object(), current_selection=lambda: selected
+        )
+    token, guarded = lease._QUARANTINE
+    assert guarded._job.state == "cleanup_uncertain" and not guarded.done
+    assert guarded._job._bundle_owner.pin is env.pin
+    assert lease.is_busy() and lease.try_acquire() is None and not lease.release(token)
+    before = list(env.events)
+    with pytest.raises(transport.GuardedOperationError, match="restart Blender"):
+        transport.execute(
+            prepared(), selected, owner_token=object(), current_selection=lambda: selected
+        )
+    assert env.events == before
+    runtime = importlib.import_module(PACKAGE + ".backend_runtime")
+    original = lease._QUARANTINE
+    for transition in (runtime.stop_bundled_setup, runtime.new_lifetime, runtime.new_lifetime):
+        transition()
+        assert lease._QUARANTINE is original and lease.is_busy()
+    # Quarantine deliberately stays absorbing in this isolated test package.
+
+
+def test_stdout_limit_is_enforced_without_allocating_an_unbounded_capture(monkeypatch):
+    env = install(monkeypatch)
+    original = w.Win32API.file_size
+
+    def size(self, file):
+        if file == "file1" and self.resumed_for_limit:
+            return jobs.MAX_RESPONSE_BYTES + 1
+        return original(self, file)
+
+    env.process.resumed_for_limit = False
+    env.process.hook = lambda event: (
+        setattr(env.process, "resumed_for_limit", True) if event == "resume" else None
+    )
+    monkeypatch.setattr(w.Win32API, "file_size", size)
+    job = run_job(env)
+    assert job.state == "failed" and env.pin.releases == 1 and "read_file1" not in env.events
+
+
+@pytest.mark.parametrize("phase", ["resume", "wait", "read_file1", "read_file2"])
+def test_pin_loss_never_authorizes_output_but_does_not_block_cleanup(monkeypatch, phase):
+    env = install(monkeypatch)
+    env.process.hook = lambda event: setattr(env.pin, "held", False) if event == phase else None
+    job = run_job(env)
+    assert job.state == "failed" and job._response is None
+    assert env.pin.releases == 1 and "rmdir" in env.events
+
+
+def test_pin_release_failure_retains_same_owner_and_never_retries(monkeypatch):
+    env = install(monkeypatch)
+    env.pin.fail_release = True
+    job = run_job(env)
+    assert job.state == "cleanup_uncertain" and not job.done and env.pin.releases == 1
+    with pytest.raises(w.BundleCleanupUncertain):
+        job._bundle_owner.cleanup()
+    assert env.pin.releases == 1
+
+
+def test_early_file_failure_uses_leaf_budget_and_stops_after_late_owned_close(monkeypatch):
+    env = install(monkeypatch)
+    env.process.fault = "open_file1"
+    env.process.hook = lambda event: (
+        setattr(env.clock, "now", 106.0) if event == "close_file0" else None
+    )
+    job = run_job(env)
+    owner = job._bundle_owner
+    assert job.state == "cleanup_uncertain" and not job.done
+    assert owner.process.cleanup_started_at == 100.0 and owner._cleanup_deadline == 105.0
+    assert owner.process._resources[0].attempted and owner.process._resources[0].closed
+    assert env.events[-1] == "close_file0"
+    assert not owner.validation._close_attempted and not env.runtime.closed
+    assert env.pin.held and env.pin.releases == 0 and "create_job" not in env.events
+
+
+def test_early_no_process_failure_checks_validation_query_with_original_budget(monkeypatch):
+    env = install(monkeypatch)
+    env.process.fault = "open_file0"
+
+    def late(event):
+        if event == "anchor_info" and "open_file0" in env.events:
+            env.clock.now += 6
+
+    env.runtime.hook = late
+    job = run_job(env)
+    owner = job._bundle_owner
+    assert job.state == "cleanup_uncertain" and owner.process.cleanup_started_at == 100
+    assert owner._cleanup_deadline == 105 and env.clock.now == 106
+    assert env.events[-1] == "anchor_info"
+    assert not env.runtime.closed and env.pin.held and env.pin.releases == 0
+    assert owner.validation._close_attempted and not owner.validation.closed
+
+
+def test_late_failed_transient_close_backdates_without_a_fresh_adapter_budget(monkeypatch):
+    env = install(monkeypatch)
+    env.process.fault = "close_attributes"
+    env.process.hook = lambda event: (
+        setattr(env.clock, "now", 106.0) if event == "close_attributes" else None
+    )
+    job = run_job(env)
+    owner = job._bundle_owner
+    assert job.state == "cleanup_uncertain" and owner.process.cleanup_started_at == 100
+    assert owner._cleanup_deadline == 105
+    assert env.events[-1] == "close_attributes" and "kill_job" not in env.events
+    assert env.process.close_calls == ["attributes"] and not env.process.closed
+    assert not env.runtime.closed and env.pin.held
+
+
+def test_slow_successful_transient_close_does_not_start_terminal_cleanup_budget(monkeypatch):
+    env = install(monkeypatch)
+    env.process.hook = lambda event: (
+        setattr(env.clock, "now", 106.0) if event == "close_attributes" else None
+    )
+    job = run_job(env)
+    assert job.state == "ready" and job.done
+    assert job._bundle_owner.process.cleanup_started_at == 106
+    assert job._bundle_owner._cleanup_deadline == 111 and env.pin.releases == 1
+
+
+@pytest.mark.parametrize("event", ["close_201", "close_anchor", "rmdir", "pin_release"])
+def test_late_cleanup_success_keeps_truthful_observations_but_suppresses_result(monkeypatch, event):
+    env = install(monkeypatch)
+    if event == "pin_release":
+        original = env.pin.release
+
+        def slow_release():
+            original()
+            env.clock.now += 6
+
+        env.pin.release = slow_release
+    else:
+
+        def hook(observed):
+            if observed == event:
+                env.clock.now += 6
+
+        if event == "close_201":
+            env.process.hook = hook
+        else:
+            env.runtime.hook = hook
+    job = run_job(env)
+    owner = job._bundle_owner
+    assert job.state == "cleanup_uncertain" and not job.done and job._response is None
+    assert owner.process.cleanup_started_at == 100 and owner._cleanup_deadline == 105
+    assert env.events[-1] == event
+    if event == "close_201":
+        resource = next(item for item in owner.process._resources if item.value == 201)
+        assert resource.closed and resource.attempted
+        assert not owner.validation._close_attempted and not env.runtime.closed
+    elif event == "close_anchor":
+        anchor = owner.validation._by_path[owner.validation.job_directory]
+        assert anchor.closed and anchor.attempted
+        assert owner.validation.job_directory in env.runtime.directories
+    elif event == "rmdir":
+        assert owner.validation.job_directory not in env.runtime.directories
+        assert not owner.validation.closed
+    else:
+        assert owner.validation.closed and not env.pin.held and env.pin.releases == 1
+        assert owner.process._pin_resource.closed
+    before = list(env.events)
+    with pytest.raises(w.BundleCleanupUncertain):
+        owner.cleanup()
+    assert env.events == before
+
+
+def test_original_cleanup_budget_survives_early_failure_and_adapter_polling(monkeypatch):
+    env = install(monkeypatch)
+    env.process.fault = "observe"
+    env.process.complete_on_resume = False
+    env.process.kill_completes = False
+    job = run_job(env)
+    owner = job._bundle_owner
+    assert job.state == "cleanup_uncertain" and not job.done
+    assert owner.process.cleanup_started_at == 100 and owner._cleanup_deadline == 105
+    assert 105 <= env.clock.now < 105.02 and len(env.clock.sleeps) <= 501
+    assert env.pin.held and env.pin.releases == 0 and not env.runtime.closed

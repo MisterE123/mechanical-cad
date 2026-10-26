@@ -1,0 +1,208 @@
+"""Native registration plus deterministic modal interaction, without GUI claims."""
+
+import os
+import sys
+from pathlib import Path
+from types import SimpleNamespace
+from unittest.mock import patch
+
+import bpy
+
+ROOT = Path(os.environ.get("MCAD_ROOT", Path(__file__).resolve().parents[1])).resolve()
+sys.path.insert(0, str(ROOT / "blender_addon"))
+from mechanical_cad_blender import assembly_job_ui as ui  # noqa: E402
+from mechanical_cad_blender import register, registration, unregister  # noqa: E402
+
+checks = []
+
+
+def check(condition, label):
+    assert condition, label
+    checks.append(label)
+
+
+class Manager:
+    def __init__(self):
+        self.timers, self.operators = [], []
+
+    def event_timer_add(self, interval, window):
+        timer = object()
+        self.timers.append(timer)
+        return timer
+
+    def event_timer_remove(self, timer):
+        self.timers.remove(timer)
+
+    def modal_handler_add(self, operator):
+        self.operators.append(operator)
+
+
+class Workspace:
+    text = None
+
+    def status_text_set(self, value):
+        self.text = value
+
+
+class Pending:
+    done = False
+    cancelled = False
+
+
+class Subject(ui.AssemblyJobMixin):
+    def __init__(self):
+        self.messages = []
+
+    def report(self, kinds, text):
+        self.messages.append((kinds, text))
+
+
+class Layout:
+    def __init__(self):
+        self.texts = []
+
+    def label(self, *, text, **kwargs):
+        self.texts.append(text)
+
+
+register()
+manager, workspace = Manager(), Workspace()
+context = SimpleNamespace(
+    window_manager=manager,
+    window=bpy.context.window,
+    workspace=workspace,
+    scene=bpy.context.scene,
+)
+context.scene.mechanical_cad_assembly.verification_message = "Current measured result"
+requested = []
+
+
+def prepare(*args, **kwargs):
+    requested.append((args, kwargs))
+    return Pending()
+
+
+def cancel(pending, reason="cancelled"):
+    pending.cancelled = True
+    return True
+
+
+with (
+    patch.object(ui.assembly_pending, "prepare", prepare),
+    patch.object(ui.assembly_pending, "cancel", cancel),
+    patch.object(ui.assembly_pending, "poll", return_value=None) as poll,
+    patch.object(ui.assembly_pending, "cancel_all", return_value=True),
+):
+    subject = Subject()
+    check(subject.begin_job(context, "assembly_check") == {"RUNNING_MODAL"}, "start is modal")
+    check(len(manager.timers) == 1 and subject in ui._OPERATORS, "one tracked modal timer")
+    check("Esc" in workspace.text, "running status explains cancellation")
+    check(
+        subject.modal(context, SimpleNamespace(type="MIDDLEMOUSE", value="PRESS"))
+        == {"PASS_THROUGH"},
+        "viewport navigation passes through",
+    )
+    check(not poll.called, "navigation never consumes evidence")
+    check(
+        subject.modal(context, SimpleNamespace(type="ESC", value="PRESS")) == {"RUNNING_MODAL"},
+        "Escape requests cancellation without blocking cleanup",
+    )
+    check(subject._pending.cancelled and manager.timers, "cancel retains timer until reaped")
+    from mechanical_cad_blender.bridge import BridgeError
+
+    poll.side_effect = BridgeError("Cancelled; prior evidence retained")
+    subject._pending.done = True
+    check(
+        subject.modal(context, SimpleNamespace(type="TIMER", value="NOTHING")) == {"CANCELLED"},
+        "reaped cancellation closes modal",
+    )
+    check(not manager.timers and not ui._OPERATORS, "cancel removes timers and operator tracking")
+    check(workspace.text is None, "cancel restores workspace status")
+    subject._cleanup_ui()
+    check(not manager.timers, "UI cleanup is idempotent")
+    for event_type in ("ESC", "TIMER", "MIDDLEMOUSE"):
+        calls = poll.call_count
+        check(
+            subject.modal(context, SimpleNamespace(type=event_type, value="PRESS"))
+            == {"CANCELLED"},
+            "retired handler terminates every late event",
+        )
+        check(poll.call_count == calls, "retired handler never accesses pending/RNA")
+
+    poll.side_effect = None
+    poll.return_value = {"ok": True}
+    subject = Subject()
+    check(
+        subject.begin_job(context, "assembly_sample", joint_id="slide", values=[1, 2])
+        == {"RUNNING_MODAL"},
+        "sample uses the same modal lifecycle",
+    )
+    check(requested[-1][1]["values"] == [1, 2], "exact listed values passed to pending boundary")
+    check(
+        subject.modal(context, SimpleNamespace(type="TIMER", value="NOTHING")) == {"FINISHED"},
+        "published result ends modal successfully",
+    )
+    check(not manager.timers and not ui._OPERATORS, "success removes timer and tracking")
+    check(
+        subject.messages[-1][1] == "Current measured result",
+        "success uses canonical evidence notice",
+    )
+    ui.cancel_all("test cleanup")
+    check(not bpy.app.timers.is_registered(ui._supervise), "lifecycle removes supervisor")
+
+with patch.object(ui.assembly_pending, "cancel_all", return_value=False):
+    check(not ui.cancel_all("delayed cleanup"), "pending OS cleanup remains explicit")
+    check(bpy.app.timers.is_registered(ui._supervise), "delayed cleanup retains supervisor")
+with patch.object(ui.assembly_pending, "cancel_all", return_value=True):
+    check(ui.cancel_all("cleanup completed"), "completed cleanup is reported")
+    check(not bpy.app.timers.is_registered(ui._supervise), "completed cleanup removes supervisor")
+
+# Failure before the modal timer exists must still supervise delayed cleanup.
+with (
+    patch.object(ui.assembly_pending, "prepare", prepare),
+    patch.object(ui.assembly_pending, "cancel", cancel),
+    patch.object(ui.assembly_pending, "cancel_all", return_value=False),
+    patch.object(manager, "event_timer_add", side_effect=RuntimeError("timer unavailable")),
+):
+    subject = Subject()
+    try:
+        subject.begin_job(context, "assembly_check")
+    except RuntimeError:
+        checks.append("interaction setup failure remains explicit")
+    else:
+        raise AssertionError("timer setup unexpectedly succeeded")
+    check(subject._pending.cancelled, "setup failure cancels native request")
+    check(
+        bpy.app.timers.is_registered(ui._supervise), "setup failure preserves reaping supervision"
+    )
+with patch.object(ui.assembly_pending, "cancel_all", return_value=True):
+    ui.cancel_all("setup failure test cleanup")
+
+layout = Layout()
+fixture = {
+    "instances": [{} for _ in range(16)],
+    "verification_presets": [],
+    "active_verification_preset": None,
+}
+with patch.object(ui.assembly_state, "read_assembly", return_value=fixture):
+    ui.draw_workload(layout, context, 32)
+check(
+    any("120 pairs × 32 poses" in s for s in layout.texts),
+    "requested workload names pair/pose count",
+)
+check(any("3840" in s for s in layout.texts), "full pair-query workload shown")
+check(any("measurements only" in s for s in layout.texts), "absent intent never implies pass")
+check(any("Esc" in s for s in layout.texts), "confirmation explains in-flight cancellation")
+with patch.object(ui, "cancel_all") as cleanup:
+    registration._before_blend_load(None)
+    check(cleanup.called, "load-pre cancels before replacing scene data")
+with patch.object(ui, "cancel_all") as cleanup:
+    registration._before_history_change(None)
+    check(cleanup.called, "history-pre cancels before undo changes data")
+with patch.object(ui, "cancel_all", return_value=True) as cleanup:
+    registration._before_blender_exit(None)
+    check(cleanup.called, "native exit cancels owned work before daemon threads stop")
+check(registration._before_blender_exit in bpy.app.handlers.exit_pre, "native exit hook registered")
+unregister()
+check(not bpy.app.timers.is_registered(ui._supervise), "unregister leaves no supervisor")
+print("ASSEMBLY_JOB_UI_SMOKE_OK", len(checks))

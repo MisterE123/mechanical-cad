@@ -1,0 +1,232 @@
+"""Plain-language in-app help; future features are explicitly labelled."""
+
+HELP_TOPICS = {
+    "workflow.overview": (
+        "From 2D profiles to a mechanical solid",
+        [
+            "Open CAD Workspaces, then New Document. New Sketch opens Line and Circle tools; Rectangle is a separate constrained shortcut.",
+            "Finish Sketch commits its constraints and opens Part. Choose Extrude, check the profile and length, then Apply.",
+            "Create another profile and extrusion for a cutting tool. Cut subtracts Tool from Base.",
+            "Select the original sketch and Edit Sketch to change its dimensions without losing the downstream part. Save writes portable .mcad.json history.",
+            "Assembly reuses accepted Part sources with fixed, revolute or slider joints in a rooted tree. General closed-loop mates and broad constraint editing are not implemented.",
+        ],
+    ),
+    "sketch.plane": (
+        "Sketch plane and position",
+        [
+            "Panel profiles lie parallel to global XY, with Z setting their height. New viewport sketches and the rectangle shortcut use global XY at Z = 0.",
+            "X and Y place the rectangle's lower-left corner or the circle's centre.",
+            "Extrusion follows the profile normal: global +Z for these XY profiles.",
+            "Arbitrary-plane authoring, face attachment and contextual reference geometry are not implemented in the viewport tools.",
+        ],
+    ),
+    "sketch.rectangle": (
+        "Create a rectangle profile",
+        [
+            "No viewport selection is needed. Width and Height are measured in millimetres.",
+            "X, Y and Z locate its lower-left corner. Width and Height must be positive.",
+            "Apply adds a saved profile and visible named parameters to this document.",
+            "To revise it, edit those parameters and Regenerate. Blender Undo reverses recent session actions.",
+            "This is a dimensioned XY-plane profile, not a general constrained sketch.",
+        ],
+    ),
+    "sketch.circle": (
+        "Create a circle profile",
+        [
+            "No viewport selection is needed. X, Y and Z locate the circle's centre.",
+            "Radius is half the diameter, in millimetres. Enter 5 for a 10 mm diameter circle.",
+            "Radius must be positive. Apply adds a saved profile and named parameters.",
+            "To revise it, edit those parameters and Regenerate, or use session Undo.",
+            "Circle outlines in Blender are display tessellations; the CAD profile is an exact circle.",
+        ],
+    ),
+    "sketch.dimensions": (
+        "Edit saved dimensions and formulas",
+        [
+            "Named parameters control the saved profiles and solids. Values use millimetres.",
+            "Blender numeric widgets use single precision. For exact typed decimal/formula input, use the Formula text field.",
+            "Change a value, then Regenerate to replay dependent features. Dirty display geometry is hidden.",
+            "The formula toggle accepts safe arithmetic such as width / 2; it does not run Python.",
+            "A formula may reference another named parameter. Cycles, missing names and invalid dimensions fail visibly.",
+            "The Rectangle shortcut provides H/V, shared corners, an optional anchor and size relations. General Line/Circle tools expose driving line distance and radius; broader relation editing is not yet provided.",
+        ],
+    ),
+    "feature.extrude": (
+        "Extrude a profile into a solid",
+        [
+            "Choose a saved primitive or constrained profile. The selected history profile is a visible, correctable default.",
+            "Length is the positive distance in millimetres along the profile normal, which is +Z for XY profiles.",
+            "Apply adds a solid feature, keeping the source profile in history. The source dimensions remain editable.",
+            "Change its named length and Regenerate, or use session Undo to reverse creation.",
+            "Reversed directions, symmetric extrusion, taper and Through all are not implemented.",
+        ],
+    ),
+    "feature.boolean_operands": (
+        "Cut one solid with another",
+        [
+            "Base is the solid you keep. Tool is the solid whose overlapping volume is removed.",
+            "Choose two different recorded solids. Verify both dropdowns before Apply; suggested choices can be changed.",
+            "Apply creates a new Base minus Tool result. Both original features stay in history.",
+            "The tool has finite dimensions; this is not Through all. Enlarge or reposition the tool and Regenerate when needed.",
+            "This slice requires one nonempty solid result. Split bodies and invalid or no-effect cuts are rejected.",
+        ],
+    ),
+    "history.edit": (
+        "Saved feature history and output",
+        [
+            "The feature list is saved design history. Earlier features provide inputs to later ones.",
+            "Select a row and choose Display Selected Feature to inspect that output. This does not delete later features.",
+            "Edit named dimensions and Regenerate to replay the whole document. Errors identify failed and blocked features.",
+            "Blender Undo only reverses recent session actions; it is different from the portable feature history.",
+            "Direct Blender mesh edits are display-only and are discarded on Regenerate. Feature deletion and reordering are not provided in this UI yet.",
+        ],
+    ),
+    "intent.suggestion": (
+        "Check suggested inputs before Apply",
+        [
+            "A default is a starting point, not a hidden design decision.",
+            "Extrude may suggest the selected history profile. Cut initially suggests the two latest solids.",
+            "The dialog shows the exact Profile, Base and Tool. Change any wrong choice before Apply.",
+            "Cancel leaves the document unchanged. Automatic sketch constraints are not implemented.",
+        ],
+    ),
+    "units": (
+        "Millimetres and Blender display scale",
+        [
+            "This version uses millimetres for CAD lengths. Enter 25.4 for 25.4 mm.",
+            "Parameter formulas follow the same millimetre convention; do not append unit suffixes such as mm or in.",
+            "CAD millimetres convert to metres by 0.001; display coordinates also account for the scene unit scale.",
+            "At default scene scale, a 40 mm part spans 0.04 Blender units. Focus Result isolates and frames it; Whole Scene restores the full scene.",
+            "Regenerate after changing scene unit scale. The authoritative CAD dimensions remain in millimetres.",
+        ],
+    ),
+    "error.details": ("Full diagnostic message", []),
+    "error.rebuild": (
+        "Fix a failed regeneration",
+        [
+            "The current build did not succeed. Read the error and failed feature in this panel.",
+            "Fix the named dimension or formula, then Regenerate. Blocked features depend on an earlier failure.",
+            "Failed replay keeps the last-good display as a visibly marked STALE wireframe cache. It is not the current result, is excluded from renders, and has no current volume.",
+            "A rejected file load or feature creation keeps your prior document and valid display unchanged.",
+            "For a backend or timeout error, check the add-on preferences and retry. Unrelated Blender objects are untouched.",
+        ],
+    ),
+    "persistence": (
+        "Save, load and Blender files",
+        [
+            "Save writes .mcad.json: document identity, parameters, feature IDs and operations. Display meshes are not saved in this CAD file.",
+            "Load validates and replays the file before replacing your current document. Invalid files show an error.",
+            "Save your work before New, Demo or Load replaces the current model. Use Blender Undo for recent session changes.",
+            "The current document also lives in the Blender scene and is retained in .blend files. On reopening, Regenerate verifies its display.",
+            "Portable JSON history is authoritative. A .blend mesh alone does not preserve CAD design intent.",
+        ],
+    ),
+    "setup.bundled": (
+        "Automatic offline CAD backend",
+        [
+            "The standalone extension includes its isolated CAD backend. Enable the extension and wait for automatic offline preparation; no Project Root or Python path is required.",
+            "Preferences show preparation, ready or failure status. Preparation uses only the installed package and does not download or install dependencies from the network.",
+            "Once ready, create a New Document, draw a sketch and extrude it. The native CAD libraries run in a separate process, never inside Blender.",
+            "If cleanup cannot be confirmed, native operations stay blocked. Save your work and restart Blender. Disabling and re-enabling the extension cannot discard the retained owner or bypass the failure.",
+            "A prepared backend is not geometry evidence. Check or rebuild the current document explicitly; saved reports remain historical until validated again.",
+        ],
+    ),
+    "setup.backend": (
+        "Configure the independent CAD backend",
+        [
+            "CAD modeling runs in an isolated external Python process. Blender never imports the native CAD library.",
+            "In add-on preferences, set Project Root to this repository and Python Executable to its prepared .venv Python.",
+            "The external environment needs the project's CAD dependencies. It may use a different Python version from Blender.",
+            "Then use New Demo or Regenerate to test the connection. Timeout and display mesh tolerance can be adjusted in preferences.",
+        ],
+    ),
+    "verification.geometry": (
+        "What a successful replay verifies",
+        [
+            "Ready means the saved feature history replayed successfully through the CAD backend.",
+            "A solid must pass kernel validity checks and this slice requires one nonempty solid per solid feature.",
+            "A valid CAD solid does not by itself verify a watertight display mesh. Mesh quality depends on tessellation tolerance.",
+            "Assembly checks measure exact-solid interference and clearance at the specified poses. A selected verification preset supplies engineering requirements; sampled poses do not prove continuous collision freedom.",
+            "This status is not manufacturing certification. No structural or load validation is provided.",
+        ],
+    ),
+    "roadmap": (
+        "Current scope and planned workflow",
+        [
+            "Available now: Sketch, Part and Assembly workspaces; viewport lines, circles and the rectangle shortcut; exact driving dimensions; upstream edits; extrusion, cut and portable history.",
+            "The bounded Center Arc preview builds and saves one arc with two shared-ID radial lines and at most its sole extrusion. Geometry Check and STEP/STL support its sole active bounded sector solid on exact global XY; the same solid can be captured into an Assembly and updated after editing. Trim, extend, construction geometry, broader relation editing, multiple regions, holes, fillets and face attachment remain planned.",
+            "Reusable Part instances support explicit fixed, revolute and slider tree joints, literal mate frames, motion limits and exact-solid checks.",
+            "Assembly verification applies only to its exact accepted sources, saved policy and listed poses. Closed-loop solving and continuous collision checking are not implemented.",
+            "Drawing sheets are outside the current scope. No structural or load validation is provided.",
+        ],
+    ),
+}
+
+
+HELP_TOPICS["geometry.actions"] = (
+    "Geometry checks and explicit exports",
+    [
+        "Finish or cancel any sketch draft first. Each action rebuilds the current committed parameters and feature history in the CAD backend.",
+        "Checks require one valid positive-volume solid and a closed oriented manifold tessellation.",
+        "The bounded schema-3 output is one directed arc, two exact shared-ID radial lines and its sole active direct extrusion, with exact zero plane origin and identity quaternion. Radius and extrusion height must be 1–1000 mm after a fresh solve; nonzero freedom alone does not reject a valid solid.",
+        "Selected sketches, profile-only or broader arc graphs and arc-empty schema 3 remain unavailable for sector output and Assembly capture. A supported sector solid can be reused alongside ordinary Parts.",
+        "STEP preserves exact B-rep geometry. STL is checked binary triangles; select millimetres when importing it. Float32 encoding must stay within min(0.00001 mm, 0.1 × tessellation tolerance); a valid large solid can pass STEP and fail STL precision.",
+        "Choose an export file explicitly. The file selector asks before replacing an existing file; a symlink entry is replaced without changing its target.",
+        "Failed geometry leaves the prior export untouched. UNKNOWN means an export may already have replaced the file but its completion could not be validated. OUTDATED retains a confirmed earlier write after current CAD publication was rejected. Neither outcome retries automatically; inspect the file and deliberately run again if needed.",
+        "Saved reports are historical metadata. Reopening a scene, Undo/Redo or a changed backend requires fresh verification; an earlier successful replay is not a current Geometry Check.",
+        "Blender Undo does not undo exported files. Save .mcad.json or .blend to retain editable feature history.",
+        "These checks do not establish manufacturability, wall thickness, tolerances, structural strength or assembly motion.",
+    ],
+)
+
+
+HELP_TOPICS["sketch.viewport_rectangle"] = (
+    "Constrained viewport rectangle",
+    [
+        "Click two opposite corners on global XY. The lower-left corner in sketch coordinates and its X/Y location are shown.",
+        "The tool explicitly adds H/V edges, shared corner points and driving width/height distances. In Dimensions, turn off Fix rectangle position to remove the anchor and leave translation free.",
+        "Releasing position seeds the same point IDs from the last visible solution, so removing only the anchor keeps its placement. Changing size at the same time may move a free rectangle; inspect Apply's result.",
+        "Enter 60 for 60 mm, not 60mm. Unit suffixes and conversion are unsupported. Exact decimals and named formulas are accepted; Apply solves only the draft.",
+        "Actual solver status and remaining degrees of freedom appear after solving. Fixed position normally gives 0 DoF; free translation gives 2. An unverified preview claims neither.",
+        "Finish commits one schema-2 constrained feature and returns to Part. Editing the original rectangle preserves its ID and rebuilds downstream solids.",
+        "Leaving Sketch suspends the draft in its original scene. Resume restores exact typed input, including invalid text, only against the original committed revision; its preview and DoF remain unverified until Apply or Finish. Esc, Cancel or Discard deliberately removes the draft.",
+        "Save .blend to retain suspended or active draft input separately from feature history; .mcad.json saves only committed design. Undo/Redo keeps the draft but can make its base stale. Restore the original document or explicitly Discard; the editor never automatically rebases.",
+        "This shortcut supports its bounded rectangle definition on XY. Use New Sketch for Line/Circle drawing and direct distance/radius labels; arbitrary planes and broader relation editing remain unavailable.",
+    ],
+)
+
+
+HELP_TOPICS["sketch.general"] = (
+    "Lines, circles, Center Arc and direct dimensions",
+    [
+        "Choose Line or Circle on the left, then click two points. Line endpoints can reuse a visibly picked existing point. Pointer previews are unverified; accepted geometry runs a real asynchronous solve.",
+        "Press D or choose Dimension, select a line, circle or arc, then place its label. Line dimensions drive endpoint distance; circles and arcs use radius only. No diameter conversion or reference-dimension tool is provided yet.",
+        "Double-click a label to edit its exact number or named formula. Enter requests checked acceptance once; Esc cancels that field. Invalid text remains editable. Clicking outside retains pending text; use Reopen Input before continuing.",
+        "Drag a label to move its annotation without changing geometry. Its placement is saved with the Blender scene on Finish and restored on Edit Sketch. Portable CAD JSON contains design history but not these scene-only placements.",
+        "Check reports the current solver result and remaining freedom. Underconstrained sketches can be intentional. A closed simple line loop or one circle supplies a profile; a connected open chain can be saved as editable data without a solid.",
+        "Finish saves the checked sketch and rebuilds downstream features. A change that breaks an existing extrusion stays in the recoverable draft. Crossed, branched, mixed or multiple-region profiles are outside this preview's region policy, even when constraints solve.",
+        "Esc outside a text field suspends the draft. Resume restores exact input against the original Part revision. Cancel Sketch or Discard deliberately removes it. Local Ctrl-Z edits the draft journal; Blender Undo edits committed history.",
+        "Isolated sketch view hides mesh context only in this viewport and restores its prior filter on exit. Reference geometry and editing in solid context are not supported yet. Other objects, viewports and rendering visibility remain unchanged.",
+        "Center Arc explicitly enables a newer saved draft format on first use; review the disclosure before continuing. Existing geometry and local history stay unchanged. The accepted arc upgrades the sketch in one Undo step; the capable saved draft format stays newer after Undo.",
+        "Center Arc takes center, start and end. The third click stores its raw observed endpoint, even if the provisional stroke ends elsewhere on its support circle. Check may move unconstrained points in the solved display; authored seeds stay unchanged. No projection or hidden constraint is saved. The end marker remains visibly unsolved until a real Check succeeds.",
+        "Use existing point opens an exact-ID/role picker for initial and later Line/Arc phases. This accepts a PointRef directly; it never guesses between overlapping IDs. Inspector Center/Start/End buttons only select points. Continue explicitly resumes pointer capture after suspension.",
+        "Reverse sweep chooses the directed complementary region in local UV: CCW becomes CW or vice versa. It never swaps center/start/end roles, IDs or seeds. Review the action; a camera flip does not change the direction.",
+        "For the ordinary supported sector, draw one arc and two radial lines using the exact center/start/end IDs. Explicitly Fix at origin on the center, apply Horizontal and Vertical to the intended radial lines, and add a radius dimension. Check reports genuine freedom; a fully constrained supported sector can Finish and use its first sole Extrude.",
+        "A successful solve and pure profile readiness are separate from native construction. The solid builder can reject a periodic arc interval even after solving. The failed draft and exact pending radius text stay recoverable. Review the intended fixed-center/H/V/radius constraints and Check again, or Undo; this is not an automatic repair or a guarantee.",
+        "Incomplete arcs stay suspendable drafts and cannot Finish. Arc-bearing Parts permit only the supported sector sketch and its sole extrusion. Primitives, a second extrusion and unrelated graph edits are blocked. Ordinary CAD JSON and Blender saving remain available. Geometry Check and STEP/STL support the sole active bounded sector solid on exact global XY; profile-only output remains unavailable for export or Assembly capture. Capture the completed sector solid into Assembly, edit its source in Part, then explicitly Update All Instances.",
+        "Trim, extend, construction lines, tangent/equal tools, general Coincident creation, multiple regions and holes are unavailable. The compact field has no IME composition or screen-reader text integration.",
+    ],
+)
+
+
+HELP_TOPICS["sketch.constraints"] = (
+    "Explicit sketch relations",
+    [
+        "Select a line to see Horizontal and Vertical tools. These add persistent relations in the sketch plane. Pointer placement and snapping alone never add a hidden constraint. An exact existing relation is inspected rather than duplicated.",
+        "Choose Points on the left to pick endpoints and circle/arc centers separately from curves. Distinct overlapping point IDs remain ambiguous. Select a line, circle or arc and use its exact-kind Start, End or Center inspector control to select the point. Selection alone never accepts a Line/Arc point input; use the separate Use existing point picker for that.",
+        "Fix here anchors a point at its current checked position. Fix at origin separately asks to move it to sketch-plane (0, 0) mm; connected geometry can move. An existing fixed relation is inspected, never silently replaced.",
+        "Select a relation in the inspector to remove only that relation. With a current successful Check, removal starts from its solved point positions and circle radii. Remaining degrees of freedom come from the next real Check, not from the number of deleted relations.",
+        "Without a current solution, Remove using authored positions is a separate explicit recovery choice. It preserves the saved authored point/radius seeds, which may differ from an old displayed outline. Review the named relation before Apply. Undo sketch restores the exact prior intent; a new Check is always required.",
+        "Conflict candidates are native diagnostic suggestions bound to the current request and raw input revision. They are not proof of which relation is wrong or permission to delete it. Failed sketches stay editable drafts and cannot Finish until the sketch and dependent features succeed.",
+    ],
+)

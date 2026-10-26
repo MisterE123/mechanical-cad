@@ -1,0 +1,467 @@
+"""Versioned feature DAG and atomic, human-readable document persistence.
+
+This module is independent of Blender, tessellation and Open CASCADE. Feature
+identities are explicit IDs, never Blender names or mesh indices.
+"""
+
+from __future__ import annotations
+
+import copy
+import hashlib
+import json
+import os
+import re
+import tempfile
+from dataclasses import dataclass, field
+from pathlib import Path
+from types import MappingProxyType
+from typing import Any
+
+from .errors import CADException
+from .expressions import CONSTANTS, FUNCTIONS, Scalar, resolve_parameters
+from .sketch_model import (
+    SUPPORTED_SKETCH_SCHEMA_VERSIONS,
+    SketchDefinition,
+    sketch_capabilities,
+)
+
+SCHEMA_VERSION = 1  # Existing primitive documents keep their original serializer/hash.
+LATEST_SCHEMA_VERSION = 2
+SUPPORTED_SCHEMA_VERSIONS = {1, 2}
+MAX_DOCUMENT_BYTES = 2 * 1024 * 1024
+MAX_FEATURES = 256
+MAX_PARAMETERS = 128
+IDENTIFIER = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+FEATURE_ID = re.compile(r"^[A-Za-z0-9_][A-Za-z0-9_.-]{0,127}$")
+KINDS = {
+    "sketch_rectangle": ({"width", "height"}, {"x": 0, "y": 0, "z": 0}, {}),
+    "sketch_circle": ({"radius"}, {"x": 0, "y": 0, "z": 0}, {}),
+    "sketch_constrained": (set(), {}, {}),
+    "extrude": ({"length"}, {}, {"profile": "profile"}),
+    "cut": (set(), {}, {"base": "solid", "tool": "solid"}),
+}
+
+
+def reject_duplicate_keys(pairs: list[tuple[str, Any]]) -> dict:
+    """Ambiguous JSON must not silently discard a dimension or reference."""
+    result = {}
+    for key, value in pairs:
+        if key in result:
+            raise ValueError(f"Duplicate JSON key '{key}'")
+        result[key] = value
+    return result
+
+
+def output_type(kind: str) -> str:
+    return "profile" if kind.startswith("sketch_") else "solid"
+
+
+def _keys(data: dict, allowed: set[str], required: set[str], what: str) -> None:
+    if not isinstance(data, dict):
+        raise CADException("invalid_document", f"{what} must be an object.")
+    extra, missing = set(data) - allowed, required - set(data)
+    if extra or missing:
+        detail = f"unknown keys {sorted(extra)}" if extra else f"missing keys {sorted(missing)}"
+        raise CADException("invalid_document", f"{what}: {detail}.")
+
+
+def _text(value: Any, what: str, limit: int = 256) -> str:
+    if not isinstance(value, str) or not value or len(value) > limit:
+        raise CADException(
+            "invalid_document", f"{what} must be nonempty text up to {limit} characters."
+        )
+    return value
+
+
+@dataclass(frozen=True)
+class Feature:
+    id: str
+    kind: str
+    label: str
+    params: dict[str, Scalar] = field(default_factory=dict)
+    inputs: dict[str, str] = field(default_factory=dict)
+    sketch: SketchDefinition | None = None
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "params", MappingProxyType(copy.deepcopy(dict(self.params))))
+        object.__setattr__(self, "inputs", MappingProxyType(dict(self.inputs)))
+
+    @classmethod
+    def from_dict(cls, data: dict) -> Feature:
+        _keys(
+            data, {"id", "kind", "label", "params", "inputs", "sketch"}, {"id", "kind"}, "Feature"
+        )
+        identifier = _text(data["id"], "Feature ID", 128)
+        if not FEATURE_ID.fullmatch(identifier):
+            raise CADException("invalid_document", f"Invalid feature ID '{identifier}'.")
+        kind = data["kind"]
+        if not isinstance(kind, str) or kind not in KINDS:
+            raise CADException("unsupported_feature", f"Unsupported feature kind '{kind}'.")
+        if kind == "sketch_constrained":
+            if "sketch" not in data:
+                raise CADException(
+                    "invalid_document", "Constrained sketch feature needs a typed sketch payload."
+                )
+            sketch = SketchDefinition.from_dict(data["sketch"])
+        else:
+            if "sketch" in data:
+                raise CADException(
+                    "invalid_document", "Only constrained sketch features accept a sketch payload."
+                )
+            sketch = None
+        required, defaults, input_schema = KINDS[kind]
+        params, inputs = data.get("params", {}), data.get("inputs", {})
+        _keys(params, required | set(defaults), required, f"Parameters for {identifier}")
+        _keys(inputs, set(input_schema), set(input_schema), f"Inputs for {identifier}")
+        for name, value in params.items():
+            if isinstance(value, bool) or not isinstance(value, (int, float, str)):
+                raise CADException(
+                    "invalid_document",
+                    f"Parameter {identifier}.{name} must be a number or formula.",
+                )
+        for target in inputs.values():
+            _text(target, "Input feature ID", 128)
+        return cls(
+            identifier,
+            kind,
+            _text(data.get("label", identifier), "Feature label"),
+            {**defaults, **copy.deepcopy(params)},
+            dict(inputs),
+            sketch,
+        )
+
+    def to_dict(self) -> dict:
+        result = {
+            "id": self.id,
+            "kind": self.kind,
+            "label": self.label,
+            "params": dict(self.params),
+            "inputs": dict(self.inputs),
+        }
+        if self.sketch is not None:
+            if not isinstance(self.sketch, SketchDefinition):
+                raise CADException("invalid_document", "Expected a typed SketchDefinition payload.")
+            result["sketch"] = self.sketch.to_dict()
+        return result
+
+
+def _has_bounded_sketch_data(data: Any) -> bool:
+    """Opt-in input policy; document schema 2 alone does not migrate old sketches."""
+    return (
+        type(data) is dict
+        and type(data.get("features")) is list
+        and any(
+            type(feature) is dict
+            and type(feature.get("sketch")) is dict
+            and type(feature["sketch"].get("schema_version")) is int
+            and feature["sketch"]["schema_version"] in SUPPORTED_SKETCH_SCHEMA_VERSIONS
+            and sketch_capabilities(feature["sketch"]["schema_version"]).bounded_payload
+            for feature in data["features"]
+        )
+    )
+
+
+def _check_bounded_document_budget(data: dict, *, persisted: bool = False) -> None:
+    if _has_bounded_sketch_data(data):
+        from .sketch_model import _check_object_budget
+
+        _check_object_budget(
+            data,
+            max_bytes=MAX_DOCUMENT_BYTES,
+            max_depth=32,
+            label="Document",
+            size_code="document_too_large",
+        )
+        if persisted:
+            check_persisted_document_budget(data)
+
+
+def check_persisted_document_budget(data: dict) -> None:
+    """Count exact canonical bytes after a caller's bounded structural preflight.
+
+    New services may require a persistable candidate even for legacy embedded
+    sketches. Old model acceptance does not call this helper unless opted in.
+    ensure_ascii=True makes character count equal encoded byte count.
+    """
+    size = 1  # The canonical trailing newline.
+    encoder = json.JSONEncoder(sort_keys=True, indent=2, allow_nan=False)
+    for chunk in encoder.iterencode(data):
+        size += len(chunk)
+        if size > MAX_DOCUMENT_BYTES:
+            raise CADException("document_too_large", "Document exceeds the 2 MiB limit.")
+
+
+@dataclass(frozen=True)
+class Document:
+    id: str
+    name: str
+    parameters: dict[str, Scalar]
+    features: tuple[Feature, ...]
+    active_feature: str | None = None
+    units: str = "mm"
+    schema_version: int = SCHEMA_VERSION
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "features", tuple(self.features))
+        if any(
+            isinstance(feature, Feature)
+            and isinstance(feature.sketch, SketchDefinition)
+            and sketch_capabilities(feature.sketch.schema_version).bounded_payload
+            for feature in self.features
+        ):
+            self.to_dict()  # Bound raw and persisted opted-in data before deepcopy/acceptance.
+        object.__setattr__(
+            self, "parameters", MappingProxyType(copy.deepcopy(dict(self.parameters)))
+        )
+
+    @classmethod
+    def from_dict(cls, data: dict) -> Document:
+        _check_bounded_document_budget(data)
+        _keys(
+            data,
+            {"schema_version", "id", "name", "units", "parameters", "features", "active_feature"},
+            {"schema_version", "id", "name", "units", "parameters", "features"},
+            "Document",
+        )
+        if (
+            type(data["schema_version"]) is not int
+            or data["schema_version"] not in SUPPORTED_SCHEMA_VERSIONS
+        ):
+            raise CADException("unsupported_schema", "Only document schemas 1 and 2 are supported.")
+        if data["units"] != "mm":
+            raise CADException("unsupported_units", "This version accepts millimetres ('mm') only.")
+        parameters, features = data["parameters"], data["features"]
+        if not isinstance(parameters, dict) or len(parameters) > MAX_PARAMETERS:
+            raise CADException(
+                "invalid_document",
+                f"Parameters must be an object with at most {MAX_PARAMETERS} entries.",
+            )
+        for name in parameters:
+            if (
+                not isinstance(name, str)
+                or not IDENTIFIER.fullmatch(name)
+                or len(name) > 64
+                or name in CONSTANTS
+                or name in FUNCTIONS
+            ):
+                raise CADException(
+                    "invalid_document", f"Invalid or reserved parameter name '{name}'."
+                )
+        if not isinstance(features, list) or len(features) > MAX_FEATURES:
+            raise CADException(
+                "invalid_document", f"Features must be a list of at most {MAX_FEATURES} entries."
+            )
+        active = data.get("active_feature")
+        if active is not None:
+            _text(active, "Active feature ID", 128)
+        document = cls(
+            _text(data["id"], "Document ID", 128),
+            _text(data["name"], "Document name"),
+            copy.deepcopy(parameters),
+            tuple(Feature.from_dict(f) for f in features),
+            data.get("active_feature"),
+            schema_version=data["schema_version"],
+        )
+        document.validate()
+        return document
+
+    @classmethod
+    def from_json(cls, text: str) -> Document:
+        if len(text.encode("utf-8")) > MAX_DOCUMENT_BYTES:
+            raise CADException("document_too_large", "Document exceeds the 2 MiB limit.")
+        try:
+            data = json.loads(
+                text,
+                object_pairs_hook=reject_duplicate_keys,
+                parse_constant=lambda value: (_ for _ in ()).throw(
+                    ValueError(f"Non-finite constant {value}")
+                ),
+            )
+        except (ValueError, RecursionError) as exc:
+            raise CADException("invalid_json", f"Cannot read document JSON: {exc}") from exc
+        # Preserve legacy accepted number spellings. Only an explicitly embedded
+        # bounded sketch capability opts the containing document into the bounded numeric-lexeme
+        # policy; a later from_dict call cannot recover the original spelling.
+        if _has_bounded_sketch_data(data):
+            from .sketch_model import _parse_number
+
+            data = json.loads(
+                text,
+                object_pairs_hook=reject_duplicate_keys,
+                parse_int=lambda token: _parse_number(token, integer=True),
+                parse_float=_parse_number,
+            )
+        return cls.from_dict(data)
+
+    def to_dict(self) -> dict:
+        data = {
+            "schema_version": self.schema_version,
+            "id": self.id,
+            "name": self.name,
+            "units": self.units,
+            "parameters": dict(self.parameters),
+            "features": [feature.to_dict() for feature in self.features],
+            "active_feature": self.active_feature,
+        }
+        _check_bounded_document_budget(data, persisted=True)
+        return data
+
+    def to_json(self) -> str:
+        return json.dumps(self.to_dict(), sort_keys=True, indent=2, allow_nan=False) + "\n"
+
+    @property
+    def content_hash(self) -> str:
+        return hashlib.sha256(self.to_json().encode()).hexdigest()
+
+    def validate(self) -> None:
+        _text(self.id, "Document ID", 128)
+        _text(self.name, "Document name")
+        if (
+            type(self.schema_version) is not int
+            or self.schema_version not in SUPPORTED_SCHEMA_VERSIONS
+        ):
+            raise CADException("unsupported_schema", "Unsupported document schema.")
+        if self.units != "mm":
+            raise CADException("unsupported_units", "This version accepts millimetres ('mm') only.")
+        if len(self.parameters) > MAX_PARAMETERS or len(self.features) > MAX_FEATURES:
+            raise CADException(
+                "invalid_document", "Document exceeds its parameter or feature limit."
+            )
+        if any(
+            isinstance(feature, Feature)
+            and isinstance(feature.sketch, SketchDefinition)
+            and sketch_capabilities(feature.sketch.schema_version).bounded_payload
+            for feature in self.features
+        ):
+            self.to_dict()  # Validate actual canonical bytes before callers may solve.
+        for name in self.parameters:
+            if (
+                not isinstance(name, str)
+                or not IDENTIFIER.fullmatch(name)
+                or len(name) > 64
+                or name in CONSTANTS
+                or name in FUNCTIONS
+            ):
+                raise CADException(
+                    "invalid_document", f"Invalid or reserved parameter name '{name}'."
+                )
+        for feature in self.features:
+            if not isinstance(feature, Feature):
+                raise CADException("invalid_document", "Expected Feature instances.")
+            Feature.from_dict(feature.to_dict())
+            if feature.kind == "sketch_constrained" and self.schema_version < 2:
+                raise CADException(
+                    "migration_required",
+                    "Constrained sketches require explicit migration to document schema 2.",
+                )
+        if self.active_feature is not None:
+            _text(self.active_feature, "Active feature ID", 128)
+        resolve_parameters(self.parameters)
+        ordered = self.topological_features()
+        by_id = {feature.id: feature for feature in ordered}
+        if self.active_feature is not None and self.active_feature not in by_id:
+            raise CADException(
+                "missing_active_feature", f"Active feature '{self.active_feature}' does not exist."
+            )
+        for feature in ordered:
+            for input_name, expected_type in KINDS[feature.kind][2].items():
+                actual = by_id[feature.inputs[input_name]]
+                if output_type(actual.kind) != expected_type:
+                    raise CADException(
+                        "input_type_mismatch",
+                        f"{feature.id}.{input_name} requires {expected_type}, not {actual.kind}.",
+                    )
+
+    def topological_features(self) -> tuple[Feature, ...]:
+        by_id = {feature.id: feature for feature in self.features}
+        if len(by_id) != len(self.features):
+            raise CADException("duplicate_feature", "Every feature must have a unique ID.")
+        for feature in self.features:
+            for target in feature.inputs.values():
+                if target not in by_id:
+                    raise CADException(
+                        "missing_reference",
+                        f"Feature '{feature.id}' refers to missing feature '{target}'.",
+                    )
+        ordered: list[Feature] = []
+        pending = list(self.features)
+        completed: set[str] = set()
+        while pending:
+            ready = [feature for feature in pending if set(feature.inputs.values()) <= completed]
+            if not ready:
+                raise CADException("feature_cycle", "Feature graph contains a dependency cycle.")
+            for feature in ready:
+                ordered.append(feature)
+                completed.add(feature.id)
+                pending.remove(feature)
+        return tuple(ordered)
+
+    def migrate_to_v2(self) -> Document:
+        """Explicitly opt into typed sketches; preserve existing IDs and feature intent.
+
+        Loading/replaying schema 1 never calls this automatically. The version
+        change intentionally changes the document hash; no primitive is converted.
+        """
+        self.validate()
+        if self.schema_version == LATEST_SCHEMA_VERSION:
+            return self
+        data = self.to_dict()
+        data["schema_version"] = LATEST_SCHEMA_VERSION
+        return self.from_dict(data)
+
+    def with_parameter(self, name: str, value: Scalar) -> Document:
+        """Return a validated copy, leaving the previous document unchanged."""
+        data = self.to_dict()
+        data["parameters"][name] = value
+        return self.from_dict(data)
+
+    def with_feature(self, feature: Feature, *, make_active: bool = True) -> Document:
+        data = self.to_dict()
+        data["features"] = [
+            feature.to_dict() if item.id == feature.id else item.to_dict() for item in self.features
+        ]
+        if not any(item.id == feature.id for item in self.features):
+            data["features"].append(feature.to_dict())
+        if make_active:
+            data["active_feature"] = feature.id
+        return self.from_dict(data)
+
+    def without_feature(self, feature_id: str) -> Document:
+        """Remove only unreferenced nodes; never silently cascade design deletion."""
+        if not any(feature.id == feature_id for feature in self.features):
+            raise CADException("missing_reference", f"Feature '{feature_id}' does not exist.")
+        users = [feature.id for feature in self.features if feature_id in feature.inputs.values()]
+        if users:
+            raise CADException(
+                "feature_in_use", f"Feature '{feature_id}' is used by {', '.join(users)}."
+            )
+        data = self.to_dict()
+        data["features"] = [item for item in data["features"] if item["id"] != feature_id]
+        if data["active_feature"] == feature_id:
+            data["active_feature"] = data["features"][-1]["id"] if data["features"] else None
+        return self.from_dict(data)
+
+
+def load_document(path: str | Path) -> Document:
+    path = Path(path)
+    if path.stat().st_size > MAX_DOCUMENT_BYTES:
+        raise CADException("document_too_large", "Document exceeds the 2 MiB limit.")
+    return Document.from_json(path.read_text(encoding="utf-8"))
+
+
+def save_document(document: Document, path: str | Path) -> None:
+    """Atomic replacement: a failed write preserves the previous model document."""
+    document.validate()
+    path = Path(path)
+    descriptor, temporary = tempfile.mkstemp(
+        prefix=f".{path.name}.", suffix=".tmp", dir=path.parent
+    )
+    try:
+        with os.fdopen(descriptor, "w", encoding="utf-8") as stream:
+            stream.write(document.to_json())
+            stream.flush()
+            os.fsync(stream.fileno())
+        os.replace(temporary, path)
+    finally:
+        if os.path.exists(temporary):
+            os.unlink(temporary)

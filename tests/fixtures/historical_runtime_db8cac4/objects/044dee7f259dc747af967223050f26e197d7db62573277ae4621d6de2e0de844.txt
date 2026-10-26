@@ -1,0 +1,959 @@
+"""Pure general-sketch transaction orchestration, separate from canonical Part data.
+
+Commands and strict intent validation live in general_sketch_commands; bounded
+local Undo/Redo and snapshot continuity live in general_sketch_journal. The store
+codec has an independently versioned general kind; rectangle behavior is untouched.
+
+The exact original document is immutable. Candidate/trial construction owns its
+copies. The shared native-free bridge validates current solve/replay evidence;
+only detached revision-bound solved seeds are retained, never a local DoF guess.
+No successful preview authorizes Finish/export or modifies committed history.
+The external owner additionally guards live scene, base, slot and cancellation.
+"""
+
+from __future__ import annotations
+
+import copy
+import hashlib
+import json
+from dataclasses import replace
+
+from . import backend_contracts, operation_contracts
+from .general_sketch_commands import (
+    JOURNAL_VERSION,
+    MAX_ALLOCATED_IDS,
+    MAX_DOCUMENT_BYTES,
+    MAX_JOURNAL_BYTES,
+    MAX_JOURNAL_ENTRIES,
+    MAX_RAW_TEXT_BYTES,
+    AddArc,
+    AddCircle,
+    AddLine,
+    AddPoint,
+    AddRelation,
+    Command,
+    CommandResult,
+    DeleteBatch,
+    DeletePreview,
+    DraftError,
+    EditDriver,
+    EditFixedTarget,
+    PendingDimensionEdit,
+    PointRef,
+    PointSeed,
+    RecoverRemoveRelation,
+    ReverseArcSweep,
+    _apply_record,
+    _identifier,
+    _ids,
+    _integer,
+    _journal_version,
+    _json,
+    _keys,
+    _normalized_sketch,
+    _record,
+    _require,
+    _Solution,
+    _successor,
+    _validate_sketch,
+    deletion_preview,
+    parse_json,
+    prepare_command,
+)
+from .general_sketch_journal import append_entry, restore_history, restore_pending
+from .guarded_evidence import GuardedEvidence
+from .request_contracts import snapshot_request
+
+__all__ = [
+    "AddArc",
+    "AddCircle",
+    "AddLine",
+    "AddPoint",
+    "AddRelation",
+    "Command",
+    "CommandResult",
+    "DeleteBatch",
+    "DeletePreview",
+    "DraftError",
+    "EditDriver",
+    "EditFixedTarget",
+    "PendingDimensionEdit",
+    "PointRef",
+    "PointSeed",
+    "RecoverRemoveRelation",
+    "ReverseArcSweep",
+    "GeneralSketchDraft",
+    "_normalized_sketch",
+]
+
+
+def validate_replay_response(request, response):
+    """Compatibility helper with strict explicit version dispatch."""
+    return operation_contracts.validate_response(request, response)
+
+
+def read_guarded_operation(
+    evidence, expected_prepared, current_selection, *, owner_token, action, require_success=False
+):
+    """Read an exact independently captured G; the arriving receipt cannot choose it.
+
+    This native-free handoff is shared by General draft, diagnostic and display
+    consumers. Selection comes from the full captured candidate, never a packet
+    version, cached UI capability, or the evidence's own prepared request.
+    """
+    _require(
+        type(expected_prepared) is backend_contracts.PreparedRequest,
+        "The independently prepared guarded request is required.",
+    )
+    try:
+        expected = backend_contracts.prepare_guarded_request(expected_prepared.guarded_request())
+    except AttributeError as exc:
+        raise DraftError("The expected guarded request is incomplete.") from exc
+    _require(expected == expected_prepared, "The expected guarded request changed.")
+    _require(type(evidence) is GuardedEvidence, "Expected retained guarded evidence.")
+    try:
+        returned = backend_contracts.prepare_guarded_request(evidence.guarded_request())
+    except AttributeError as exc:
+        raise DraftError("The retained guarded evidence is incomplete.") from exc
+    _require(
+        returned == expected,
+        "Returned evidence differs from the exact prepared guarded request.",
+    )
+    request = expected.operation_request()
+    version = operation_contracts.result_version_for(
+        request["document"], action=action, owner_role="general"
+    )
+    _require(request.get("action") == action, "Prepared operation belongs to another action.")
+    try:
+        return evidence.revalidate(
+            current_selection,
+            owner_token=owner_token,
+            expected_action=action,
+            expected_result_version=version,
+            require_success=require_success,
+        )
+    except AttributeError as exc:
+        raise DraftError("The retained guarded evidence is incomplete.") from exc
+
+
+class GeneralSketchDraft:
+    """Detached accepted intent with bounded, explicitly local sketch Undo/Redo."""
+
+    def __init__(
+        self,
+        document_json: str,
+        feature_id: str = "",
+        is_edit: bool = False,
+        *,
+        journal_version: int = JOURNAL_VERSION,
+    ):
+        self._journal_version = _journal_version(journal_version)
+        document = parse_json(document_json, MAX_DOCUMENT_BYTES)
+        _require(
+            type(document) is dict
+            and type(document.get("features")) is list
+            and type(document.get("parameters")) is dict,
+            "Invalid base Part document.",
+        )
+        _require(type(is_edit) is bool, "Draft edit mode must be boolean.")
+        _identifier(document.get("id"))
+        _require(
+            type(document.get("schema_version")) is int and document["schema_version"] in (1, 2),
+            "Unsupported Part document version.",
+        )
+        feature_ids = [item.get("id") for item in document["features"] if type(item) is dict]
+        _require(len(feature_ids) == len(document["features"]), "Invalid base feature records.")
+        _require(
+            journal_version == 3
+            or not any(
+                type(item.get("sketch")) is dict and item["sketch"].get("schema_version") == 3
+                for item in document["features"]
+            ),
+            "Sketch schema 3 requires explicit journal 3 capability.",
+        )
+        for identifier in feature_ids:
+            _identifier(identifier)
+        _require(len(feature_ids) == len(set(feature_ids)), "Duplicate base feature identities.")
+        if not feature_id:
+            _require(not is_edit, "Choose the existing sketch feature to edit.")
+            index = 1
+            while f"sketch_{index}" in feature_ids:
+                index = _successor(index, "feature identity counter")
+            feature_id = f"sketch_{index}"
+        _identifier(feature_id)
+        if is_edit:
+            feature = next(
+                (item for item in document["features"] if item["id"] == feature_id), None
+            )
+            _require(
+                feature is not None and feature.get("kind") == "sketch_constrained",
+                "Choose an existing constrained sketch.",
+            )
+            sketch = copy.deepcopy(feature.get("sketch"))
+        else:
+            _require(feature_id not in feature_ids, "New sketch feature ID already exists.")
+            sketch_id = f"{feature_id}_geometry"
+            _identifier(sketch_id)
+            sketch = {
+                "schema_version": 2,
+                "id": sketch_id,
+                "units": "mm",
+                "plane": {"id": "xy", "origin": [0, 0, 0], "quaternion": [1, 0, 0, 0]},
+                "points": [],
+                "lines": [],
+                "circles": [],
+                "constraints": [],
+            }
+        self._document_json, self._base = document_json, document
+        self._feature_id, self._is_edit = feature_id, is_edit
+        self._sketch = _validate_sketch(sketch, journal_version=self.journal_version)
+        if self.journal_version == 3:
+            self._candidate_for(self._sketch)
+        self._revision = 0
+        self._allocated_ids, self._next_id = _ids(sketch), 1
+        self._anchor = copy.deepcopy(sketch)
+        self._anchor_sequence = 0
+        self._anchor_next_id = 1
+        self._journal, self._cursor = [], 0
+        self._pending = None
+        self._solution = self._trial_solution = None
+        self._solution_evidence = self._trial_evidence = None
+        self._solution_prepared = self._trial_prepared = None
+        self._guarded_owner = self._current_selection = None
+
+    @property
+    def document_json(self):
+        return self._document_json
+
+    @property
+    def journal_version(self):
+        return self._journal_version
+
+    def promote_arc_capability(self):
+        """Return detached explicit journal-3 intent, preserving old history exactly.
+
+        This is a capability choice, never an embedded-schema edit, accepted
+        command, or authority transfer. The owner controls any saved-slot update.
+        """
+        state = self.checkpoint_payload()
+        state["journal"]["schema_version"] = 3
+        return type(self).from_checkpoint_payload(state, expected_journal_version=3)
+
+    @property
+    def feature_id(self):
+        return self._feature_id
+
+    @property
+    def is_edit(self):
+        return self._is_edit
+
+    @property
+    def revision(self):
+        return self._revision
+
+    @property
+    def base_hash(self):
+        return hashlib.sha256(self.document_json.encode("utf-8")).hexdigest()
+
+    @property
+    def sketch(self):
+        return copy.deepcopy(self._sketch)
+
+    @property
+    def pending_edit(self):
+        return self._pending
+
+    @property
+    def can_undo(self):
+        return self._cursor > 0 and self._pending is None
+
+    @property
+    def can_redo(self):
+        return self._cursor < len(self._journal) and self._pending is None
+
+    @property
+    def has_current_solution(self):
+        if self._pending is not None or self._solution is None:
+            return False
+        try:
+            current = (
+                self._solution.revision == self.revision
+                and self._solution.candidate_json == _json(self.candidate())
+                and self._guarded_current(self._solution_evidence, self._solution_prepared)
+            )
+        except (ValueError, RuntimeError, TypeError, KeyError, AttributeError):
+            current = False
+        if not current:
+            self._clear_evidence()
+        return current
+
+    @property
+    def has_verified_trial(self):
+        if self._pending is None or self._trial_solution is None:
+            return False
+        try:
+            current = (
+                self._trial_solution.revision == self.revision
+                and self._trial_solution.input_revision == self._pending.input_revision
+                and self._trial_solution.candidate_json == _json(self.trial_candidate())
+                and self._guarded_current(self._trial_evidence, self._trial_prepared, trial=True)
+            )
+        except (ValueError, RuntimeError, TypeError, KeyError, AttributeError):
+            current = False
+        if not current:
+            self._clear_evidence()
+        return current
+
+    @property
+    def consumed_by(self):
+        return tuple(
+            item["id"]
+            for item in self._base["features"]
+            if self.feature_id in (item.get("inputs") or {}).values()
+        )
+
+    def require_current(self, document_json):
+        _require(
+            document_json == self.document_json,
+            "The committed document changed. Restore the exact original base or cancel and reopen this sketch.",
+        )
+
+    def candidate(self):
+        """Return a detached unverified Part candidate, never mutate canonical text."""
+        return self._candidate_for(self._sketch)
+
+    def _candidate_for(self, sketch):
+        document = copy.deepcopy(self._base)
+        if self.is_edit:
+            feature = next(item for item in document["features"] if item["id"] == self.feature_id)
+            feature["sketch"] = copy.deepcopy(sketch)
+        else:
+            document["schema_version"] = 2
+            document["features"].append(
+                {
+                    "id": self.feature_id,
+                    "kind": "sketch_constrained",
+                    "label": "Sketch",
+                    "params": {},
+                    "inputs": {},
+                    "sketch": copy.deepcopy(sketch),
+                }
+            )
+            if document.get("active_feature") is None:
+                document["active_feature"] = self.feature_id
+        _require(
+            len(_json(document).encode("utf-8")) <= MAX_DOCUMENT_BYTES,
+            "Candidate exceeds the Part document byte limit.",
+        )
+        if self.journal_version == 3:
+            from .operation_contracts import validate_authoring_candidate
+
+            try:
+                _validate_sketch(sketch, journal_version=self.journal_version)
+                validate_authoring_candidate(document)
+            except (ValueError, TypeError, KeyError, OverflowError, RecursionError) as exc:
+                raise DraftError(f"Unsupported authoring candidate: {exc}") from exc
+        return document
+
+    def _idle(self):
+        _require(self._pending is None, "Accept or cancel the pending dimension edit first.")
+
+    def bind_guarded(self, owner_token, current_selection):
+        """Bind a production draft; legacy dictionaries can no longer mint authority.
+
+        The callback is runtime-only and must be retired before RNA teardown.
+        Same-owner clones retain the original immutable evidence, not saved JSON.
+        """
+        _require(owner_token is not None and callable(current_selection), "Invalid evidence owner.")
+        _require(
+            self._guarded_owner is None or self._guarded_owner is owner_token,
+            "Sketch evidence cannot transfer to a different owner.",
+        )
+        self._guarded_owner, self._current_selection = owner_token, current_selection
+        self._clear_evidence()
+
+    def retire_guarded(self):
+        """Drop live callbacks permanently without converting back to legacy mode."""
+        self._clear_evidence()
+        self._current_selection = None
+
+    def _guarded_current(self, evidence, prepared, *, trial=False):
+        if self._guarded_owner is None:
+            return True  # Explicit isolated pure-helper compatibility mode.
+        try:
+            _require(
+                type(evidence) is tuple
+                and 1 <= len(evidence) <= 2
+                and type(prepared) is tuple
+                and len(evidence) == len(prepared)
+                and self._current_selection is not None,
+                "Current guarded sketch evidence is unavailable.",
+            )
+            current = self._current_selection()
+            candidate = self.trial_candidate() if trial else self.candidate()
+            nonces = set()
+            for index, (item, expected) in enumerate(zip(evidence, prepared, strict=True)):
+                read_guarded_operation(
+                    item,
+                    expected,
+                    current,
+                    owner_token=self._guarded_owner,
+                    action="solve_sketch" if index == 0 else "replay",
+                    require_success=True,
+                )
+                operation = expected.operation_request()
+                _require(
+                    expected.request_id not in nonces, "Each solve/replay needs a fresh nonce."
+                )
+                nonces.add(expected.request_id)
+                _require(
+                    _json(operation["document"]) == _json(candidate),
+                    "Retained evidence belongs to another candidate.",
+                )
+                if index == 0:
+                    _require(
+                        _json(operation) == _json(self.solve_request(trial=trial)),
+                        "Retained solve request changed.",
+                    )
+            return True
+        except (ValueError, RuntimeError, TypeError, AttributeError, ReferenceError):
+            # Once a mismatch is observed, restoring old settings cannot revive it.
+            self._clear_evidence()
+            return False
+
+    def transfer_guarded_solution(self, source):
+        """Transfer immutable current authority to an exact same-owner clone.
+
+        Preserve the whole solve/downstream chain and its solved seeds. A new
+        acceptance from the public solve projection would silently lose the
+        downstream evidence that made a consumed driver acceptable.
+        """
+        self._idle()
+        _require(
+            type(source) is GeneralSketchDraft
+            and self._guarded_owner is not None
+            and self._guarded_owner is source._guarded_owner
+            and self._current_selection is not None,
+            "Current sketch evidence cannot transfer to another owner.",
+        )
+        _require(source.has_current_solution, "The source sketch solution is no longer current.")
+        _require(
+            self.revision == source.revision
+            and _json(self.solve_request()) == _json(source.solve_request()),
+            "Current sketch evidence requires an exact same-revision clone.",
+        )
+        evidence = source._solution_evidence
+        prepared = source._solution_prepared
+        _require(self._guarded_current(evidence, prepared), "The cloned backend evidence is stale.")
+        self._solution = source._solution
+        self._solution_evidence = evidence
+        self._solution_prepared = prepared
+        _require(self.has_current_solution, "The cloned sketch solution was revoked.")
+
+    def _clear_evidence(self):
+        self._solution = self._trial_solution = None
+        self._solution_evidence = self._trial_evidence = None
+        self._solution_prepared = self._trial_prepared = None
+
+    def invalidate_solution(self):
+        """Retire runtime solve authority without changing authored intent/history.
+
+        Owners call this when beginning a replacement Check. Cancellation or a
+        failed launch must not revive a solution whose complete evidence retired.
+        No saved field, revision, raw input, or allocation is changed.
+        """
+        self._clear_evidence()
+
+    def execute(self, command: Command):
+        """Accept an explicit structural command as unverified authoring intent."""
+        self._idle()
+        _require(
+            not isinstance(command, EditDriver),
+            "Use a pending dimension edit and validated trial to edit a driver.",
+        )
+        if isinstance(command, RecoverRemoveRelation):
+            _require(
+                not self.has_current_solution,
+                "A current solved placement exists; use validated relation release instead of authored-position recovery.",
+            )
+        seeds = None
+        if isinstance(command, DeleteBatch) and self.has_current_solution:
+            seeds = {
+                "points": json.loads(self._solution.points_json),
+                "circles": json.loads(self._solution.circles_json),
+            }
+        prepared = prepare_command(
+            self._sketch,
+            command,
+            self.revision,
+            self._allocated_ids,
+            self._next_id,
+            release_seeds=seeds,
+            max_allocated_ids=MAX_ALLOCATED_IDS,
+            journal_version=self.journal_version,
+        )
+        changed = prepared.record is not None and self._commit(
+            prepared.record, allocated=prepared.allocated_ids, next_id=prepared.next_id
+        )
+        return CommandResult(changed, self.revision, prepared.entity_ids, prepared.constraint_id)
+
+    def preview_delete(self, targets):
+        return deletion_preview(
+            self._sketch, self.revision, targets, journal_version=self.journal_version
+        )
+
+    def _commit(self, command, *, allocated=None, next_id=None):
+        after = _apply_record(self._sketch, command, journal_version=self.journal_version)
+        self._candidate_for(after)
+        if _json(after) == _json(self._sketch):
+            return False
+        revision = _successor(self._revision, "draft revision")
+        history = append_entry(
+            self._sketch,
+            after,
+            command,
+            self._journal,
+            self._cursor,
+            self._anchor,
+            self._anchor_sequence,
+            anchor_next_id=self._anchor_next_id,
+            allocation_before=self._next_id,
+            allocation_after=self._next_id if next_id is None else next_id,
+            max_entries=MAX_JOURNAL_ENTRIES,
+            max_bytes=MAX_JOURNAL_BYTES,
+        )
+        self._sketch = copy.deepcopy(after)
+        self._journal, self._cursor = history.entries, history.cursor
+        self._anchor, self._anchor_sequence = history.anchor, history.anchor_sequence
+        self._anchor_next_id = history.anchor_next_id
+        if allocated is not None:
+            self._allocated_ids, self._next_id = allocated, next_id
+        self._revision = revision
+        self._clear_evidence()
+        return True
+
+    def undo(self):
+        """Undo only accepted sketch intent; external committed history is untouched."""
+        self._idle()
+        _require(self.can_undo, "No retained local sketch edit to undo.")
+        revision = _successor(self._revision, "draft revision")
+        before = self._journal[self._cursor - 1]["before"]
+        self._candidate_for(before)
+        self._sketch = copy.deepcopy(before)
+        self._cursor -= 1
+        self._revision = revision
+        self._clear_evidence()
+
+    def redo(self):
+        self._idle()
+        _require(self.can_redo, "No local sketch edit to redo.")
+        revision = _successor(self._revision, "draft revision")
+        after = self._journal[self._cursor]["after"]
+        self._candidate_for(after)
+        self._sketch = copy.deepcopy(after)
+        self._cursor += 1
+        self._revision = revision
+        self._clear_evidence()
+
+    def begin_edit(self, constraint_id):
+        self._idle()
+        relation = _record(self._sketch, "constraints", constraint_id)
+        _require(relation["kind"] in {"distance", "radius"}, "Choose a driving distance or radius.")
+        source = relation["value"]
+        self._pending = PendingDimensionEdit(
+            constraint_id,
+            relation["kind"],
+            tuple(relation["refs"]),
+            source,
+            self.revision,
+            0,
+            source if type(source) is str else repr(source),
+        )
+        self._clear_evidence()
+        return self._pending
+
+    def update_edit(self, raw_text):
+        _require(self._pending is not None, "No dimension edit is open.")
+        _require(
+            type(raw_text) is str and len(raw_text) <= MAX_RAW_TEXT_BYTES,
+            "Raw dimension input is too large.",
+        )
+        try:
+            _require(
+                len(raw_text.encode("utf-8")) <= MAX_RAW_TEXT_BYTES,
+                "Raw dimension input is too large.",
+            )
+        except UnicodeError as exc:
+            raise DraftError("Raw dimension input is not valid Unicode.") from exc
+        self._pending = replace(
+            self._pending,
+            raw_text=raw_text,
+            input_revision=_successor(self._pending.input_revision, "dimension input revision"),
+            error="",
+        )
+        self._clear_evidence()
+
+    def cancel_edit(self):
+        _require(self._pending is not None, "No dimension edit is open.")
+        self._pending = None
+        self._clear_evidence()
+
+    def _edit_command(self):
+        pending = self._pending
+        _require(
+            pending is not None and pending.base_revision == self.revision,
+            "The pending dimension target is stale.",
+        )
+        relation = _record(self._sketch, "constraints", pending.constraint_id)
+        _require(
+            (relation["kind"], tuple(relation["refs"]), _json(relation["value"]))
+            == (pending.kind, pending.refs, _json(pending.source)),
+            "The pending dimension binding changed.",
+        )
+        original_text = pending.source if type(pending.source) is str else repr(pending.source)
+        value = pending.source if pending.raw_text == original_text else pending.raw_text.strip()
+        _require(
+            type(value) is not str or 0 < len(value) <= 256,
+            "Enter a dimension or expression of at most 256 characters.",
+        )
+        return {"op": "driver", "constraint_id": pending.constraint_id, "value": value}
+
+    def trial_candidate(self):
+        """Normalize edited edge whitespace only; raw input stays verbatim."""
+        return self._candidate_for(
+            _apply_record(self._sketch, self._edit_command(), journal_version=self.journal_version)
+        )
+
+    def solve_request(self, *, trial=False):
+        candidate = self.trial_candidate() if trial else self.candidate()
+        return {
+            "protocol_version": 1,
+            "action": "solve_sketch",
+            "result_version": operation_contracts.result_version_for(
+                candidate, action="solve_sketch", owner_role="general"
+            ),
+            "document": candidate,
+            "feature_id": self.feature_id,
+        }
+
+    def record_validated_solution(
+        self, request, response, expected_revision, *, expected_input_revision=None
+    ):
+        """Validate at the shared bridge; retain coordinates only for this revision.
+
+        The owner additionally guards runtime scene/base/slot/configuration and
+        cancellation before calling. This pure layer does not own those resources.
+        A caller cannot authorize a release by passing raw solved coordinates.
+        """
+        _require(
+            self._guarded_owner is None,
+            "Production sketches require retained guarded evidence, not a legacy response.",
+        )
+        return self._record_validated_solution(
+            request, response, expected_revision, expected_input_revision=expected_input_revision
+        )
+
+    def record_guarded_solution(
+        self, evidence, expected_revision, *, expected_prepared, expected_input_revision=None
+    ):
+        """Accept the same retained operation under a live same-owner binding."""
+        _require(
+            self._guarded_owner is not None and self._current_selection is not None,
+            "Bind the production sketch owner before accepting guarded evidence.",
+        )
+        _require(type(evidence) is GuardedEvidence, "Expected retained guarded solve evidence.")
+        response = read_guarded_operation(
+            evidence,
+            expected_prepared,
+            self._current_selection(),
+            owner_token=self._guarded_owner,
+            action="solve_sketch",
+        )
+        accepted = self._record_validated_solution(
+            expected_prepared.operation_request(),
+            response,
+            expected_revision,
+            expected_input_revision=expected_input_revision,
+        )
+        # Recheck after local acceptance as callbacks may have revoked the owner.
+        read_guarded_operation(
+            evidence,
+            expected_prepared,
+            self._current_selection(),
+            owner_token=self._guarded_owner,
+            action="solve_sketch",
+        )
+        if accepted:
+            if expected_input_revision is None:
+                self._solution_evidence = (evidence,)
+                self._solution_prepared = (expected_prepared,)
+            else:
+                self._trial_evidence = (evidence,)
+                self._trial_prepared = (expected_prepared,)
+        return accepted
+
+    def _record_validated_solution(
+        self, request, response, expected_revision, *, expected_input_revision=None
+    ):
+        _integer(expected_revision)
+        _require(expected_revision == self.revision, "Stale sketch solve revision.")
+        trial = expected_input_revision is not None
+        if trial:
+            _integer(expected_input_revision)
+            _require(
+                self._pending is not None
+                and self._pending.input_revision == expected_input_revision,
+                "Stale dimension input revision.",
+            )
+            self._trial_solution = None
+        else:
+            self._idle()
+            self._solution = None
+        try:
+            request = snapshot_request(request)
+        except (ValueError, RuntimeError, TypeError) as exc:
+            raise DraftError(f"Invalid bounded sketch request: {exc}") from exc
+        _require(
+            _json(request) == _json(self.solve_request(trial=trial)),
+            "Solve request differs from the exact current candidate.",
+        )
+        try:
+            validated = operation_contracts.validate_response(request, response)
+        except (ValueError, TypeError, KeyError, OverflowError, RecursionError) as exc:
+            raise DraftError(f"Sketch evidence was rejected: {exc}") from exc
+        if not validated["ok"]:
+            if trial:
+                self._pending = replace(self._pending, error=validated["error"]["message"])
+            return False
+        solved = validated["result"]["sketch"]["solved"]
+        solution = _Solution(
+            self.revision,
+            expected_input_revision,
+            _json(request["document"]),
+            _json(solved["points"]),
+            _json(
+                [
+                    {key: circle[key] for key in ("id", "radius")}
+                    for circle in solved.get("circles", [])
+                ]
+            ),
+        )
+        if trial:
+            self._trial_solution = solution
+            self._pending = replace(self._pending, error="")
+        else:
+            self._solution = solution
+        return True
+
+    def replay_request(self, *, trial=False, options=None):
+        """Capture a full replay request; the owner still owns actual execution."""
+        candidate = self.trial_candidate() if trial else self.candidate()
+        request = {
+            "protocol_version": 1,
+            "action": "replay",
+            "result_version": operation_contracts.result_version_for(
+                candidate, action="replay", owner_role="general"
+            ),
+            "document": candidate,
+        }
+        if options is not None:
+            request["options"] = copy.deepcopy(options)
+        try:
+            return snapshot_request(request)
+        except (ValueError, RuntimeError, TypeError) as exc:
+            raise DraftError(f"Invalid bounded replay request: {exc}") from exc
+
+    def accept_edit(
+        self,
+        *,
+        replay_request=None,
+        replay_response=None,
+        replay_evidence=None,
+        replay_prepared=None,
+    ):
+        """Accept one checked driver; consumed sketches also require full replay.
+
+        This changes local accepted intent only. Even matching full replay here
+        does not replace the owner's fresh Finish/publication transaction gates.
+        """
+        _require(
+            self.has_verified_trial,
+            "Check this exact dimension input successfully before accepting it.",
+        )
+        solution = self._trial_solution
+        retained_evidence = self._trial_evidence
+        retained_prepared = self._trial_prepared
+        if self._guarded_owner is not None:
+            _require(
+                replay_request is None and replay_response is None,
+                "Production downstream acceptance requires retained guarded evidence.",
+            )
+            if self.consumed_by or replay_evidence is not None:
+                _require(
+                    type(replay_evidence) is GuardedEvidence,
+                    "Current guarded downstream replay is required.",
+                )
+                replay_response = read_guarded_operation(
+                    replay_evidence,
+                    replay_prepared,
+                    self._current_selection(),
+                    owner_token=self._guarded_owner,
+                    action="replay",
+                    require_success=True,
+                )
+                replay_request = replay_prepared.operation_request()
+                retained_evidence = (*retained_evidence, replay_evidence)
+                retained_prepared = (*retained_prepared, replay_prepared)
+                _require(
+                    self._guarded_current(retained_evidence, retained_prepared, trial=True),
+                    "Trial and downstream backend evidence must remain current together.",
+                )
+        else:
+            _require(
+                replay_evidence is None and replay_prepared is None,
+                "Bind a production owner for guarded replay.",
+            )
+        candidate = self.trial_candidate()
+        _require(
+            solution.candidate_json == _json(candidate), "The checked dimension candidate changed."
+        )
+        if self.consumed_by or replay_request is not None or replay_response is not None:
+            _require(
+                replay_request is not None and replay_response is not None,
+                "This driver affects downstream features and needs an exact full replay before acceptance; keep the pending edit.",
+            )
+            try:
+                replay_request = snapshot_request(replay_request)
+                _require(
+                    replay_request.get("action", "replay") == "replay"
+                    and "destination" not in replay_request
+                    and _json(replay_request.get("document")) == _json(candidate),
+                    "Full replay request differs from the exact pending driver candidate.",
+                )
+                validated = validate_replay_response(replay_request, replay_response)
+            except (
+                ValueError,
+                RuntimeError,
+                TypeError,
+                KeyError,
+                OverflowError,
+                RecursionError,
+            ) as exc:
+                raise DraftError(f"Downstream replay evidence was rejected: {exc}") from exc
+            if not validated["ok"] or validated["result"]["status"] != "ok":
+                message = (
+                    "The full downstream replay failed; keep the pending driver edit to correct it."
+                )
+                self._pending = replace(self._pending, error=message)
+                raise DraftError(message)
+            feature = next(
+                item for item in validated["result"]["features"] if item["id"] == self.feature_id
+            )
+            solved = feature["sketch"]["solved"]
+            solution = replace(
+                solution,
+                points_json=_json(solved["points"]),
+                circles_json=_json(
+                    [
+                        {key: circle[key] for key in ("id", "radius")}
+                        for circle in solved.get("circles", [])
+                    ]
+                ),
+            )
+        _require(
+            self._guarded_current(retained_evidence, retained_prepared, trial=True),
+            "Trial backend evidence is stale.",
+        )
+        changed = self._commit(self._edit_command())
+        self._pending = None
+        self._solution = replace(solution, revision=self.revision, input_revision=None)
+        self._trial_solution = None
+        self._solution_evidence = retained_evidence
+        self._solution_prepared = retained_prepared
+        return CommandResult(changed, self.revision)
+
+    # Semantic name for owner adapters that distinguish driving-field acceptance
+    # from whole-sketch Finish. Both names use exactly the same evidence gates.
+    accept_driver = accept_edit
+
+    def checkpoint_payload(self):
+        """Pure intent only, including local history. No evidence or owner tokens."""
+        pending = None
+        if self._pending is not None:
+            p = self._pending
+            pending = {
+                "constraint_id": p.constraint_id,
+                "kind": p.kind,
+                "refs": list(p.refs),
+                "source": p.source,
+                "base_revision": p.base_revision,
+                "input_revision": p.input_revision,
+                "raw_text": p.raw_text,
+            }
+        return {
+            "document_json": self.document_json,
+            "feature_id": self.feature_id,
+            "is_edit": self.is_edit,
+            "revision": self.revision,
+            "accepted_sketch": self.sketch,
+            "allocated_ids": sorted(self._allocated_ids),
+            "next_id": self._next_id,
+            "journal": {
+                "schema_version": self.journal_version,
+                "anchor_sequence": self._anchor_sequence,
+                "anchor_next_id": self._anchor_next_id,
+                "anchor": copy.deepcopy(self._anchor),
+                "cursor": self._cursor,
+                "entries": copy.deepcopy(self._journal),
+            },
+            "pending_edit": pending,
+        }
+
+    @classmethod
+    def from_checkpoint_payload(cls, state, *, expected_journal_version=JOURNAL_VERSION):
+        """Validate a complete replayable journal, restoring no solved capability."""
+        _keys(
+            state,
+            {
+                "document_json",
+                "feature_id",
+                "is_edit",
+                "revision",
+                "accepted_sketch",
+                "allocated_ids",
+                "next_id",
+                "journal",
+                "pending_edit",
+            },
+        )
+        _journal_version(expected_journal_version)
+        _require(
+            type(state["journal"]) is dict
+            and type(state["journal"].get("schema_version")) is int
+            and state["journal"]["schema_version"] == expected_journal_version,
+            "Unsupported local journal version.",
+        )
+        draft = cls(
+            state["document_json"],
+            state["feature_id"],
+            state["is_edit"],
+            journal_version=expected_journal_version,
+        )
+        history = restore_history(
+            state,
+            draft._sketch,
+            max_entries=MAX_JOURNAL_ENTRIES,
+            max_bytes=MAX_JOURNAL_BYTES,
+            max_allocated_ids=MAX_ALLOCATED_IDS,
+            expected_journal_version=expected_journal_version,
+            validate_candidate=draft._candidate_for if expected_journal_version == 3 else None,
+        )
+        draft._candidate_for(history.sketch)
+        draft._sketch, draft._revision = history.sketch, history.revision
+        draft._allocated_ids, draft._next_id = history.allocated_ids, history.next_id
+        draft._anchor, draft._anchor_sequence = history.anchor, history.anchor_sequence
+        draft._anchor_next_id = history.anchor_next_id
+        draft._journal, draft._cursor = history.entries, history.cursor
+        draft._pending = restore_pending(state["pending_edit"], history.sketch, history.revision)
+        draft._clear_evidence()
+        return draft

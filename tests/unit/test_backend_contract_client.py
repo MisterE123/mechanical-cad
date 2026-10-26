@@ -84,6 +84,11 @@ def test_all_actions_require_baseline_and_explicit_solver_minimum(action):
         with pytest.raises(client.BackendContractError):
             client.prepare_request(operation(action), required_capabilities=expected)
         expected = sorted([*expected, client.ASSEMBLY_STEP_EXPORT])
+    if action == "edge_catalog":
+        # 538f1a8 and ADR 0002 make catalog observation a separate capability.
+        with pytest.raises(client.BackendContractError):
+            client.prepare_request(operation(action), required_capabilities=expected)
+        expected = sorted([*expected, "mcad.edge-catalog/1"])
     assert required == expected
     assert prepared.operation_request() == operation(action)
     assert len(prepared.payload) <= client.MAX_GUARDED_REQUEST_BYTES

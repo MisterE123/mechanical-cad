@@ -1,0 +1,39 @@
+"""Source and Blender metadata must identify the same preview version."""
+
+import ast
+import tomllib
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[2]
+
+
+def assigned_literal(path, name):
+    tree = ast.parse(path.read_text())
+    for node in tree.body:
+        if isinstance(node, ast.Assign) and any(
+            isinstance(target, ast.Name) and target.id == name for target in node.targets
+        ):
+            return ast.literal_eval(node.value)
+    raise AssertionError(f"Missing {name} in {path}")
+
+
+def test_project_core_and_blender_versions_match():
+    project = tomllib.loads((ROOT / "pyproject.toml").read_text())["project"]["version"]
+    core = assigned_literal(ROOT / "src/mechanical_cad/__init__.py", "__version__")
+    addon = assigned_literal(ROOT / "blender_addon/mechanical_cad_blender/__init__.py", "bl_info")[
+        "version"
+    ]
+    assert project == core == ".".join(str(part) for part in addon)
+
+
+def test_declared_minimum_matches_registration_and_committed_release_metadata():
+    addon = ROOT / "blender_addon/mechanical_cad_blender"
+    info = assigned_literal(addon / "__init__.py", "bl_info")
+    minimum = assigned_literal(addon / "common.py", "MIN_BLENDER_VERSION")
+    release = tomllib.loads((ROOT / "pyproject.toml").read_text())["tool"]["mechanical_cad"][
+        "release"
+    ]
+    assert info["blender"] == minimum == tuple(release["blender_minimum"])
+    assert minimum == (5, 2, 0)
+    assert "rooted-tree" in release["scope"]
+    assert "Linux" in release["qualified_runtime"]
