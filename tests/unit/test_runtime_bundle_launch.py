@@ -1,276 +1,155 @@
-"""Bundled live seam with inert runtime bytes/fake children; no native execution."""
+"""Portable bundled contracts and native-host admission; no CAD/native child launch.
 
-import fcntl
-import hashlib
+Linux descriptor/flock/process lifecycle coverage lives in the explicit Linux
+module. Windows transport/kernel-leaf mocks remain in test_windows_transport.
+"""
+
 import importlib
-import json
 import os
 import sys
-import threading
-import types
-from concurrent.futures import ThreadPoolExecutor
-from dataclasses import asdict, replace
-from pathlib import Path
+from dataclasses import asdict
+from types import SimpleNamespace
 
 import pytest
 
-ROOT = Path(__file__).resolve().parents[2]
-PACKAGE = "mcad_bundled_launch_tests"
-package = types.ModuleType(PACKAGE)
-package.__path__ = [str(ROOT / "blender_addon/mechanical_cad_blender")]
-sys.modules[PACKAGE] = package
-launch = importlib.import_module(PACKAGE + ".runtime_bundle_launch")
-selection = importlib.import_module(PACKAGE + ".backend_selection")
-contracts = importlib.import_module(PACKAGE + ".backend_contracts")
-managed = importlib.import_module(PACKAGE + ".sidecar_job")
-m = importlib.import_module(PACKAGE + ".runtime_bundle_manifest")
 
+def profile_for(platform, tmp_path):
+    if platform == "linux-x64":
+        import test_runtime_bundle_launch_linux as implementation
 
-def encode(value):
-    return json.dumps(value, sort_keys=True, separators=(",", ":")).encode("ascii")
+        fixture = implementation.Fixture(tmp_path, materialize=False)
+        release = fixture.release_data
+        location = None
+    else:
+        import test_windows_runtime as implementation
 
+        fixture = implementation.Fixture()
+        release = fixture.release
+        location = fixture.location
 
-def digest(data):
-    return hashlib.sha256(data).hexdigest()
-
-
-def test_linux_policy_accepts_only_none_without_new_behavior(bundle):
-    policy = bundle.policy()
-    assert policy.windows_cache is None
-    assert replace(policy).descriptor is policy.descriptor
-    assert replace(policy).constants is policy.constants
-    assert policy.descriptor_bytes() == bundle.policy(windows_cache=None).descriptor_bytes()
-    assert policy.launch_environment() == bundle.policy(windows_cache=None).launch_environment()
-    with pytest.raises(launch.BundleLaunchError):
-        bundle.policy(windows_cache=object())
-
-
-class Fixture:
-    def __init__(self, tmp_path):
-        self.package = tmp_path / "installed package é"
-        self.cache = tmp_path / "private cache 中文"
-        self.package.mkdir()
-        self.cache.mkdir()
-        self.bundle_id = m.bundle_identity("a" * 40, "b" * 64, "linux-x64")
-        self.root = self.cache / self.bundle_id
-        self.root.mkdir()
-        self.contents = {
-            "python/bin/python3.12": b"inert interpreter, never executed",
-            "bootstrap.py": b"inert bootstrap, never executed",
-            "src/mechanical_cad/__init__.py": b"inert core, never imported",
-            "native/libexpat.so.1": b"inert private expat",
-            "native/libz.so.1": b"inert private zlib",
-        }
-        files = []
-        for relative, data in self.contents.items():
-            path = self.root / relative
-            path.parent.mkdir(parents=True, exist_ok=True)
-            path.write_bytes(data)
-            mode = 0o755 if relative == "python/bin/python3.12" else 0o644
-            path.chmod(mode)
-            files.append(
-                {"path": relative, "size": len(data), "sha256": digest(data), "mode": mode}
-            )
-        self.manifest_data = encode(
-            {
-                "schema_version": 1,
-                "bundle_id": self.bundle_id,
-                "platform": "linux-x64",
-                "python_path": "python/bin/python3.12",
-                "bootstrap_path": "bootstrap.py",
-                "files": files,
-            }
-        )
-        folder = self.package / "_backend" / self.bundle_id
-        folder.mkdir(parents=True)
-        (folder / "bundle-manifest.json").write_bytes(self.manifest_data)
-        self.release_data = encode(
-            {
-                "schema_version": 1,
-                "bundle_id": self.bundle_id,
-                "source_commit": "a" * 40,
-                "runtime_lock_sha256": "b" * 64,
-                "platform": "linux-x64",
-                "manifest_path": f"_backend/{self.bundle_id}/bundle-manifest.json",
-                "manifest_sha256": digest(self.manifest_data),
-                "payload_path": f"_backend/{self.bundle_id}/payload.zip",
-                "payload_sha256": "c" * 64,
-                "payload_size": 1,
-            }
-        )
-        (self.package / "release_identity.json").write_bytes(self.release_data)
-        (self.root / ".bundle-ready.json").write_bytes(
-            encode(
-                {
-                    "bundle_id": self.bundle_id,
-                    "manifest_sha256": digest(self.manifest_data),
-                    "payload_sha256": "c" * 64,
-                }
-            )
-        )
-        self.descriptor = m.BundleDescriptor(
-            self.bundle_id,
-            "a" * 40,
-            "b" * 64,
-            "linux-x64",
-            digest(self.manifest_data),
-            "c" * 64,
-            str(self.root),
-            str(self.root / "python/bin/python3.12"),
-            str(self.root / "bootstrap.py"),
-        )
-        self.constants = {
-            "SCHEMA_VERSION": 1,
-            "BUILD_STATUS": "UNQUALIFIED_CONTRACT_ARTIFACT",
-            "SOURCE_COMMIT": "a" * 40,
-            "RUNTIME_LOCK_SHA256": "b" * 64,
-            "BUNDLE_ID": self.bundle_id,
-            "PLATFORM": "linux-x64",
-            "PYTHON_IMPLEMENTATION": "cpython",
-            "PYTHON_VERSION": (3, 12, 15, "final", 0),
-            "PYTHON_CACHE_TAG": "cpython-312",
-            "PYTHON_BITS": 64,
-            "PYTHON_PATH": "python/bin/python3.12",
-            "PYTHON_FLAGS": launch.PYTHON_FLAGS,
-            "BOOTSTRAP_PATH": "bootstrap.py",
-            "BOOTSTRAP_SHA256": digest(self.contents["bootstrap.py"]),
-            "RELEASE_IDENTITY_PATH": "release_identity.json",
-            "RELEASE_IDENTITY_BYTES": self.release_data,
-            "RELEASE_IDENTITY_SHA256": digest(self.release_data),
-            "BUNDLE_MANIFEST_SHA256": digest(self.manifest_data),
-            "PAYLOAD_SHA256": "c" * 64,
-            "ENTRY_LOADER": "raise SystemExit('inert test loader')",
-        }
-
-    def policy(self, **changes):
+    def capture(**changes):
         arguments = dict(
-            descriptor=self.descriptor,
-            package_root=str(self.package),
-            cache_root=str(self.cache),
-            release_data=self.release_data,
-            constants=self.constants,
+            descriptor=fixture.descriptor,
+            package_root=str(fixture.package),
+            cache_root=str(fixture.cache),
+            release_data=release,
+            constants=fixture.constants,
+            windows_cache=location,
         )
         arguments.update(changes)
-        return launch.capture_bundled_policy(**arguments)
+        return implementation.launch.capture_bundled_policy(**arguments)
 
-    def selected(self, **changes):
-        return selection.BackendSelection.capture_bundled(
-            self.policy(), generation=0, lifetime_id="test-lifetime", **changes
+    return SimpleNamespace(
+        fixture=fixture,
+        capture=capture,
+        launch=implementation.launch,
+        manifests=implementation.m,
+        selection=implementation.selection,
+    )
+
+
+@pytest.fixture(
+    params=[
+        pytest.param(
+            "linux-x64",
+            marks=pytest.mark.skipif(
+                sys.platform != "linux", reason="Linux policy capture requires a real Linux host"
+            ),
+        ),
+        "windows-x64",
+    ]
+)
+def profile(request, tmp_path):
+    # Pure records only; no materialization, chmod, filesystem links or Win32 API.
+    value = profile_for(request.param, tmp_path)
+    assert list(tmp_path.iterdir()) == []
+    value.capture()  # Clean positive prevents vacuous mutation rejection.
+    return value
+
+
+@pytest.mark.parametrize("platform", ["linux-x64", "windows-x64"])
+def test_constant_record_shape_and_immutability_are_portable(tmp_path, platform):
+    profile = profile_for(platform, tmp_path)
+    original = dict(profile.fixture.constants)
+    constants = profile.launch.BundledLaunchConstants(**original)
+    assert asdict(constants) == original
+    assert constants.PLATFORM == platform
+    profile.fixture.constants["ENTRY_LOADER"] = "caller mutation"
+    assert constants.ENTRY_LOADER == original["ENTRY_LOADER"]
+    with pytest.raises((AttributeError, TypeError)):
+        constants.ENTRY_LOADER = "mutated capture"
+    assert list(tmp_path.iterdir()) == []
+
+
+@pytest.mark.parametrize("damage", ["missing", "unknown"])
+def test_constant_field_membership_rejects_before_host_dependent_work(profile, damage):
+    constants = dict(profile.fixture.constants)
+    if damage == "missing":
+        del constants["ENTRY_LOADER"]
+    else:
+        constants["EXTRA"] = "never accepted"
+    with pytest.raises(profile.manifests.BundleError, match="constant fields"):
+        profile.capture(constants=constants)
+
+
+def test_public_capture_matches_the_actual_host_profile(profile):
+    policy = profile.capture()
+    expected = {("linux", "posix"): "linux-x64", ("win32", "nt"): "windows-x64"}.get(
+        (sys.platform, os.name)
+    )
+    if policy.constants.PLATFORM == expected:
+        captured = profile.selection.BackendSelection.capture_bundled(
+            policy, generation=0, lifetime_id="actual-host"
         )
+        assert captured.bundled_policy.constants.PLATFORM == expected
+    else:
+        with pytest.raises(
+            profile.selection.SelectionError, match="does not match this operating system"
+        ):
+            profile.selection.BackendSelection.capture_bundled(
+                policy, generation=0, lifetime_id="actual-host"
+            )
 
 
-@pytest.fixture
-def bundle(tmp_path):
-    return Fixture(tmp_path)
+@pytest.mark.skipif(sys.platform != "win32", reason="actual Windows host admission guard")
+def test_native_windows_host_admits_windows_profile_without_manual_backend_bypass(tmp_path):
+    assert os.name == "nt"
+    profile = profile_for("windows-x64", tmp_path)
+    policy = profile.capture()
+    capture = profile.selection.BackendSelection.capture_bundled
+    selected = capture(policy, generation=3, lifetime_id="native-windows-test")
+    assert selected.timeout == 240.0
+    assert selected.bundled_policy.constants.PLATFORM == "windows-x64"
+    assert selected.project_root == profile.fixture.root
+    selected.assert_current(capture(policy, generation=3, lifetime_id="native-windows-test"))
+    with pytest.raises(profile.selection.SelectionError):
+        selected.assert_current(capture(policy, generation=4, lifetime_id="native-windows-test"))
+    assert capture(policy, 23.0, generation=3, lifetime_id="native-windows-test").timeout == 23.0
+    evidence = importlib.import_module(profile.selection.__package__ + ".guarded_evidence")
+    jobs = importlib.import_module(profile.selection.__package__ + ".sidecar_job")
+    for record in (selected, policy, policy.descriptor):
+        assert type(record) is not evidence.GuardedEvidence
+    with pytest.raises(jobs.bridge.BridgeError, match="prepared request"):
+        jobs.SidecarJob.from_selection(policy.descriptor, selected)
+    assert list(tmp_path.iterdir()) == []
 
 
-def prepared(action="canonical_snapshot"):
-    operation = {"protocol_version": 1, "action": action, "document": {}}
-    if action.startswith("export_"):
-        operation.update(result_version=2, destination="/unused/never-written.step")
-    return contracts.prepare_request(
-        operation, required_capabilities=contracts.minimum_capabilities(operation)
+@pytest.mark.skipif(sys.platform != "win32", reason="actual Windows unsupported-backend guard")
+def test_native_windows_host_rejects_linux_policy_and_manual_backend_before_io(
+    tmp_path, monkeypatch
+):
+    profile = profile_for("linux-x64", tmp_path)
+    profile.launch.BundledLaunchConstants(
+        **profile.fixture.constants
+    )  # Valid data, unsupported host.
+    with pytest.raises(profile.launch.BundleLaunchError, match="Linux only"):
+        profile.capture()
+    monkeypatch.setattr(
+        profile.selection, "resolved_path", lambda *a: pytest.fail("external path resolved")
     )
-
-
-def finished(job, state="ready"):
-    assert job.wait(5)
-    assert job.done and job.state == state
-    return job
-
-
-def worker(function, *args, **kwargs):
-    with ThreadPoolExecutor(max_workers=1) as pool:
-        return pool.submit(function, *args, **kwargs).result(5)
-
-
-class FakeProcess:
-    def __init__(self, arguments, **kwargs):
-        self.arguments, self.kwargs = arguments, kwargs
-        self.returncode = 0
-        self.waited = False
-        self.killed = False
-        self.stdin = kwargs["stdin"].read()
-        self.fd = kwargs["pass_fds"][0]
-        assert fcntl.fcntl(self.fd, fcntl.F_GETFL) & os.O_ACCMODE == os.O_RDONLY
-        with pytest.raises(OSError):
-            os.write(self.fd, b"forbidden")
-        assert os.lseek(self.fd, 0, os.SEEK_CUR) == 0
-        self.descriptor = json.loads(os.read(self.fd, launch.MAX_DESCRIPTOR_BYTES))
-        kwargs["stdout"].write(encode({"protocol_version": 1, "ok": True, "fake": True}))
-        kwargs["stdout"].flush()
-
-    def poll(self):
-        return self.returncode
-
-    def kill(self):
-        self.killed = True
-        self.returncode = -9
-
-    def wait(self):
-        self.waited = True
-        return self.returncode
-
-
-@pytest.fixture
-def fake_launch(monkeypatch):
-    processes = []
-
-    def popen(*args, **kwargs):
-        process = FakeProcess(*args, **kwargs)
-        processes.append(process)
-        return process
-
-    monkeypatch.setattr(managed.subprocess, "Popen", popen)
-    return processes
-
-
-def test_immutable_capture_has_no_io_and_ignores_all_ambient_configuration(bundle, monkeypatch):
-    expected_environment = {
-        "LANG": "C.UTF-8",
-        "LC_ALL": "C.UTF-8",
-        "LD_LIBRARY_PATH": str(bundle.root / "native"),
-    }
-    for key in (
-        "MCAD_ROOT",
-        "MCAD_PYTHON",
-        "PYTHONHOME",
-        "PYTHONPATH",
-        "PYTHONSTARTUP",
-        "LD_PRELOAD",
-        "LD_AUDIT",
-        "LD_LIBRARY_PATH",
-        "GLIBC_TUNABLES",
-        "PATH",
-        "HOME",
-    ):
-        monkeypatch.setenv(key, "/untrusted/" + key)
-    before = dict(os.environ)
-    with monkeypatch.context() as patch:
-        patch.setattr(Path, "resolve", lambda *a, **k: pytest.fail("capture resolved a path"))
-        patch.setattr(Path, "stat", lambda *a, **k: pytest.fail("capture touched the filesystem"))
-        patch.setattr(os, "open", lambda *a, **k: pytest.fail("capture opened a file"))
-        value = bundle.selected()
-    assert type(value) is selection.BackendSelection
-    assert value.project_root == str(bundle.root)
-    assert value.core_origin == str(bundle.root / "src/mechanical_cad")
-    assert (
-        value.python_executable_target == value.python_executable == bundle.descriptor.python_path
-    )
-    assert value.launch_environment() == expected_environment
-    assert os.environ == before
-    bundle.constants["ENTRY_LOADER"] = "mutated caller mapping"
-    assert value.bundled_policy.constants.ENTRY_LOADER != bundle.constants["ENTRY_LOADER"]
-    environment = value.launch_environment()
-    environment["LD_PRELOAD"] = "evil"
-    assert value.launch_environment() == expected_environment
-    for obj, field, replacement in (
-        (value, "project_root", "/other"),
-        (value.bundled_policy, "package_root", "/other"),
-        (value.bundled_policy.constants, "ENTRY_LOADER", "other"),
-    ):
-        with pytest.raises((AttributeError, TypeError)):
-            setattr(obj, field, replacement)
+    with pytest.raises(profile.selection.SelectionError, match="Linux only"):
+        profile.selection.BackendSelection.capture(generation=0, lifetime_id="native-windows-test")
+    assert list(tmp_path.iterdir()) == []
 
 
 @pytest.mark.parametrize(
@@ -294,500 +173,15 @@ def test_immutable_capture_has_no_io_and_ignores_all_ambient_configuration(bundl
         ("SOURCE_COMMIT", "d" * 40),
         ("ENTRY_LOADER", ""),
         ("ENTRY_LOADER", "x" * 4097),
-        ("ENTRY_LOADER", "é"),
+        ("ENTRY_LOADER", "Ã©"),
         ("ENTRY_LOADER", "x\0y"),
         ("EXTRA", 1),
     ],
 )
-def test_inconsistent_or_mutable_constants_are_rejected(bundle, field, value):
-    constants = dict(bundle.constants)
+def test_inconsistent_or_mutable_constants_are_rejected(profile, field, value):
+    constants = dict(profile.fixture.constants)
+    if field == "PLATFORM":
+        value = "linux-x64" if constants["PLATFORM"] == "windows-x64" else "windows-x64"
     constants[field] = value
-    with pytest.raises(m.BundleError):
-        bundle.policy(constants=constants)
-
-
-@pytest.mark.parametrize(
-    "kind", ["descriptor", "package", "cache", "colon", "token", "release", "missing"]
-)
-def test_policy_rejects_unbound_identity_and_loader_paths(bundle, kind):
-    changes = {}
-    if kind == "descriptor":
-        changes["descriptor"] = replace(bundle.descriptor, root="/wrong")
-    elif kind == "package":
-        changes["package_root"] = str(bundle.cache)
-    elif kind == "cache":
-        changes["cache_root"] = "/tmp/../tmp"
-    elif kind in {"colon", "token"}:
-        cache = str(bundle.cache) + (":evil" if kind == "colon" else "$ORIGIN")
-        root = str(Path(cache) / bundle.bundle_id)
-        changes.update(
-            cache_root=cache,
-            descriptor=replace(
-                bundle.descriptor,
-                root=root,
-                python_path=root + "/python/bin/python3.12",
-                bootstrap_path=root + "/bootstrap.py",
-            ),
-        )
-    elif kind == "release":
-        changes["release_data"] = bundle.release_data + b" "
-    else:
-        constants = dict(bundle.constants)
-        del constants["ENTRY_LOADER"]
-        changes["constants"] = constants
-    with pytest.raises(m.BundleError):
-        bundle.policy(**changes)
-
-
-def test_windows_rejects_linux_policy_without_live_selection_bypass(bundle, monkeypatch):
-    policy = bundle.policy()
-    monkeypatch.setattr(selection.sys, "platform", "win32")
-    with pytest.raises(selection.SelectionError, match="does not match this operating system"):
-        selection.BackendSelection.capture_bundled(policy, generation=0, lifetime_id="x")
-    with pytest.raises(launch.BundleLaunchError, match="Linux"):
-        bundle.policy()
-
-
-def test_currentness_includes_full_bundled_policy(bundle):
-    first = bundle.selected()
-    first.assert_current(bundle.selected())
-    policy = replace(first.bundled_policy, package_root=str(bundle.package) + " moved")
-    changed = selection.BackendSelection.capture_bundled(
-        policy, generation=0, lifetime_id="test-lifetime"
-    )
-    with pytest.raises(selection.SelectionError):
-        first.assert_current(changed)
-    with pytest.raises(selection.SelectionError):
-        replace(first, _environment=(("LD_LIBRARY_PATH", "/evil"),))
-
-
-def test_operation_reacquires_reverifies_and_passes_exact_request_with_readonly_fd(
-    bundle, fake_launch, monkeypatch
-):
-    calls = []
-    verify = launch.materialize.verify_cached_bundle
-
-    def verified(*args, **kwargs):
-        assert threading.current_thread() is not threading.main_thread()
-        assert kwargs["pin"].mode == "shared"
-        kwargs["pin"].assert_held()
-        calls.append(kwargs["pin"])
-        return verify(*args, **kwargs)
-
-    monkeypatch.setattr(launch.materialize, "verify_cached_bundle", verified)
-    captured = bundle.selected()
-    request = prepared()
-    for _ in range(2):
-        job = managed.SidecarJob.from_selection(request, captured)
-        assert calls == fake_launch or len(calls) == len(fake_launch)
-        assert job._bundle_owner is None
-        finished(job.start())
-        process = fake_launch[-1]
-        assert process.stdin == request.payload
-        assert process.arguments == [
-            captured.python_executable,
-            "-I",
-            "-S",
-            "-B",
-            "-X",
-            "utf8",
-            "-c",
-            captured.bundled_policy.constants.ENTRY_LOADER,
-            str(process.fd),
-        ]
-        assert process.kwargs["cwd"] == str(bundle.root)
-        assert process.kwargs["env"] == captured.launch_environment()
-        assert process.kwargs["close_fds"] is True
-        assert process.kwargs["pass_fds"] == (process.fd,)
-        assert not process.kwargs.get("shell", False)
-        assert process.descriptor == {"schema_version": 1, **asdict(bundle.descriptor)}
-        assert process.waited
-        assert all(stream.closed for stream in job._owned_files)
-        assert not Path(job._bundle_owner._directory).exists()
-        assert job._bundle_owner.cleanup_complete
-        assert job.result()["fake"] is True
-        with pytest.raises(OSError):
-            os.fstat(process.fd)
-    assert len(calls) == 2 and calls[0] is not calls[1]
-
-
-@pytest.mark.parametrize(
-    "kind", ["corrupt", "missing", "extra", "mode", "marker", "release", "bootstrap"]
-)
-def test_cache_mutation_between_selection_and_launch_fails_before_child(bundle, fake_launch, kind):
-    captured = bundle.selected()
-    target = bundle.root / "native/libz.so.1"
-    if kind == "corrupt":
-        target.write_bytes(b"changed")
-    elif kind == "missing":
-        target.unlink()
-    elif kind == "extra":
-        (bundle.root / "unexpected").write_bytes(b"extra")
-    elif kind == "mode":
-        target.chmod(0o755)
-    elif kind == "marker":
-        (bundle.root / ".bundle-ready.json").write_bytes(b"{}")
-    elif kind == "release":
-        (bundle.package / "release_identity.json").write_bytes(b"{}")
-    else:
-        policy = replace(
-            captured.bundled_policy,
-            constants=replace(
-                captured.bundled_policy.constants,
-                BOOTSTRAP_SHA256="d" * 64,
-            ),
-        )
-        captured = selection.BackendSelection.capture_bundled(
-            policy, generation=0, lifetime_id="test-lifetime"
-        )
-    job = finished(managed.SidecarJob.from_selection(prepared(), captured).start(), "failed")
-    assert not fake_launch
-    assert job._bundle_owner.cleanup_complete
-    with pytest.raises(managed.bridge.BridgeError):
-        job.result()
-    if kind == "corrupt":
-        assert target.read_bytes() == b"changed"  # No cache repair/removal.
-
-
-def test_cancellation_during_verification_never_launches(bundle, fake_launch, monkeypatch):
-    entered, unblock = threading.Event(), threading.Event()
-    verify = launch.materialize.verify_cached_bundle
-
-    def blocked(*args, **kwargs):
-        entered.set()
-        assert unblock.wait(5)
-        return verify(*args, **kwargs)
-
-    monkeypatch.setattr(launch.materialize, "verify_cached_bundle", blocked)
-    job = managed.SidecarJob.from_selection(prepared(), bundle.selected()).start()
-    assert entered.wait(5)
-    job.cancel()
-    assert not job.done
-    unblock.set()
-    finished(job, "cancelled")
-    assert not fake_launch
-    assert job._bundle_owner.cleanup_complete
-
-
-def test_pin_retained_through_wait_and_every_temporary_close(bundle, fake_launch, monkeypatch):
-    events = []
-    original = launch.pins.RuntimeBundlePin.release
-
-    def release(pin):
-        assert fake_launch[-1].waited
-        assert all(file.closed for file in job._owned_files)
-        assert not Path(job._bundle_owner._directory).exists()
-        events.append("release")
-        return original(pin)
-
-    monkeypatch.setattr(launch.pins.RuntimeBundlePin, "release", release)
-    job = managed.SidecarJob.from_selection(prepared(), bundle.selected())
-    finished(job.start())
-    assert events == ["release"]
-
-
-@pytest.mark.parametrize("where", ["pin", "descriptor", "file", "process", "acquisition"])
-def test_cleanup_uncertainty_retains_owner_never_completes_or_consumes(
-    bundle, fake_launch, monkeypatch, where
-):
-    calls = []
-    original_close = os.close
-    original_release = launch.pins.RuntimeBundlePin.release
-
-    def bad_release(pin):
-        calls.append(pin)
-        # Exercise uncertainty without leaving a real lock owned by this test.
-        original_release(pin)
-        raise launch.pins.BundlePinError("pin_release_uncertain", pin=pin)
-
-    if where == "pin":
-        monkeypatch.setattr(launch.pins.RuntimeBundlePin, "release", bad_release)
-    elif where == "descriptor":
-
-        def bad_close(fd):
-            if fake_launch and fd == fake_launch[-1].fd:
-                calls.append(fd)
-                original_close(fd)
-                raise OSError("uncertain close")
-            return original_close(fd)
-
-        monkeypatch.setattr(launch.os, "close", bad_close)
-    elif where == "file":
-        original_temp = managed.tempfile.TemporaryFile
-
-        class File:
-            def __init__(self):
-                self.inner = original_temp(mode="w+b")
-
-            def __getattr__(self, name):
-                return getattr(self.inner, name)
-
-            def close(self):
-                calls.append(self)
-                self.inner.close()
-                raise OSError("uncertain file close")
-
-        monkeypatch.setattr(managed.tempfile, "TemporaryFile", lambda **kwargs: File())
-    elif where == "process":
-
-        def bad_wait(process):
-            calls.append(process)
-            raise OSError("reap not confirmed")
-
-        monkeypatch.setattr(FakeProcess, "wait", bad_wait)
-    else:
-
-        class OriginalPin:
-            def release(self):
-                pytest.fail("uncertain acquisition owner was retried")
-
-        pin = OriginalPin()
-
-        def bad_acquire(*args, **kwargs):
-            calls.append(pin)
-            raise launch.pins.BundlePinError("pin_release_uncertain", pin=pin)
-
-        monkeypatch.setattr(launch.pins, "acquire_bundle_pin", bad_acquire)
-    job = managed.SidecarJob.from_selection(prepared("export_step"), bundle.selected()).start()
-    job._worker.join(5)
-    assert not job._worker.is_alive()
-    assert job.state == "cleanup_uncertain"
-    assert not job.done and not job.wait(0)
-    assert "restart Blender" in job.cleanup_diagnostic
-    assert job._bundle_owner is not None and job._bundle_owner.cleanup_uncertain
-    assert not job._bundle_owner.cleanup_complete
-    count = len(calls)
-    for _ in range(3):
-        assert job.cancel() is False
-        assert job.poll() == "cleanup_uncertain"
-        with pytest.raises(managed.bridge.BridgeError, match="not ready"):
-            job.result()
-        assert not job.wait(0)
-    assert len(calls) == count
-    assert job._error.outcome_unknown
-    # Fixture cleanup of known real test resources is separate from production.
-    monkeypatch.undo()
-    if where != "acquisition":
-        if where != "pin":
-            original_release(job._bundle_owner.pin)
-        fd = job._bundle_owner._read_fd
-        if where in {"file", "process"}:
-            original_close(fd)
-            job._bundle_owner._path.unlink()
-            os.rmdir(job._bundle_owner._directory)
-        elif where == "descriptor":
-            job._bundle_owner._path.unlink()
-            os.rmdir(job._bundle_owner._directory)
-
-
-def test_cancel_after_ready_is_one_shot_and_clean(bundle, fake_launch):
-    job = finished(managed.SidecarJob.from_selection(prepared(), bundle.selected()).start())
-    assert job.cancel()
-    assert job.state == "cancelled" and job.done
-    with pytest.raises(managed.bridge.BridgeError, match="cancelled"):
-        job.result()
-    assert job.state == "consumed"
-
-
-def test_cancel_unstarted_does_not_acquire_or_launch(bundle, fake_launch, monkeypatch):
-    monkeypatch.setattr(
-        launch.pins, "acquire_bundle_pin", lambda *a, **k: pytest.fail("pin acquired")
-    )
-    job = managed.SidecarJob.from_selection(prepared(), bundle.selected())
-    assert job.cancel()
-    assert job.start() is job
-    finished(job, "cancelled")
-    assert not fake_launch
-
-
-@pytest.mark.parametrize(
-    "stream,fast", [("stdout", False), ("stderr", False), ("stdout", True), ("stderr", True)]
-)
-def test_bundled_output_limits_cleanup_and_export_unknown(bundle, monkeypatch, stream, fast):
-    processes = []
-
-    class Overflow(FakeProcess):
-        def __init__(self, *args, **kwargs):
-            super().__init__(*args, **kwargs)
-            self.returncode = 0 if fast else None
-            kwargs[stream].write(b"x" * 256)
-            kwargs[stream].flush()
-            processes.append(self)
-
-    monkeypatch.setattr(managed, "MAX_RESPONSE_BYTES", 128)
-    monkeypatch.setattr(managed, "MAX_STDERR_BYTES", 128)
-    monkeypatch.setattr(managed.subprocess, "Popen", Overflow)
-    job = finished(
-        managed.SidecarJob.from_selection(prepared("export_step"), bundle.selected()).start(),
-        "failed",
-    )
-    with pytest.raises(managed.bridge.BridgeError, match="limit") as error:
-        job.result()
-    assert error.value.outcome_unknown
-    assert processes[0].waited
-    assert processes[0].killed is (not fast)
-    assert job._bundle_owner.cleanup_complete
-
-
-def test_bundled_timeout_kills_reaps_and_preserves_export_unknown(bundle, monkeypatch):
-    processes = []
-
-    class Slow(FakeProcess):
-        def __init__(self, *args, **kwargs):
-            super().__init__(*args, **kwargs)
-            self.returncode = None
-            processes.append(self)
-
-    monkeypatch.setattr(managed.subprocess, "Popen", Slow)
-    job = finished(
-        managed.SidecarJob.from_selection(
-            prepared("export_step"), bundle.selected(timeout=1)
-        ).start(),
-        "failed",
-    )
-    with pytest.raises(managed.bridge.BridgeError, match="timed out") as error:
-        job.result()
-    assert error.value.outcome_unknown
-    assert processes[0].killed and processes[0].waited
-    assert job._bundle_owner.cleanup_complete
-
-
-def test_bundled_launch_failure_and_partial_tempfiles_clean_up(bundle, fake_launch, monkeypatch):
-    original = managed.tempfile.TemporaryFile
-    opened = []
-
-    def partial(**kwargs):
-        if len(opened) == 2:
-            raise OSError("private failure details")
-        file = original(**kwargs)
-        opened.append(file)
-        return file
-
-    monkeypatch.setattr(managed.tempfile, "TemporaryFile", partial)
-    job = finished(
-        managed.SidecarJob.from_selection(prepared(), bundle.selected()).start(), "failed"
-    )
-    assert not fake_launch
-    assert len(opened) == 2 and all(file.closed for file in opened)
-    assert job._bundle_owner.cleanup_complete
-    with pytest.raises(managed.bridge.BridgeError) as error:
-        job.result()
-    assert "private failure details" not in str(error.value)
-
-
-def test_descriptor_writer_close_uncertainty_is_retained_without_numeric_retry(
-    bundle, monkeypatch, fake_launch
-):
-    original_close = os.close
-    calls = []
-
-    def close(fd):
-        if job._bundle_owner is not None and fd == job._bundle_owner._write_fd:
-            calls.append(fd)
-            original_close(fd)
-            raise OSError("uncertain writer close")
-        original_close(fd)
-
-    job = managed.SidecarJob.from_selection(prepared(), bundle.selected())
-    monkeypatch.setattr(launch.os, "close", close)
-    job.start()._worker.join(5)
-    assert job.state == "cleanup_uncertain" and not job.done
-    assert not fake_launch and len(calls) == 1
-    assert job._bundle_owner._write_close_attempted
-    assert not job._bundle_owner._read_close_attempted
-    for _ in range(3):
-        assert not job.cancel()
-        assert not job.wait(0)
-        with pytest.raises(launch.BundleCleanupUncertain):
-            job._bundle_owner.cleanup()
-    assert len(calls) == 1
-    monkeypatch.undo()
-    job._bundle_owner.pin.release()
-    job._bundle_owner._path.unlink()
-    os.rmdir(job._bundle_owner._directory)
-
-
-def test_cross_process_pin_blocks_until_cancelled_child_and_temp_cleanup(bundle, monkeypatch):
-    # Only this standard-library probe runs as a real child. The bundled runtime
-    # and CAD payload remain inert data throughout the test.
-    import subprocess
-
-    real_popen = subprocess.Popen
-    entered, waiting, finish_wait = threading.Event(), threading.Event(), threading.Event()
-    processes = []
-
-    class Held(FakeProcess):
-        def __init__(self, *args, **kwargs):
-            super().__init__(*args, **kwargs)
-            self.returncode = None
-            processes.append(self)
-            entered.set()
-
-        def wait(self):
-            waiting.set()
-            assert finish_wait.wait(5)
-            return super().wait()
-
-    def exclusive_available():
-        probe = real_popen(
-            [
-                sys.executable,
-                "-I",
-                "-S",
-                "-c",
-                "import fcntl, os, sys\nf = os.open(sys.argv[1], os.O_RDWR)\n"
-                "try:\n fcntl.flock(f, fcntl.LOCK_EX | fcntl.LOCK_NB)\n"
-                "except BlockingIOError:\n sys.exit(2)\nfinally:\n os.close(f)\n",
-                str(bundle.cache / ".bundle-pins" / (bundle.bundle_id + ".lock")),
-            ],
-            stdin=subprocess.DEVNULL,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            env={},
-            close_fds=True,
-        )
-        probe.communicate(timeout=5)
-        assert probe.returncode in (0, 2)
-        return probe.returncode == 0
-
-    monkeypatch.setattr(managed.subprocess, "Popen", Held)
-    job = managed.SidecarJob.from_selection(prepared("export_step"), bundle.selected()).start()
-    try:
-        assert entered.wait(5)
-        assert not exclusive_available()
-        assert job.cancel()
-        assert waiting.wait(5)
-        assert not job.done and not job.wait(0)
-        assert not exclusive_available()
-    finally:
-        finish_wait.set()
-    finished(job, "cancelled")
-    assert exclusive_available()
-    assert processes[0].killed and processes[0].waited
-    with pytest.raises(managed.bridge.BridgeError) as error:
-        job.result()
-    assert error.value.outcome_unknown
-
-
-def test_unexpected_verified_descriptor_cannot_launch(bundle, fake_launch, monkeypatch):
-    monkeypatch.setattr(
-        launch.materialize,
-        "verify_cached_bundle",
-        lambda *a, **k: replace(bundle.descriptor, root="/other"),
-    )
-    job = finished(
-        managed.SidecarJob.from_selection(prepared(), bundle.selected()).start(), "failed"
-    )
-    assert not fake_launch
-    with pytest.raises(managed.bridge.BridgeError):
-        job.result()
-    assert job._bundle_owner.cleanup_complete
-
-
-def test_selection_and_descriptor_are_not_guarded_evidence(bundle):
-    evidence = importlib.import_module(PACKAGE + ".guarded_evidence")
-    selected = bundle.selected()
-    for value in (selected, selected.bundled_policy, selected.bundled_policy.descriptor):
-        assert type(value) is not evidence.GuardedEvidence
-    with pytest.raises(managed.bridge.BridgeError, match="prepared request"):
-        managed.SidecarJob.from_selection(selected.bundled_policy.descriptor, selected)
+    with pytest.raises(profile.manifests.BundleError):
+        profile.capture(constants=constants)
