@@ -1,5 +1,6 @@
 """Pre-main candidate execution and publication event/permission boundaries."""
 
+import ast
 import importlib.util
 import subprocess
 import sys
@@ -160,3 +161,18 @@ def test_workflow_trigger_and_write_permission_policy():
     assert "if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')" in publish
     assert publish.count("contents: write") == 1 and text.count("contents: write") == 1
     assert publish.count("GH_TOKEN: ${{ github.token }}") == 1
+
+
+def test_supported_core_python_matrix_is_an_actual_publish_dependency():
+    core = (ROOT / ".github/workflows/tests.yml").read_text()
+    workflow = (ROOT / ".github/workflows/release.yml").read_text()
+    regression, remainder = workflow.split("  regression:\n", 1)[1].split("  build:\n", 1)
+    core_versions = ast.literal_eval(core.split("        python: ", 1)[1].splitlines()[0])
+    release_versions = ast.literal_eval(regression.split("        python: ", 1)[1].splitlines()[0])
+    assert release_versions == core_versions == ["3.11", "3.12", "3.13"]
+    assert "os: [ubuntu-24.04, windows-2022]" in regression
+    assert "python-version: ${{ matrix.python }}" in regression
+    assert "python -m pytest -q" in regression
+    assert "continue-on-error" not in regression
+    assert "needs: regression" in remainder.split("  native:\n", 1)[0]
+    assert "needs: [regression, build, native]" in remainder.split("  publish:\n", 1)[1]
