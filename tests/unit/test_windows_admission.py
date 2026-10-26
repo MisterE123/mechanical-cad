@@ -12,7 +12,7 @@ import json
 import os
 import sys
 import types
-from dataclasses import replace
+from dataclasses import fields, replace
 from pathlib import Path
 
 import pytest
@@ -454,6 +454,7 @@ def part_namespace():
             "_scene_key",
             "_read_document",
             "_runtime_record",
+            "_runtime_projection",
             "part_is_current",
             "geometry_report_is_current",
             "current_part_evidence",
@@ -472,6 +473,7 @@ def part_namespace():
             GuardedEvidence=guarded.GuardedEvidence,
             operation_contracts=operations,
             json=json,
+            fields=fields,
             _PART_ACTIONS={"replay", "check_geometry", "export_step", "export_stl"},
             _RUNTIME={},
             _GEOMETRY_RUNTIME={},
