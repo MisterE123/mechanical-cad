@@ -1,0 +1,6 @@
+# Source inventories, historical fixtures and qualification receipts hash exact
+# committed bytes. Preserve both LF and intentional CRLF on checkout AND add,
+# including ordinary Windows clones with core.autocrlf=true. Do not renormalize
+# existing evidence. -text disables newline conversion, not textual diff/merge.
+# This is source-integrity portability, not native-platform qualification.
+* -text

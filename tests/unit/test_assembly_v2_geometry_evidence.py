@@ -257,7 +257,7 @@ def test_selected_solid_summary_stats_bind_geometry_even_when_report_is_blocked(
         validate_parts(response)
 
 
-def test_cut_base_ancestor_is_allowed_but_tool_or_unrelated_identity_is_rejected(make):
+def cut_response(make):
     _, response, _ = make(new_sketch=False)
     result = response["result"]
     features = result["canonical_assembly"]["part_sources"][0]["document"]["features"]
@@ -316,8 +316,45 @@ def test_cut_base_ancestor_is_allowed_but_tool_or_unrelated_identity_is_rejected
             image_count=1,
         )
         face["provenance"].pop("source_boundary", None)
+    return response
+
+
+def test_cut_base_ancestor_retains_exact_identity(make):
+    validate_parts(cut_response(make), complete=True)
+
+
+@pytest.mark.parametrize("relation", ["tool_modified", "tool_unchanged"])
+def test_cut_exact_tool_face_ancestry_is_allowed(make, relation):
+    # Synthetic protocol evidence only; native Cut history is tested separately.
+    response = cut_response(make)
+    selected = part(response)
+    face = selected["topology"][0]
+    original_id = face["id"]
+    face["feature_id"] = "tool"
+    face["id"] = f"tool/face/{face['role']}"
+    face["provenance"].update(
+        relation=relation, evolution=relation, source_id=face["id"]
+    )
+    selected["mesh"]["triangle_face_ids"] = [
+        face["id"] if identifier == original_id else identifier
+        for identifier in selected["mesh"]["triangle_face_ids"]
+    ]
     validate_parts(response, complete=True)
-    selected["topology"][0]["feature_id"] = "tool"
+
+
+def test_cut_tool_origin_cannot_relabel_a_different_stable_face_id(make):
+    response = cut_response(make)
+    part(response)["topology"][0]["feature_id"] = "tool"
+    with pytest.raises(ValueError, match="stable face identity differs from semantic role"):
+        validate_parts(response, complete=True)
+
+
+def test_cut_unrelated_profile_origin_is_rejected(make):
+    response = cut_response(make)
+    face = part(response)["topology"][0]
+    # A tool solid can own an inherited face, but its profile is not a solid ancestor.
+    face.update(feature_id="tool_profile", role="profile", id="tool_profile/face/profile")
+    face["provenance"]["source_id"] = face["id"]
     with pytest.raises(ValueError, match="unrelated face origin"):
         validate_parts(response, complete=True)
 

@@ -1,6 +1,6 @@
 # Public source snapshot provenance
 
-Source: local development commit `a15bdbf107116b8ebd6f5f2a547144b6eef3a225`.
+Source: local development commit `dd9683492b43f74807e26c5f7ec45c8375877381`.
 
 All executable source, tests, hash-pinned fixtures, examples and application assets are byte-identical to that committed tree. Documentation-only privacy changes remove private transfer/host details, replace six operational Windows reports with public technical summaries, and generalize workspace/host descriptions in Markdown. This provenance document is added.
 
@@ -44,3 +44,16 @@ The next normal public commit follows `c407db478ad54488c31484c568422a858cdda400`
 Scoped validation recorded 200 release-tool checks, 183 historical/pin/live-root/dispatch checks, 336 cleanup/arc/UI checks and 2,645 arc mutation checks passing. Packaging checks passed 203 with one existing byte-pin failure retained. Counts overlap and do not establish a full-suite pass. Whole-tree Ruff and Git whitespace checks passed.
 
 The preceding c407 public candidate's sketch CI recorded 18,142 passed, 640 failed, 12 skipped and 119 setup errors. Those results precede this follow-on. Original live runtime allowlist failures and remaining historical/version-policy failures require further work; none are waived here. Native platform qualification and materials approval are still incomplete. No main promotion or release publication is performed.
+
+
+## Integrated dual-platform pipeline and reviewed compatibility repairs
+
+This normal public commit follows actual Techbox commit `c896d4d4c67c324abb58997690152660e925ea82`, preserving the public collaboration history. Its functional source is byte-identical to local integration `dd9683492b43f74807e26c5f7ec45c8375877381`; the sixteen previously listed public documentation sanitizations remain in place.
+
+The integrated pipeline includes Linux/Windows source regression jobs, candidate building, explicit materials/admission gates and a fail-closed release publisher. Its presence does not establish a successful release build. Main promotion, tags and public releases remain withheld. Reviewed test repairs preserve exact historical sources while checking current runtime boundaries and generalized connected-modeling policies. Python AST snapshot serialization is normalized across supported interpreter versions without changing geometry code.
+
+Git checkout attributes preserve exact bytes across operating systems. The original data-only Blender normalization receipt is retained with its 483 CRLF lines and SHA256 `27f858112f287dc7133520315cc2d43910edd0fd8cf9e46e8c306d19c3bb83c6`. It is not newline-normalized. Three Git checkout byte-preservation tests and whole-code Ruff passed. A fresh unfiltered 19,202-test local run on preceding code commit `de922c5` was still in progress when this publication was prepared; the two subsequent commits only add the tested checkout-byte guard/attributes and status documentation. No full-suite pass is claimed.
+
+The preceding public `065be4ac6b10f2a6e5936b79956bb6cabcec645c` CI completed with 18,798 passed, 137 failed and 12 skipped on Python 3.12/sketch, and 18,797 passed, 138 failed and 12 skipped on Python 3.11/3.13. Setup errors were eliminated. Those results predate these repairs. The Techbox candidate's Windows jobs exposed an unconditional POSIX `fcntl` test import during collection; the separate Windows portability fix is not included here. Exact-current CI must run again.
+
+Separate retained Linux source-level Blender 5.2.2 checks on a15bdbf passed eight processes and 190 numbered assertions plus a fingerprint-rejection contract, including source-update, insertion and face-mate Apply/Cancel/save/independent reopen. These are not installed-package, GUI/Undo/Redo, Windows or complete-release qualification for this newer source.

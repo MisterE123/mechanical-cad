@@ -166,63 +166,136 @@ def test_no_other_action_family_is_admitted(action):
 
 
 @pytest.mark.parametrize(
-    "change",
+    "change,admitted",
     [
-        lambda d: d.update(kind="assembly"),
-        lambda d: d.update(active_feature=None),
-        lambda d: d.update(active_feature="sketch"),
-        lambda d: d["features"].pop(),
-        lambda d: d["features"].append(
-            {"id": "other", "kind": "sketch_circle", "params": {"radius": 2}}
+        pytest.param(lambda d: d.update(kind="assembly"), False, id="assembly-kind"),
+        pytest.param(lambda d: d.update(active_feature=None), False, id="no-active"),
+        pytest.param(lambda d: d.update(active_feature="sketch"), False, id="active-profile"),
+        pytest.param(lambda d: d["features"].pop(), False, id="missing-active-solid"),
+        pytest.param(
+            lambda d: d["features"].append(
+                {"id": "other", "kind": "sketch_circle", "params": {"radius": 2}}
+            ),
+            True,
+            id="extra-profile",
         ),
-        lambda d: d["features"].append(
-            {
-                "id": "other",
-                "kind": "extrude",
-                "params": {"length": 2},
-                "inputs": {"profile": "sketch"},
-            }
+        pytest.param(
+            lambda d: d["features"].append(
+                {
+                    "id": "other",
+                    "kind": "extrude",
+                    "params": {"length": 2},
+                    "inputs": {"profile": "sketch"},
+                }
+            ),
+            True,
+            id="extra-solid",
         ),
-        lambda d: d["features"][1].update(inputs={"profile": "extrude"}),
-        lambda d: d["features"][1].update(
-            kind="cut", params={}, inputs={"base": "sketch", "tool": "sketch"}
+        pytest.param(
+            lambda d: d["features"][1].update(inputs={"profile": "extrude"}), False, id="self-cycle"
         ),
-        lambda d: d["features"][0]["sketch"].update(arcs=[]),
-        lambda d: d["features"][0]["sketch"].update(schema_version=2, arcs=[]),
-        lambda d: d["features"][0]["sketch"]["arcs"].append(
-            {"id": "other", "center": "o", "start": "a", "end": "b", "direction": "ccw"}
+        pytest.param(
+            lambda d: d["features"][1].update(
+                kind="cut", params={}, inputs={"base": "sketch", "tool": "sketch"}
+            ),
+            False,
+            id="wrong-cut-input-types",
         ),
-        lambda d: d["features"][0]["sketch"]["circles"].append(
-            {"id": "circle", "center": "o", "radius": 5}
+        pytest.param(lambda d: d["features"][0]["sketch"].update(arcs=[]), True, id="arc-empty"),
+        pytest.param(
+            lambda d: d["features"][0]["sketch"].update(schema_version=2, arcs=[]),
+            False,
+            id="invalid-schema2-arcs-field",
         ),
-        lambda d: d["features"][0]["sketch"]["lines"].pop(),
-        lambda d: d["features"][0]["sketch"]["lines"].append(
-            {"id": "chord", "start": "a", "end": "b"}
+        pytest.param(
+            lambda d: d["features"][0]["sketch"]["arcs"].append(
+                {"id": "other", "center": "o", "start": "a", "end": "b", "direction": "ccw"}
+            ),
+            True,
+            id="multiple-arcs",
         ),
-        lambda d: d["features"][0]["sketch"]["lines"][0].update(start="a", end="b"),
-        lambda d: d["features"][0]["sketch"]["plane"].update(origin=[1e-12, 0, 0]),
-        lambda d: d["features"][0]["sketch"]["plane"].update(quaternion=[-1, 0, 0, 0]),
-        lambda d: d["features"][0]["sketch"]["plane"].update(quaternion=[0, 0, 0, 1]),
-        lambda d: d["features"][1]["params"].update(length=0.999999999),
-        lambda d: d["features"][1]["params"].update(length=1000.000001),
+        pytest.param(
+            lambda d: d["features"][0]["sketch"]["circles"].append(
+                {"id": "circle", "center": "o", "radius": 5}
+            ),
+            True,
+            id="circle",
+        ),
+        pytest.param(lambda d: d["features"][0]["sketch"]["lines"].pop(), True, id="one-line"),
+        pytest.param(
+            lambda d: d["features"][0]["sketch"]["lines"].append(
+                {"id": "chord", "start": "a", "end": "b"}
+            ),
+            True,
+            id="extra-line",
+        ),
+        pytest.param(
+            lambda d: d["features"][0]["sketch"]["lines"][0].update(start="a", end="b"),
+            True,
+            id="distinct-topology",
+        ),
+        pytest.param(
+            lambda d: d["features"][0]["sketch"]["plane"].update(origin=[1e-12, 0, 0]),
+            True,
+            id="offset-plane",
+        ),
+        pytest.param(
+            lambda d: d["features"][0]["sketch"]["plane"].update(quaternion=[-1, 0, 0, 0]),
+            True,
+            id="negative-identity-quaternion",
+        ),
+        pytest.param(
+            lambda d: d["features"][0]["sketch"]["plane"].update(quaternion=[0, 0, 0, 1]),
+            True,
+            id="rotated-plane",
+        ),
+        pytest.param(
+            lambda d: d["features"][1]["params"].update(length=0.999999999),
+            True,
+            id="below-sector-scale",
+        ),
+        pytest.param(
+            lambda d: d["features"][1]["params"].update(length=1000.000001),
+            True,
+            id="above-sector-scale",
+        ),
     ],
 )
-def test_unsupported_sources_fail_before_response_validation(change):
+def test_source_graph_admission_is_distinct_from_solved_geometry(change, admitted):
     source = sector_document()
     change(source)
-    with pytest.raises(ValueError):
-        geometry.validate_source(source)
+    before = copy.deepcopy(source)
+    # f8639a0 deliberately admits general analytic/connected solid sources.
+    # Model validity and selected output kind still gate the source; solving,
+    # sector scale and solid readiness remain independent backend requirements.
+    if not admitted:
+        with pytest.raises(ValueError):
+            geometry.validate_source(source)
+    else:
+        accepted = geometry.validate_source(source)
+        assert accepted == source and accepted is not source
+        accepted["name"] = "detached change"
+    assert source == before
 
 
-def test_coordinate_and_coincident_aliases_do_not_replace_shared_ids():
+def test_source_admission_preserves_distinct_ids_without_claiming_profile_readiness():
     source = sector_document()
     sketch = source["features"][0]["sketch"]
     sketch["points"].append({"id": "alias", "u": 5, "v": 0})
     sketch["lines"][0]["end"] = "alias"
     for constraints in ([], [{"id": "join", "kind": "coincident", "refs": ["a", "alias"]}]):
         sketch["constraints"] = constraints
-        with pytest.raises(ValueError, match="endpoint IDs"):
-            geometry.validate_source(source)
+        before = copy.deepcopy(source)
+        accepted = geometry.validate_source(source)
+        assert accepted == before and accepted is not source
+        assert accepted["features"][0]["sketch"]["lines"][0]["end"] == "alias"
+        assert source == before
+        # A distinct existing ID is not silently welded or relabelled, while
+        # a nonexistent endpoint remains malformed source, even at that location.
+        broken = copy.deepcopy(source)
+        broken["features"][0]["sketch"]["lines"][0]["end"] = "missing"
+        with pytest.raises(ValueError):
+            geometry.validate_source(broken)
 
 
 @pytest.mark.parametrize("action", ACTIONS)
@@ -311,6 +384,19 @@ def test_export_receipts_preserve_exact_requested_path(destination):
         lambda r: r.update(destination="sector/part.step"),
         lambda r: r["document"].update(name="changed"),
         lambda r: r["document"]["features"][0].update(label="new label"),
+        # Extra valid intent is admissible, but changes the exact operation;
+        # a response for the earlier graph cannot certify the expanded source.
+        lambda r: r["document"]["features"].append(
+            {"id": "unused", "kind": "sketch_circle", "params": {"radius": 2}}
+        ),
+        lambda r: r["document"]["features"].append(
+            {
+                "id": "branch",
+                "kind": "extrude",
+                "params": {"length": 2},
+                "inputs": {"profile": "sketch"},
+            }
+        ),
     ],
 )
 def test_complete_raw_request_binds_even_semantically_equivalent_changes(change):

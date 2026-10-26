@@ -7,6 +7,7 @@ from collections import Counter
 from pathlib import Path
 
 import pytest
+from arc_owner_review import verify_reviewed_methods
 
 ROOT = Path(__file__).resolve().parents[2]
 ADDON = ROOT / "blender_addon/mechanical_cad_blender"
@@ -14,8 +15,9 @@ ADDON = ROOT / "blender_addon/mechanical_cad_blender"
 METHODS = {"revalidate", "consume"}
 
 
-def authority_inventory(raw):
+def authority_inventory(raw, module=""):
     tree = ast.parse(raw)
+    verify_reviewed_methods(tree, module)
     parents = {
         id(child): parent for parent in ast.walk(tree) for child in ast.iter_child_nodes(parent)
     }
@@ -57,12 +59,22 @@ def authority_inventory(raw):
             alias_nodes.update(id(part) for part in references)
     rows, used = [], set()
     direct_nodes = set()
+    choice_nodes = set()
     for node in ast.walk(tree):
         if not isinstance(node, ast.Call):
             continue
         direct = isinstance(node.func, ast.Attribute) and node.func.attr in METHODS
         key = (scope(node), node.func.id) if isinstance(node.func, ast.Name) else None
         if not direct and key not in aliases:
+            continue
+        if (
+            module == "solid_projection_picker"
+            and scope(node) == "SolidProjectionPicker.apply_choice"
+            and ast.unparse(node) == "choice.consume(self)"
+        ):
+            # The sealed method first validates the choice's guarded evidence;
+            # this distinct one-shot UI choice is not EvidencePublication.
+            choice_nodes.add(id(node.func))
             continue
         if direct:
             direct_nodes.add(id(node.func))
@@ -76,7 +88,9 @@ def authority_inventory(raw):
     assert used == set(aliases), "unused or untraced authority alias"
     for node in ast.walk(tree):
         if isinstance(node, ast.Attribute) and node.attr in METHODS:
-            assert id(node) in alias_nodes | direct_nodes, "untraced authority method reference"
+            assert id(node) in alias_nodes | direct_nodes | choice_nodes, (
+                "untraced authority method reference"
+            )
         if (
             isinstance(node, ast.Call)
             and isinstance(node.func, ast.Name)
@@ -90,6 +104,16 @@ def authority_inventory(raw):
 # These expressions are separately inspected at their defining owners. Neither
 # received result stamps nor a broad version set may select a live contract.
 EXPECTED_AUTHORITY_CALLS = (
+    ("direct_edge_pick", "BlendEdgePicker.poll_catalog", "self.catalog_version", "'edge_catalog'"),
+    ("direct_edge_pick", "BlendEdgePicker.hover", "self.catalog_version", "'edge_catalog'"),
+    ("direct_edge_pick", "BlendEdgePicker.selected_arguments", "self.catalog_version", "'edge_catalog'"),
+    ("projection_repair_ui", "MCAD_OT_replace_projection_reference._review", "self._version", "'edge_catalog'"),
+    ("solid_projection_picker", "SolidProjectionPicker.validate_choice", "self.catalog_version", "'edge_catalog'"),
+    ("general_session", "GeneralSession.project_solid_edge", "version", "'edge_catalog'"),
+    ("general_session", "GeneralSession._solid_projection_edges", "version", "'edge_catalog'"),
+    ("line_length_session", "LineLengthSession.complete_line_length", "prepared.operation_request()['result_version']", "'solve_sketch'"),
+    ("circle_diameter_session", "CircleDiameterSession.complete_circle_diameter", "prepared.operation_request()['result_version']", "'solve_sketch'"),
+    ("extrusion_preview", "Preview.tick", "operation_contracts.result_version_for(candidate)", "'replay'"),
     ("sketch_remove_fillet_session", "RemoveFilletSession.complete_fillet_removal",
      "prepared.operation_request()['result_version']", "action"),
     ("assembly_display", "_validated", "result_version", "assembly_bridge.ACTIONS"),
@@ -159,6 +183,8 @@ EXPECTED_ALIASES = {
     ("sketch_draft", "RectangleDraft.accept_guarded_replay", "validate"),
 }
 EXPECTED_READ_WRAPPERS = (
+    ("circle_diameter_session", "CircleDiameterSession._diameter_read", "pair[1]", "action"),
+    ("line_length_session", "LineLengthSession._length_read", "pair[1]", "action"),
     ("sketch_remove_fillet_session", "RemoveFilletSession._removal_read", "pair[1]", "action"),
     (
         "constraint_diagnostics",
@@ -217,10 +243,11 @@ EXPECTED_READ_WRAPPERS = (
 )
 
 
-def test_every_authority_sink_and_alias_has_explicit_reviewed_version_and_action():
+def check_authority_sources(sources, *, complete=True):
     actual, aliases = [], set()
-    for path in sorted(ADDON.glob("*.py")):
-        calls, assigned = authority_inventory(path.read_text())
+    for filename, source in sorted(sources.items()):
+        path = Path(filename)
+        calls, assigned = authority_inventory(source, path.stem)
         for scope, _callee, keywords in calls:
             assert "owner_token" in keywords, (path.name, scope)
             assert "expected_result_version" in keywords, (path.name, scope)
@@ -229,8 +256,19 @@ def test_every_authority_sink_and_alias_has_explicit_reviewed_version_and_action
                 (path.stem, scope, keywords["expected_result_version"], keywords["expected_action"])
             )
         aliases.update((path.stem, scope, name) for scope, name in assigned)
-    assert Counter(actual) == Counter(EXPECTED_AUTHORITY_CALLS)
-    assert aliases == EXPECTED_ALIASES
+    modules = {Path(name).stem for name in sources}
+    expected = EXPECTED_AUTHORITY_CALLS if complete else (
+        row for row in EXPECTED_AUTHORITY_CALLS if row[0] in modules
+    )
+    expected_aliases = EXPECTED_ALIASES if complete else {
+        row for row in EXPECTED_ALIASES if row[0] in modules
+    }
+    assert Counter(actual) == Counter(expected)
+    assert aliases == expected_aliases
+
+
+def test_every_authority_sink_and_alias_has_explicit_reviewed_version_and_action():
+    check_authority_sources({path.name: path.read_text() for path in ADDON.glob("*.py")})
 
 
 def test_assembly_version_selection_uses_exact_source_policy_not_received_stamp():
@@ -566,3 +604,142 @@ return selected
             if isinstance(node, ast.Assign) and node.targets == stores
         ]
         assert len(assignments) == 1 and ast.unparse(assignments[0].value) == expression
+
+
+@pytest.mark.parametrize(
+    "module,before,after",
+    [
+        ("solid_projection_picker", "choice = self.validate_choice(context)", "choice = self.edge_choice"),
+        ("solid_projection_picker", "from .projection_edge_choice import EdgeChoice, freeze_candidates", "from .projection_edge_choice import freeze_candidates\nfrom .guarded_evidence import EvidencePublication as EdgeChoice"),
+        ("solid_projection_picker", "self.edge_choice = EdgeChoice(self, self.overlap_candidates)", "self.edge_choice = self.catalog_evidence"),
+        ("solid_projection_picker", "source, entry = choice.consume(self)", "source, entry = choice.evidence.publication.consume(self)"),
+        ("solid_projection_picker", "source, entry = choice.consume(self)", "consume = choice.consume\n        source, entry = consume(self)"),
+        ("solid_projection_picker", "owner_token=choice.catalog_token", "owner_token=self.owner_token"),
+        ("solid_projection_picker", 'expected_action="edge_catalog"', 'expected_action="replay"'),
+        ("projection_edge_choice", "self.retired = True", "self.retired = False"),
+        ("projection_edge_choice", "picker.edge_choice is not self", "False"),
+        ("line_length_session", "owner_token=self.owner_token", "owner_token=None"),
+        ("circle_diameter_session", 'expected_action="solve_sketch"', 'expected_action="replay"'),
+    ],
+)
+def test_reviewed_choice_and_new_owner_bodies_cannot_hide_authority_mutations(module, before, after):
+    # Positive local admission prevents a partial-inventory mismatch from making
+    # a mutation test pass vacuously; the full live inventory is checked above.
+    sources = {module + ".py": (ADDON / (module + ".py")).read_text()}
+    check_authority_sources(sources, complete=False)
+    original = sources[module + ".py"]
+    assert before in original
+    sources[module + ".py"] = original.replace(before, after, 1)
+    with pytest.raises(AssertionError):
+        check_authority_sources(sources, complete=False)
+
+
+@pytest.mark.parametrize(
+    "extra",
+    [
+        "def rogue(choice):\n    return choice.consume(self)\n",
+        "def rogue(evidence):\n    return evidence.consume(owner_token=o, expected_result_version=2, expected_action='replay')\n",
+        "def rogue(evidence):\n    consume = evidence.consume\n    return consume(owner_token=o, expected_result_version=2, expected_action='replay')\n",
+        "def rogue(evidence):\n    return getattr(evidence, 'consume')()\n",
+    ],
+)
+def test_choice_exception_never_admits_extra_direct_alias_or_dynamic_authority(extra):
+    sources = {"solid_projection_picker.py": (ADDON / "solid_projection_picker.py").read_text()}
+    check_authority_sources(sources, complete=False)
+    sources["solid_projection_picker.py"] += "\n" + extra
+    with pytest.raises(AssertionError):
+        check_authority_sources(sources, complete=False)
+
+
+def test_method_seals_are_portable_without_ignoring_real_type_parameters():
+    from arc_owner_review import method_digest
+
+    function = ast.parse("def f(value):\n    return value\n").body[0]
+    expected = method_digest(function)
+    # Python 3.11 has no type_params field; Python 3.12+ adds its empty list.
+    function._fields = tuple(name for name in function._fields if name != "type_params")
+    assert method_digest(function) == expected
+    function._fields = (*function._fields, "type_params")
+    function.type_params = []
+    assert method_digest(function) == expected
+    function.type_params = [ast.Name(id="T", ctx=ast.Load())]
+    assert method_digest(function) != expected
+
+
+@pytest.mark.parametrize(
+    "statement",
+    [
+        "import types as EdgeChoice",
+        "import json.decoder as EdgeChoice",
+        "import EdgeChoice",
+        "import EdgeChoice.shadow",
+    ],
+)
+def test_choice_constructor_rejects_plain_and_dotted_import_shadows(statement):
+    source = (ADDON / "solid_projection_picker.py").read_text()
+    check_authority_sources({"solid_projection_picker.py": source}, complete=False)
+    with pytest.raises(AssertionError, match="constructor shadowed by import"):
+        check_authority_sources(
+            {"solid_projection_picker.py": source + "\n" + statement + "\n"}, complete=False
+        )
+
+
+def test_choice_import_rule_uses_actual_python_bound_name_not_dotted_suffix():
+    source = (ADDON / "solid_projection_picker.py").read_text()
+    # This spelling binds unrelated_package, not the EdgeChoice suffix. No code
+    # executes; the scanner must distinguish binding from a textual name match.
+    check_authority_sources(
+        {"solid_projection_picker.py": source + "\nimport unrelated_package.EdgeChoice\n"},
+        complete=False,
+    )
+
+
+@pytest.mark.parametrize(
+    "statement",
+    [
+        "try:\n    pass\nexcept Exception as EdgeChoice:\n    pass\n",
+        "match value:\n    case EdgeChoice:\n        pass\n",
+        "match value:\n    case [*EdgeChoice]:\n        pass\n",
+        "match value:\n    case {**EdgeChoice}:\n        pass\n",
+    ],
+)
+def test_choice_constructor_rejects_exception_and_pattern_capture_binders(statement):
+    source = (ADDON / "solid_projection_picker.py").read_text()
+    check_authority_sources({"solid_projection_picker.py": source}, complete=False)
+    with pytest.raises(AssertionError, match="constructor shadowed by string binder"):
+        check_authority_sources(
+            {"solid_projection_picker.py": source + "\n" + statement}, complete=False
+        )
+
+
+@pytest.mark.parametrize("kind", ["TypeVar", "ParamSpec", "TypeVarTuple"])
+def test_choice_constructor_rejects_class_type_parameter_binders_on_supported_ast_schemas(kind):
+    from arc_owner_review import definitions
+
+    tree = ast.parse((ADDON / "solid_projection_picker.py").read_text())
+    verify_reviewed_methods(tree, "solid_projection_picker")
+    owner = definitions(tree)["SolidProjectionPicker"]
+    # Represent the exact name-bearing 3.12+ AST shape also on 3.11, where this
+    # syntax cannot be parsed. No generated code is compiled or executed.
+    binder = type(kind, (ast.AST,), {"_fields": ("name",)})(name="EdgeChoice")
+    owner._fields = (*tuple(name for name in owner._fields if name != "type_params"), "type_params")
+    owner.type_params = [binder]
+    with pytest.raises(AssertionError, match="constructor shadowed by string binder"):
+        verify_reviewed_methods(tree, "solid_projection_picker")
+
+
+def test_unrelated_pattern_capture_does_not_shadow_the_reviewed_constructor():
+    source = (ADDON / "solid_projection_picker.py").read_text()
+    check_authority_sources(
+        {"solid_projection_picker.py": source + "\nmatch value:\n    case harmless:\n        pass\n"},
+        complete=False,
+    )
+
+
+def test_wildcard_import_cannot_claim_an_unrelated_constructor_binding():
+    source = (ADDON / "solid_projection_picker.py").read_text()
+    check_authority_sources({"solid_projection_picker.py": source}, complete=False)
+    with pytest.raises(AssertionError, match="wildcard import cannot prove"):
+        check_authority_sources(
+            {"solid_projection_picker.py": source + "\nfrom .unreviewed import *\n"}, complete=False
+        )

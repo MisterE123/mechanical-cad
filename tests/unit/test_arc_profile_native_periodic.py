@@ -8,6 +8,7 @@ the historical checkout is neither required nor imported by these tests.
 from __future__ import annotations
 
 import ast
+import copy
 import hashlib
 import importlib.abc
 import inspect
@@ -665,6 +666,86 @@ def historical_line_from_direction(node):
     return node
 
 
+def snapshot4_ast_dump(node):
+    """Keep the original Python 3.12 fingerprints across supported interpreters.
+
+    Python 3.11 lacks the empty type_params field added to definitions in 3.12;
+    Python 3.13 hides empty lists by default. Normalize only those presentation
+    differences, never nonempty type parameters or other semantic fields. Copy
+    first so callers' source trees and interpreter AST classes stay untouched.
+    """
+    node = copy.deepcopy(node)
+    for definition in ast.walk(node):
+        if isinstance(definition, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+            if "type_params" not in definition._fields:
+                definition._fields = (*definition._fields, "type_params")
+            if not hasattr(definition, "type_params"):
+                definition.type_params = []
+    options = {"include_attributes": False}
+    if "show_empty" in inspect.signature(ast.dump).parameters:
+        options["show_empty"] = True
+    return ast.dump(node, **options)
+
+
+@pytest.mark.parametrize("source", ("def f(): pass", "async def f(): pass", "class C: pass"))
+def test_snapshot4_ast_dump_normalizes_only_missing_empty_type_params(source):
+    node = ast.parse(source).body[0]
+    # Emulate the 3.11 schema even when this test runs on 3.12 or 3.13.
+    node._fields = tuple(field for field in node._fields if field != "type_params")
+    if hasattr(node, "type_params"):
+        del node.type_params
+    before = ast.dump(node, include_attributes=False)
+    normalized = snapshot4_ast_dump(node)
+    assert normalized.endswith(", type_params=[])")
+    assert "body=[Pass()]" in normalized
+    assert "decorator_list=[]" in normalized
+    assert ast.dump(node, include_attributes=False) == before
+    assert "type_params" not in node._fields
+    assert not hasattr(node, "type_params")
+    # Preserve even an explicitly supplied field on a 3.11-shaped node.
+    node.type_params = [ast.Name(id="T", ctx=ast.Load())]
+    assert snapshot4_ast_dump(node) != normalized
+    assert "type_params=[Name(id='T', ctx=Load())]" in snapshot4_ast_dump(node)
+
+
+@pytest.mark.parametrize(
+    "name",
+    ("_Trig", "_line_from_direction", "_radial_disk", "_circle_memberships", "_actual_angle"),
+)
+def test_snapshot4_ast_dump_matches_python311_shaped_original_definitions(name):
+    node = ast.parse(inspect.getsource(getattr(native, name))).body[0]
+    expected = snapshot4_ast_dump(node)
+    for definition in ast.walk(node):
+        if isinstance(definition, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+            assert not getattr(definition, "type_params", [])
+            definition._fields = tuple(
+                field for field in definition._fields if field != "type_params"
+            )
+            if hasattr(definition, "type_params"):
+                del definition.type_params
+    assert snapshot4_ast_dump(node) == expected
+
+
+@pytest.mark.parametrize(
+    "name,before,after",
+    (
+        ("_Trig", "range(1, 258)", "range(1, 257)"),
+        ("_Trig", "exact_t.mantissa > 0", "exact_t.mantissa >= 0"),
+        ("_circle_memberships", "parameters[1] < parameters[0]", "parameters[1] <= parameters[0]"),
+        ("_actual_angle", "dot.mantissa <= 0", "dot.mantissa < 0"),
+    ),
+)
+def test_snapshot4_ast_dump_preserves_real_function_and_branch_mutations(name, before, after):
+    source = inspect.getsource(getattr(native, name))
+    assert source.count(before) == 1
+    original = snapshot4_ast_dump(ast.parse(source).body[0])
+    mutated = snapshot4_ast_dump(ast.parse(source.replace(before, after)).body[0])
+    assert (
+        hashlib.sha256(original.encode()).hexdigest()
+        != hashlib.sha256(mutated.encode()).hexdigest()
+    )
+
+
 @pytest.mark.parametrize(
     "before,after",
     (
@@ -687,7 +768,7 @@ def test_radial_inverse_guard_rejects_unrelated_line_proof_changes(before, after
         restored = historical_line_from_direction(node)
     except AssertionError:
         return
-    digest = hashlib.sha256(ast.dump(restored, include_attributes=False).encode()).hexdigest()
+    digest = hashlib.sha256(snapshot4_ast_dump(restored).encode()).hexdigest()
     assert digest != "536bb352cf133ecff9a9ececd219ed717dfda672015737c89f60260118d9537e"
 
 
@@ -714,7 +795,4 @@ def test_original_taylor_and_all_branch_membership_leaves_remain_snapshot4_exact
     assert len(uses) == 1
     uses[0].attr = "length"
     for name, digest in expected.items():
-        assert (
-            hashlib.sha256(ast.dump(nodes[name], include_attributes=False).encode()).hexdigest()
-            == digest
-        )
+        assert hashlib.sha256(snapshot4_ast_dump(nodes[name]).encode()).hexdigest() == digest

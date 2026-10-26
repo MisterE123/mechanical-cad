@@ -1,0 +1,414 @@
+{
+  "authoring_importers": {
+    "arc_profile_intervals": [
+      "arc_profile_primitives"
+    ],
+    "arc_profile_sector_policy": [
+      "arc_geometry",
+      "arc_profile_intervals",
+      "arc_profile_primitives",
+      "arc_profile_sector_source"
+    ],
+    "arc_profile_sector_source": [
+      "arc_geometry",
+      "arc_profile_primitives"
+    ],
+    "assembly_display": [
+      "operation_contracts"
+    ],
+    "assembly_export_bridge": [
+      "result_v3"
+    ],
+    "assembly_operator_helpers": [
+      "operation_contracts"
+    ],
+    "assembly_operators": [
+      "operation_contracts"
+    ],
+    "assembly_state": [
+      "operation_contracts"
+    ],
+    "assembly_validation_model": [
+      "result_v3"
+    ],
+    "circle_diameter_session": [
+      "operation_contracts"
+    ],
+    "constraint_diagnostics": [
+      "operation_contracts"
+    ],
+    "constraint_selection": [
+      "sketch_contracts_v3"
+    ],
+    "display": [
+      "operation_contracts",
+      "sketch_contracts_v3"
+    ],
+    "document_state": [
+      "operation_contracts"
+    ],
+    "draft_dispatch": [
+      "general_arc_authoring_store"
+    ],
+    "edge_catalog_bridge": [
+      "result_v3"
+    ],
+    "extrusion_preview": [
+      "operation_contracts"
+    ],
+    "general_session": [
+      "operation_contracts"
+    ],
+    "general_sketch_draft": [
+      "operation_contracts"
+    ],
+    "general_sketch_overlay": [
+      "arc_geometry"
+    ],
+    "general_sketch_validation": [
+      "operation_contracts"
+    ],
+    "general_view_geometry": [
+      "arc_geometry",
+      "operation_contracts",
+      "sketch_contracts_v3"
+    ],
+    "geometry_result_v3": [
+      "part_contracts_v3",
+      "result_v3",
+      "sketch_contracts_v3"
+    ],
+    "guarded_evidence": [
+      "operation_contracts"
+    ],
+    "guarded_operations": [
+      "operation_contracts"
+    ],
+    "line_length_session": [
+      "operation_contracts"
+    ],
+    "line_trim_extend": [
+      "arc_geometry"
+    ],
+    "operation_contracts": [
+      "result_v3",
+      "sketch_contracts_v3"
+    ],
+    "operators": [
+      "operation_contracts"
+    ],
+    "part_contracts_v3": [
+      "sketch_contracts_v3"
+    ],
+    "part_snapshot_bridge": [
+      "part_contracts_v3"
+    ],
+    "repair_intent": [
+      "operation_contracts"
+    ],
+    "result_v3": [
+      "part_contracts_v3",
+      "sector_topology_v3",
+      "sketch_contracts_v3"
+    ],
+    "sector_topology_v3": [
+      "sketch_contracts_v3"
+    ],
+    "service_v3": [
+      "result_v3"
+    ],
+    "sketch_annotation_store": [
+      "sketch_contracts_v3"
+    ],
+    "sketch_contracts_v3": [
+      "arc_geometry",
+      "arc_profile_primitives",
+      "arc_profile_sector_policy",
+      "arc_profile_sector_source"
+    ],
+    "sketch_display": [
+      "sketch_contracts_v3"
+    ],
+    "sketch_pending": [
+      "operation_contracts"
+    ],
+    "viewport_sketch": [
+      "operation_contracts"
+    ]
+  },
+  "documentation": [
+    "docs/INTEGRATED_MODELING.md",
+    "docs/ARCHITECTURE.md",
+    "docs/RELEASE_125.md",
+    "docs/RELEASE_126.md",
+    "docs/ASSEMBLY_SOURCE_UPDATE_PREVIEW.md"
+  ],
+  "general_classes": [
+    "MCAD_OT_new_plane_sketch",
+    "MCAD_OT_new_face_sketch",
+    "MCAD_OT_copied_face_sketch",
+    "MCAD_OT_project_sketch_geometry",
+    "MCAD_OT_sketch_normal_view",
+    "MCAD_OT_general_sketch",
+    "MCAD_OT_edit_general_sketch",
+    "MCAD_OT_general_tool",
+    "MCAD_OT_enable_arc_editing",
+    "MCAD_OT_sketch_corner_fillet",
+    "MCAD_OT_remove_sketch_fillet",
+    "MCAD_OT_use_existing_point",
+    "MCAD_OT_reverse_arc_sweep"
+  ],
+  "path_origins": {
+    "blender_addon/mechanical_cad_blender/analytic_profile_geometry.py": "ff8b014bf75c0eda602efa662787988c212dd4cf Build general mixed analytic sketch contours with holes and editable rounded parts",
+    "blender_addon/mechanical_cad_blender/annotation_retirement.py": "241b85e5c100fcbe981da9452df024e28935b2d3 Distinguish restored-corner radius retirement from missing bindings",
+    "blender_addon/mechanical_cad_blender/arc_geometry.py": "ce5b50bb011b3949a6599c7cbc28d31024805e0a Add qualified data-only sector result-v3 services",
+    "blender_addon/mechanical_cad_blender/arc_profile_intervals.py": "ce5b50bb011b3949a6599c7cbc28d31024805e0a Add qualified data-only sector result-v3 services",
+    "blender_addon/mechanical_cad_blender/arc_profile_primitives.py": "ce5b50bb011b3949a6599c7cbc28d31024805e0a Add qualified data-only sector result-v3 services",
+    "blender_addon/mechanical_cad_blender/arc_profile_sector_policy.py": "ce5b50bb011b3949a6599c7cbc28d31024805e0a Add qualified data-only sector result-v3 services",
+    "blender_addon/mechanical_cad_blender/arc_profile_sector_source.py": "ce5b50bb011b3949a6599c7cbc28d31024805e0a Add qualified data-only sector result-v3 services",
+    "blender_addon/mechanical_cad_blender/assembly_component_context.py": "ec15b3c233a813298abe4c72fed35b66c018bfda Resolve Assembly component actions from current viewport selection",
+    "blender_addon/mechanical_cad_blender/assembly_coordinates.py": "69346e58fb96fb79af6b71ed3b5255413824d896 Add planar and spherical assembly joints with explicit bounded axes",
+    "blender_addon/mechanical_cad_blender/assembly_export_bridge.py": "56a13b32f2d29ccb8576f4d64053fe990a61d9bd Add checked Assembly STEP export with reusable placed Parts",
+    "blender_addon/mechanical_cad_blender/assembly_export_owner.py": "56a13b32f2d29ccb8576f4d64053fe990a61d9bd Add checked Assembly STEP export with reusable placed Parts",
+    "blender_addon/mechanical_cad_blender/assembly_face_pick.py": "b8b8b54c874c1c746a09fe4b764e94b05d340629 Add associative Mate by Faces viewport workflow",
+    "blender_addon/mechanical_cad_blender/assembly_frame_evidence.py": "2aa94b355ca61687e9cd0f3c92e9d2705f042919 Verify associative datum frames and poses against current planar topology",
+    "blender_addon/mechanical_cad_blender/assembly_gear_ui.py": "072792fe2f19b82d2736aef08ff1b52baeed8d47 Add bounded directed revolute gear relations with explicit controls",
+    "blender_addon/mechanical_cad_blender/assembly_gears.py": "072792fe2f19b82d2736aef08ff1b52baeed8d47 Add bounded directed revolute gear relations with explicit controls",
+    "blender_addon/mechanical_cad_blender/assembly_insert_face_pick.py": "e7c2e3eabef3de6043219316e4ea0928223a20e8 Mate new Assembly components with guarded planar face preview",
+    "blender_addon/mechanical_cad_blender/assembly_insert_mate_draft.py": "e7c2e3eabef3de6043219316e4ea0928223a20e8 Mate new Assembly components with guarded planar face preview",
+    "blender_addon/mechanical_cad_blender/assembly_insert_mate_preview.py": "e7c2e3eabef3de6043219316e4ea0928223a20e8 Mate new Assembly components with guarded planar face preview",
+    "blender_addon/mechanical_cad_blender/assembly_insert_pick_projection.py": "e7c2e3eabef3de6043219316e4ea0928223a20e8 Mate new Assembly components with guarded planar face preview",
+    "blender_addon/mechanical_cad_blender/assembly_insert_preview.py": "088d18506ae1edd24eb059e04530d4973ba16c59 Preview Assembly insertion before atomic child and joint Apply",
+    "blender_addon/mechanical_cad_blender/assembly_insert_preview_draft.py": "088d18506ae1edd24eb059e04530d4973ba16c59 Preview Assembly insertion before atomic child and joint Apply",
+    "blender_addon/mechanical_cad_blender/assembly_insert_preview_session.py": "aafb2bf63579db7a8b9df837504a47a52e4e8ffb Separate preview owners and pending intent from launch coordinators",
+    "blender_addon/mechanical_cad_blender/assembly_joint_draft.py": "c3664f339025c0ff515f1e81cfe9352caea0f727 Add visual fixed and slider joint placement",
+    "blender_addon/mechanical_cad_blender/assembly_joint_overlay.py": "c3664f339025c0ff515f1e81cfe9352caea0f727 Add visual fixed and slider joint placement",
+    "blender_addon/mechanical_cad_blender/assembly_joint_viewport.py": "c3664f339025c0ff515f1e81cfe9352caea0f727 Add visual fixed and slider joint placement",
+    "blender_addon/mechanical_cad_blender/assembly_motion_draft.py": "2f368a6bf5eaa22551801b7cc6d4b6beac96682d Preview independent gear driver motion with guarded full assembly replay",
+    "blender_addon/mechanical_cad_blender/assembly_source_preview_contract.py": "1630f4f23e2089b82766a91330b64827274e8d0d Preview shared Part source updates across the full Assembly before Apply",
+    "blender_addon/mechanical_cad_blender/assembly_source_preview_registry.py": "0bd086d88d4a60dda9f77968ac8ddf67e57ed0e9 Share source preview owner registry without circular viewport imports",
+    "blender_addon/mechanical_cad_blender/assembly_source_update_preview.py": "1630f4f23e2089b82766a91330b64827274e8d0d Preview shared Part source updates across the full Assembly before Apply",
+    "blender_addon/mechanical_cad_blender/assembly_summary.py": "67cf7797b50f1353ec3a4650698bda951a4042b6 Surface compact assembly status and guarded primary actions",
+    "blender_addon/mechanical_cad_blender/assets/tool_glyphs/NOTICE.txt": "c794cf6efbac550b7410b9860f4f0b3c06cc99e9 Clarify loft sweep hole and shell with original CAD glyphs",
+    "blender_addon/mechanical_cad_blender/assets/tool_glyphs/dark/APPLY_LINE_EDIT.png": "15b0524029c8a1fe60d47cac84d6f265a10587bb Distinguish CAD toolbar commands with semantic glyphs and named tooltips",
+    "blender_addon/mechanical_cad_blender/assets/tool_glyphs/dark/ARC.png": "15b0524029c8a1fe60d47cac84d6f265a10587bb Distinguish CAD toolbar commands with semantic glyphs and named tooltips",
+    "blender_addon/mechanical_cad_blender/assets/tool_glyphs/dark/CANCEL_CHECK.png": "15b0524029c8a1fe60d47cac84d6f265a10587bb Distinguish CAD toolbar commands with semantic glyphs and named tooltips",
+    "blender_addon/mechanical_cad_blender/assets/tool_glyphs/dark/CANCEL_LINE_EDIT.png": "15b0524029c8a1fe60d47cac84d6f265a10587bb Distinguish CAD toolbar commands with semantic glyphs and named tooltips",
+    "blender_addon/mechanical_cad_blender/assets/tool_glyphs/dark/CHAMFER.png": "15b0524029c8a1fe60d47cac84d6f265a10587bb Distinguish CAD toolbar commands with semantic glyphs and named tooltips",
+    "blender_addon/mechanical_cad_blender/assets/tool_glyphs/dark/CIRCLE_TANGENT.png": "15b0524029c8a1fe60d47cac84d6f265a10587bb Distinguish CAD toolbar commands with semantic glyphs and named tooltips",
+    "blender_addon/mechanical_cad_blender/assets/tool_glyphs/dark/CIRCULAR_CUT_PATTERN.png": "15b0524029c8a1fe60d47cac84d6f265a10587bb Distinguish CAD toolbar commands with semantic glyphs and named tooltips",
+    "blender_addon/mechanical_cad_blender/assets/tool_glyphs/dark/CIRCULAR_PATTERN.png": "15b0524029c8a1fe60d47cac84d6f265a10587bb Distinguish CAD toolbar commands with semantic glyphs and named tooltips",
+    "blender_addon/mechanical_cad_blender/assets/tool_glyphs/dark/COINCIDENT.png": "15b0524029c8a1fe60d47cac84d6f265a10587bb Distinguish CAD toolbar commands with semantic glyphs and named tooltips",
+    "blender_addon/mechanical_cad_blender/assets/tool_glyphs/dark/CONCENTRIC.png": "15b0524029c8a1fe60d47cac84d6f265a10587bb Distinguish CAD toolbar commands with semantic glyphs and named tooltips",
+    "blender_addon/mechanical_cad_blender/assets/tool_glyphs/dark/CUT.png": "15b0524029c8a1fe60d47cac84d6f265a10587bb Distinguish CAD toolbar commands with semantic glyphs and named tooltips",
+    "blender_addon/mechanical_cad_blender/assets/tool_glyphs/dark/DIAMETER.png": "15b0524029c8a1fe60d47cac84d6f265a10587bb Distinguish CAD toolbar commands with semantic glyphs and named tooltips",
+    "blender_addon/mechanical_cad_blender/assets/tool_glyphs/dark/DIMENSION.png": "07ce23402371eaa639ab20eee4eafaf748e5a828 Clarify line and dimension tools and current dimension gestures",
+    "blender_addon/mechanical_cad_blender/assets/tool_glyphs/dark/EQUAL.png": "15b0524029c8a1fe60d47cac84d6f265a10587bb Distinguish CAD toolbar commands with semantic glyphs and named tooltips",
+    "blender_addon/mechanical_cad_blender/assets/tool_glyphs/dark/EXTEND.png": "15b0524029c8a1fe60d47cac84d6f265a10587bb Distinguish CAD toolbar commands with semantic glyphs and named tooltips",
+    "blender_addon/mechanical_cad_blender/assets/tool_glyphs/dark/FACE_CIRCLE.png": "15b0524029c8a1fe60d47cac84d6f265a10587bb Distinguish CAD toolbar commands with semantic glyphs and named tooltips",
+    "blender_addon/mechanical_cad_blender/assets/tool_glyphs/dark/FACE_RECTANGLE.png": "15b0524029c8a1fe60d47cac84d6f265a10587bb Distinguish CAD toolbar commands with semantic glyphs and named tooltips",
+    "blender_addon/mechanical_cad_blender/assets/tool_glyphs/dark/FILLET.png": "15b0524029c8a1fe60d47cac84d6f265a10587bb Distinguish CAD toolbar commands with semantic glyphs and named tooltips",
+    "blender_addon/mechanical_cad_blender/assets/tool_glyphs/dark/HOLE.png": "c794cf6efbac550b7410b9860f4f0b3c06cc99e9 Clarify loft sweep hole and shell with original CAD glyphs",
+    "blender_addon/mechanical_cad_blender/assets/tool_glyphs/dark/INTERSECTION.png": "15b0524029c8a1fe60d47cac84d6f265a10587bb Distinguish CAD toolbar commands with semantic glyphs and named tooltips",
+    "blender_addon/mechanical_cad_blender/assets/tool_glyphs/dark/LINE.png": "07ce23402371eaa639ab20eee4eafaf748e5a828 Clarify line and dimension tools and current dimension gestures",
+    "blender_addon/mechanical_cad_blender/assets/tool_glyphs/dark/LINEAR_CUT_PATTERN.png": "15b0524029c8a1fe60d47cac84d6f265a10587bb Distinguish CAD toolbar commands with semantic glyphs and named tooltips",
+    "blender_addon/mechanical_cad_blender/assets/tool_glyphs/dark/LINEAR_PATTERN.png": "15b0524029c8a1fe60d47cac84d6f265a10587bb Distinguish CAD toolbar commands with semantic glyphs and named tooltips",
+    "blender_addon/mechanical_cad_blender/assets/tool_glyphs/dark/LOFT.png": "c794cf6efbac550b7410b9860f4f0b3c06cc99e9 Clarify loft sweep hole and shell with original CAD glyphs",
+    "blender_addon/mechanical_cad_blender/assets/tool_glyphs/dark/MIDPOINT.png": "15b0524029c8a1fe60d47cac84d6f265a10587bb Distinguish CAD toolbar commands with semantic glyphs and named tooltips",
+    "blender_addon/mechanical_cad_blender/assets/tool_glyphs/dark/NEW_FACE_SKETCH.png": "15b0524029c8a1fe60d47cac84d6f265a10587bb Distinguish CAD toolbar commands with semantic glyphs and named tooltips",
+    "blender_addon/mechanical_cad_blender/assets/tool_glyphs/dark/PARALLEL.png": "15b0524029c8a1fe60d47cac84d6f265a10587bb Distinguish CAD toolbar commands with semantic glyphs and named tooltips",
+    "blender_addon/mechanical_cad_blender/assets/tool_glyphs/dark/POINT_ON_LINE.png": "15b0524029c8a1fe60d47cac84d6f265a10587bb Distinguish CAD toolbar commands with semantic glyphs and named tooltips",
+    "blender_addon/mechanical_cad_blender/assets/tool_glyphs/dark/PROJECT.png": "15b0524029c8a1fe60d47cac84d6f265a10587bb Distinguish CAD toolbar commands with semantic glyphs and named tooltips",
+    "blender_addon/mechanical_cad_blender/assets/tool_glyphs/dark/REVERSE.png": "15b0524029c8a1fe60d47cac84d6f265a10587bb Distinguish CAD toolbar commands with semantic glyphs and named tooltips",
+    "blender_addon/mechanical_cad_blender/assets/tool_glyphs/dark/SHELL.png": "15b0524029c8a1fe60d47cac84d6f265a10587bb Distinguish CAD toolbar commands with semantic glyphs and named tooltips",
+    "blender_addon/mechanical_cad_blender/assets/tool_glyphs/dark/SKETCH_CHECK.png": "15b0524029c8a1fe60d47cac84d6f265a10587bb Distinguish CAD toolbar commands with semantic glyphs and named tooltips",
+    "blender_addon/mechanical_cad_blender/assets/tool_glyphs/dark/SWEEP.png": "c794cf6efbac550b7410b9860f4f0b3c06cc99e9 Clarify loft sweep hole and shell with original CAD glyphs",
+    "blender_addon/mechanical_cad_blender/assets/tool_glyphs/dark/TANGENT.png": "15b0524029c8a1fe60d47cac84d6f265a10587bb Distinguish CAD toolbar commands with semantic glyphs and named tooltips",
+    "blender_addon/mechanical_cad_blender/assets/tool_glyphs/dark/UNION.png": "15b0524029c8a1fe60d47cac84d6f265a10587bb Distinguish CAD toolbar commands with semantic glyphs and named tooltips",
+    "blender_addon/mechanical_cad_blender/assets/tool_glyphs/dark/USE_POINT.png": "15b0524029c8a1fe60d47cac84d6f265a10587bb Distinguish CAD toolbar commands with semantic glyphs and named tooltips",
+    "blender_addon/mechanical_cad_blender/assets/tool_glyphs/dark/USE_SOLID_EDGE.png": "15b0524029c8a1fe60d47cac84d6f265a10587bb Distinguish CAD toolbar commands with semantic glyphs and named tooltips",
+    "blender_addon/mechanical_cad_blender/assets/tool_glyphs/dark/VERTICAL.png": "15b0524029c8a1fe60d47cac84d6f265a10587bb Distinguish CAD toolbar commands with semantic glyphs and named tooltips",
+    "blender_addon/mechanical_cad_blender/assets/tool_glyphs/design_manifest.json": "c794cf6efbac550b7410b9860f4f0b3c06cc99e9 Clarify loft sweep hole and shell with original CAD glyphs",
+    "blender_addon/mechanical_cad_blender/assets/tool_glyphs/light/APPLY_LINE_EDIT.png": "15b0524029c8a1fe60d47cac84d6f265a10587bb Distinguish CAD toolbar commands with semantic glyphs and named tooltips",
+    "blender_addon/mechanical_cad_blender/assets/tool_glyphs/light/ARC.png": "15b0524029c8a1fe60d47cac84d6f265a10587bb Distinguish CAD toolbar commands with semantic glyphs and named tooltips",
+    "blender_addon/mechanical_cad_blender/assets/tool_glyphs/light/CANCEL_CHECK.png": "15b0524029c8a1fe60d47cac84d6f265a10587bb Distinguish CAD toolbar commands with semantic glyphs and named tooltips",
+    "blender_addon/mechanical_cad_blender/assets/tool_glyphs/light/CANCEL_LINE_EDIT.png": "15b0524029c8a1fe60d47cac84d6f265a10587bb Distinguish CAD toolbar commands with semantic glyphs and named tooltips",
+    "blender_addon/mechanical_cad_blender/assets/tool_glyphs/light/CHAMFER.png": "15b0524029c8a1fe60d47cac84d6f265a10587bb Distinguish CAD toolbar commands with semantic glyphs and named tooltips",
+    "blender_addon/mechanical_cad_blender/assets/tool_glyphs/light/CIRCLE_TANGENT.png": "15b0524029c8a1fe60d47cac84d6f265a10587bb Distinguish CAD toolbar commands with semantic glyphs and named tooltips",
+    "blender_addon/mechanical_cad_blender/assets/tool_glyphs/light/CIRCULAR_CUT_PATTERN.png": "15b0524029c8a1fe60d47cac84d6f265a10587bb Distinguish CAD toolbar commands with semantic glyphs and named tooltips",
+    "blender_addon/mechanical_cad_blender/assets/tool_glyphs/light/CIRCULAR_PATTERN.png": "15b0524029c8a1fe60d47cac84d6f265a10587bb Distinguish CAD toolbar commands with semantic glyphs and named tooltips",
+    "blender_addon/mechanical_cad_blender/assets/tool_glyphs/light/COINCIDENT.png": "15b0524029c8a1fe60d47cac84d6f265a10587bb Distinguish CAD toolbar commands with semantic glyphs and named tooltips",
+    "blender_addon/mechanical_cad_blender/assets/tool_glyphs/light/CONCENTRIC.png": "15b0524029c8a1fe60d47cac84d6f265a10587bb Distinguish CAD toolbar commands with semantic glyphs and named tooltips",
+    "blender_addon/mechanical_cad_blender/assets/tool_glyphs/light/CUT.png": "15b0524029c8a1fe60d47cac84d6f265a10587bb Distinguish CAD toolbar commands with semantic glyphs and named tooltips",
+    "blender_addon/mechanical_cad_blender/assets/tool_glyphs/light/DIAMETER.png": "15b0524029c8a1fe60d47cac84d6f265a10587bb Distinguish CAD toolbar commands with semantic glyphs and named tooltips",
+    "blender_addon/mechanical_cad_blender/assets/tool_glyphs/light/DIMENSION.png": "07ce23402371eaa639ab20eee4eafaf748e5a828 Clarify line and dimension tools and current dimension gestures",
+    "blender_addon/mechanical_cad_blender/assets/tool_glyphs/light/EQUAL.png": "15b0524029c8a1fe60d47cac84d6f265a10587bb Distinguish CAD toolbar commands with semantic glyphs and named tooltips",
+    "blender_addon/mechanical_cad_blender/assets/tool_glyphs/light/EXTEND.png": "15b0524029c8a1fe60d47cac84d6f265a10587bb Distinguish CAD toolbar commands with semantic glyphs and named tooltips",
+    "blender_addon/mechanical_cad_blender/assets/tool_glyphs/light/FACE_CIRCLE.png": "15b0524029c8a1fe60d47cac84d6f265a10587bb Distinguish CAD toolbar commands with semantic glyphs and named tooltips",
+    "blender_addon/mechanical_cad_blender/assets/tool_glyphs/light/FACE_RECTANGLE.png": "15b0524029c8a1fe60d47cac84d6f265a10587bb Distinguish CAD toolbar commands with semantic glyphs and named tooltips",
+    "blender_addon/mechanical_cad_blender/assets/tool_glyphs/light/FILLET.png": "15b0524029c8a1fe60d47cac84d6f265a10587bb Distinguish CAD toolbar commands with semantic glyphs and named tooltips",
+    "blender_addon/mechanical_cad_blender/assets/tool_glyphs/light/HOLE.png": "c794cf6efbac550b7410b9860f4f0b3c06cc99e9 Clarify loft sweep hole and shell with original CAD glyphs",
+    "blender_addon/mechanical_cad_blender/assets/tool_glyphs/light/INTERSECTION.png": "15b0524029c8a1fe60d47cac84d6f265a10587bb Distinguish CAD toolbar commands with semantic glyphs and named tooltips",
+    "blender_addon/mechanical_cad_blender/assets/tool_glyphs/light/LINE.png": "07ce23402371eaa639ab20eee4eafaf748e5a828 Clarify line and dimension tools and current dimension gestures",
+    "blender_addon/mechanical_cad_blender/assets/tool_glyphs/light/LINEAR_CUT_PATTERN.png": "15b0524029c8a1fe60d47cac84d6f265a10587bb Distinguish CAD toolbar commands with semantic glyphs and named tooltips",
+    "blender_addon/mechanical_cad_blender/assets/tool_glyphs/light/LINEAR_PATTERN.png": "15b0524029c8a1fe60d47cac84d6f265a10587bb Distinguish CAD toolbar commands with semantic glyphs and named tooltips",
+    "blender_addon/mechanical_cad_blender/assets/tool_glyphs/light/LOFT.png": "c794cf6efbac550b7410b9860f4f0b3c06cc99e9 Clarify loft sweep hole and shell with original CAD glyphs",
+    "blender_addon/mechanical_cad_blender/assets/tool_glyphs/light/MIDPOINT.png": "15b0524029c8a1fe60d47cac84d6f265a10587bb Distinguish CAD toolbar commands with semantic glyphs and named tooltips",
+    "blender_addon/mechanical_cad_blender/assets/tool_glyphs/light/NEW_FACE_SKETCH.png": "15b0524029c8a1fe60d47cac84d6f265a10587bb Distinguish CAD toolbar commands with semantic glyphs and named tooltips",
+    "blender_addon/mechanical_cad_blender/assets/tool_glyphs/light/PARALLEL.png": "15b0524029c8a1fe60d47cac84d6f265a10587bb Distinguish CAD toolbar commands with semantic glyphs and named tooltips",
+    "blender_addon/mechanical_cad_blender/assets/tool_glyphs/light/POINT_ON_LINE.png": "15b0524029c8a1fe60d47cac84d6f265a10587bb Distinguish CAD toolbar commands with semantic glyphs and named tooltips",
+    "blender_addon/mechanical_cad_blender/assets/tool_glyphs/light/PROJECT.png": "15b0524029c8a1fe60d47cac84d6f265a10587bb Distinguish CAD toolbar commands with semantic glyphs and named tooltips",
+    "blender_addon/mechanical_cad_blender/assets/tool_glyphs/light/REVERSE.png": "15b0524029c8a1fe60d47cac84d6f265a10587bb Distinguish CAD toolbar commands with semantic glyphs and named tooltips",
+    "blender_addon/mechanical_cad_blender/assets/tool_glyphs/light/SHELL.png": "15b0524029c8a1fe60d47cac84d6f265a10587bb Distinguish CAD toolbar commands with semantic glyphs and named tooltips",
+    "blender_addon/mechanical_cad_blender/assets/tool_glyphs/light/SKETCH_CHECK.png": "15b0524029c8a1fe60d47cac84d6f265a10587bb Distinguish CAD toolbar commands with semantic glyphs and named tooltips",
+    "blender_addon/mechanical_cad_blender/assets/tool_glyphs/light/SWEEP.png": "c794cf6efbac550b7410b9860f4f0b3c06cc99e9 Clarify loft sweep hole and shell with original CAD glyphs",
+    "blender_addon/mechanical_cad_blender/assets/tool_glyphs/light/TANGENT.png": "15b0524029c8a1fe60d47cac84d6f265a10587bb Distinguish CAD toolbar commands with semantic glyphs and named tooltips",
+    "blender_addon/mechanical_cad_blender/assets/tool_glyphs/light/UNION.png": "15b0524029c8a1fe60d47cac84d6f265a10587bb Distinguish CAD toolbar commands with semantic glyphs and named tooltips",
+    "blender_addon/mechanical_cad_blender/assets/tool_glyphs/light/USE_POINT.png": "15b0524029c8a1fe60d47cac84d6f265a10587bb Distinguish CAD toolbar commands with semantic glyphs and named tooltips",
+    "blender_addon/mechanical_cad_blender/assets/tool_glyphs/light/USE_SOLID_EDGE.png": "15b0524029c8a1fe60d47cac84d6f265a10587bb Distinguish CAD toolbar commands with semantic glyphs and named tooltips",
+    "blender_addon/mechanical_cad_blender/assets/tool_glyphs/light/VERTICAL.png": "15b0524029c8a1fe60d47cac84d6f265a10587bb Distinguish CAD toolbar commands with semantic glyphs and named tooltips",
+    "blender_addon/mechanical_cad_blender/assets/tool_glyphs/svg/HOLE.svg": "c794cf6efbac550b7410b9860f4f0b3c06cc99e9 Clarify loft sweep hole and shell with original CAD glyphs",
+    "blender_addon/mechanical_cad_blender/assets/tool_glyphs/svg/LOFT.svg": "c794cf6efbac550b7410b9860f4f0b3c06cc99e9 Clarify loft sweep hole and shell with original CAD glyphs",
+    "blender_addon/mechanical_cad_blender/assets/tool_glyphs/svg/SHELL.svg": "c794cf6efbac550b7410b9860f4f0b3c06cc99e9 Clarify loft sweep hole and shell with original CAD glyphs",
+    "blender_addon/mechanical_cad_blender/assets/tool_glyphs/svg/SWEEP.svg": "c794cf6efbac550b7410b9860f4f0b3c06cc99e9 Clarify loft sweep hole and shell with original CAD glyphs",
+    "blender_addon/mechanical_cad_blender/backend_platform.py": "42fb3e02011202ba04e65735b4581dc1785c1731 Add isolated standalone runtime contracts and owned Windows process leaf",
+    "blender_addon/mechanical_cad_blender/blend_selection.py": "960471987dce30ce02c342ea48ae32593728750e Add explicit multiple-edge Fillet and Chamfer intent and viewport selection",
+    "blender_addon/mechanical_cad_blender/circle_diameter_session.py": "7064045de4a88c9182b28a5f19b7a2a8617c5c05 Add guarded unfinished Circle diameter input and atomic radius driver",
+    "blender_addon/mechanical_cad_blender/compact_status.py": "78c0e23220715672fc27d2caa6f7ca9623cb7690 Compact sketch and part reports around truthful vital status",
+    "blender_addon/mechanical_cad_blender/copied_face_plane.py": "34c5e178f4db3e10f27c620ba9b41932e0f7ef2f Add explicit unlinked sketch plane sampling from current native faces",
+    "blender_addon/mechanical_cad_blender/cut_support_ancestry.py": "0e27210b1f0f91352ab0e915d978f2372585a179 Preserve source-bound sketch planes through proven Cut chains",
+    "blender_addon/mechanical_cad_blender/direct_edge_pick.py": "538f1a8b665d98299229df5d1dd9d435c432a19a Select supported blend edges with one guarded viewport click",
+    "blender_addon/mechanical_cad_blender/document_paths.py": "9e7b8087b8dc012e9d97ddb5b0d3fb74accbe646 Keep compound CAD save extensions stable in file selectors",
+    "blender_addon/mechanical_cad_blender/edge_catalog_bridge.py": "538f1a8b665d98299229df5d1dd9d435c432a19a Select supported blend edges with one guarded viewport click",
+    "blender_addon/mechanical_cad_blender/edge_pick.py": "72b3a7b5c25472cd51d670057e064c12cdc58480 Add exact-bound two-face viewport blend selection",
+    "blender_addon/mechanical_cad_blender/end_face_repair.py": "ff5c8b77e231098c913ecf6f611aab5615e340c4 Stage explicit repair of broken Up to Face references",
+    "blender_addon/mechanical_cad_blender/end_face_repair_ui.py": "ff5c8b77e231098c913ecf6f611aab5615e340c4 Stage explicit repair of broken Up to Face references",
+    "blender_addon/mechanical_cad_blender/extrusion_candidate.py": "a284928809c1badfa8d18aba464c2eaeedc6e003 Add atomic one-step additive and subtractive sketch extrusion",
+    "blender_addon/mechanical_cad_blender/extrusion_end_condition.py": "975902fcb88f7d46b3539538e4932b468bdd298d Add explicit up-to-planar-face extrusion end condition",
+    "blender_addon/mechanical_cad_blender/extrusion_operators.py": "a284928809c1badfa8d18aba464c2eaeedc6e003 Add atomic one-step additive and subtractive sketch extrusion",
+    "blender_addon/mechanical_cad_blender/extrusion_preview.py": "f84d40b9e5ed12a9f97619d64f4194f64dffd651 Preview exact extrusion candidates asynchronously before atomic Apply",
+    "blender_addon/mechanical_cad_blender/extrusion_preview_geometry.py": "f84d40b9e5ed12a9f97619d64f4194f64dffd651 Preview exact extrusion candidates asynchronously before atomic Apply",
+    "blender_addon/mechanical_cad_blender/face_pick.py": "bc261e68633178ce4617bb90f05ec1cb8bf35f3f Add exact viewport face picking for attached sketches",
+    "blender_addon/mechanical_cad_blender/feature_glyphs.py": "4920872781160a2ecfe5de2e7329133c9f289dd8 Identify feature families without hiding guarded replay status",
+    "blender_addon/mechanical_cad_blender/feature_guidance.py": "2b67eb3e3ae7294e44072fb3743e2e0be8fd663f Explain practical recovery choices in solid feature dialogs",
+    "blender_addon/mechanical_cad_blender/feature_history_draw.py": "1bf529adf98cbee93f9abc70525a2078bbed7f90 Recover synchronous guarded feature-history presentation scope",
+    "blender_addon/mechanical_cad_blender/fillet_intent.py": "fa62ccd6772105f79af20d23be4b0a3c471a9f15 Persist bounded corner fillet intent and reject flipped native resize",
+    "blender_addon/mechanical_cad_blender/fixed_plane_edit.py": "b876b6df6d24afb79a2ed099311efea4d0ecec58 Add guarded one-time offset for unlinked sketch planes",
+    "blender_addon/mechanical_cad_blender/gear_pair.py": "5dd8bd133c882736d4e304cd60aec3edb909d44b Add atomic printable spur gear pair configurator and native mesh checks",
+    "blender_addon/mechanical_cad_blender/gear_pair_ui.py": "5dd8bd133c882736d4e304cd60aec3edb909d44b Add atomic printable spur gear pair configurator and native mesh checks",
+    "blender_addon/mechanical_cad_blender/general_arc_authoring_store.py": "bef37be9076577f96a9c05708104730942b787c0 Add dormant versioned arc authoring contracts and persistence",
+    "blender_addon/mechanical_cad_blender/general_authoring_anchors.py": "aafb2bf63579db7a8b9df837504a47a52e4e8ffb Separate preview owners and pending intent from launch coordinators",
+    "blender_addon/mechanical_cad_blender/general_sketch_validation.py": "505ac3cc2279d380f19650cf0e98ae320fc5229d Separate shared sketch validation from command reducers",
+    "blender_addon/mechanical_cad_blender/geometry_result_v3.py": "cc130e667cc30c76e0437f5994059220f1aca25e feat: reconstruct bounded sector output contracts",
+    "blender_addon/mechanical_cad_blender/help_browser.py": "748f2b1671a25b486dd409bea30372937e2e0796 Add categorized searchable CAD help with assumption guidance",
+    "blender_addon/mechanical_cad_blender/help_catalog.py": "748f2b1671a25b486dd409bea30372937e2e0796 Add categorized searchable CAD help with assumption guidance",
+    "blender_addon/mechanical_cad_blender/history_edit.py": "b4d0ae0384664ae16e870f38915e88575952d82d Connect modeling palettes, feature history editing and named parameters",
+    "blender_addon/mechanical_cad_blender/history_operators.py": "b4d0ae0384664ae16e870f38915e88575952d82d Connect modeling palettes, feature history editing and named parameters",
+    "blender_addon/mechanical_cad_blender/history_rebuild.py": "300106cd289c6c36c063bb650f132e0f57244c2c Rebuild restored Part history with bounded guarded async replay",
+    "blender_addon/mechanical_cad_blender/hole_operators.py": "05eee1782484ac2c3a7c49a4d6916008cfa36713 Add editable simple and counterbored round hole workflow",
+    "blender_addon/mechanical_cad_blender/hole_recipe.py": "05eee1782484ac2c3a7c49a4d6916008cfa36713 Add editable simple and counterbored round hole workflow",
+    "blender_addon/mechanical_cad_blender/line_axis.py": "35941e34adb549200c2c5d9ded56c474032bc614 Add explicit Shift-held Line axis constraints with atomic sketch history",
+    "blender_addon/mechanical_cad_blender/line_length_session.py": "82cfda5755fd37847a8bd1176415276983f49503 Add guarded pending Line length field and atomic owner acceptance",
+    "blender_addon/mechanical_cad_blender/line_trim_extend.py": "591f02b16c9ad3999c4b8602058eb896af40e7dd Add explicit sketch line Trim and Extend with preview and local Undo",
+    "blender_addon/mechanical_cad_blender/linked_extrusion_edit.py": "c7495483443ee2b44612498a68a02dad16d3079c Edit linked Boolean extrusion depth in one guarded dialog",
+    "blender_addon/mechanical_cad_blender/local_recovery.py": "0da3402a1d448530e287f7c0b6d5fa1aaacd9455 Add explicit opt-in settled Part recovery and fresh Scene restore",
+    "blender_addon/mechanical_cad_blender/loft_sections.py": "42b598b043f5640c3587ac4f1ade355d85a1fb09 Add explicit ordered multi-section Loft with guarded exact replay",
+    "blender_addon/mechanical_cad_blender/mirror_plane_ui.py": "c0a927413f45192edc46c08d6fcd21b71b52b13f Add expression-preserving Mirror plane presets and offset controls",
+    "blender_addon/mechanical_cad_blender/operation_contracts.py": "bef37be9076577f96a9c05708104730942b787c0 Add dormant versioned arc authoring contracts and persistence",
+    "blender_addon/mechanical_cad_blender/parameter_depth_edit.py": "c705ee41fbcaad0976d3af2c34723add4f265328 Make shared depth parameter edits explicit in feature dialog",
+    "blender_addon/mechanical_cad_blender/parameter_presentation.py": "99eebf58a64408d48b4023b9494b61db81c831a0 Expose direct face and rectangle workflows with readable parameter usage",
+    "blender_addon/mechanical_cad_blender/parameter_radius_edit.py": "a6d06a16a6c7b4602cee730019f5984d78320847 Expose explicit shared or feature-only primitive circle radius edits",
+    "blender_addon/mechanical_cad_blender/part_contracts_v3.py": "ce5b50bb011b3949a6599c7cbc28d31024805e0a Add qualified data-only sector result-v3 services",
+    "blender_addon/mechanical_cad_blender/pending_circle_diameter.py": "7064045de4a88c9182b28a5f19b7a2a8617c5c05 Add guarded unfinished Circle diameter input and atomic radius driver",
+    "blender_addon/mechanical_cad_blender/pending_circle_diameter_intent.py": "aafb2bf63579db7a8b9df837504a47a52e4e8ffb Separate preview owners and pending intent from launch coordinators",
+    "blender_addon/mechanical_cad_blender/pending_line_length.py": "1786333aa8c02bd504a86f36ed773e9983353748 Preserve pending Line driving-length intent and stage detached candidates",
+    "blender_addon/mechanical_cad_blender/pending_line_length_intent.py": "aafb2bf63579db7a8b9df837504a47a52e4e8ffb Separate preview owners and pending intent from launch coordinators",
+    "blender_addon/mechanical_cad_blender/point_line_dimension.py": "94e4f40114b1128d0f9f4c83f20ac46631d875a6 Dimension sketch centers directly from reference edges with atomic native helpers",
+    "blender_addon/mechanical_cad_blender/profile_geometry_checks.py": "ea2983de09ddf95c8d2c09d71725d1e84d0b81de Share pure profile checks without a bridge dependency cycle",
+    "blender_addon/mechanical_cad_blender/projection_edge_choice.py": "8abf807e021b4fca3a1e27505ff5bca927d1d817 Add explicit owner-bound overlap edge choice with preview and Apply",
+    "blender_addon/mechanical_cad_blender/projection_edge_choice_draw.py": "8abf807e021b4fca3a1e27505ff5bca927d1d817 Add explicit owner-bound overlap edge choice with preview and Apply",
+    "blender_addon/mechanical_cad_blender/projection_edge_choice_labels.py": "0fb9138480cd5bb482cf4aee83c7be7d31f560ca Compact edge choice labels while retaining distinguishing context",
+    "blender_addon/mechanical_cad_blender/projection_repair.py": "29716c70f11a5a3e9cfec2a46f9c83ccdd46b4a3 Add explicit projected reference replacement with endpoint direction",
+    "blender_addon/mechanical_cad_blender/projection_repair_ui.py": "29716c70f11a5a3e9cfec2a46f9c83ccdd46b4a3 Add explicit projected reference replacement with endpoint direction",
+    "blender_addon/mechanical_cad_blender/recovery_capture.py": "0da3402a1d448530e287f7c0b6d5fa1aaacd9455 Add explicit opt-in settled Part recovery and fresh Scene restore",
+    "blender_addon/mechanical_cad_blender/recovery_store.py": "6549f5fea1d83ab8342ae0c78e67c1c1d5aa6591 Add bounded opt-in recovery store and pure safety tests",
+    "blender_addon/mechanical_cad_blender/rectangle_tool.py": "3df704c3ca9ce7121ff274e81f16097e08561ecd Add atomic rectangles inside plane-aware drawn sketches",
+    "blender_addon/mechanical_cad_blender/reference_dimensions.py": "993e7fb83d21034d1de44e50149445d06e93ddaa Add read-only sketch reference length radius and diameter labels",
+    "blender_addon/mechanical_cad_blender/region_profile_bridge.py": "9305237f0a315d42e2baf9e6c52a5a2965a2f953 Support closed sketch regions with analytic holes and stable boundaries",
+    "blender_addon/mechanical_cad_blender/repair_intent.py": "594840d2203c4708eaf664d045c5638dd1271f23 Persist unapplied repair intent with explicit fresh Resume",
+    "blender_addon/mechanical_cad_blender/repair_resume.py": "2658275de754dd583dd1e36814f2826e9b4f5450 Make saved repair Resume cancellable through guarded modal jobs",
+    "blender_addon/mechanical_cad_blender/repair_scope.py": "594840d2203c4708eaf664d045c5638dd1271f23 Persist unapplied repair intent with explicit fresh Resume",
+    "blender_addon/mechanical_cad_blender/result_v3.py": "ce5b50bb011b3949a6599c7cbc28d31024805e0a Add qualified data-only sector result-v3 services",
+    "blender_addon/mechanical_cad_blender/runtime_bundle_launch.py": "1c8f03026c814cd69bfb25c35449810b5b858fb2 Integrate offline bundled setup and retained-resource quarantine",
+    "blender_addon/mechanical_cad_blender/runtime_bundle_manifest.py": "42fb3e02011202ba04e65735b4581dc1785c1731 Add isolated standalone runtime contracts and owned Windows process leaf",
+    "blender_addon/mechanical_cad_blender/runtime_bundle_materialize.py": "42fb3e02011202ba04e65735b4581dc1785c1731 Add isolated standalone runtime contracts and owned Windows process leaf",
+    "blender_addon/mechanical_cad_blender/runtime_bundle_pin.py": "ab7edce1561df34fd9eb12f62772b132f02297b9 Add isolated runtime pins and bootstrap with explicit descriptor ownership",
+    "blender_addon/mechanical_cad_blender/runtime_bundle_prepare.py": "1c8f03026c814cd69bfb25c35449810b5b858fb2 Integrate offline bundled setup and retained-resource quarantine",
+    "blender_addon/mechanical_cad_blender/sector_topology_v3.py": "ce5b50bb011b3949a6599c7cbc28d31024805e0a Add qualified data-only sector result-v3 services",
+    "blender_addon/mechanical_cad_blender/service_v3.py": "ce5b50bb011b3949a6599c7cbc28d31024805e0a Add qualified data-only sector result-v3 services",
+    "blender_addon/mechanical_cad_blender/shell_pick.py": "e89ff97d24fb645672329d9903098fda3c5325fb Add editable picked planar openings to Shell",
+    "blender_addon/mechanical_cad_blender/shell_selection.py": "5c955dea2e14463385c01916688cf7173a479723 Support explicit multiple planar Shell openings with checked selection UI",
+    "blender_addon/mechanical_cad_blender/sketch_contracts_v3.py": "ce5b50bb011b3949a6599c7cbc28d31024805e0a Add qualified data-only sector result-v3 services",
+    "blender_addon/mechanical_cad_blender/sketch_corner_fillet.py": "5bfb6db159752da4284f465600c8566a9392b016 WIP: add corner fillet authoring pending persistent resize bounds",
+    "blender_addon/mechanical_cad_blender/sketch_planes.py": "3324be4c2b2e4fd4898f10abd438db8b58d735cc Add principal offset sketch planes and visible modeling context",
+    "blender_addon/mechanical_cad_blender/sketch_projection.py": "2a29c15b65dfbe4e557a07c38e1c1d4ef832324e Bind live projected sketch references to exact upstream solve evidence",
+    "blender_addon/mechanical_cad_blender/sketch_relations.py": "75a826ffa99abb24080fce1cda0ff3792a7f8575 Add usable sketch pair relations and fixed-point target editing",
+    "blender_addon/mechanical_cad_blender/sketch_remove_fillet.py": "cfa81d09ba2d0f9bbcc0f71b87d861bd815a0647 Restore explicit sketch fillets atomically with strict removal journal",
+    "blender_addon/mechanical_cad_blender/sketch_remove_fillet_session.py": "416562b7f39dc5c601253f23406b88ac71a819e0 Guard sharp-corner restoration against solved placement drift before acceptance",
+    "blender_addon/mechanical_cad_blender/sketch_support_evidence.py": "bd91e9368a6a7b166af5d295a008247beed7d9a5 Bind attached constrained sketches to flat current support replay evidence",
+    "blender_addon/mechanical_cad_blender/solid_dialog_values.py": "e9c28f9611489e03860bc26b431d1a76fc55752c Simplify solid dialogs and explicit extrusion direction",
+    "blender_addon/mechanical_cad_blender/solid_feature_edit.py": "36daecdc44425b0dd967ce6e88fb8c779c8bf035 Add connected solid operations and editable Part feature history",
+    "blender_addon/mechanical_cad_blender/solid_help_topics.py": "83a9d4ce8e31e290df64b7b2527db5d0f837a710 Explain current solid tools inside editable modal dialogs",
+    "blender_addon/mechanical_cad_blender/solid_operators.py": "36daecdc44425b0dd967ce6e88fb8c779c8bf035 Add connected solid operations and editable Part feature history",
+    "blender_addon/mechanical_cad_blender/solid_projection_picker.py": "914b0e063a2b0c3cae00a945d75a6e724a18c8f3 Project picked stable solid edges into editable sketches",
+    "blender_addon/mechanical_cad_blender/solid_review.py": "33c4ec2e33bef3b166b7dbca9af2069d6f0a1c78 Add source-bound visual reselection for existing solid features",
+    "blender_addon/mechanical_cad_blender/staged_edit.py": "475e164e17e68428a4760c927771c321924c4c73 Retain failed upstream edits for explicit atomic reference repair",
+    "blender_addon/mechanical_cad_blender/staged_edit_store.py": "9b91f7ee46af987fe03f0c2da71c7dff7c852cda Separate staged ownership layer and guard pending parameter edits",
+    "blender_addon/mechanical_cad_blender/staged_edit_ui.py": "475e164e17e68428a4760c927771c321924c4c73 Retain failed upstream edits for explicit atomic reference repair",
+    "blender_addon/mechanical_cad_blender/step_asset.py": "dd3f921170e17a7058a13416030403c3a32f2a0a Bind embedded single-solid STEP imports to exact source bytes",
+    "blender_addon/mechanical_cad_blender/step_import_operators.py": "ef1d35b6f707b0ede07e4d8e9051313f51257930 feat: import embedded STEP solids through normal file selector",
+    "blender_addon/mechanical_cad_blender/support_intent.py": "77e557a82b38d9bf8755ab1778c39f517e5a5f46 Preserve explainable sketch support intent across proven planar Cut splits",
+    "blender_addon/mechanical_cad_blender/support_intent_edit.py": "77e557a82b38d9bf8755ab1778c39f517e5a5f46 Preserve explainable sketch support intent across proven planar Cut splits",
+    "blender_addon/mechanical_cad_blender/support_intent_ui.py": "77e557a82b38d9bf8755ab1778c39f517e5a5f46 Preserve explainable sketch support intent across proven planar Cut splits",
+    "blender_addon/mechanical_cad_blender/support_presentation.py": "d10f36c469ea988403f200d0da5765e602255a02 Recover guarded selected-support panel presentation sharing",
+    "blender_addon/mechanical_cad_blender/sweep_placement.py": "628f68ae21ec50f1a4b5c40492d3b4e4b786038b Add explicit automatic Sweep section placement with authored fallback",
+    "blender_addon/mechanical_cad_blender/tool_glyphs.py": "15b0524029c8a1fe60d47cac84d6f265a10587bb Distinguish CAD toolbar commands with semantic glyphs and named tooltips",
+    "blender_addon/mechanical_cad_blender/topology_labels.py": "a6939a9ef4fe5bb15d998b9b0738a6a43e6e201b Name proven open shell inner walls and lip for attached references",
+    "blender_addon/mechanical_cad_blender/unit_input.py": "d7392b13d1e61fc85b10773502474cf36defbaff Accept explicit unit literals in typed CAD dimension inputs",
+    "blender_addon/mechanical_cad_blender/viewport_navigation.py": "d1849a95d530a675cbfdf170358cb7807b186c7a Pass native navigation gizmo gestures through Shell picking",
+    "blender_addon/mechanical_cad_blender/viewport_ray.py": "fe223a26099c160b929ce9410da892bf8e43c626 Respect Local View occlusion when picking exact CAD edges",
+    "blender_addon/mechanical_cad_blender/windows_cache.py": "b48ffcd14d3f79c8c02057316684a60f58c83bfc Add closed automatic Windows cache preparation",
+    "blender_addon/mechanical_cad_blender/windows_package_cache.py": "e1dae0750202d3cbb1bbec6d630191db88e34175 Integrate guarded Windows runtime contracts and repair synthetic regressions",
+    "blender_addon/mechanical_cad_blender/windows_package_host.py": "270aa7957994fabe3a4b148b0646795568829614 Integrate guarded Windows live capture and registration contracts",
+    "blender_addon/mechanical_cad_blender/windows_process.py": "42fb3e02011202ba04e65735b4581dc1785c1731 Add isolated standalone runtime contracts and owned Windows process leaf",
+    "blender_addon/mechanical_cad_blender/windows_runtime.py": "6f08ea8ef45051a2430d4010ba7935e578337667 Add closed Windows bundled transport and ownership controls",
+    "blender_addon/mechanical_cad_blender/workspace_view.py": "a6799f0c373d262fef07d4c5cf0ac40c77f1245c Add reversible CAD viewport focus with safe draft suspension",
+    "src/mechanical_cad/analytic_profile.py": "ff8b014bf75c0eda602efa662787988c212dd4cf Build general mixed analytic sketch contours with holes and editable rounded parts",
+    "src/mechanical_cad/analytic_profile_geometry.py": "ff8b014bf75c0eda602efa662787988c212dd4cf Build general mixed analytic sketch contours with holes and editable rounded parts",
+    "src/mechanical_cad/assembly_export.py": "56a13b32f2d29ccb8576f4d64053fe990a61d9bd Add checked Assembly STEP export with reusable placed Parts",
+    "src/mechanical_cad/blend_selection.py": "960471987dce30ce02c342ea48ae32593728750e Add explicit multiple-edge Fillet and Chamfer intent and viewport selection",
+    "src/mechanical_cad/cut_support_ancestry.py": "0e27210b1f0f91352ab0e915d978f2372585a179 Preserve source-bound sketch planes through proven Cut chains",
+    "src/mechanical_cad/edge_catalog.py": "538f1a8b665d98299229df5d1dd9d435c432a19a Select supported blend edges with one guarded viewport click",
+    "src/mechanical_cad/fillet_intent.py": "fa62ccd6772105f79af20d23be4b0a3c471a9f15 Persist bounded corner fillet intent and reject flipped native resize",
+    "src/mechanical_cad/geometry_policy_v3.py": "cc130e667cc30c76e0437f5994059220f1aca25e feat: reconstruct bounded sector output contracts",
+    "src/mechanical_cad/geometry_protocol_v3.py": "cc130e667cc30c76e0437f5994059220f1aca25e feat: reconstruct bounded sector output contracts",
+    "src/mechanical_cad/loft_sections.py": "42b598b043f5640c3587ac4f1ade355d85a1fb09 Add explicit ordered multi-section Loft with guarded exact replay",
+    "src/mechanical_cad/profile_adapter_v3.py": "ce5b50bb011b3949a6599c7cbc28d31024805e0a Add qualified data-only sector result-v3 services",
+    "src/mechanical_cad/projection_repair.py": "29716c70f11a5a3e9cfec2a46f9c83ccdd46b4a3 Add explicit projected reference replacement with endpoint direction",
+    "src/mechanical_cad/region_nesting.py": "9305237f0a315d42e2baf9e6c52a5a2965a2f953 Support closed sketch regions with analytic holes and stable boundaries",
+    "src/mechanical_cad/result_policy_v3.py": "ce5b50bb011b3949a6599c7cbc28d31024805e0a Add qualified data-only sector result-v3 services",
+    "src/mechanical_cad/sketch_projection.py": "1e7c8fa96ce337a3427e5bbcd7f8d20dc8449905 Add associative sketch line and circle construction projection",
+    "src/mechanical_cad/sketch_protocol_v3.py": "ce5b50bb011b3949a6599c7cbc28d31024805e0a Add qualified data-only sector result-v3 services",
+    "src/mechanical_cad/sketch_relations.py": "75a826ffa99abb24080fce1cda0ff3792a7f8575 Add usable sketch pair relations and fixed-point target editing",
+    "src/mechanical_cad/sketch_service_v3.py": "ce5b50bb011b3949a6599c7cbc28d31024805e0a Add qualified data-only sector result-v3 services",
+    "src/mechanical_cad/sketch_support.py": "91227adbca5b5f37ec26090caffad5ad18f6850b Resolve drawn face sketches against exact upstream support context",
+    "src/mechanical_cad/spur_gear.py": "55b6c9fc630526dc79146d22d6d0aef8d296e47b Add bounded parametric involute spur gear solids and export tests",
+    "src/mechanical_cad/spur_gear_curves.py": "e9f04b747e489755e76a63adc9a9067fd35e7f87 Use bounded cubic spur gear flanks and fix Windows gear export flushing",
+    "src/mechanical_cad/step_asset.py": "83e4b9aeafee675975741c25d8ae1067be0b63f1 Import bounded immutable single-solid STEP parts into feature history",
+    "src/mechanical_cad/support_intent.py": "77e557a82b38d9bf8755ab1778c39f517e5a5f46 Preserve explainable sketch support intent across proven planar Cut splits",
+    "src/mechanical_cad/support_plane.py": "91227adbca5b5f37ec26090caffad5ad18f6850b Resolve drawn face sketches against exact upstream support context",
+    "src/mechanical_cad/sweep_placement.py": "628f68ae21ec50f1a4b5c40492d3b4e4b786038b Add explicit automatic Sweep section placement with authored fallback"
+  },
+  "reviewed_source": "a15bdbf107116b8ebd6f5f2a547144b6eef3a225",
+  "schema": 1
+}

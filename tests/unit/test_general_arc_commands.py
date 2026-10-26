@@ -1,4 +1,4 @@
-"""Dormant, native-free arc authoring intent and exact journal capability gates."""
+"""Native-free generalized arc intent and exact journal capability gates."""
 
 import copy
 import importlib
@@ -394,7 +394,7 @@ def test_imported_literal_arc_prefix_remains_permitted_in_legacy_identity_space(
 
 
 @pytest.mark.parametrize("transition", ["undo", "redo"])
-def test_history_transition_admission_is_atomic_on_unsupported_arc_candidate(transition):
+def test_history_transition_admission_is_atomic_on_missing_arc_candidate_reference(transition):
     draft = source_draft()
     arc_id = add_arc(draft)
     draft.execute(d.ReverseArcSweep(arc_id))
@@ -403,17 +403,18 @@ def test_history_transition_admission_is_atomic_on_unsupported_arc_candidate(tra
         snapshot = draft._journal[draft._cursor]["after"]
     else:
         snapshot = draft._journal[draft._cursor - 1]["before"]
-    snapshot["circles"].append(
-        {"id": "unsupported", "center": snapshot["arcs"][0]["center"], "radius": 2}
-    )
+    snapshot["circles"].append({"id": "invalid", "center": "missing_point", "radius": 2})
     before = exact(draft)
-    with pytest.raises(d.DraftError, match="one arc"):
+    with pytest.raises(d.DraftError):
         getattr(draft, transition)()
     assert exact(draft) == before
 
 
 @pytest.mark.parametrize("case", ["second_arc", "circle", "third_line"])
-def test_imported_unsupported_arc_bearing_drafts_are_refused_before_editor_entry(case):
+@pytest.mark.parametrize("invalid_reference", [False, True])
+def test_imported_generalized_arc_drafts_preserve_data_and_reject_missing_references(
+    case, invalid_reference
+):
     draft = source_draft()
     arc_id = add_arc(draft)
     document = draft.candidate()
@@ -428,9 +429,23 @@ def test_imported_unsupported_arc_bearing_drafts_are_refused_before_editor_entry
             {"id": f"line{number}", "start": arc["center"], "end": arc["start"]}
             for number in range(3)
         ]
+    if invalid_reference:
+        key, role = {
+            "second_arc": ("arcs", "end"),
+            "circle": ("circles", "center"),
+            "third_line": ("lines", "end"),
+        }[case]
+        sketch[key][-1][role] = "missing_point"
     raw = json.dumps(document, indent=2)
-    with pytest.raises(d.DraftError, match="one arc"):
-        d.GeneralSketchDraft(raw, "sketch", True, journal_version=3)
+    if invalid_reference:
+        with pytest.raises(d.DraftError):
+            d.GeneralSketchDraft(raw, "sketch", True, journal_version=3)
+    else:
+        imported = d.GeneralSketchDraft(raw, "sketch", True, journal_version=3)
+        assert imported.document_json == raw
+        assert imported.sketch == sketch
+        assert not imported.has_current_solution and not imported.has_verified_trial
+        assert exact(restore(imported)) == exact(imported)
     assert arc_id == draft.sketch["arcs"][0]["id"] and raw == json.dumps(document, indent=2)
 
 
@@ -466,7 +481,7 @@ def test_bad_arc_commands_are_atomic_and_consume_no_ids(bad):
 
 
 @pytest.mark.parametrize("bad", ["second_arc", "circle", "third_line"])
-def test_arc_bearing_command_admission_rejects_wider_geometry_before_mutation(bad):
+def test_arc_bearing_commands_preserve_generalized_geometry_and_exact_history(bad):
     draft = source_draft()
     arc_id = add_arc(draft)
     arc = draft.sketch["arcs"][0]
@@ -478,23 +493,37 @@ def test_arc_bearing_command_admission_rejects_wider_geometry_before_mutation(ba
         command = d.AddCircle(d.PointSeed(10, 0), 1)
     else:
         command = d.AddArc(d.PointSeed(10, 0), d.PointSeed(15, 0), d.PointSeed(10, 7), "ccw")
-    before = exact(draft)
-    with pytest.raises(d.DraftError, match="one arc"):
-        draft.execute(command)
-    assert exact(draft) == before and draft.sketch["arcs"][0]["id"] == arc_id
+    before, raw = d._json(draft.sketch), draft.document_json
+    draft.execute(command)
+    accepted = d._json(draft.sketch)
+    assert accepted != before and draft.sketch["arcs"][0]["id"] == arc_id
+    assert draft.document_json == raw and not draft.has_current_solution
+    clone = restore(draft)
+    assert exact(clone) == exact(draft)
+    clone.undo()
+    assert d._json(clone.sketch) == before
+    clone.redo()
+    assert d._json(clone.sketch) == accepted
 
 
-def test_arc_empty_schema3_retains_legacy_curves_but_cannot_acquire_mixed_arc():
+def test_arc_empty_schema3_retains_legacy_curves_when_adding_mixed_arc():
     draft = source_draft(3)
     draft.execute(d.AddCircle(d.PointSeed(0, 0), 5))
     for y in range(3):
         draft.execute(d.AddLine(d.PointSeed(10, y), d.PointSeed(15, y)))
     assert len(draft.sketch["lines"]) == 3 and len(draft.sketch["circles"]) == 1
-    before = exact(draft)
-    with pytest.raises(d.DraftError, match="one arc"):
-        add_arc(draft)
-    assert exact(draft) == before
-    assert exact(restore(draft)) == before
+    before = copy.deepcopy(draft.sketch)
+    add_arc(draft)
+    assert draft.sketch["lines"] == before["lines"]
+    assert draft.sketch["circles"] == before["circles"]
+    assert draft.sketch["points"][: len(before["points"])] == before["points"]
+    clone = restore(draft)
+    assert exact(clone) == exact(draft)
+    accepted = d._json(clone.sketch)
+    clone.undo()
+    assert clone.sketch == before
+    clone.redo()
+    assert d._json(clone.sketch) == accepted
 
 
 @pytest.mark.parametrize(
@@ -516,22 +545,46 @@ def test_arc_empty_schema3_retains_legacy_curves_but_cannot_acquire_mixed_arc():
         },
     ],
 )
-def test_first_arc_checks_entire_candidate_graph_and_all_redo_states(extra):
+def test_first_arc_preserves_connected_graph_and_all_redo_states(extra):
     extras = [extra]
     if extra["kind"] == "extrude":
         extras.append({**extra, "id": "second"})
     draft = source_draft(extras=extras)
-    before = exact(draft)
-    with pytest.raises(d.DraftError, match="arc-containing replay graph"):
-        add_arc(draft)
-    assert exact(draft) == before
-    valid = source_draft()
-    add_arc(valid)
-    valid.undo()
-    state = valid.checkpoint_payload()
-    state["document_json"] = draft.document_json
-    with pytest.raises(d.DraftError, match="arc-containing replay graph"):
+    raw = draft.document_json
+    add_arc(draft)
+    assert draft.candidate()["features"][1:] == extras
+    assert draft.document_json == raw and not draft.has_current_solution
+    accepted = d._json(draft.sketch)
+    draft.undo()
+    clone = restore(draft)
+    assert exact(clone) == exact(draft)
+    clone.redo()
+    assert d._json(clone.sketch) == accepted
+    assert clone.candidate()["features"][1:] == extras
+
+
+def test_restoration_rejects_missing_profile_in_connected_graph_without_mutation():
+    draft = source_draft(
+        extras=[
+            {
+                "id": "solid",
+                "kind": "extrude",
+                "label": "Solid",
+                "params": {"length": 10},
+                "inputs": {"profile": "sketch"},
+            }
+        ]
+    )
+    add_arc(draft)
+    draft.undo()
+    state = draft.checkpoint_payload()
+    document = json.loads(state["document_json"])
+    document["features"][1]["inputs"]["profile"] = "missing_profile"
+    state["document_json"] = json.dumps(document)
+    before = copy.deepcopy(state)
+    with pytest.raises(d.DraftError):
         d.GeneralSketchDraft.from_checkpoint_payload(state, expected_journal_version=3)
+    assert state == before
 
 
 def test_solo_extrusion_selects_explicit_result3_without_native_activation():

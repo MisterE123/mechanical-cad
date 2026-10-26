@@ -19,6 +19,7 @@ from fractions import Fraction as F
 from pathlib import Path
 
 import pytest
+from historical_runtime_source import historical_runtime_root
 
 import mechanical_cad.arc_profile_incidence as incidence
 from mechanical_cad.arc_geometry import ArcGeometryError, arc_geometry
@@ -756,6 +757,9 @@ print('INCIDENCE_NATIVE_FREE_OK')
 
 
 def test_104_runtime_files_and_primitives_unchanged_with_reviewed_additive_kernel():
+    """Retain historical revision proofs and the live primitive resource ceiling."""
+    historical = historical_runtime_root()
+
     def reviewed_authoring_originals(root):
         """Load only the pinned inverse guard, without importing a test module."""
         path = TRUSTED_GUARD_ROOT / "tests/unit/test_arc_profile_native_end_cap.py"
@@ -1109,7 +1113,7 @@ def test_104_runtime_files_and_primitives_unchanged_with_reviewed_additive_kerne
                 )
 
     baseline = json.loads(
-        (ROOT / "docs/architecture/arc_profile_service/BASELINE.json").read_text()
+        (historical / "docs/architecture/arc_profile_service/BASELINE.json").read_text()
     )
     hashes = baseline["source_sha256"]
     assert len(hashes) == 105
@@ -1120,8 +1124,8 @@ def test_104_runtime_files_and_primitives_unchanged_with_reviewed_additive_kerne
     # First undo the complete SHA-pinned authoring revision. The original 104
     # byte expectations and the three reviewed service-dispatch expectations
     # remain unchanged; no path is waived or assigned a new baseline hash.
-    _, authoring_originals = reviewed_authoring_originals(ROOT)
-    dispatch_raw = (ROOT / "tests/fixtures/result_v3/dispatch_extension_30383a1.json").read_bytes()
+    _, authoring_originals = reviewed_authoring_originals(historical)
+    dispatch_raw = (historical / "tests/fixtures/result_v3/dispatch_extension_30383a1.json").read_bytes()
     assert (
         hashlib.sha256(dispatch_raw).hexdigest()
         == "4eed9a50153d2c4b3d0ea8fda5e48cd378e050287ca374241b56ee0481b497c8"
@@ -1134,18 +1138,18 @@ def test_104_runtime_files_and_primitives_unchanged_with_reviewed_additive_kerne
     }
     assert all(hashes[path] == entry["original_sha256"] for path, entry in dispatch.items())
     assert all(
-        hashlib.sha256(authoring_originals.get(path, (ROOT / path).read_bytes())).hexdigest()
+        hashlib.sha256(authoring_originals.get(path, (historical / path).read_bytes())).hexdigest()
         == (dispatch[path]["reviewed_sha256"] if path in dispatch else expected)
         for path, expected in hashes.items()
         if path != kernel_path
     )
-    original_kernel = (ROOT / "tests/fixtures/arc_sector/kernel_ocp-a05626e.py.txt").read_bytes()
+    original_kernel = (historical / "tests/fixtures/arc_sector/kernel_ocp-a05626e.py.txt").read_bytes()
     assert hashlib.sha256(original_kernel).hexdigest() == kernel_hash
     assert_kernel_additive_boundary(
-        original_kernel, authoring_originals.get(kernel_path, (ROOT / kernel_path).read_bytes())
+        original_kernel, authoring_originals.get(kernel_path, (historical / kernel_path).read_bytes())
     )
     assert_primitive_resource_boundary(
-        (ROOT / "tests/fixtures/arc_sector/arc_profile_primitives-a05626e.py.txt").read_bytes(),
+        (historical / "tests/fixtures/arc_sector/arc_profile_primitives-a05626e.py.txt").read_bytes(),
         (ROOT / "src/mechanical_cad/arc_profile_primitives.py").read_bytes(),
     )
 

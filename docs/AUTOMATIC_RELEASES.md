@@ -1,9 +1,10 @@
 # Automatic Linux and Windows release pipeline
 
-Implementation is staged locally and has not run on GitHub. No enabled automation,
-qualified native release, legal clearance or main promotion is claimed. Existing
-suite failures, absent substantive materials review and prepared platform inputs
-remain blocking inputs, not optional warnings.
+The implementation is published on the development branches. A nonpublishing
+[candidate workflow has started on GitHub](https://github.com/MisterE123/mechanical-cad/actions/runs/40382400197).
+No qualified native release, legal clearance or main promotion is claimed.
+Remaining suite failures, absent substantive materials review and incomplete
+platform-input preparation are blocking inputs, not optional warnings.
 
 `.github/workflows/release.yml` replaces the nonpublishing readiness workflow.
 Its tag path runs the full suite on Python 3.11, 3.12 and 3.13 on both OSes, matching
@@ -13,8 +14,10 @@ Blender processes on its target OS, admits both results, and publishes one relea
 Failed matrix jobs block publication. Only the final job gets `contents: write`;
 only its publish step receives the built-in token. Official actions have full
 commit pins resolved from their public repositories. No additional secret is used.
-Process-level Git configuration disables checkout line-ending conversion so sealed
-fixtures retain exact blob bytes on Windows; no global Git setting is changed.
+Repository attributes preserve exact committed bytes in ordinary clones, including
+both LF source and intentional CRLF evidence. The workflow additionally disables
+checkout conversion through process-level Git configuration; no global Git setting
+is changed. Do not normalize existing hash-pinned fixtures or evidence.
 
 Before the workflow exists on default main, pushes to the exact approved branch
 `techbox/release-pipeline` run the workflow definition from that pushed commit.

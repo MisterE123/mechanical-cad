@@ -424,19 +424,32 @@ def sector_pre_service_fixtures():
 
 
 def sector_pre_service_script(directory, manifest):
-    """Reuse this differential harness with both frozen dispatch-owning modules.
+    """Restore the dispatch and native signature closure, without eager OCP imports.
 
-    Restoring only the sidecar would accidentally compare two callers of the
-    changed engine. The unchanged mathematical/native leaves remain protected
-    separately by exact-source guards; no source Git is needed in an archive.
+    Other leaves remain shared: unchanged golden bytes detect drift in these
+    requests, rather than claiming a complete historical Python environment.
     """
+    kernel = directory / "kernel_ocp-30383a1.py.txt"
+    kernel_sha = "77f3f3033f95cbe72a97dbdab70769f1f0c3d34604f2d2ac036d6e10f78224ac"
+    assert hashlib.sha256(kernel.read_bytes()).hexdigest() == kernel_sha
     sources = {}
     for name, entry in manifest["sources"].items():
         raw = (directory / entry["fixture"]).read_bytes()
         assert hashlib.sha256(raw).hexdigest() == entry["sha256"]
         sources[name] = raw.decode("utf-8")
     return (
-        "import sys, types\n"
+        "import sys, types, importlib.abc, importlib.util, hashlib\n"
+        "from pathlib import Path\n"
+        "class HistoricalKernel(importlib.abc.MetaPathFinder, importlib.abc.Loader):\n"
+        " def find_spec(self, fullname, path=None, target=None):\n"
+        "  if fullname == 'mechanical_cad.kernel_ocp':\n"
+        "   return importlib.util.spec_from_loader(fullname, self)\n"
+        " def create_module(self, spec): return None\n"
+        " def exec_module(self, module):\n"
+        f"  raw = Path({str(kernel)!r}).read_bytes()\n"
+        f"  assert hashlib.sha256(raw).hexdigest() == {kernel_sha!r}\n"
+        f"  exec(compile(raw, {str(kernel)!r}, 'exec'), module.__dict__)\n"
+        "sys.meta_path.insert(0, HistoricalKernel())\n"
         "engine = types.ModuleType('mechanical_cad.engine')\n"
         "engine.__package__ = 'mechanical_cad'\n"
         "sys.modules[engine.__name__] = engine\n"
@@ -477,9 +490,20 @@ def test_exact_pre_service_request_stdout_exit_and_source_differential(case):
     )
     assert current.returncode == original.returncode == case["returncode"]
     assert original.stdout == expected
-    if case["name"] == "primitive_cut_result_2":
-        # Preserve the historical capture. Only the explicitly upgraded ordinary
-        # Cut wall identity and its triangle bindings differ from that capture.
+    assert_reviewed_pre_service_stdout(case["name"], expected, current.stdout)
+
+
+def reviewed_pre_service_stdout(name, expected):
+    """Apply only independently specified, documented protocol extensions.
+
+    ADR 0009 adds optional diagnostic cylinder origins, including to v1.
+    FILE_FORMAT's v1-unchanged ancestry promise concerns Cut ancestry only:
+    neither that ledger nor the v2 stable tool-wall identity is added to v1.
+    Original bytes/hashes remain authoritative for the archived implementation.
+    """
+    if name == "primitive_cut_result_2":
+        # Preserve the historical capture and the previously reviewed ordinary
+        # Cut wall/triangle identity delta, before adding diagnostics below.
         value = json.loads(expected)
         output = value["result"]["features"][-1]
         walls = [face for face in output["topology"] if face["role"] == "cut.wall"]
@@ -514,4 +538,180 @@ def test_exact_pre_service_request_stdout_exit_and_source_differential(case):
         assert expected.count(previous) == 1
         expected = expected.replace(previous, replacement)
         expected = expected.replace(b'"snapshot:body:face:6"', b'"hole_tool/face/side.circle"')
-    assert current.stdout == expected
+    # The plate is 40 x 30, with a centered tool; the failed graph has
+    # width=-1 and tool x=width/2. Sketch/parameter pads use the global axis.
+    origins = {
+        "primitive_cut_result_None": [
+            ("hole_tool", "hole_tool/face/side.circle", [20.0, 15.0, 0.0]),
+            ("body", "snapshot:body:face:6", [20.0, 15.0, 0.0]),
+        ],
+        "primitive_cut_result_1": [
+            ("hole_tool", "hole_tool/face/side.circle", [20.0, 15.0, 0.0]),
+            ("body", "snapshot:body:face:6", [20.0, 15.0, 0.0]),
+        ],
+        "primitive_cut_result_2": [
+            ("hole_tool", "hole_tool/face/side.circle", [20.0, 15.0, 0.0]),
+            ("body", "hole_tool/face/side.circle", [20.0, 15.0, 0.0]),
+        ],
+        "replay_circle_sketch_part": [("pad", "pad/face/side.circle.rim", [0.0, 0.0, 0.0])],
+        "replay_parameter_chain": [("pad", "pad/face/side.circle", [0.0, 0.0, 0.0])],
+        "independent_failure_graph": [
+            ("hole_tool", "hole_tool/face/side.circle", [-0.5, 15.0, 0.0])
+        ],
+    }
+    if name not in origins:
+        return expected
+    value = json.loads(expected)
+    # Round-tripping must not silently normalize any historical wire difference.
+    assert json.dumps(value, separators=(",", ":")).encode() + b"\n" == expected
+    features = {feature["id"]: feature for feature in value["result"]["features"]}
+    for feature_id, face_id, origin in origins[name]:
+        faces = [face for face in features[feature_id]["topology"] if face["id"] == face_id]
+        assert len(faces) == 1
+        signature = faces[0]["signature"]
+        assert "axis_origin" not in signature
+        signature["axis_origin"] = origin
+    if name in ("primitive_cut_result_2", "independent_failure_graph"):
+        body = features["body"]
+        assert "cut_ancestry" not in body
+        # Preserve wire key order: the ledger precedes the output port.
+        output = body.pop("output")
+        body["cut_ancestry"] = (
+            primitive_cut_ancestry() if name == "primitive_cut_result_2" else None
+        )
+        body["output"] = output
+    return json.dumps(value, separators=(",", ":")).encode() + b"\n"
+
+
+def primitive_cut_ancestry():
+    """Plate side walls survive; caps are drilled; tool caps disappear."""
+    entries = []
+    for port, source, relation in [
+        ("base", "pad/face/side.y_min", "unchanged"),
+        ("base", "pad/face/side.x_max", "unchanged"),
+        ("base", "pad/face/side.y_max", "unchanged"),
+        ("base", "pad/face/side.x_min", "unchanged"),
+        ("base", "pad/face/cap.start", "modified"),
+        ("base", "pad/face/cap.end", "modified"),
+        ("tool", "hole_tool/face/side.circle", "unchanged"),
+        ("tool", "hole_tool/face/cap.start", "deleted"),
+        ("tool", "hole_tool/face/cap.end", "deleted"),
+    ]:
+        entries.append(
+            {
+                "port": port,
+                "source_id": source,
+                "deleted": relation == "deleted",
+                "modified": [source] if relation == "modified" else [],
+                "generated": [],
+                "unchanged": [source] if relation == "unchanged" else [],
+            }
+        )
+    return {"version": 1, "sources": entries}
+
+
+def assert_reviewed_pre_service_stdout(name, original, current):
+    assert current == reviewed_pre_service_stdout(name, original)
+
+
+@pytest.mark.parametrize(
+    "mutation",
+    [
+        "origin",
+        "missing_origin",
+        "extra_signature",
+        "port",
+        "deleted",
+        "source",
+        "wall",
+        "triangle",
+    ],
+)
+def test_reviewed_native_deltas_reject_mutations(mutation):
+    directory, _ = sector_pre_service_fixtures()
+    name = "primitive_cut_result_2"
+    original = (directory / (name + ".stdout.txt")).read_bytes()
+    value = json.loads(reviewed_pre_service_stdout(name, original))
+    body = value["result"]["features"][-1]
+    wall = next(face for face in body["topology"] if face["id"] == "hole_tool/face/side.circle")
+    if mutation == "origin":
+        wall["signature"]["axis_origin"][0] += 1
+    elif mutation == "missing_origin":
+        del wall["signature"]["axis_origin"]
+    elif mutation == "extra_signature":
+        wall["signature"]["unreviewed"] = True
+    elif mutation == "port":
+        body["cut_ancestry"]["sources"][0]["port"] = "tool"
+    elif mutation == "deleted":
+        body["cut_ancestry"]["sources"][-1]["deleted"] = False
+    elif mutation == "source":
+        body["cut_ancestry"]["sources"][0]["source_id"] = "forged/face"
+    elif mutation == "wall":
+        wall["id"] = "snapshot:body:face:6"
+    else:
+        # Corrupt only a mesh binding, retaining the correct topology identity.
+        raw = json.dumps(body["mesh"], separators=(",", ":"))
+        assert '"hole_tool/face/side.circle"' in raw
+        body["mesh"] = json.loads(
+            raw.replace('"hole_tool/face/side.circle"', '"snapshot:body:face:6"', 1)
+        )
+    changed = json.dumps(value, separators=(",", ":")).encode() + b"\n"
+    with pytest.raises(AssertionError):
+        assert_reviewed_pre_service_stdout(name, original, changed)
+
+
+@pytest.mark.parametrize("name", ["primitive_cut_result_None", "primitive_cut_result_1"])
+@pytest.mark.parametrize("mutation", ["ancestry", "identity"])
+def test_v1_does_not_receive_v2_cut_extensions(name, mutation):
+    directory, _ = sector_pre_service_fixtures()
+    original = (directory / (name + ".stdout.txt")).read_bytes()
+    value = json.loads(reviewed_pre_service_stdout(name, original))
+    body = value["result"]["features"][-1]
+    assert "cut_ancestry" not in body
+    wall = next(face for face in body["topology"] if face["role"] == "cut.wall")
+    assert wall["id"] == "snapshot:body:face:6"
+    if mutation == "ancestry":
+        body["cut_ancestry"] = primitive_cut_ancestry()
+    else:
+        wall["id"] = "hole_tool/face/side.circle"
+    with pytest.raises(AssertionError):
+        assert_reviewed_pre_service_stdout(
+            name, original, json.dumps(value, separators=(",", ":")).encode() + b"\n"
+        )
+
+
+def test_historical_kernel_closure_rejects_tampering(tmp_path):
+    directory, manifest = sector_pre_service_fixtures()
+    for entry in manifest["sources"].values():
+        shutil.copyfile(directory / entry["fixture"], tmp_path / entry["fixture"])
+    kernel = "kernel_ocp-30383a1.py.txt"
+    (tmp_path / kernel).write_bytes((directory / kernel).read_bytes() + b"\n# drift\n")
+    with pytest.raises(AssertionError):
+        sector_pre_service_script(tmp_path, manifest)
+
+
+def test_historical_kernel_loader_is_lazy_and_rechecks_bytes(tmp_path):
+    directory, manifest = sector_pre_service_fixtures()
+    for entry in manifest["sources"].values():
+        shutil.copyfile(directory / entry["fixture"], tmp_path / entry["fixture"])
+    kernel = "kernel_ocp-30383a1.py.txt"
+    shutil.copyfile(directory / kernel, tmp_path / kernel)
+    script = sector_pre_service_script(tmp_path, manifest)
+    # Tamper after parent validation: a snapshot must not import the kernel,
+    # whereas a child attempting that import must reject the changed bytes.
+    (tmp_path / kernel).write_bytes(b"raise RuntimeError('must never execute')\n")
+    raw = (directory / "snapshot_drilled_plate.request.txt").read_text()
+    result, _ = run(raw=raw, no_site=True, script=script)
+    assert result.returncode == 0
+    assert result.stdout == (directory / "snapshot_drilled_plate.stdout.txt").read_bytes()
+    loader = script.split("engine = types.ModuleType", 1)[0]
+    result = subprocess.run(
+        [sys.executable, "-B", "-S", "-c", loader + "import mechanical_cad.kernel_ocp\n"],
+        cwd=ROOT,
+        env={**os.environ, "PYTHONPATH": str(ROOT / "src"), "PYTHONNOUSERSITE": "1"},
+        capture_output=True,
+        timeout=30,
+    )
+    assert result.returncode != 0
+    assert b"AssertionError" in result.stderr
+    assert b"must never execute" not in result.stderr
