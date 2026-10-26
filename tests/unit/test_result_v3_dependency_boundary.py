@@ -8,8 +8,10 @@ negative controls. See fixtures/result_v3/CURRENT_BOUNDARY_REVIEW.md.
 from __future__ import annotations
 
 import ast
+import errno
 import hashlib
 import json
+import os
 import shutil
 import tempfile
 from functools import lru_cache
@@ -161,14 +163,36 @@ def result_history_root():
     return Path(_RESULT_HISTORY.name)
 
 
+# setuptools editable installs write these data-only metadata leaves in src.
+# Neither other egg-info directories nor unrecognized children are exempt.
+EDITABLE_METADATA = frozenset(
+    "src/mechanical_cad.egg-info/" + name
+    for name in (
+        "PKG-INFO", "SOURCES.txt", "top_level.txt", "requires.txt",
+        "dependency_links.txt", "entry_points.txt",
+    )
+)
+
+
 def _runtime_paths(root):
-    return {
-        path.relative_to(root).as_posix()
-        for prefix in ("src", "blender_addon")
-        for path in (root / prefix).rglob("*")
-        if path.is_file()
-        and not (path.suffix == ".pyc" and path.parent.name == "__pycache__")
-    }
+    paths = set()
+    for prefix in ("src", "blender_addon"):
+        directory = root / prefix
+        assert not directory.is_symlink(), directory
+        for path in directory.rglob("*"):
+            # Check before filtering: even known metadata and directory links
+            # must not disguise external or unenumerated runtime payloads.
+            assert not path.is_symlink(), path
+            if not path.is_file():
+                continue
+            relative = path.relative_to(root).as_posix()
+            if relative in EDITABLE_METADATA:
+                assert not path.stat().st_mode & 0o111, path
+                continue
+            if path.suffix == ".pyc" and path.parent.name == "__pycache__":
+                continue
+            paths.add(relative)
+    return paths
 
 
 def _assert_current_paths(root):
@@ -782,3 +806,96 @@ def test_current_review_policy_cannot_be_silently_recomputed(tmp_path, monkeypat
     monkeypatch.setitem(globals(), "CURRENT_POLICY", path)
     with pytest.raises(AssertionError):
         _current_policy()
+
+
+def test_current_path_inventory_accepts_only_known_editable_metadata(tmp_path):
+    expected = set(_baseline()["files"]) | set(_current_policy()["path_origins"])
+    for relative in expected | EDITABLE_METADATA:
+        path = tmp_path / relative
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(b"synthetic editable metadata" if relative in EDITABLE_METADATA else b"")
+    _assert_current_paths(tmp_path)
+
+
+@pytest.mark.parametrize("mutation", [
+    "unknown", "python", "impostor", "nested", "stat_execute_mode", "file_symlink",
+    "directory_symlink", "dangling_symlink",
+    "classified_file_link", "classified_directory_link", "classified_dangling_link",
+    pytest.param("executable", marks=pytest.mark.skipif(
+        os.name == "nt", reason="Windows chmod does not expose POSIX execute bits"
+    )),
+])
+def test_editable_metadata_exemption_rejects_unreviewed_payloads(tmp_path, mutation, monkeypatch):
+    expected = set(_baseline()["files"]) | set(_current_policy()["path_origins"])
+    for relative in expected | EDITABLE_METADATA:
+        path = tmp_path / relative
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(b"")
+    _assert_current_paths(tmp_path)
+    metadata = tmp_path / "src/mechanical_cad.egg-info"
+    if mutation == "executable":
+        (metadata / "PKG-INFO").chmod(0o755)
+    elif mutation == "stat_execute_mode":
+        # Portable predicate control, alongside the real POSIX chmod control.
+        # Keep all real stat fields and file-kind bits; inject only execute bits.
+        original_stat = type(metadata).stat
+
+        def executable_stat(path, *args, **kwargs):
+            result = original_stat(path, *args, **kwargs)
+            if path == metadata / "PKG-INFO":
+                fields = list(result)
+                fields[0] |= 0o111
+                return os.stat_result(fields)
+            return result
+
+        monkeypatch.setattr(type(metadata), "stat", executable_stat)
+    elif mutation.startswith("classified_"):
+        # All-host classification controls; these create no native symlinks.
+        # A marker keeps the dangling-link name visible to directory enumeration.
+        target = metadata if mutation == "classified_directory_link" else metadata / "PKG-INFO"
+        original_is_symlink = type(metadata).is_symlink
+
+        def classified_link(path):
+            return path == target or original_is_symlink(path)
+
+        monkeypatch.setattr(type(metadata), "is_symlink", classified_link)
+        if mutation == "classified_dangling_link":
+            original_is_file = type(metadata).is_file
+
+            def dangling_file(path):
+                return False if path == target else original_is_file(path)
+
+            monkeypatch.setattr(type(metadata), "is_file", dangling_file)
+    elif mutation in {"file_symlink", "dangling_symlink"}:
+        path = metadata / "PKG-INFO"
+        path.unlink()
+        target = "README" if mutation == "dangling_symlink" else "src/mechanical_cad/model.py"
+        _metadata_test_symlink(path, tmp_path / target)
+    elif mutation == "directory_symlink":
+        metadata.rename(tmp_path / "metadata")
+        _metadata_test_symlink(metadata, tmp_path / "metadata", directory=True)
+    else:
+        relative = {
+            "unknown": "mechanical_cad.egg-info/unreviewed.txt",
+            "python": "mechanical_cad.egg-info/payload.py",
+            "impostor": "impostor.egg-info/PKG-INFO",
+            "nested": "mechanical_cad.egg-info/nested/PKG-INFO",
+        }[mutation]
+        path = tmp_path / "src" / relative
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(b"unreviewed")
+    with pytest.raises(AssertionError):
+        _assert_current_paths(tmp_path)
+
+
+def _metadata_test_symlink(path, target, *, directory=False):
+    if os.name == "nt":
+        pytest.skip("Native link control is POSIX-scoped; all-host link predicates run separately")
+    try:
+        path.symlink_to(target, target_is_directory=directory)
+    except NotImplementedError as exc:
+        pytest.skip(f"Host cannot create symlinks: {exc}")
+    except OSError as exc:
+        if exc.errno in {errno.ENOSYS, errno.EOPNOTSUPP}:
+            pytest.skip(f"Host symlink support unavailable: {exc}")
+        raise

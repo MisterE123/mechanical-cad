@@ -1,0 +1,1306 @@
+{
+  "boundary": "Material-root paths are historical evidence references, not files included in this repository or an admission ledger. All issue descriptions retained, including their historical approved-choice wording; this report grants no review authority.",
+  "component_count": 43,
+  "components": [
+    {
+      "declared_identity": "CPython 3.12.15; PBS 20261013 Linux x86_64 install_only_stripped; 601 actual runtime files",
+      "id": "cpython-pbs",
+      "kind": "external_runtime",
+      "name": "CPython in Python Build Standalone",
+      "notice_paths": [
+        "licenses/berkeley/notices/CPython-3.12.15-Doc-license.rst",
+        "licenses/berkeley/notices/CPython-3.12.15-LICENSE.txt",
+        "licenses/berkeley/notices/CPython-LICENSE.txt",
+        "licenses/berkeley/notices/PBS-LICENSE.txt",
+        "licenses/python/CPython-LICENSE.txt",
+        "licenses/python/PBS-LICENSE.txt",
+        "licenses/python/runtime-LICENSE.txt"
+      ],
+      "provenance_paths": [
+        "licenses/INTEGRATED_MATERIALS.md",
+        "licenses/berkeley/INTEGRATED_PATHS.json",
+        "licenses/berkeley/README.md",
+        "licenses/berkeley/SOURCE_OBTAINMENT.md",
+        "licenses/berkeley/sources/cpython-linux312-patch-order.txt",
+        "licenses/provenance/INTEGRATED_MATERIALS_ORIGIN.json",
+        "licenses/provenance/pbs-declared-source-pins.json",
+        "licenses/provenance/pbs-linux-PYTHON.json",
+        "licenses/provenance/runtime-file-provenance.json"
+      ],
+      "source_paths": [
+        "sources/Python-3.12.15.tar.xz",
+        "sources/db-6.0.19.tar.gz",
+        "sources/python-build-standalone-9e40cba825ca0997a01cab9f60a0b15ffb976af2.tar.gz"
+      ],
+      "unresolved_issue_ids": [
+        "pbs.original_build",
+        "release.original_build"
+      ]
+    },
+    {
+      "declared_identity": "51 libTK shared objects labelled 8.0.1; supplied upstream source b8f597c677811d1f9f4d8a97f5ae2825c0353a42 is not an original patched-wheel build attestation",
+      "id": "occt",
+      "kind": "external_runtime",
+      "name": "Open CASCADE Technology",
+      "notice_paths": [
+        "licenses/DISTRIBUTION_NOTICE.md",
+        "licenses/occt/LICENSE_LGPL_21.txt",
+        "licenses/occt/MODIFICATIONS.md",
+        "licenses/occt/OCCT_LGPL_EXCEPTION.txt",
+        "licenses/occt/dox/license.md",
+        "licenses/ocp/build-system-eace4e42-LICENSE.txt",
+        "licenses/rapidjson/rapidjson-24b5e7a8-license.txt"
+      ],
+      "provenance_paths": [
+        "licenses/INTEGRATED_MATERIALS.md",
+        "licenses/occt/switch-vtk-freetype-cmake-order.patch",
+        "licenses/ocp/BUILD_INPUTS.json",
+        "licenses/ocp/BUILD_LINUX.md",
+        "licenses/ocp/SOURCE_IDENTITIES.json",
+        "licenses/provenance/INTEGRATED_MATERIALS_ORIGIN.json",
+        "licenses/provenance/restored-source-summary.json",
+        "licenses/provenance/source-analysis-scope-001.json"
+      ],
+      "source_paths": [
+        "sources/occt/OCCT-b8f597c677811d1f9f4d8a97f5ae2825c0353a42.tar.gz",
+        "sources/ocp/OCP_src_stubs_Linux-8.0.1.1.zip",
+        "sources/ocp/ocp-build-system-eace4e42cfa2c162ac39bc36864534fe5f5787a6.tar.gz",
+        "sources/rapidjson/rapidjson-24b5e7a8-headers.tar.gz"
+      ],
+      "unresolved_issue_ids": [
+        "release.original_build"
+      ]
+    },
+    {
+      "declared_identity": "Wheel 8.0.1.1.0 cp312 manylinux_2_28_x86_64, archive SHA256 9df1e3700016bee819c0a8627880f37de47540eef63e8adb368f659a0fdeff78",
+      "id": "ocp",
+      "kind": "external_runtime",
+      "name": "cadquery-ocp-novtk bindings and metadata",
+      "notice_paths": [
+        "licenses/occt/MODIFICATIONS.md",
+        "licenses/ocp/OCP-8.0.1.1-LICENSE.txt",
+        "licenses/ocp/build-system-LICENSE.txt",
+        "licenses/ocp/build-system-eace4e42-LICENSE.txt"
+      ],
+      "provenance_paths": [
+        "licenses/INTEGRATED_MATERIALS.md",
+        "licenses/occt/switch-vtk-freetype-cmake-order.patch",
+        "licenses/ocp/BUILD_INPUTS.json",
+        "licenses/ocp/BUILD_LINUX.md",
+        "licenses/ocp/SOURCE_IDENTITIES.json",
+        "licenses/provenance/INTEGRATED_MATERIALS_ORIGIN.json",
+        "licenses/provenance/linux-ocp-declared-components.json",
+        "licenses/provenance/runtime-file-provenance.json"
+      ],
+      "source_paths": [
+        "sources/ocp/OCP_src_stubs_Linux-8.0.1.1.zip",
+        "sources/ocp/ocp-build-system-eace4e42cfa2c162ac39bc36864534fe5f5787a6.tar.gz"
+      ],
+      "unresolved_issue_ids": [
+        "release.original_build"
+      ]
+    },
+    {
+      "declared_identity": "Wheel SBOM declares bzip2-libs 1.0.6-28.el8_10; hashed ELF family association is not source/build equivalence",
+      "id": "ocp-bzip2-libs",
+      "kind": "external_runtime",
+      "name": "bzip2-libs from OCP Linux wheel",
+      "notice_paths": [
+        "licenses/ocp-dependencies/ocp-bzip2-libs/NOTICE.txt"
+      ],
+      "provenance_paths": [
+        "licenses/INTEGRATED_MATERIALS.md",
+        "licenses/provenance/INTEGRATED_MATERIALS_ORIGIN.json",
+        "licenses/provenance/linux-ocp-declared-components.json",
+        "licenses/provenance/permissive-extra-notices-20261019.json",
+        "licenses/provenance/runtime-file-provenance.json"
+      ],
+      "source_paths": [],
+      "unresolved_issue_ids": [
+        "ocp-bzip2-libs.source",
+        "release.original_build"
+      ]
+    },
+    {
+      "declared_identity": "Wheel SBOM declares fmt 6.2.1-1.el8; hashed ELF family association is not source/build equivalence",
+      "id": "ocp-fmt",
+      "kind": "external_runtime",
+      "name": "fmt from OCP Linux wheel",
+      "notice_paths": [
+        "licenses/fmt/fmt-6.2.1-LICENSE.rst"
+      ],
+      "provenance_paths": [
+        "licenses/INTEGRATED_MATERIALS.md",
+        "licenses/provenance/INTEGRATED_MATERIALS_ORIGIN.json",
+        "licenses/provenance/linux-ocp-declared-components.json",
+        "licenses/provenance/runtime-file-provenance.json"
+      ],
+      "source_paths": [],
+      "unresolved_issue_ids": [
+        "ocp-fmt.source",
+        "release.original_build"
+      ]
+    },
+    {
+      "declared_identity": "Wheel SBOM declares fontconfig 2.13.1-4.el8; hashed ELF family association is not source/build equivalence",
+      "id": "ocp-fontconfig",
+      "kind": "external_runtime",
+      "name": "fontconfig from OCP Linux wheel",
+      "notice_paths": [
+        "licenses/ocp-dependencies/ocp-fontconfig/NOTICE.txt"
+      ],
+      "provenance_paths": [
+        "licenses/INTEGRATED_MATERIALS.md",
+        "licenses/provenance/INTEGRATED_MATERIALS_ORIGIN.json",
+        "licenses/provenance/linux-ocp-declared-components.json",
+        "licenses/provenance/permissive-binary-notices-20261019.json",
+        "licenses/provenance/runtime-file-provenance.json"
+      ],
+      "source_paths": [],
+      "unresolved_issue_ids": [
+        "ocp-fontconfig.source",
+        "release.original_build"
+      ]
+    },
+    {
+      "declared_identity": "Wheel SBOM declares freeimage 3.17.0-5.el8; hashed ELF family association is not source/build equivalence",
+      "id": "ocp-freeimage",
+      "kind": "external_runtime",
+      "name": "freeimage from OCP Linux wheel",
+      "notice_paths": [
+        "licenses/DISTRIBUTION_NOTICE.md",
+        "licenses/freeimage/ACKNOWLEDGEMENTS.txt",
+        "licenses/freeimage/derived-spec/license-fi.txt",
+        "licenses/freeimage/derived-spec/license-gplv2.txt",
+        "licenses/freeimage/derived-spec/license-gplv3.txt",
+        "licenses/freeimage/original/Source/FreeImage/NNQuantizer.cpp.txt",
+        "licenses/freeimage/original/Source/FreeImage/PSDParser.cpp.txt",
+        "licenses/freeimage/original/Source/FreeImage/PSDParser.h.txt",
+        "licenses/freeimage/original/Source/FreeImage/PluginPICT.cpp.txt",
+        "licenses/freeimage/original/Source/FreeImage/PluginPSD.cpp.txt",
+        "licenses/freeimage/original/license-fi.txt",
+        "licenses/freeimage/original/license-gplv2.txt",
+        "licenses/freeimage/original/license-gplv3.txt"
+      ],
+      "provenance_paths": [
+        "licenses/INTEGRATED_MATERIALS.md",
+        "licenses/freeimage/SOURCE_AND_BUILD.md",
+        "licenses/freeimage/build-inputs/FreeImage-3.17.0_CVE-2015-0852.patch",
+        "licenses/freeimage/build-inputs/FreeImage-3.17.0_doxygen.patch",
+        "licenses/freeimage/build-inputs/FreeImage-3.17.0_unbundle.patch",
+        "licenses/freeimage/build-inputs/FreeImage-CVE-2016-5684.patch",
+        "licenses/freeimage/build-inputs/freeimage.spec",
+        "licenses/freeimage/original/README.linux",
+        "licenses/provenance/INTEGRATED_MATERIALS_ORIGIN.json",
+        "licenses/provenance/linux-ocp-declared-components.json",
+        "licenses/provenance/runtime-file-provenance.json"
+      ],
+      "source_paths": [
+        "sources/freeimage/FreeImage3170.zip"
+      ],
+      "unresolved_issue_ids": [
+        "ocp-freeimage.route",
+        "release.original_build"
+      ]
+    },
+    {
+      "declared_identity": "Wheel SBOM declares freetype 2.9.1-10.el8_10; hashed ELF family association is not source/build equivalence",
+      "id": "ocp-freetype",
+      "kind": "external_runtime",
+      "name": "freetype from OCP Linux wheel",
+      "notice_paths": [
+        "licenses/DISTRIBUTION_NOTICE.md",
+        "licenses/ocp-dependencies/ACKNOWLEDGEMENTS.txt",
+        "licenses/ocp-dependencies/ocp-freetype/NOTICE.txt"
+      ],
+      "provenance_paths": [
+        "licenses/INTEGRATED_MATERIALS.md",
+        "licenses/provenance/INTEGRATED_MATERIALS_ORIGIN.json",
+        "licenses/provenance/linux-ocp-declared-components.json",
+        "licenses/provenance/permissive-binary-notices-20261019.json",
+        "licenses/provenance/runtime-file-provenance.json"
+      ],
+      "source_paths": [],
+      "unresolved_issue_ids": [
+        "ocp-freetype.route",
+        "ocp-freetype.source",
+        "release.original_build"
+      ]
+    },
+    {
+      "declared_identity": "Wheel SBOM declares ilmbase 2.2.0-13.el8; hashed ELF family association is not source/build equivalence",
+      "id": "ocp-ilmbase",
+      "kind": "external_runtime",
+      "name": "ilmbase from OCP Linux wheel",
+      "notice_paths": [
+        "licenses/ocp-dependencies/ocp-ilmbase/NOTICE.txt"
+      ],
+      "provenance_paths": [
+        "licenses/INTEGRATED_MATERIALS.md",
+        "licenses/provenance/INTEGRATED_MATERIALS_ORIGIN.json",
+        "licenses/provenance/linux-ocp-declared-components.json",
+        "licenses/provenance/permissive-binary-notices-20261019.json",
+        "licenses/provenance/runtime-file-provenance.json"
+      ],
+      "source_paths": [],
+      "unresolved_issue_ids": [
+        "ocp-ilmbase.source",
+        "release.original_build"
+      ]
+    },
+    {
+      "declared_identity": "Wheel SBOM declares jasper-libs 2.0.14-6.el8_10; hashed ELF family association is not source/build equivalence",
+      "id": "ocp-jasper-libs",
+      "kind": "external_runtime",
+      "name": "jasper-libs from OCP Linux wheel",
+      "notice_paths": [
+        "licenses/ocp-dependencies/ocp-jasper-libs/NOTICE.txt"
+      ],
+      "provenance_paths": [
+        "licenses/INTEGRATED_MATERIALS.md",
+        "licenses/provenance/INTEGRATED_MATERIALS_ORIGIN.json",
+        "licenses/provenance/linux-ocp-declared-components.json",
+        "licenses/provenance/permissive-binary-notices-20261019.json",
+        "licenses/provenance/runtime-file-provenance.json"
+      ],
+      "source_paths": [],
+      "unresolved_issue_ids": [
+        "ocp-jasper-libs.source",
+        "release.original_build"
+      ]
+    },
+    {
+      "declared_identity": "Wheel SBOM declares jxrlib 1.1-1.el8; hashed ELF family association is not source/build equivalence",
+      "id": "ocp-jxrlib",
+      "kind": "external_runtime",
+      "name": "jxrlib from OCP Linux wheel",
+      "notice_paths": [
+        "licenses/ocp-dependencies/ocp-jxrlib/NOTICE.txt"
+      ],
+      "provenance_paths": [
+        "licenses/INTEGRATED_MATERIALS.md",
+        "licenses/provenance/INTEGRATED_MATERIALS_ORIGIN.json",
+        "licenses/provenance/linux-ocp-declared-components.json",
+        "licenses/provenance/permissive-binary-notices-20261019.json",
+        "licenses/provenance/runtime-file-provenance.json"
+      ],
+      "source_paths": [],
+      "unresolved_issue_ids": [
+        "ocp-jxrlib.source",
+        "release.original_build"
+      ]
+    },
+    {
+      "declared_identity": "Wheel SBOM declares lcms2 2.9-2.el8; hashed ELF family association is not source/build equivalence",
+      "id": "ocp-lcms2",
+      "kind": "external_runtime",
+      "name": "lcms2 from OCP Linux wheel",
+      "notice_paths": [
+        "licenses/ocp-dependencies/ocp-lcms2/NOTICE.txt"
+      ],
+      "provenance_paths": [
+        "licenses/INTEGRATED_MATERIALS.md",
+        "licenses/provenance/INTEGRATED_MATERIALS_ORIGIN.json",
+        "licenses/provenance/linux-ocp-declared-components.json",
+        "licenses/provenance/permissive-binary-notices-20261019.json",
+        "licenses/provenance/runtime-file-provenance.json"
+      ],
+      "source_paths": [],
+      "unresolved_issue_ids": [
+        "ocp-lcms2.source",
+        "release.original_build"
+      ]
+    },
+    {
+      "declared_identity": "Wheel SBOM declares libgomp 8.5.0-29.el8_10.alma.1; hashed ELF family association is not source/build equivalence",
+      "id": "ocp-libgomp",
+      "kind": "external_runtime",
+      "name": "libgomp from OCP Linux wheel",
+      "notice_paths": [
+        "licenses/libgomp/COPYING.RUNTIME.txt",
+        "licenses/libgomp/COPYING3.txt",
+        "licenses/libgomp/libgomp-header-source-notice.txt"
+      ],
+      "provenance_paths": [
+        "licenses/INTEGRATED_MATERIALS.md",
+        "licenses/distro-source/PATCH_ORDER.json",
+        "licenses/distro-source/RECIPIENT_SOURCE_ACCESS.md",
+        "licenses/distro-source/SOURCE_CORRESPONDENCE.json",
+        "licenses/distro-source/gcc-8.5.0-sha512.sum.txt",
+        "licenses/provenance/INTEGRATED_MATERIALS_ORIGIN.json",
+        "licenses/provenance/linux-ocp-declared-components.json",
+        "licenses/provenance/runtime-file-provenance.json"
+      ],
+      "source_paths": [
+        "sources/linux-distro/gcc-8.5.0-29.el8_10.alma.1-distgit.tar",
+        "sources/linux-distro/gcc-8.5.0.tar.xz"
+      ],
+      "unresolved_issue_ids": [
+        "ocp-libgomp.source_scope",
+        "release.original_build"
+      ]
+    },
+    {
+      "declared_identity": "Wheel SBOM declares libjpeg-turbo 1.5.3-14.el8_10; hashed ELF family association is not source/build equivalence",
+      "id": "ocp-libjpeg-turbo",
+      "kind": "external_runtime",
+      "name": "libjpeg-turbo from OCP Linux wheel",
+      "notice_paths": [
+        "licenses/ocp-dependencies/ACKNOWLEDGEMENTS.txt",
+        "licenses/ocp-dependencies/ocp-libjpeg-turbo/NOTICE.txt"
+      ],
+      "provenance_paths": [
+        "licenses/INTEGRATED_MATERIALS.md",
+        "licenses/provenance/INTEGRATED_MATERIALS_ORIGIN.json",
+        "licenses/provenance/linux-ocp-declared-components.json",
+        "licenses/provenance/permissive-binary-notices-20261019.json",
+        "licenses/provenance/runtime-file-provenance.json"
+      ],
+      "source_paths": [],
+      "unresolved_issue_ids": [
+        "ocp-libjpeg-turbo.source",
+        "release.original_build"
+      ]
+    },
+    {
+      "declared_identity": "Wheel SBOM declares libpng 1.6.34-11.el8_10; hashed ELF family association is not source/build equivalence",
+      "id": "ocp-libpng",
+      "kind": "external_runtime",
+      "name": "libpng from OCP Linux wheel",
+      "notice_paths": [
+        "licenses/ocp-dependencies/ocp-libpng/NOTICE.txt"
+      ],
+      "provenance_paths": [
+        "licenses/INTEGRATED_MATERIALS.md",
+        "licenses/provenance/INTEGRATED_MATERIALS_ORIGIN.json",
+        "licenses/provenance/linux-ocp-declared-components.json",
+        "licenses/provenance/permissive-extra-notices-20261019.json",
+        "licenses/provenance/runtime-file-provenance.json"
+      ],
+      "source_paths": [],
+      "unresolved_issue_ids": [
+        "ocp-libpng.source",
+        "release.original_build"
+      ]
+    },
+    {
+      "declared_identity": "Wheel SBOM declares LibRaw 0.19.5-6.el8_10; hashed ELF family association is not source/build equivalence",
+      "id": "ocp-libraw",
+      "kind": "external_runtime",
+      "name": "LibRaw from OCP Linux wheel",
+      "notice_paths": [
+        "licenses/DISTRIBUTION_NOTICE.md",
+        "licenses/LibRaw/AAHD-NOTICE.txt",
+        "licenses/LibRaw/Adobe-MIT-distribution-rendering.txt",
+        "licenses/LibRaw/COPYRIGHT.txt",
+        "licenses/LibRaw/DCB-FBDD-NOTICE.txt",
+        "licenses/LibRaw/DHT-NOTICE.txt",
+        "licenses/LibRaw/LICENSE.CDDL.txt",
+        "licenses/LibRaw/LICENSE.LGPL.txt",
+        "licenses/LibRaw/LibRaw-dcraw-NOTICE.txt",
+        "licenses/LibRaw/X3F-NOTICE.txt"
+      ],
+      "provenance_paths": [
+        "licenses/INTEGRATED_MATERIALS.md",
+        "licenses/distro-source/LibRaw-Adobe-scope.json",
+        "licenses/distro-source/PATCH_ORDER.json",
+        "licenses/distro-source/RECIPIENT_SOURCE_ACCESS.md",
+        "licenses/distro-source/SOURCE_CORRESPONDENCE.json",
+        "licenses/provenance/INTEGRATED_MATERIALS_ORIGIN.json",
+        "licenses/provenance/linux-ocp-declared-components.json",
+        "licenses/provenance/runtime-file-provenance.json"
+      ],
+      "source_paths": [
+        "sources/linux-distro/LibRaw-0.19.5-6.el8_10-distgit.tar",
+        "sources/linux-distro/LibRaw-0.19.5.tar.gz"
+      ],
+      "unresolved_issue_ids": [
+        "ocp-libraw.adobe_scope",
+        "ocp-libraw.route",
+        "release.original_build"
+      ]
+    },
+    {
+      "declared_identity": "Wheel SBOM declares libuuid 2.32.1-48.el8_10; hashed ELF family association is not source/build equivalence",
+      "id": "ocp-libuuid",
+      "kind": "external_runtime",
+      "name": "libuuid from OCP Linux wheel",
+      "notice_paths": [
+        "licenses/ocp-dependencies/ocp-libuuid/NOTICE.txt"
+      ],
+      "provenance_paths": [
+        "licenses/INTEGRATED_MATERIALS.md",
+        "licenses/provenance/INTEGRATED_MATERIALS_ORIGIN.json",
+        "licenses/provenance/linux-ocp-declared-components.json",
+        "licenses/provenance/permissive-binary-notices-20261019.json",
+        "licenses/provenance/runtime-file-provenance.json"
+      ],
+      "source_paths": [],
+      "unresolved_issue_ids": [
+        "ocp-libuuid.source",
+        "release.original_build"
+      ]
+    },
+    {
+      "declared_identity": "Wheel SBOM declares libwebp 1.0.0-11.el8_10; hashed ELF family association is not source/build equivalence",
+      "id": "ocp-libwebp",
+      "kind": "external_runtime",
+      "name": "libwebp from OCP Linux wheel",
+      "notice_paths": [
+        "licenses/ocp-dependencies/ocp-libwebp/NOTICE.txt"
+      ],
+      "provenance_paths": [
+        "licenses/INTEGRATED_MATERIALS.md",
+        "licenses/provenance/INTEGRATED_MATERIALS_ORIGIN.json",
+        "licenses/provenance/linux-ocp-declared-components.json",
+        "licenses/provenance/permissive-binary-notices-20261019.json",
+        "licenses/provenance/runtime-file-provenance.json"
+      ],
+      "source_paths": [],
+      "unresolved_issue_ids": [
+        "ocp-libwebp.source",
+        "release.original_build"
+      ]
+    },
+    {
+      "declared_identity": "Wheel SBOM declares OpenEXR-libs 2.2.0-12.el8_10.1; hashed ELF family association is not source/build equivalence",
+      "id": "ocp-openexr-libs",
+      "kind": "external_runtime",
+      "name": "OpenEXR-libs from OCP Linux wheel",
+      "notice_paths": [
+        "licenses/ocp-dependencies/ocp-openexr-libs/NOTICE.txt"
+      ],
+      "provenance_paths": [
+        "licenses/INTEGRATED_MATERIALS.md",
+        "licenses/provenance/INTEGRATED_MATERIALS_ORIGIN.json",
+        "licenses/provenance/linux-ocp-declared-components.json",
+        "licenses/provenance/permissive-binary-notices-20261019.json",
+        "licenses/provenance/runtime-file-provenance.json"
+      ],
+      "source_paths": [],
+      "unresolved_issue_ids": [
+        "ocp-openexr-libs.source",
+        "release.original_build"
+      ]
+    },
+    {
+      "declared_identity": "Wheel SBOM declares openjpeg2 2.4.0-5.el8; hashed ELF family association is not source/build equivalence",
+      "id": "ocp-openjpeg2",
+      "kind": "external_runtime",
+      "name": "openjpeg2 from OCP Linux wheel",
+      "notice_paths": [
+        "licenses/ocp-dependencies/ocp-openjpeg2/NOTICE.txt"
+      ],
+      "provenance_paths": [
+        "licenses/INTEGRATED_MATERIALS.md",
+        "licenses/provenance/INTEGRATED_MATERIALS_ORIGIN.json",
+        "licenses/provenance/linux-ocp-declared-components.json",
+        "licenses/provenance/permissive-binary-notices-20261019.json",
+        "licenses/provenance/runtime-file-provenance.json"
+      ],
+      "source_paths": [],
+      "unresolved_issue_ids": [
+        "ocp-openjpeg2.source",
+        "release.original_build"
+      ]
+    },
+    {
+      "declared_identity": "Retained recipe requires pybind11==2.13.*; original patch/version is not fixed by this range",
+      "id": "ocp-pybind11",
+      "kind": "external_runtime",
+      "name": "pybind11 headers in OCP binding build",
+      "notice_paths": [
+        "licenses/pybind11/pybind11-2.13.0-LICENSE.txt",
+        "licenses/pybind11/pybind11-2.13.6-LICENSE.txt"
+      ],
+      "provenance_paths": [
+        "licenses/INTEGRATED_MATERIALS.md",
+        "licenses/provenance/INTEGRATED_MATERIALS_ORIGIN.json",
+        "sources/ocp/ocp-build-system-eace4e42cfa2c162ac39bc36864534fe5f5787a6.tar.gz"
+      ],
+      "source_paths": [],
+      "unresolved_issue_ids": [
+        "ocp-pybind11.patch_identity",
+        "ocp-pybind11.source",
+        "release.original_build"
+      ]
+    },
+    {
+      "declared_identity": "libtiff-92a88e40.so.5.3.0; historical 4.0.9 identification; absent as distinct wheel SBOM component",
+      "id": "ocp-tiff",
+      "kind": "external_runtime",
+      "name": "Custom libtiff from OCP Linux wheel",
+      "notice_paths": [
+        "licenses/ocp-dependencies/ocp-tiff/NOTICE.txt"
+      ],
+      "provenance_paths": [
+        "licenses/INTEGRATED_MATERIALS.md",
+        "licenses/provenance/INTEGRATED_MATERIALS_ORIGIN.json",
+        "licenses/provenance/permissive-binary-notices-20261019.json",
+        "licenses/provenance/runtime-file-provenance.json",
+        "sources/ocp/ocp-build-system-eace4e42cfa2c162ac39bc36864534fe5f5787a6.tar.gz"
+      ],
+      "source_paths": [],
+      "unresolved_issue_ids": [
+        "ocp-tiff.original_input",
+        "ocp-tiff.source",
+        "release.original_build"
+      ]
+    },
+    {
+      "declared_identity": "Wheel SBOM declares xz-libs 5.2.4-4.el8_6; hashed ELF family association is not source/build equivalence",
+      "id": "ocp-xz-libs",
+      "kind": "external_runtime",
+      "name": "xz-libs from OCP Linux wheel",
+      "notice_paths": [
+        "licenses/ocp-dependencies/ocp-xz-libs/NOTICE.txt"
+      ],
+      "provenance_paths": [
+        "licenses/INTEGRATED_MATERIALS.md",
+        "licenses/provenance/INTEGRATED_MATERIALS_ORIGIN.json",
+        "licenses/provenance/linux-ocp-declared-components.json",
+        "licenses/provenance/permissive-extra-notices-20261019.json",
+        "licenses/provenance/runtime-file-provenance.json"
+      ],
+      "source_paths": [],
+      "unresolved_issue_ids": [
+        "ocp-xz-libs.source",
+        "release.original_build"
+      ]
+    },
+    {
+      "declared_identity": "PBS source pin declares bdb 6.0.19; Linux metadata static-link contribution",
+      "id": "pbs-bdb",
+      "kind": "external_runtime",
+      "name": "PBS bdb",
+      "notice_paths": [
+        "licenses/berkeley/notices/Berkeley-DB-6.0.19-LICENSE.txt",
+        "licenses/berkeley/notices/LICENSE.bdb.txt",
+        "licenses/python/LICENSE.bdb.txt"
+      ],
+      "provenance_paths": [
+        "licenses/INTEGRATED_MATERIALS.md",
+        "licenses/berkeley/INTEGRATED_PATHS.json",
+        "licenses/berkeley/README.md",
+        "licenses/berkeley/SOURCE_OBTAINMENT.md",
+        "licenses/berkeley/sources/cpython-linux312-patch-order.txt",
+        "licenses/provenance/INTEGRATED_MATERIALS_ORIGIN.json",
+        "licenses/provenance/pbs-declared-source-pins.json",
+        "licenses/provenance/pbs-linux-PYTHON.json",
+        "sources/python-build-standalone-9e40cba825ca0997a01cab9f60a0b15ffb976af2.tar.gz"
+      ],
+      "source_paths": [
+        "sources/Python-3.12.15.tar.xz",
+        "sources/db-6.0.19.tar.gz",
+        "sources/python-build-standalone-9e40cba825ca0997a01cab9f60a0b15ffb976af2.tar.gz"
+      ],
+      "unresolved_issue_ids": [
+        "pbs.original_build"
+      ]
+    },
+    {
+      "declared_identity": "PBS source pin declares bzip2 1.0.8; Linux metadata static-link contribution",
+      "id": "pbs-bzip2",
+      "kind": "external_runtime",
+      "name": "PBS bzip2",
+      "notice_paths": [
+        "licenses/python/LICENSE.bzip2.txt"
+      ],
+      "provenance_paths": [
+        "licenses/INTEGRATED_MATERIALS.md",
+        "licenses/provenance/INTEGRATED_MATERIALS_ORIGIN.json",
+        "licenses/provenance/pbs-declared-source-pins.json",
+        "licenses/provenance/pbs-linux-PYTHON.json",
+        "sources/python-build-standalone-9e40cba825ca0997a01cab9f60a0b15ffb976af2.tar.gz"
+      ],
+      "source_paths": [],
+      "unresolved_issue_ids": [
+        "pbs-bzip2.source",
+        "pbs.original_build"
+      ]
+    },
+    {
+      "declared_identity": "PBS source pin declares expat 2.9.0; Linux metadata static-link contribution",
+      "id": "pbs-expat",
+      "kind": "external_runtime",
+      "name": "PBS expat",
+      "notice_paths": [
+        "licenses/expat/Expat-2.9.0-COPYING.txt",
+        "licenses/python/LICENSE.expat.txt"
+      ],
+      "provenance_paths": [
+        "licenses/INTEGRATED_MATERIALS.md",
+        "licenses/provenance/INTEGRATED_MATERIALS_ORIGIN.json",
+        "licenses/provenance/pbs-declared-source-pins.json",
+        "licenses/provenance/pbs-linux-PYTHON.json",
+        "sources/python-build-standalone-9e40cba825ca0997a01cab9f60a0b15ffb976af2.tar.gz"
+      ],
+      "source_paths": [
+        "sources/linux-private/expat_2.9.0.orig.tar.gz"
+      ],
+      "unresolved_issue_ids": [
+        "pbs.original_build"
+      ]
+    },
+    {
+      "declared_identity": "PBS source pin declares libedit 20240808-3.1; Linux metadata static-link contribution",
+      "id": "pbs-libedit",
+      "kind": "external_runtime",
+      "name": "PBS libedit",
+      "notice_paths": [
+        "licenses/python/LICENSE.libedit.txt"
+      ],
+      "provenance_paths": [
+        "licenses/INTEGRATED_MATERIALS.md",
+        "licenses/provenance/INTEGRATED_MATERIALS_ORIGIN.json",
+        "licenses/provenance/pbs-declared-source-pins.json",
+        "licenses/provenance/pbs-linux-PYTHON.json",
+        "sources/python-build-standalone-9e40cba825ca0997a01cab9f60a0b15ffb976af2.tar.gz"
+      ],
+      "source_paths": [],
+      "unresolved_issue_ids": [
+        "pbs-libedit.source",
+        "pbs.original_build"
+      ]
+    },
+    {
+      "declared_identity": "PBS source pin declares libffi 3.8.0; Linux metadata static-link contribution",
+      "id": "pbs-libffi",
+      "kind": "external_runtime",
+      "name": "PBS libffi",
+      "notice_paths": [
+        "licenses/python/LICENSE.libffi.txt"
+      ],
+      "provenance_paths": [
+        "licenses/INTEGRATED_MATERIALS.md",
+        "licenses/provenance/INTEGRATED_MATERIALS_ORIGIN.json",
+        "licenses/provenance/pbs-declared-source-pins.json",
+        "licenses/provenance/pbs-linux-PYTHON.json",
+        "sources/python-build-standalone-9e40cba825ca0997a01cab9f60a0b15ffb976af2.tar.gz"
+      ],
+      "source_paths": [],
+      "unresolved_issue_ids": [
+        "pbs-libffi.source",
+        "pbs.original_build"
+      ]
+    },
+    {
+      "declared_identity": "PBS source pin declares mpdecimal 4.0.0; Linux metadata static-link contribution",
+      "id": "pbs-mpdecimal",
+      "kind": "external_runtime",
+      "name": "PBS mpdecimal",
+      "notice_paths": [
+        "licenses/python/LICENSE.mpdecimal.txt"
+      ],
+      "provenance_paths": [
+        "licenses/INTEGRATED_MATERIALS.md",
+        "licenses/provenance/INTEGRATED_MATERIALS_ORIGIN.json",
+        "licenses/provenance/pbs-declared-source-pins.json",
+        "licenses/provenance/pbs-linux-PYTHON.json",
+        "sources/python-build-standalone-9e40cba825ca0997a01cab9f60a0b15ffb976af2.tar.gz"
+      ],
+      "source_paths": [],
+      "unresolved_issue_ids": [
+        "pbs-mpdecimal.source",
+        "pbs.original_build"
+      ]
+    },
+    {
+      "declared_identity": "PBS source pin declares ncurses 6.5; Linux metadata static-link contribution",
+      "id": "pbs-ncurses",
+      "kind": "external_runtime",
+      "name": "PBS ncurses",
+      "notice_paths": [
+        "licenses/python/LICENSE.ncurses.txt"
+      ],
+      "provenance_paths": [
+        "licenses/INTEGRATED_MATERIALS.md",
+        "licenses/provenance/INTEGRATED_MATERIALS_ORIGIN.json",
+        "licenses/provenance/pbs-declared-source-pins.json",
+        "licenses/provenance/pbs-linux-PYTHON.json",
+        "sources/python-build-standalone-9e40cba825ca0997a01cab9f60a0b15ffb976af2.tar.gz"
+      ],
+      "source_paths": [],
+      "unresolved_issue_ids": [
+        "pbs-ncurses.source",
+        "pbs.original_build"
+      ]
+    },
+    {
+      "declared_identity": "PBS source pin declares openssl-3.5 3.5.9; Linux metadata static-link contribution",
+      "id": "pbs-openssl-3.5",
+      "kind": "external_runtime",
+      "name": "PBS openssl-3.5",
+      "notice_paths": [
+        "licenses/python/LICENSE.openssl-1.1.txt",
+        "licenses/python/LICENSE.openssl-3.txt"
+      ],
+      "provenance_paths": [
+        "licenses/INTEGRATED_MATERIALS.md",
+        "licenses/provenance/INTEGRATED_MATERIALS_ORIGIN.json",
+        "licenses/provenance/pbs-declared-source-pins.json",
+        "licenses/provenance/pbs-linux-PYTHON.json",
+        "sources/python-build-standalone-9e40cba825ca0997a01cab9f60a0b15ffb976af2.tar.gz"
+      ],
+      "source_paths": [],
+      "unresolved_issue_ids": [
+        "pbs-openssl-3.5.source",
+        "pbs.original_build"
+      ]
+    },
+    {
+      "declared_identity": "PBS source pin declares sqlite 3530100; Linux metadata static-link contribution",
+      "id": "pbs-sqlite",
+      "kind": "external_runtime",
+      "name": "PBS sqlite",
+      "notice_paths": [
+        "licenses/python/LICENSE.sqlite.txt"
+      ],
+      "provenance_paths": [
+        "licenses/INTEGRATED_MATERIALS.md",
+        "licenses/provenance/INTEGRATED_MATERIALS_ORIGIN.json",
+        "licenses/provenance/pbs-declared-source-pins.json",
+        "licenses/provenance/pbs-linux-PYTHON.json",
+        "sources/python-build-standalone-9e40cba825ca0997a01cab9f60a0b15ffb976af2.tar.gz"
+      ],
+      "source_paths": [],
+      "unresolved_issue_ids": [
+        "pbs-sqlite.source",
+        "pbs.original_build"
+      ]
+    },
+    {
+      "declared_identity": "PBS source pin declares uuid 1.0.3; Linux metadata static-link contribution",
+      "id": "pbs-uuid",
+      "kind": "external_runtime",
+      "name": "PBS uuid",
+      "notice_paths": [
+        "licenses/python/LICENSE.libuuid.txt"
+      ],
+      "provenance_paths": [
+        "licenses/INTEGRATED_MATERIALS.md",
+        "licenses/provenance/INTEGRATED_MATERIALS_ORIGIN.json",
+        "licenses/provenance/pbs-declared-source-pins.json",
+        "licenses/provenance/pbs-linux-PYTHON.json",
+        "sources/python-build-standalone-9e40cba825ca0997a01cab9f60a0b15ffb976af2.tar.gz"
+      ],
+      "source_paths": [],
+      "unresolved_issue_ids": [
+        "pbs-uuid.source",
+        "pbs.original_build"
+      ]
+    },
+    {
+      "declared_identity": "PBS source pin declares xz 5.8.4; Linux metadata static-link contribution",
+      "id": "pbs-xz",
+      "kind": "external_runtime",
+      "name": "PBS xz",
+      "notice_paths": [
+        "licenses/python/LICENSE.liblzma.txt"
+      ],
+      "provenance_paths": [
+        "licenses/INTEGRATED_MATERIALS.md",
+        "licenses/provenance/INTEGRATED_MATERIALS_ORIGIN.json",
+        "licenses/provenance/pbs-declared-source-pins.json",
+        "licenses/provenance/pbs-linux-PYTHON.json",
+        "sources/python-build-standalone-9e40cba825ca0997a01cab9f60a0b15ffb976af2.tar.gz"
+      ],
+      "source_paths": [],
+      "unresolved_issue_ids": [
+        "pbs-xz.source",
+        "pbs.original_build"
+      ]
+    },
+    {
+      "declared_identity": "Static libz family; zlib 1.3.2 vs zlib-ng 2.2.4 applicability unresolved",
+      "id": "pbs-zlib",
+      "kind": "external_runtime",
+      "name": "PBS zlib",
+      "notice_paths": [
+        "licenses/python/LICENSE.zlib-ng.txt",
+        "licenses/python/LICENSE.zlib.txt"
+      ],
+      "provenance_paths": [
+        "licenses/INTEGRATED_MATERIALS.md",
+        "licenses/provenance/INTEGRATED_MATERIALS_ORIGIN.json",
+        "licenses/provenance/pbs-declared-source-pins.json",
+        "licenses/provenance/pbs-linux-PYTHON.json",
+        "sources/python-build-standalone-9e40cba825ca0997a01cab9f60a0b15ffb976af2.tar.gz"
+      ],
+      "source_paths": [],
+      "unresolved_issue_ids": [
+        "pbs-zlib.source",
+        "pbs.original_build",
+        "pbs.zlib_identity"
+      ]
+    },
+    {
+      "declared_identity": "libexpat1 2.9.0-1~deb13u1; source 2.9.0-1~deb13u1",
+      "id": "private-expat",
+      "kind": "external_runtime",
+      "name": "Private Debian Expat",
+      "notice_paths": [
+        "licenses/expat/Expat-2.9.0-COPYING.txt",
+        "licenses/linux-private/private-expat-debian-copyright.txt"
+      ],
+      "provenance_paths": [
+        "licenses/INTEGRATED_MATERIALS.md",
+        "licenses/provenance/INTEGRATED_MATERIALS_ORIGIN.json",
+        "licenses/provenance/linux-private/expat_2.9.0-1~deb13u1.dsc",
+        "licenses/provenance/restored-source-summary.json",
+        "licenses/provenance/runtime-file-provenance.json",
+        "licenses/provenance/source-analysis-scope-001.json"
+      ],
+      "source_paths": [
+        "sources/linux-private/expat_2.9.0-1~deb13u1.debian.tar.xz",
+        "sources/linux-private/expat_2.9.0.orig.tar.gz"
+      ],
+      "unresolved_issue_ids": [
+        "release.original_build"
+      ]
+    },
+    {
+      "declared_identity": "zlib1g 1:1.3.dfsg+really1.3.1-1+b1; source 1:1.3.dfsg+really1.3.1-1",
+      "id": "private-zlib",
+      "kind": "external_runtime",
+      "name": "Private Debian zlib",
+      "notice_paths": [
+        "licenses/linux-private/private-zlib-debian-copyright.txt"
+      ],
+      "provenance_paths": [
+        "licenses/INTEGRATED_MATERIALS.md",
+        "licenses/provenance/INTEGRATED_MATERIALS_ORIGIN.json",
+        "licenses/provenance/linux-private/zlib_1.3.dfsg+really1.3.1-1.dsc",
+        "licenses/provenance/restored-source-summary.json",
+        "licenses/provenance/runtime-file-provenance.json",
+        "licenses/provenance/source-analysis-scope-001.json"
+      ],
+      "source_paths": [
+        "sources/linux-private/zlib_1.3.dfsg+really1.3.1-1.debian.tar.xz",
+        "sources/linux-private/zlib_1.3.dfsg+really1.3.1.orig.tar.gz"
+      ],
+      "unresolved_issue_ids": [
+        "release.original_build"
+      ]
+    },
+    {
+      "declared_identity": "Mechanical CAD exact committed source fb099b03d1383b14d5ad5e6d6b209a60fe205972; 1951 files. Earlier project archives retained as historical evidence; external runtime unchanged.",
+      "id": "project",
+      "kind": "project_package",
+      "name": "Mechanical CAD project package",
+      "notice_paths": [
+        "licenses/DISTRIBUTION_NOTICE.md",
+        "licenses/project/4d7df8c85202109c6cd4808a4c9d6d28d23ac278/LICENSE",
+        "licenses/project/4d7df8c85202109c6cd4808a4c9d6d28d23ac278/THIRD_PARTY_NOTICES.md",
+        "licenses/project/7013a025b3526581ef733f9ab03da1d43557d189/LICENSE",
+        "licenses/project/7013a025b3526581ef733f9ab03da1d43557d189/THIRD_PARTY_NOTICES.md",
+        "licenses/project/84127aa30c1fd67f0fd02f0136114dab916d632c/LICENSE",
+        "licenses/project/84127aa30c1fd67f0fd02f0136114dab916d632c/THIRD_PARTY_NOTICES.md",
+        "licenses/project/LICENSE",
+        "licenses/project/THIRD_PARTY_NOTICES.md",
+        "licenses/project/fab775ebd5e5de247a6603c530ac76661a74027b/LICENSE",
+        "licenses/project/fab775ebd5e5de247a6603c530ac76661a74027b/THIRD_PARTY_NOTICES.md",
+        "licenses/project/fb099b03d1383b14d5ad5e6d6b209a60fe205972/LICENSE",
+        "licenses/project/fb099b03d1383b14d5ad5e6d6b209a60fe205972/THIRD_PARTY_NOTICES.md",
+        "licenses/project/icons-Apache-2.0.txt",
+        "licenses/project/icons-GPL-3.0-or-later.txt",
+        "licenses/project/icons-NOTICE.txt",
+        "licenses/project/palette-shapes-NOTICE.txt"
+      ],
+      "provenance_paths": [
+        "licenses/INTEGRATED_MATERIALS.md",
+        "licenses/provenance/CURRENT_FEATURE_BUILD.txt",
+        "licenses/provenance/INTEGRATED_MATERIALS_ORIGIN.json",
+        "licenses/provenance/current-4d7df8c85202109c6cd4808a4c9d6d28d23ac278-BUILD.txt",
+        "licenses/provenance/current-4d7df8c85202109c6cd4808a4c9d6d28d23ac278-source-inventory.json",
+        "licenses/provenance/current-7013a025b3526581ef733f9ab03da1d43557d189-BUILD.txt",
+        "licenses/provenance/current-7013a025b3526581ef733f9ab03da1d43557d189-source-inventory.json",
+        "licenses/provenance/current-84127aa30c1fd67f0fd02f0136114dab916d632c-BUILD.txt",
+        "licenses/provenance/current-84127aa30c1fd67f0fd02f0136114dab916d632c-runtime-lock.json",
+        "licenses/provenance/current-84127aa30c1fd67f0fd02f0136114dab916d632c-source-freeze.json",
+        "licenses/provenance/current-84127aa30c1fd67f0fd02f0136114dab916d632c-source-inventory.json",
+        "licenses/provenance/current-fab775ebd5e5de247a6603c530ac76661a74027b-BUILD.txt",
+        "licenses/provenance/current-fab775ebd5e5de247a6603c530ac76661a74027b-runtime-lock.json",
+        "licenses/provenance/current-fab775ebd5e5de247a6603c530ac76661a74027b-source-freeze.json",
+        "licenses/provenance/current-fab775ebd5e5de247a6603c530ac76661a74027b-source-inventory.json",
+        "licenses/provenance/current-fb099b03d1383b14d5ad5e6d6b209a60fe205972-BUILD.txt",
+        "licenses/provenance/current-fb099b03d1383b14d5ad5e6d6b209a60fe205972-source-inventory.json",
+        "licenses/provenance/project-source-freeze.json",
+        "licenses/provenance/project-source-inventory.json",
+        "licenses/provenance/runtime-file-provenance.json",
+        "licenses/provenance/runtime-inventory.json",
+        "licenses/provenance/runtime-lock.json",
+        "licenses/provenance/runtime-static-elf.json"
+      ],
+      "source_paths": [
+        "sources/project/mechanical-cad-4d7df8c85202109c6cd4808a4c9d6d28d23ac278.zip",
+        "sources/project/mechanical-cad-5b272e6cf19dadf25df2972377de46af80944256.zip",
+        "sources/project/mechanical-cad-7013a025b3526581ef733f9ab03da1d43557d189.zip",
+        "sources/project/mechanical-cad-84127aa30c1fd67f0fd02f0136114dab916d632c.zip",
+        "sources/project/mechanical-cad-fab775ebd5e5de247a6603c530ac76661a74027b.zip",
+        "sources/project/mechanical-cad-fb099b03d1383b14d5ad5e6d6b209a60fe205972.zip"
+      ],
+      "unresolved_issue_ids": [
+        "release.original_build",
+        "release.rebuild",
+        "release.rights"
+      ]
+    },
+    {
+      "declared_identity": "Wheel 8.0.1.1.0 py3-none-any; 5 retained files; wheel SHA256 98c71bb60cfb651afe179b134ab88580fd75384fce0cc6d633f727002cd18abd",
+      "id": "proxy",
+      "kind": "external_runtime",
+      "name": "cadquery-ocp-proxy",
+      "notice_paths": [
+        "licenses/ocp/build-system-LICENSE.txt",
+        "licenses/ocp/build-system-eace4e42-LICENSE.txt"
+      ],
+      "provenance_paths": [
+        "licenses/INTEGRATED_MATERIALS.md",
+        "licenses/ocp/BUILD_INPUTS.json",
+        "licenses/ocp/BUILD_LINUX.md",
+        "licenses/ocp/SOURCE_IDENTITIES.json",
+        "licenses/provenance/INTEGRATED_MATERIALS_ORIGIN.json",
+        "licenses/provenance/runtime-file-provenance.json",
+        "sources/ocp/ocp-build-system-eace4e42cfa2c162ac39bc36864534fe5f5787a6.tar.gz"
+      ],
+      "source_paths": [
+        "sources/ocp/OCP_src_stubs_Linux-8.0.1.1.zip",
+        "sources/ocp/ocp-build-system-eace4e42cfa2c162ac39bc36864534fe5f5787a6.tar.gz"
+      ],
+      "unresolved_issue_ids": [
+        "proxy.version_source"
+      ]
+    },
+    {
+      "declared_identity": "slvs 3.2; source metadata commit 477d4c87ca51b9727fbc0765cbd94253c3968b8b",
+      "id": "slvs",
+      "kind": "external_runtime",
+      "name": "slvs / SolveSpace Python solver",
+      "notice_paths": [
+        "licenses/DISTRIBUTION_NOTICE.md",
+        "licenses/slvs/COPYING.txt",
+        "licenses/slvs/source-README.md"
+      ],
+      "provenance_paths": [
+        "licenses/INTEGRATED_MATERIALS.md",
+        "licenses/provenance/INTEGRATED_MATERIALS_ORIGIN.json",
+        "licenses/provenance/restored-source-summary.json",
+        "licenses/provenance/slvs-PKG-INFO.txt",
+        "licenses/provenance/source-analysis-scope-001.json",
+        "licenses/provenance/source-analysis-scope-002.json"
+      ],
+      "source_paths": [
+        "sources/slvs/slvs-3.2.tar.gz"
+      ],
+      "unresolved_issue_ids": [
+        "release.original_build",
+        "slvs.header_closure",
+        "slvs.metadata_conflict"
+      ]
+    },
+    {
+      "declared_identity": "Selected Eigen_Colamd.h wrapper and University of Florida COLAMD attributions in slvs sdist",
+      "id": "slvs-colamd",
+      "kind": "external_runtime",
+      "name": "COLAMD within Eigen",
+      "notice_paths": [
+        "licenses/slvs/eigen/Eigen_Colamd.h.txt"
+      ],
+      "provenance_paths": [
+        "licenses/INTEGRATED_MATERIALS.md",
+        "licenses/provenance/INTEGRATED_MATERIALS_ORIGIN.json",
+        "licenses/provenance/restored-source-summary.json",
+        "licenses/provenance/source-analysis-scope-001.json"
+      ],
+      "source_paths": [
+        "sources/slvs/slvs-3.2.tar.gz"
+      ],
+      "unresolved_issue_ids": [
+        "slvs.header_closure"
+      ]
+    },
+    {
+      "declared_identity": "Bundled extlib/eigen in exact slvs 3.2 sdist; no standalone version inferred",
+      "id": "slvs-eigen",
+      "kind": "external_runtime",
+      "name": "Eigen bundled in slvs",
+      "notice_paths": [
+        "licenses/slvs/eigen/BFloat16.h.txt",
+        "licenses/slvs/eigen/COPYING.APACHE",
+        "licenses/slvs/eigen/COPYING.BSD",
+        "licenses/slvs/eigen/COPYING.GPL",
+        "licenses/slvs/eigen/COPYING.LGPL",
+        "licenses/slvs/eigen/COPYING.MINPACK",
+        "licenses/slvs/eigen/COPYING.MPL2",
+        "licenses/slvs/eigen/COPYING.README",
+        "licenses/slvs/eigen/GeneralMatrixMatrixTriangular_BLAS.h.txt",
+        "licenses/slvs/eigen/GeneralMatrixMatrix_BLAS.h.txt",
+        "licenses/slvs/eigen/GeneralMatrixVector_BLAS.h.txt",
+        "licenses/slvs/eigen/Half.h.txt",
+        "licenses/slvs/eigen/MKL_support.h.txt",
+        "licenses/slvs/eigen/SelfadjointMatrixMatrix_BLAS.h.txt",
+        "licenses/slvs/eigen/SelfadjointMatrixVector_BLAS.h.txt",
+        "licenses/slvs/eigen/SparseColEtree.h.txt",
+        "licenses/slvs/eigen/TriangularMatrixMatrix_BLAS.h.txt",
+        "licenses/slvs/eigen/TriangularMatrixVector_BLAS.h.txt",
+        "licenses/slvs/eigen/TriangularSolverMatrix_BLAS.h.txt"
+      ],
+      "provenance_paths": [
+        "licenses/INTEGRATED_MATERIALS.md",
+        "licenses/provenance/INTEGRATED_MATERIALS_ORIGIN.json",
+        "licenses/provenance/restored-source-summary.json",
+        "licenses/provenance/source-analysis-scope-001.json"
+      ],
+      "source_paths": [
+        "sources/slvs/slvs-3.2.tar.gz"
+      ],
+      "unresolved_issue_ids": [
+        "slvs.header_closure"
+      ]
+    },
+    {
+      "declared_identity": "Selected header defines MI_MALLOC_VERSION 222; dotted version not independently established",
+      "id": "slvs-mimalloc",
+      "kind": "external_runtime",
+      "name": "mimalloc bundled in slvs",
+      "notice_paths": [
+        "licenses/slvs/mimalloc-LICENSE.txt"
+      ],
+      "provenance_paths": [
+        "licenses/INTEGRATED_MATERIALS.md",
+        "licenses/provenance/INTEGRATED_MATERIALS_ORIGIN.json",
+        "licenses/provenance/restored-source-summary.json",
+        "licenses/provenance/source-analysis-scope-002.json"
+      ],
+      "source_paths": [
+        "sources/slvs/slvs-3.2.tar.gz"
+      ],
+      "unresolved_issue_ids": [
+        "slvs.header_closure"
+      ]
+    }
+  ],
+  "issue_count": 42,
+  "issues": [
+    {
+      "description": "No complete, candidate-corresponding source archive is supplied for bzip2-libs from OCP Linux wheel. Selected recipes or historical pins do not establish source closure. See this component\u2019s provenance_paths entries. This typed entry records absent material in this strict map; it does not itself assert a legal source-delivery obligation. Applicable license duties are decided separately.",
+      "id": "ocp-bzip2-libs.source",
+      "role": "missing_source_material"
+    },
+    {
+      "description": "No complete, candidate-corresponding source archive is supplied for fmt from OCP Linux wheel. Selected recipes or historical pins do not establish source closure. See this component\u2019s provenance_paths entries. This typed entry records absent material in this strict map; it does not itself assert a legal source-delivery obligation. Applicable license duties are decided separately.",
+      "id": "ocp-fmt.source",
+      "role": "missing_source_material"
+    },
+    {
+      "description": "No complete, candidate-corresponding source archive is supplied for fontconfig from OCP Linux wheel. Selected recipes or historical pins do not establish source closure. See this component\u2019s provenance_paths entries. This typed entry records absent material in this strict map; it does not itself assert a legal source-delivery obligation. Applicable license duties are decided separately.",
+      "id": "ocp-fontconfig.source",
+      "role": "missing_source_material"
+    },
+    {
+      "description": "This distribution selects the actual downstream express GPLv3 alternative, recorded in licenses/DISTRIBUTION_NOTICE.md; no later-version grant is inferred. Original GPLv2/GPLv3/FIPL texts and surviving paintlib/NeuQuant/PSD attributions remain intact. The recovered SRPM differs from the historical whole-RPM hash, while all historical source/derived-notice identities were matched.",
+      "id": "ocp-freeimage.route",
+      "role": "other_unresolved"
+    },
+    {
+      "description": "This distribution selects FTL with its credit, recorded in licenses/DISTRIBUTION_NOTICE.md. Exact FreeType 2.9.1 main and incorporated-header notices and acknowledgement are supplied; original alternatives remain intact. Original EL8 patch-specific additions are not independently attested, but no specific missing extra notice is identified.",
+      "id": "ocp-freetype.route",
+      "role": "other_unresolved"
+    },
+    {
+      "description": "No complete, candidate-corresponding source archive is supplied for freetype from OCP Linux wheel. Selected recipes or historical pins do not establish source closure. See this component\u2019s provenance_paths entries. This typed entry records absent material in this strict map; it does not itself assert a legal source-delivery obligation. Applicable license duties are decided separately.",
+      "id": "ocp-freetype.source",
+      "role": "missing_source_material"
+    },
+    {
+      "description": "No complete, candidate-corresponding source archive is supplied for ilmbase from OCP Linux wheel. Selected recipes or historical pins do not establish source closure. See this component\u2019s provenance_paths entries. This typed entry records absent material in this strict map; it does not itself assert a legal source-delivery obligation. Applicable license duties are decided separately.",
+      "id": "ocp-ilmbase.source",
+      "role": "missing_source_material"
+    },
+    {
+      "description": "No complete, candidate-corresponding source archive is supplied for jasper-libs from OCP Linux wheel. Selected recipes or historical pins do not establish source closure. See this component\u2019s provenance_paths entries. This typed entry records absent material in this strict map; it does not itself assert a legal source-delivery obligation. Applicable license duties are decided separately.",
+      "id": "ocp-jasper-libs.source",
+      "role": "missing_source_material"
+    },
+    {
+      "description": "No complete, candidate-corresponding source archive is supplied for jxrlib from OCP Linux wheel. Selected recipes or historical pins do not establish source closure. See this component\u2019s provenance_paths entries. This typed entry records absent material in this strict map; it does not itself assert a legal source-delivery obligation. Applicable license duties are decided separately.",
+      "id": "ocp-jxrlib.source",
+      "role": "missing_source_material"
+    },
+    {
+      "description": "No complete, candidate-corresponding source archive is supplied for lcms2 from OCP Linux wheel. Selected recipes or historical pins do not establish source closure. See this component\u2019s provenance_paths entries. This typed entry records absent material in this strict map; it does not itself assert a legal source-delivery obligation. Applicable license duties are decided separately.",
+      "id": "ocp-lcms2.source",
+      "role": "missing_source_material"
+    },
+    {
+      "description": "Full official GCC 8.5.0 archive and all 61 distro patches/spec are supplied. All 1489 libgomp/root-control Git blobs match distro commit a3253c88425835d5b339d6998a1110a66ccd8b44; 57 RHEL-8 GCC-tree patch sets passed inert exact-context checking. Separate nvptx-tools/newlib sources needed for the entire GCC RPM are not included; that is not a missing-source claim for an unshipped offload plugin. Wheel-stage modification correspondence remains separate.",
+      "id": "ocp-libgomp.source_scope",
+      "role": "other_unresolved"
+    },
+    {
+      "description": "No complete, candidate-corresponding source archive is supplied for libjpeg-turbo from OCP Linux wheel. Selected recipes or historical pins do not establish source closure. See this component\u2019s provenance_paths entries. This typed entry records absent material in this strict map; it does not itself assert a legal source-delivery obligation. Applicable license duties are decided separately.",
+      "id": "ocp-libjpeg-turbo.source",
+      "role": "missing_source_material"
+    },
+    {
+      "description": "No complete, candidate-corresponding source archive is supplied for libpng from OCP Linux wheel. Selected recipes or historical pins do not establish source closure. See this component\u2019s provenance_paths entries. This typed entry records absent material in this strict map; it does not itself assert a legal source-delivery obligation. Applicable license duties are decided separately.",
+      "id": "ocp-libpng.source",
+      "role": "missing_source_material"
+    },
+    {
+      "description": "Original LibRaw attribution is preserved with a clearly labelled distribution-supplied rendering of the named standard MIT text, not a recovered Adobe SDK notice or new grant. Original Adobe-specific SDK text remains unrecovered. Identified routines require USE_ZLIB, not enabled by reviewed source/spec; ELF metadata has no direct libz dependency. The full archive still distributes optional code. These scope facts do not establish a missing compiled-binary notice.",
+      "id": "ocp-libraw.adobe_scope",
+      "role": "other_unresolved"
+    },
+    {
+      "description": "This distribution selects LGPL version 2.1, recorded in licenses/DISTRIBUTION_NOTICE.md. Exact upstream archive, all seven distro patches/spec, original LGPL/CDDL texts and third-party notices remain supplied. Actual wheel-stage modification/source correspondence and native replacement behavior are separate provenance/qualification facts; no exact-rebuild requirement is inferred.",
+      "id": "ocp-libraw.route",
+      "role": "other_unresolved"
+    },
+    {
+      "description": "No complete, candidate-corresponding source archive is supplied for libuuid from OCP Linux wheel. Selected recipes or historical pins do not establish source closure. See this component\u2019s provenance_paths entries. This typed entry records absent material in this strict map; it does not itself assert a legal source-delivery obligation. Applicable license duties are decided separately.",
+      "id": "ocp-libuuid.source",
+      "role": "missing_source_material"
+    },
+    {
+      "description": "No complete, candidate-corresponding source archive is supplied for libwebp from OCP Linux wheel. Selected recipes or historical pins do not establish source closure. See this component\u2019s provenance_paths entries. This typed entry records absent material in this strict map; it does not itself assert a legal source-delivery obligation. Applicable license duties are decided separately.",
+      "id": "ocp-libwebp.source",
+      "role": "missing_source_material"
+    },
+    {
+      "description": "No complete, candidate-corresponding source archive is supplied for OpenEXR-libs from OCP Linux wheel. Selected recipes or historical pins do not establish source closure. See this component\u2019s provenance_paths entries. This typed entry records absent material in this strict map; it does not itself assert a legal source-delivery obligation. Applicable license duties are decided separately.",
+      "id": "ocp-openexr-libs.source",
+      "role": "missing_source_material"
+    },
+    {
+      "description": "No complete, candidate-corresponding source archive is supplied for openjpeg2 from OCP Linux wheel. Selected recipes or historical pins do not establish source closure. See this component\u2019s provenance_paths entries. This typed entry records absent material in this strict map; it does not itself assert a legal source-delivery obligation. Applicable license duties are decided separately.",
+      "id": "ocp-openjpeg2.source",
+      "role": "missing_source_material"
+    },
+    {
+      "description": "Build recipe selects pybind11 2.13.*; exact original patch version remains unknown. Supplied v2.13.0 and v2.13.6 upstream license texts are byte-identical. This is a source identity fact, not a blanket missing-notice claim.",
+      "id": "ocp-pybind11.patch_identity",
+      "role": "other_unresolved"
+    },
+    {
+      "description": "No complete, candidate-corresponding source archive is supplied for pybind11 headers in OCP binding build. Selected recipes or historical pins do not establish source closure. See this component\u2019s provenance_paths entries. This typed entry records absent material in this strict map; it does not itself assert a legal source-delivery obligation. Applicable license duties are decided separately.",
+      "id": "ocp-pybind11.source",
+      "role": "missing_source_material"
+    },
+    {
+      "description": "Retained recipe downloads a libtiff source RPM and unpacks its upstream tar, then disables JBIG. Its security-patched comment does not prove distro patches ran. Exact original TIFF 4.0.9 source/recipe/patch provenance remains unresolved.",
+      "id": "ocp-tiff.original_input",
+      "role": "other_unresolved"
+    },
+    {
+      "description": "No complete, candidate-corresponding source archive is supplied for Custom libtiff from OCP Linux wheel. Selected recipes or historical pins do not establish source closure. See this component\u2019s provenance_paths entries. This typed entry records absent material in this strict map; it does not itself assert a legal source-delivery obligation. Applicable license duties are decided separately.",
+      "id": "ocp-tiff.source",
+      "role": "missing_source_material"
+    },
+    {
+      "description": "No complete, candidate-corresponding source archive is supplied for xz-libs from OCP Linux wheel. Selected recipes or historical pins do not establish source closure. See this component\u2019s provenance_paths entries. This typed entry records absent material in this strict map; it does not itself assert a legal source-delivery obligation. Applicable license duties are decided separately.",
+      "id": "ocp-xz-libs.source",
+      "role": "missing_source_material"
+    },
+    {
+      "description": "No complete, candidate-corresponding source archive is supplied for PBS bzip2. Selected recipes or historical pins do not establish source closure. See this component\u2019s provenance_paths entries. This typed entry records absent material in this strict map; it does not itself assert a legal source-delivery obligation. Applicable license duties are decided separately.",
+      "id": "pbs-bzip2.source",
+      "role": "missing_source_material"
+    },
+    {
+      "description": "No complete, candidate-corresponding source archive is supplied for PBS libedit. Selected recipes or historical pins do not establish source closure. See this component\u2019s provenance_paths entries. This typed entry records absent material in this strict map; it does not itself assert a legal source-delivery obligation. Applicable license duties are decided separately.",
+      "id": "pbs-libedit.source",
+      "role": "missing_source_material"
+    },
+    {
+      "description": "No complete, candidate-corresponding source archive is supplied for PBS libffi. Selected recipes or historical pins do not establish source closure. See this component\u2019s provenance_paths entries. This typed entry records absent material in this strict map; it does not itself assert a legal source-delivery obligation. Applicable license duties are decided separately.",
+      "id": "pbs-libffi.source",
+      "role": "missing_source_material"
+    },
+    {
+      "description": "No complete, candidate-corresponding source archive is supplied for PBS mpdecimal. Selected recipes or historical pins do not establish source closure. See this component\u2019s provenance_paths entries. This typed entry records absent material in this strict map; it does not itself assert a legal source-delivery obligation. Applicable license duties are decided separately.",
+      "id": "pbs-mpdecimal.source",
+      "role": "missing_source_material"
+    },
+    {
+      "description": "No complete, candidate-corresponding source archive is supplied for PBS ncurses. Selected recipes or historical pins do not establish source closure. See this component\u2019s provenance_paths entries. This typed entry records absent material in this strict map; it does not itself assert a legal source-delivery obligation. Applicable license duties are decided separately.",
+      "id": "pbs-ncurses.source",
+      "role": "missing_source_material"
+    },
+    {
+      "description": "No complete, candidate-corresponding source archive is supplied for PBS openssl-3.5. Selected recipes or historical pins do not establish source closure. See this component\u2019s provenance_paths entries. This typed entry records absent material in this strict map; it does not itself assert a legal source-delivery obligation. Applicable license duties are decided separately.",
+      "id": "pbs-openssl-3.5.source",
+      "role": "missing_source_material"
+    },
+    {
+      "description": "No complete, candidate-corresponding source archive is supplied for PBS sqlite. Selected recipes or historical pins do not establish source closure. See this component\u2019s provenance_paths entries. This typed entry records absent material in this strict map; it does not itself assert a legal source-delivery obligation. Applicable license duties are decided separately.",
+      "id": "pbs-sqlite.source",
+      "role": "missing_source_material"
+    },
+    {
+      "description": "No complete, candidate-corresponding source archive is supplied for PBS uuid. Selected recipes or historical pins do not establish source closure. See this component\u2019s provenance_paths entries. This typed entry records absent material in this strict map; it does not itself assert a legal source-delivery obligation. Applicable license duties are decided separately.",
+      "id": "pbs-uuid.source",
+      "role": "missing_source_material"
+    },
+    {
+      "description": "No complete, candidate-corresponding source archive is supplied for PBS xz. Selected recipes or historical pins do not establish source closure. See this component\u2019s provenance_paths entries. This typed entry records absent material in this strict map; it does not itself assert a legal source-delivery obligation. Applicable license duties are decided separately.",
+      "id": "pbs-xz.source",
+      "role": "missing_source_material"
+    },
+    {
+      "description": "No complete, candidate-corresponding source archive is supplied for PBS zlib. Selected recipes or historical pins do not establish source closure. See this component\u2019s provenance_paths entries. This typed entry records absent material in this strict map; it does not itself assert a legal source-delivery obligation. Applicable license duties are decided separately.",
+      "id": "pbs-zlib.source",
+      "role": "missing_source_material"
+    },
+    {
+      "description": "Matching retained Linux PYTHON.json declares static links and configuration; install-only file identity is separately recorded. This supports bounded declared contribution mapping, not a reproduced build or exact original source-to-binary equivalence. CPython bundled third-party code and toolchain closure still need review.",
+      "id": "pbs.original_build",
+      "role": "other_unresolved"
+    },
+    {
+      "description": "Linux metadata links build/lib/libz.a and references both zlib and zlib-ng notice paths. Cross-profile pins list zlib 1.3.2 and zlib-ng 2.2.4. Preserve both raw selected notices; exact applicable original source identity is unresolved here. Private Debian libz.so.1 is a separate component.",
+      "id": "pbs.zlib_identity",
+      "role": "other_unresolved"
+    },
+    {
+      "description": "Retained proxy __init__.py is byte-identical to runtime; retained _version.py differs from runtime. Archive actual source text and retain build/version-generation provenance before claiming exact source mapping.",
+      "id": "proxy.version_source",
+      "role": "other_unresolved"
+    },
+    {
+      "description": "Original compiler, patches, generated code, static/header closure and source-to-shipping-binary equivalence are not established merely by package version, wheel member identity or a recorded recipe.",
+      "id": "release.original_build",
+      "role": "other_unresolved"
+    },
+    {
+      "description": "Public recipient source/build/repack instructions and integrity-metadata regeneration are supplied. No modified native library was built or executed by this material-staging task. Whether further replacement/ABI evidence is needed depends on the applicable distribution route; a direct cache hot-swap or bit-identical rebuild is not an automatic additional gate. Installed Linux qualification is separate; Windows stays deferred/closed.",
+      "id": "release.rebuild",
+      "role": "other_unresolved"
+    },
+    {
+      "description": "The distributor-selected existing FOSS configuration is recorded in licenses/DISTRIBUTION_NOTICE.md. Earlier no-selection preparation statements are superseded by that notice; original upstream alternatives and attributions remain intact. This records the approved choices, not a new grant or a claim that all original build provenance was independently proved. Remaining component facts are preserved separately.",
+      "id": "release.rights",
+      "role": "other_unresolved"
+    },
+    {
+      "description": "Selected source shows Eigen SparseQR with COLAMDOrdering and mimalloc heap usage. Recursive transitive headers, generated Cython output/compiler version, exact wheel compiler and flags remain unverified; selected text scope is finite, not complete source-to-wheel proof.",
+      "id": "slvs.header_closure",
+      "role": "other_unresolved"
+    },
+    {
+      "description": "The supplied source README/COPYING declares GPL v3 or later/GPLv3 while PKG-INFO and pyproject contain an MIT classifier. This distribution follows GPL-3.0-or-later for the combined solver, as recorded in licenses/DISTRIBUTION_NOTICE.md. Both original source declarations and conflicting metadata remain preserved; the classifier is not used as authority to relicense the combined solver.",
+      "id": "slvs.metadata_conflict",
+      "role": "other_unresolved"
+    }
+  ],
+  "missing_source_material_count": 27,
+  "selected_routes": {
+    "occt": "LGPL-2.1 with OCCT exception",
+    "ocp-freeimage": "GPL-3.0-only",
+    "ocp-freetype": "FTL",
+    "ocp-libraw": "LGPL-2.1",
+    "slvs": "GPL-3.0-or-later"
+  },
+  "status": "ENGINEERING_EVIDENCE_NOT_SUBSTANTIVE_APPROVAL"
+}

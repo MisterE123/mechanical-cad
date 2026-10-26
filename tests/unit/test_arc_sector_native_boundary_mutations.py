@@ -107,6 +107,12 @@ DYNAMIC_IMPORT_STYLES = (
 
 def _extract_function(filename, name, namespace):
     namespace = {**namespace, "TRUSTED_GUARD_ROOT": ROOT}
+    if name == INCIDENCE_GUARD:
+        # Extraction validates the caller's explicit target, not the pristine
+        # archive (nor the same-named pytest fixture). ROOT remains independently
+        # overridable for the current primitive resource check.
+        target = namespace.pop("HISTORICAL_TARGET", namespace["ROOT"])
+        namespace["historical_runtime_root"] = lambda: target
     tree = ast.parse((ROOT / "tests/unit" / filename).read_bytes())
     node = next(
         item for item in tree.body if isinstance(item, ast.FunctionDef) and item.name == name
@@ -986,3 +992,33 @@ def test_copied_guard_code_and_constants_are_only_hash_checked(
             run()
     finally:
         path.write_bytes(original)
+
+
+def test_incidence_guard_routes_history_and_live_primitives_independently(
+    historical_runtime_root, tmp_path
+):
+    relative = "src/mechanical_cad/arc_profile_primitives.py"
+    live = tmp_path / relative
+    live.parent.mkdir(parents=True)
+    live.write_bytes((ROOT / relative).read_bytes())
+    namespace = {
+        "ROOT": tmp_path,
+        "HISTORICAL_TARGET": historical_runtime_root,
+        "ast": ast,
+        "hashlib": hashlib,
+        "json": json,
+    }
+    guard = _extract_function("test_arc_profile_incidence.py", INCIDENCE_GUARD, namespace)
+    guard()  # History is absent from the live tree; primitives are current bytes.
+    target = historical_runtime_root / "src/mechanical_cad/model.py"
+    original = target.read_bytes()
+    try:
+        target.write_bytes(original + b"\n# unreviewed historical target mutation\n")
+        with pytest.raises(AssertionError):
+            guard()  # A pristine archive substitution would incorrectly pass.
+    finally:
+        target.write_bytes(original)
+    guard()
+    live.write_bytes(live.read_bytes() + b"\n# unreviewed live primitive mutation\n")
+    with pytest.raises(AssertionError):
+        guard()  # Historical primitives must not substitute for the live leaf.

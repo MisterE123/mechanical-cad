@@ -14,7 +14,7 @@ import json
 import sys
 from pathlib import Path
 
-EXPECTED_VERSION = "1.29.0"
+EXPECTED_VERSION = "1.30.0"
 
 
 def verify(root: Path) -> dict:

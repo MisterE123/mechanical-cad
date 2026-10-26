@@ -583,7 +583,7 @@ def _dispatch(layout, core, system, operating_system, importer):
             package.__file__ != operating_system.path.join(core, "__init__.py")
             or package.__spec__.origin != package.__file__
             or list(package.__path__) != [core]
-            or package.__version__ != "1.29.0"
+            or package.__version__ != "1.30.0"
         ):
             _fail("imported_core_origin_mismatch")
         sidecar = importer("mechanical_cad.sidecar")

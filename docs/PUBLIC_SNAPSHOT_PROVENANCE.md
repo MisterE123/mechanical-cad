@@ -1,6 +1,6 @@
 # Public source snapshot provenance
 
-Source: local development commit `dd9683492b43f74807e26c5f7ec45c8375877381`.
+Source: local development commit `ec5ddb90fb227ceb2348a83713db5fab26375c71`.
 
 All executable source, tests, hash-pinned fixtures, examples and application assets are byte-identical to that committed tree. Documentation-only privacy changes remove private transfer/host details, replace six operational Windows reports with public technical summaries, and generalize workspace/host descriptions in Markdown. This provenance document is added.
 
@@ -57,3 +57,12 @@ Git checkout attributes preserve exact bytes across operating systems. The origi
 The preceding public `065be4ac6b10f2a6e5936b79956bb6cabcec645c` CI completed with 18,798 passed, 137 failed and 12 skipped on Python 3.12/sketch, and 18,797 passed, 138 failed and 12 skipped on Python 3.11/3.13. Setup errors were eliminated. Those results predate these repairs. The Techbox candidate's Windows jobs exposed an unconditional POSIX `fcntl` test import during collection; the separate Windows portability fix is not included here. Exact-current CI must run again.
 
 Separate retained Linux source-level Blender 5.2.2 checks on a15bdbf passed eight processes and 190 numbered assertions plus a fingerprint-rejection contract, including source-update, insertion and face-mate Apply/Cancel/save/independent reopen. These are not installed-package, GUI/Undo/Redo, Windows or complete-release qualification for this newer source.
+
+
+## Frozen 1.30.0 working-release candidate
+
+This candidate follows actual public Techbox commit `8e8f5e90d9b661ac79bb6fc6b2a490d09b2ad30c` and binds all functional files to local source `ec5ddb90fb227ceb2348a83713db5fab26375c71`. It contains reviewed CI harness repairs and Windows fixture work plus five version-only changes to 1.30.0, not new product features. All prior public sanitizations and the exact CRLF evidence receipt remain preserved.
+
+The preceding 2059 public candidate completed all four source-CI jobs with 19,070 passed, four failed, twelve skipped and 119 setup errors. The remaining issues were AST-extracted test-helper dependencies and generated editable-install metadata in a strict path inventory. The three harness repairs have passed 2,837 targeted checks and portable controls. Version/release-event checks passed 56 tests, and a real sidecar 1.30 origin/cycle/native control passed. Longer validation remained running when this publication was prepared; no full-suite pass is claimed.
+
+The purpose of this frozen source is a real 1.30 Linux/Windows candidate build and exact-installed native qualification. Audited materials evidence is included as project documentation. A source push, focused tests, pipeline configuration or structural materials check is not itself a working release. Main promotion, tags and release publication remain gated on verified candidate results.

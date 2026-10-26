@@ -10,7 +10,7 @@ caches. Implementation layers are separate from this Blender add-on entry point.
 bl_info = {
     "name": "Mechanical CAD",
     "author": "Mechanical CAD contributors",
-    "version": (1, 29, 0),
+    "version": (1, 30, 0),
     "blender": (5, 2, 0),
     "location": "View3D > Sidebar > CAD > Open CAD Workspaces",
     "description": "Parametric sketches, editable solid features, mechanical assemblies and exact exports",
