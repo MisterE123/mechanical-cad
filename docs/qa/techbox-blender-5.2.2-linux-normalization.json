@@ -1,0 +1,483 @@
+{
+  "archive_bytes": 383295504,
+  "archive_sha256": "84098912789dc450e95697c4184fb8a90acbe5111c2ba4aede3fecb57806a168",
+  "members": 6547,
+  "native_execution": false,
+  "normalized_aliases": [
+    {
+      "bytes": 595280,
+      "path": "blender-5.2.2-linux-x64/lib/libMaterialXRender.so.1",
+      "regular_source": "blender-5.2.2-linux-x64/lib/libMaterialXRender.so.1.39.4",
+      "sha256": "9383c72d7f2959178b3cdab87765a70ae4929ea708dbfaa9ef7737f966e1a68b"
+    },
+    {
+      "bytes": 529296,
+      "path": "blender-5.2.2-linux-x64/lib/libIex.so.33",
+      "regular_source": "blender-5.2.2-linux-x64/lib/libIex.so.33.3.4.10",
+      "sha256": "396d46d788778a851d032527c95b6fcd1575b1d40b2afdd76cf476ce46612130"
+    },
+    {
+      "bytes": 135624,
+      "path": "blender-5.2.2-linux-x64/lib/libtbbmalloc.so",
+      "regular_source": "blender-5.2.2-linux-x64/lib/libtbbmalloc.so.2.17",
+      "sha256": "a4196d95c106d71d3ae39ba79a145e5f2955ae611380ae7c7a8a5fdb7cda6bfe"
+    },
+    {
+      "bytes": 923112,
+      "path": "blender-5.2.2-linux-x64/lib/libMaterialXGenShader.so",
+      "regular_source": "blender-5.2.2-linux-x64/lib/libMaterialXGenShader.so.1.39.4",
+      "sha256": "ec0ccbdfb5ad5881923f0045cdee0cb59eaf8b614c363c2e0f1fe8dea58a972f"
+    },
+    {
+      "bytes": 47672,
+      "path": "blender-5.2.2-linux-x64/lib/libIlmThread.so",
+      "regular_source": "blender-5.2.2-linux-x64/lib/libIlmThread.so.33.3.4.10",
+      "sha256": "09004b052d34491d5a171265f8570b05b147fe4bceb30cf07043a19b15f32114"
+    },
+    {
+      "bytes": 209768,
+      "path": "blender-5.2.2-linux-x64/lib/libOpenEXRUtil.so.33",
+      "regular_source": "blender-5.2.2-linux-x64/lib/libOpenEXRUtil.so.33.3.4.10",
+      "sha256": "79fa92fff6828f00e24834389d085c442138ef570bb15caa781e73b47c0aa991"
+    },
+    {
+      "bytes": 112648,
+      "path": "blender-5.2.2-linux-x64/lib/libOpenImageDenoise.so",
+      "regular_source": "blender-5.2.2-linux-x64/lib/libOpenImageDenoise.so.2.5.0",
+      "sha256": "640b85e907e420ca4c4c1a320a0c648dd80d746e38e30cd6915c081eede682a1"
+    },
+    {
+      "bytes": 1228608,
+      "path": "blender-5.2.2-linux-x64/lib/libMaterialXCore.so.1",
+      "regular_source": "blender-5.2.2-linux-x64/lib/libMaterialXCore.so.1.39.4",
+      "sha256": "a5d03f6d28f4c800d70392d592aff15d344e9ac92b83f86ed74bdd79901507e0"
+    },
+    {
+      "bytes": 327320,
+      "path": "blender-5.2.2-linux-x64/lib/libMaterialXFormat.so",
+      "regular_source": "blender-5.2.2-linux-x64/lib/libMaterialXFormat.so.1.39.4",
+      "sha256": "37f6ce4f12c4ffd0b0804d20c1736f436aad1bb1fbd5a6895e5b9bf8052b8172"
+    },
+    {
+      "bytes": 296400,
+      "path": "blender-5.2.2-linux-x64/lib/libtbb.so.12",
+      "regular_source": "blender-5.2.2-linux-x64/lib/libtbb.so.12.17",
+      "sha256": "2a3b7bc867f52a0c3c8bf65db01333fd0d7bfab0924b4ecace1e74bc64f0a6a6"
+    },
+    {
+      "bytes": 187720,
+      "path": "blender-5.2.2-linux-x64/lib/libMaterialXGenOsl.so",
+      "regular_source": "blender-5.2.2-linux-x64/lib/libMaterialXGenOsl.so.1.39.4",
+      "sha256": "998575ea710f2d74d55880d8901be85f58b71bae73c541278fa12f109faaacbf"
+    },
+    {
+      "bytes": 834352,
+      "path": "blender-5.2.2-linux-x64/lib/libosdGPU.so",
+      "regular_source": "blender-5.2.2-linux-x64/lib/libosdGPU.so.3.7.0",
+      "sha256": "2adba30e0c32c3b28e3879f99b6cf3f9c8715dd9a402c0d05fa6fd66b6fb3e10"
+    },
+    {
+      "bytes": 17677848,
+      "path": "blender-5.2.2-linux-x64/lib/libOpenImageIO.so",
+      "regular_source": "blender-5.2.2-linux-x64/lib/libOpenImageIO.so.3.1.13",
+      "sha256": "207b70b9d3d1ae48f6013dbad654ad0306a10ae35c8c0e546dab189a761d6efb"
+    },
+    {
+      "bytes": 1437424,
+      "path": "blender-5.2.2-linux-x64/lib/libur_adapter_level_zero_v2.so",
+      "regular_source": "blender-5.2.2-linux-x64/lib/libur_adapter_level_zero_v2.so.0.12.0",
+      "sha256": "2ee6cd41531208a99eeaa1f2c96a6f9acf003a32cee5b03250c6c3514aead0e8"
+    },
+    {
+      "bytes": 595280,
+      "path": "blender-5.2.2-linux-x64/lib/libMaterialXRender.so",
+      "regular_source": "blender-5.2.2-linux-x64/lib/libMaterialXRender.so.1.39.4",
+      "sha256": "9383c72d7f2959178b3cdab87765a70ae4929ea708dbfaa9ef7737f966e1a68b"
+    },
+    {
+      "bytes": 2010432,
+      "path": "blender-5.2.2-linux-x64/lib/libdraco.so",
+      "regular_source": "blender-5.2.2-linux-x64/lib/libdraco.so.9.0.0",
+      "sha256": "692475ffaa5145378ef22a91de1046bbbb5115e4bcbda230243ef27906a45391"
+    },
+    {
+      "bytes": 426184,
+      "path": "blender-5.2.2-linux-x64/lib/libMaterialXRenderGlsl.so",
+      "regular_source": "blender-5.2.2-linux-x64/lib/libMaterialXRenderGlsl.so.1.39.4",
+      "sha256": "b496c4b73704910a1999b40a3c3645c9b5380c978aca53da3326dcc87469399b"
+    },
+    {
+      "bytes": 422536,
+      "path": "blender-5.2.2-linux-x64/lib/libMaterialXGenMdl.so.1",
+      "regular_source": "blender-5.2.2-linux-x64/lib/libMaterialXGenMdl.so.1.39.4",
+      "sha256": "b39331242ffbdc7d46a931dce24475a1d7b67b5f4f01e7b2e6c0fc2dbb01934a"
+    },
+    {
+      "bytes": 63126792,
+      "path": "blender-5.2.2-linux-x64/lib/liboslexec.so",
+      "regular_source": "blender-5.2.2-linux-x64/lib/liboslexec.so.1.15.3",
+      "sha256": "5497e7bb936d51dcc6e2eadcbc777f01ef3ff5e24c48cf518853b7a5ad69728a"
+    },
+    {
+      "bytes": 426184,
+      "path": "blender-5.2.2-linux-x64/lib/libMaterialXRenderGlsl.so.1",
+      "regular_source": "blender-5.2.2-linux-x64/lib/libMaterialXRenderGlsl.so.1.39.4",
+      "sha256": "b496c4b73704910a1999b40a3c3645c9b5380c978aca53da3326dcc87469399b"
+    },
+    {
+      "bytes": 313512,
+      "path": "blender-5.2.2-linux-x64/lib/libImath.so.30",
+      "regular_source": "blender-5.2.2-linux-x64/lib/libImath.so.30.3.2.2",
+      "sha256": "10fd65525b08d33ebaf1505b70f86befe80ab2f33cf0fcee2a3d36e0af1cf1cf"
+    },
+    {
+      "bytes": 2010432,
+      "path": "blender-5.2.2-linux-x64/lib/libdraco.so.9",
+      "regular_source": "blender-5.2.2-linux-x64/lib/libdraco.so.9.0.0",
+      "sha256": "692475ffaa5145378ef22a91de1046bbbb5115e4bcbda230243ef27906a45391"
+    },
+    {
+      "bytes": 402416,
+      "path": "blender-5.2.2-linux-x64/lib/libOpenEXRCore.so",
+      "regular_source": "blender-5.2.2-linux-x64/lib/libOpenEXRCore.so.33.3.4.10",
+      "sha256": "9dba564b853acc653e9c7fb17a08ad50401998ebe5a9c4afd17056bdda828b76"
+    },
+    {
+      "bytes": 209768,
+      "path": "blender-5.2.2-linux-x64/lib/libOpenEXRUtil.so",
+      "regular_source": "blender-5.2.2-linux-x64/lib/libOpenEXRUtil.so.33.3.4.10",
+      "sha256": "79fa92fff6828f00e24834389d085c442138ef570bb15caa781e73b47c0aa991"
+    },
+    {
+      "bytes": 24688,
+      "path": "blender-5.2.2-linux-x64/lib/libtbbmalloc_proxy.so.2",
+      "regular_source": "blender-5.2.2-linux-x64/lib/libtbbmalloc_proxy.so.2.17",
+      "sha256": "162ebd71b3859d52cf22596d05b4c2718e3de936360896e256b11be6f35f3965"
+    },
+    {
+      "bytes": 422536,
+      "path": "blender-5.2.2-linux-x64/lib/libMaterialXGenMdl.so",
+      "regular_source": "blender-5.2.2-linux-x64/lib/libMaterialXGenMdl.so.1.39.4",
+      "sha256": "b39331242ffbdc7d46a931dce24475a1d7b67b5f4f01e7b2e6c0fc2dbb01934a"
+    },
+    {
+      "bytes": 296400,
+      "path": "blender-5.2.2-linux-x64/lib/libtbb.so",
+      "regular_source": "blender-5.2.2-linux-x64/lib/libtbb.so.12.17",
+      "sha256": "2a3b7bc867f52a0c3c8bf65db01333fd0d7bfab0924b4ecace1e74bc64f0a6a6"
+    },
+    {
+      "bytes": 52272,
+      "path": "blender-5.2.2-linux-x64/lib/liboslnoise.so.1.15",
+      "regular_source": "blender-5.2.2-linux-x64/lib/liboslnoise.so.1.15.3",
+      "sha256": "7cbd41c4ee0f363edb56ecfbf6f9c4bbd27a858fca9ac14409410c3c7ec45c65"
+    },
+    {
+      "bytes": 839096,
+      "path": "blender-5.2.2-linux-x64/lib/libosdCPU.so",
+      "regular_source": "blender-5.2.2-linux-x64/lib/libosdCPU.so.3.7.0",
+      "sha256": "0770f40922cd12823380012e98297f8045e3c0c2bf36d3088e668f5edbcc9346"
+    },
+    {
+      "bytes": 561208,
+      "path": "blender-5.2.2-linux-x64/lib/libvulkan.so.1",
+      "regular_source": "blender-5.2.2-linux-x64/lib/libvulkan.so.1.4.341",
+      "sha256": "86713c6a4c2216cdc92c9141fe6ebf293f66ebf61311c2f6208a395ce1218e23"
+    },
+    {
+      "bytes": 417512,
+      "path": "blender-5.2.2-linux-x64/lib/libMaterialXGenGlsl.so.1",
+      "regular_source": "blender-5.2.2-linux-x64/lib/libMaterialXGenGlsl.so.1.39.4",
+      "sha256": "91361d08a16dfac645090223635d5d192a7adbddd68eb89aa48bdc3db47a00b1"
+    },
+    {
+      "bytes": 4059392,
+      "path": "blender-5.2.2-linux-x64/lib/libsycl.so",
+      "regular_source": "blender-5.2.2-linux-x64/lib/libsycl.so.8.0.0-0",
+      "sha256": "b6aed89998738080310b2dc6769dc6d279aca2e08cfbf8509bcf06fdd8b90101"
+    },
+    {
+      "bytes": 232168,
+      "path": "blender-5.2.2-linux-x64/lib/liboslquery.so.1.15",
+      "regular_source": "blender-5.2.2-linux-x64/lib/liboslquery.so.1.15.3",
+      "sha256": "9c06af8590676129284baf4f23b2c7e7d911468e061ea96e3a0765d3d65f62e5"
+    },
+    {
+      "bytes": 58241856,
+      "path": "blender-5.2.2-linux-x64/lib/libopenvdb.so.13.0",
+      "regular_source": "blender-5.2.2-linux-x64/lib/libopenvdb.so.13.0.0",
+      "sha256": "ba2fa6a5f970293e344c4745e105240ca77d0d92404ac20af1507206dedc8cf4"
+    },
+    {
+      "bytes": 499984,
+      "path": "blender-5.2.2-linux-x64/lib/libopenjph.so.0.25",
+      "regular_source": "blender-5.2.2-linux-x64/lib/libopenjph.so.0.25.2",
+      "sha256": "021bd6eba7dd857b41abe530ee9d19755807e2a4d21831ffeae8a031cf2ee47c"
+    },
+    {
+      "bytes": 18680,
+      "path": "blender-5.2.2-linux-x64/lib/libMaterialXRenderHw.so",
+      "regular_source": "blender-5.2.2-linux-x64/lib/libMaterialXRenderHw.so.1.39.4",
+      "sha256": "a5c8f47b4e6a53838565048eb71c23855a3f0e811a9c5fba9f90db30ad62b8fa"
+    },
+    {
+      "bytes": 402416,
+      "path": "blender-5.2.2-linux-x64/lib/libOpenEXRCore.so.33",
+      "regular_source": "blender-5.2.2-linux-x64/lib/libOpenEXRCore.so.33.3.4.10",
+      "sha256": "9dba564b853acc653e9c7fb17a08ad50401998ebe5a9c4afd17056bdda828b76"
+    },
+    {
+      "bytes": 2886008,
+      "path": "blender-5.2.2-linux-x64/lib/libSDL3.so",
+      "regular_source": "blender-5.2.2-linux-x64/lib/libSDL3.so.0.4.2",
+      "sha256": "3557d0fb8aaa52b630141692e8c5aabcccc6b186ec95c3b8986864224d3be339"
+    },
+    {
+      "bytes": 17677848,
+      "path": "blender-5.2.2-linux-x64/lib/libOpenImageIO.so.3.1",
+      "regular_source": "blender-5.2.2-linux-x64/lib/libOpenImageIO.so.3.1.13",
+      "sha256": "207b70b9d3d1ae48f6013dbad654ad0306a10ae35c8c0e546dab189a761d6efb"
+    },
+    {
+      "bytes": 789160,
+      "path": "blender-5.2.2-linux-x64/lib/libopenxr_loader.so",
+      "regular_source": "blender-5.2.2-linux-x64/lib/libopenxr_loader.so.1.1.53",
+      "sha256": "7adbb2869762d901feaa5ff069628795611947e4b3695deade5e7cd9d074e624"
+    },
+    {
+      "bytes": 7217328,
+      "path": "blender-5.2.2-linux-x64/lib/libOpenColorIO.so",
+      "regular_source": "blender-5.2.2-linux-x64/lib/libOpenColorIO.so.2.5.0",
+      "sha256": "04047e22a1bc7c3b2fe6ba14f83c067fee7d6f28d2ffcc759c9735097d3ff625"
+    },
+    {
+      "bytes": 18680,
+      "path": "blender-5.2.2-linux-x64/lib/libMaterialXRenderHw.so.1",
+      "regular_source": "blender-5.2.2-linux-x64/lib/libMaterialXRenderHw.so.1.39.4",
+      "sha256": "a5c8f47b4e6a53838565048eb71c23855a3f0e811a9c5fba9f90db30ad62b8fa"
+    },
+    {
+      "bytes": 313512,
+      "path": "blender-5.2.2-linux-x64/lib/libImath.so",
+      "regular_source": "blender-5.2.2-linux-x64/lib/libImath.so.30.3.2.2",
+      "sha256": "10fd65525b08d33ebaf1505b70f86befe80ab2f33cf0fcee2a3d36e0af1cf1cf"
+    },
+    {
+      "bytes": 561208,
+      "path": "blender-5.2.2-linux-x64/lib/libvulkan.so",
+      "regular_source": "blender-5.2.2-linux-x64/lib/libvulkan.so.1.4.341",
+      "sha256": "86713c6a4c2216cdc92c9141fe6ebf293f66ebf61311c2f6208a395ce1218e23"
+    },
+    {
+      "bytes": 1228608,
+      "path": "blender-5.2.2-linux-x64/lib/libMaterialXCore.so",
+      "regular_source": "blender-5.2.2-linux-x64/lib/libMaterialXCore.so.1.39.4",
+      "sha256": "a5d03f6d28f4c800d70392d592aff15d344e9ac92b83f86ed74bdd79901507e0"
+    },
+    {
+      "bytes": 327320,
+      "path": "blender-5.2.2-linux-x64/lib/libMaterialXFormat.so.1",
+      "regular_source": "blender-5.2.2-linux-x64/lib/libMaterialXFormat.so.1.39.4",
+      "sha256": "37f6ce4f12c4ffd0b0804d20c1736f436aad1bb1fbd5a6895e5b9bf8052b8172"
+    },
+    {
+      "bytes": 5638336,
+      "path": "blender-5.2.2-linux-x64/lib/libceres.so.4",
+      "regular_source": "blender-5.2.2-linux-x64/lib/libceres.so.2.3.0",
+      "sha256": "c511a9183895ba1a90a1507a13c6c9eed91bdf711bd8d2c6f91446ab255f01c3"
+    },
+    {
+      "bytes": 1294832,
+      "path": "blender-5.2.2-linux-x64/lib/libOpenEXR.so.33",
+      "regular_source": "blender-5.2.2-linux-x64/lib/libOpenEXR.so.33.3.4.10",
+      "sha256": "533a5b6d6fadf588c940b0398580bd9ccf5a4dca1b21fb569cfafe82406d9495"
+    },
+    {
+      "bytes": 1294832,
+      "path": "blender-5.2.2-linux-x64/lib/libOpenEXR.so",
+      "regular_source": "blender-5.2.2-linux-x64/lib/libOpenEXR.so.33.3.4.10",
+      "sha256": "533a5b6d6fadf588c940b0398580bd9ccf5a4dca1b21fb569cfafe82406d9495"
+    },
+    {
+      "bytes": 112648,
+      "path": "blender-5.2.2-linux-x64/lib/libOpenImageDenoise.so.2",
+      "regular_source": "blender-5.2.2-linux-x64/lib/libOpenImageDenoise.so.2.5.0",
+      "sha256": "640b85e907e420ca4c4c1a320a0c648dd80d746e38e30cd6915c081eede682a1"
+    },
+    {
+      "bytes": 1109488,
+      "path": "blender-5.2.2-linux-x64/lib/libOpenImageIO_Util.so.3.1",
+      "regular_source": "blender-5.2.2-linux-x64/lib/libOpenImageIO_Util.so.3.1.13",
+      "sha256": "e52439d9788a61ec3f7ad8a1af82970e06655512fd9842de92b421868a93c080"
+    },
+    {
+      "bytes": 17576976,
+      "path": "blender-5.2.2-linux-x64/lib/libur_loader.so.0",
+      "regular_source": "blender-5.2.2-linux-x64/lib/libur_loader.so.0.12.0",
+      "sha256": "343e9e6dd036e529bd9748784a7eb8eb9074b26db17954e3dfb54a7fcda1e7e2"
+    },
+    {
+      "bytes": 47672,
+      "path": "blender-5.2.2-linux-x64/lib/libIlmThread.so.33",
+      "regular_source": "blender-5.2.2-linux-x64/lib/libIlmThread.so.33.3.4.10",
+      "sha256": "09004b052d34491d5a171265f8570b05b147fe4bceb30cf07043a19b15f32114"
+    },
+    {
+      "bytes": 93072,
+      "path": "blender-5.2.2-linux-x64/lib/libMaterialXRenderOsl.so",
+      "regular_source": "blender-5.2.2-linux-x64/lib/libMaterialXRenderOsl.so.1.39.4",
+      "sha256": "c135d6fd3eb94caa61dac2cde64a85cb54d294e7522d258360b820cff1246d2c"
+    },
+    {
+      "bytes": 1109488,
+      "path": "blender-5.2.2-linux-x64/lib/libOpenImageIO_Util.so",
+      "regular_source": "blender-5.2.2-linux-x64/lib/libOpenImageIO_Util.so.3.1.13",
+      "sha256": "e52439d9788a61ec3f7ad8a1af82970e06655512fd9842de92b421868a93c080"
+    },
+    {
+      "bytes": 306760,
+      "path": "blender-5.2.2-linux-x64/lib/libMaterialXGenMsl.so.1",
+      "regular_source": "blender-5.2.2-linux-x64/lib/libMaterialXGenMsl.so.1.39.4",
+      "sha256": "f849625d46ea32889cfede51ff8eab3c063cb8e110ee6d4c33a783f16e3c7edf"
+    },
+    {
+      "bytes": 5638336,
+      "path": "blender-5.2.2-linux-x64/lib/libceres.so",
+      "regular_source": "blender-5.2.2-linux-x64/lib/libceres.so.2.3.0",
+      "sha256": "c511a9183895ba1a90a1507a13c6c9eed91bdf711bd8d2c6f91446ab255f01c3"
+    },
+    {
+      "bytes": 417512,
+      "path": "blender-5.2.2-linux-x64/lib/libMaterialXGenGlsl.so",
+      "regular_source": "blender-5.2.2-linux-x64/lib/libMaterialXGenGlsl.so.1.39.4",
+      "sha256": "91361d08a16dfac645090223635d5d192a7adbddd68eb89aa48bdc3db47a00b1"
+    },
+    {
+      "bytes": 24688,
+      "path": "blender-5.2.2-linux-x64/lib/libtbbmalloc_proxy.so",
+      "regular_source": "blender-5.2.2-linux-x64/lib/libtbbmalloc_proxy.so.2.17",
+      "sha256": "162ebd71b3859d52cf22596d05b4c2718e3de936360896e256b11be6f35f3965"
+    },
+    {
+      "bytes": 306760,
+      "path": "blender-5.2.2-linux-x64/lib/libMaterialXGenMsl.so",
+      "regular_source": "blender-5.2.2-linux-x64/lib/libMaterialXGenMsl.so.1.39.4",
+      "sha256": "f849625d46ea32889cfede51ff8eab3c063cb8e110ee6d4c33a783f16e3c7edf"
+    },
+    {
+      "bytes": 17576976,
+      "path": "blender-5.2.2-linux-x64/lib/libur_loader.so",
+      "regular_source": "blender-5.2.2-linux-x64/lib/libur_loader.so.0.12.0",
+      "sha256": "343e9e6dd036e529bd9748784a7eb8eb9074b26db17954e3dfb54a7fcda1e7e2"
+    },
+    {
+      "bytes": 4059392,
+      "path": "blender-5.2.2-linux-x64/lib/libsycl.so.8",
+      "regular_source": "blender-5.2.2-linux-x64/lib/libsycl.so.8.0.0-0",
+      "sha256": "b6aed89998738080310b2dc6769dc6d279aca2e08cfbf8509bcf06fdd8b90101"
+    },
+    {
+      "bytes": 2886008,
+      "path": "blender-5.2.2-linux-x64/lib/libSDL3.so.0",
+      "regular_source": "blender-5.2.2-linux-x64/lib/libSDL3.so.0.4.2",
+      "sha256": "3557d0fb8aaa52b630141692e8c5aabcccc6b186ec95c3b8986864224d3be339"
+    },
+    {
+      "bytes": 135624,
+      "path": "blender-5.2.2-linux-x64/lib/libtbbmalloc.so.2",
+      "regular_source": "blender-5.2.2-linux-x64/lib/libtbbmalloc.so.2.17",
+      "sha256": "a4196d95c106d71d3ae39ba79a145e5f2955ae611380ae7c7a8a5fdb7cda6bfe"
+    },
+    {
+      "bytes": 52272,
+      "path": "blender-5.2.2-linux-x64/lib/liboslnoise.so",
+      "regular_source": "blender-5.2.2-linux-x64/lib/liboslnoise.so.1.15.3",
+      "sha256": "7cbd41c4ee0f363edb56ecfbf6f9c4bbd27a858fca9ac14409410c3c7ec45c65"
+    },
+    {
+      "bytes": 499984,
+      "path": "blender-5.2.2-linux-x64/lib/libopenjph.so",
+      "regular_source": "blender-5.2.2-linux-x64/lib/libopenjph.so.0.25.2",
+      "sha256": "021bd6eba7dd857b41abe530ee9d19755807e2a4d21831ffeae8a031cf2ee47c"
+    },
+    {
+      "bytes": 49707368,
+      "path": "blender-5.2.2-linux-x64/lib/liboslcomp.so.1.15",
+      "regular_source": "blender-5.2.2-linux-x64/lib/liboslcomp.so.1.15.3",
+      "sha256": "d2cd39af12389754b11070005ac55a298a55379d7d9a77413fcee4dff2e9653f"
+    },
+    {
+      "bytes": 63126792,
+      "path": "blender-5.2.2-linux-x64/lib/liboslexec.so.1.15",
+      "regular_source": "blender-5.2.2-linux-x64/lib/liboslexec.so.1.15.3",
+      "sha256": "5497e7bb936d51dcc6e2eadcbc777f01ef3ff5e24c48cf518853b7a5ad69728a"
+    },
+    {
+      "bytes": 7217328,
+      "path": "blender-5.2.2-linux-x64/lib/libOpenColorIO.so.2.5",
+      "regular_source": "blender-5.2.2-linux-x64/lib/libOpenColorIO.so.2.5.0",
+      "sha256": "04047e22a1bc7c3b2fe6ba14f83c067fee7d6f28d2ffcc759c9735097d3ff625"
+    },
+    {
+      "bytes": 529296,
+      "path": "blender-5.2.2-linux-x64/lib/libIex.so",
+      "regular_source": "blender-5.2.2-linux-x64/lib/libIex.so.33.3.4.10",
+      "sha256": "396d46d788778a851d032527c95b6fcd1575b1d40b2afdd76cf476ce46612130"
+    },
+    {
+      "bytes": 923112,
+      "path": "blender-5.2.2-linux-x64/lib/libMaterialXGenShader.so.1",
+      "regular_source": "blender-5.2.2-linux-x64/lib/libMaterialXGenShader.so.1.39.4",
+      "sha256": "ec0ccbdfb5ad5881923f0045cdee0cb59eaf8b614c363c2e0f1fe8dea58a972f"
+    },
+    {
+      "bytes": 58241856,
+      "path": "blender-5.2.2-linux-x64/lib/libopenvdb.so",
+      "regular_source": "blender-5.2.2-linux-x64/lib/libopenvdb.so.13.0.0",
+      "sha256": "ba2fa6a5f970293e344c4745e105240ca77d0d92404ac20af1507206dedc8cf4"
+    },
+    {
+      "bytes": 789160,
+      "path": "blender-5.2.2-linux-x64/lib/libopenxr_loader.so.1",
+      "regular_source": "blender-5.2.2-linux-x64/lib/libopenxr_loader.so.1.1.53",
+      "sha256": "7adbb2869762d901feaa5ff069628795611947e4b3695deade5e7cd9d074e624"
+    },
+    {
+      "bytes": 49707368,
+      "path": "blender-5.2.2-linux-x64/lib/liboslcomp.so",
+      "regular_source": "blender-5.2.2-linux-x64/lib/liboslcomp.so.1.15.3",
+      "sha256": "d2cd39af12389754b11070005ac55a298a55379d7d9a77413fcee4dff2e9653f"
+    },
+    {
+      "bytes": 232168,
+      "path": "blender-5.2.2-linux-x64/lib/liboslquery.so",
+      "regular_source": "blender-5.2.2-linux-x64/lib/liboslquery.so.1.15.3",
+      "sha256": "9c06af8590676129284baf4f23b2c7e7d911468e061ea96e3a0765d3d65f62e5"
+    },
+    {
+      "bytes": 93072,
+      "path": "blender-5.2.2-linux-x64/lib/libMaterialXRenderOsl.so.1",
+      "regular_source": "blender-5.2.2-linux-x64/lib/libMaterialXRenderOsl.so.1.39.4",
+      "sha256": "c135d6fd3eb94caa61dac2cde64a85cb54d294e7522d258360b820cff1246d2c"
+    },
+    {
+      "bytes": 187720,
+      "path": "blender-5.2.2-linux-x64/lib/libMaterialXGenOsl.so.1",
+      "regular_source": "blender-5.2.2-linux-x64/lib/libMaterialXGenOsl.so.1.39.4",
+      "sha256": "998575ea710f2d74d55880d8901be85f58b71bae73c541278fa12f109faaacbf"
+    },
+    {
+      "bytes": 1437424,
+      "path": "blender-5.2.2-linux-x64/lib/libur_adapter_level_zero_v2.so.0",
+      "regular_source": "blender-5.2.2-linux-x64/lib/libur_adapter_level_zero_v2.so.0.12.0",
+      "sha256": "2ee6cd41531208a99eeaa1f2c96a6f9acf003a32cee5b03250c6c3514aead0e8"
+    },
+    {
+      "bytes": 27884688,
+      "path": "blender-5.2.2-linux-x64/lib/libembree4.so",
+      "regular_source": "blender-5.2.2-linux-x64/lib/libembree4.so.4",
+      "sha256": "8715c82ff56331550c174266d737c644d6161469638f583a00003348140c0fb7"
+    }
+  ],
+  "regular_outputs": 5672
+}

@@ -2,11 +2,12 @@
 
 Implementation is staged locally and has not run on GitHub. No enabled automation,
 qualified native release, legal clearance or main promotion is claimed. Existing
-suite failures, absent substantive materials review and pending Windows acquisition
+suite failures, absent substantive materials review and prepared platform inputs
 remain blocking inputs, not optional warnings.
 
 `.github/workflows/release.yml` replaces the nonpublishing readiness workflow.
-Its tag path runs the full suite on both OSes, assembles both target archives on
+Its tag path runs the full suite on Python 3.11, 3.12 and 3.13 on both OSes, matching
+the supported Core workflow matrix as a direct job dependency. It assembles both target archives on
 Linux, installs/writes/reopens each exact archive in three independent native
 Blender processes on its target OS, admits both results, and publishes one release.
 Failed matrix jobs block publication. Only the final job gets `contents: write`;
@@ -75,17 +76,25 @@ particular, retain all unresolved issues and account explicitly for each one.
 The map must bind the exact candidate source. Updating configuration does not
 rewrite maps, waive missing sources or approve distribution.
 
-The Linux acquisition adapter supplies only runtime bytes. Integration contract
-for the cloud-owned Windows adapter is
-`scripts/acquire_windows_release_inputs.py: acquire(lock_path, work_root)` returning
-`platform: windows-x64`, `native_execution: false`, and producing `runtime/` and
-`runtime-inventory.json`. Both execute on Linux to retain Unix mode accounting;
-the acquired inventory must equal the separately reviewed metadata inventory.
-Until that adapter and lock are available this stage deliberately fails. A rename
-or changed cloud interface requires explicit integration, never a fallback recipe.
+The shared reviewed `scripts/acquire_release_inputs.py: acquire(lock_path,
+work_root)` now supplies runtime bytes for both target locks. The source snapshot
+065be4a adds `release_inputs/windows-x64/acquisition-lock.json`, mapping 1,050 files.
+Both execute on Linux to retain Unix mode accounting. The adapter's receipt must
+bind the intended platform, exact acquisition-lock hash and `native_execution:
+false`; its inventory must equal the separately reviewed metadata inventory.
+This integration does not establish a Windows build or native qualification.
 
-Blender downloads are size/hash pinned. Extraction accepts only portable regular
-files with finite expansion; symlinks, reparse-style entries and traversal fail.
+Blender downloads are size/hash pinned. Source/materials input extraction remains
+file-only: links, reparse-style entries and traversal fail. The official Linux
+Blender 5.2.2 archive has a separate narrow normalization policy in
+`scripts/blender_release_archive.py`. Its exact archive hash/size/URL and the exact
+79-link map in `release_inputs/blender-5.2.2-linux-x64-links.json` are pinned.
+Only those library-basename aliases may resolve through reviewed in-archive links
+to regular members. The entire plan rejects duplicate/case-ambiguous paths,
+absolute/traversing targets, missing or unreviewed aliases/members, file/link
+parents, cycles, excessive depth, sparse/special members and expansion overruns
+before output writes. Resolved aliases become independent regular copies with
+verified target-byte hashes. No filesystem symlink or hard link is created.
 Tests use isolated generated designs/profiles. No global preferences or user
 models are accessed. Native smoke is bounded installed-package evidence, not GUI,
 Undo, exhaustive workflow, or manufacturing qualification.
@@ -98,12 +107,18 @@ native modes, and qualification script/fixture Git blob identities. Full-suite
 success is enforced by workflow job dependencies, not a forgeable success flag in
 the input configuration. Artifact transfers stay within the same workflow run.
 
-The publisher verifies the existing remote tag, refuses any existing release,
+The publisher verifies the existing remote tag, refuses any existing release or draft,
 creates a draft, uploads both ZIPs and admission manifest, verifies GitHub's SHA256
 asset digests and exact asset set, rechecks the tag, then publishes the draft.
 It never creates/moves tags, overwrites/deletes assets, or cleans up uncertain
-remote state. If a write times out, one read reconciliation must prove that exact
-operation completed. No write retries occur. Unconfirmed results stop the job and
+remote state. Draft detection uses authenticated release listing, with 100 rows
+per page and at most 10 pages. A full last page, malformed response or repeated
+release ID fails closed without claiming completeness. Published-release-by-tag
+404 responses are never used to prove draft absence. An uncertain creation
+requires exactly one draft matching the tag, run/body and exact commit, with no
+assets, followed by a by-ID reread. Pre-existing drafts and ambiguous, nonempty or
+other-run drafts are never adopted. If any write times out, read reconciliation
+must prove that exact operation completed. No write retries occur. Unconfirmed results stop the job and
 retain any remote draft for explicit operator reconciliation; rerunning refuses
 an existing release rather than adopting it. A tag/main change or conflicting
 asset requires investigation, not an automated overwrite.
@@ -111,3 +126,23 @@ asset requires investigation, not an automated overwrite.
 Local tests exercise admission mutations and publisher fault injection only;
 they do not call GitHub or launch Blender. A successful mocked pipeline test is
 not an actual Actions run or native qualification.
+
+## Live Windows policy and data-only Blender evidence
+
+The fourth live runtime gate retains the sealed historical predecessor supplied
+by 065be4a, while comparing current `ROOT`/`ADDON` production files. Later reviewed
+symbols are pinned individually in `current_windows_policy_symbols.json` to c407
+bytes, verified identical in 065be4a. They cover the finite Windows timeout default
+and explicit-preference capture, retained package/cache identity fields and OS
+provider dispatch, private cache security handling and read-only runtime DLL
+origin helpers. Exact symbol hashes constrain these later changes rather than
+adding broad method exemptions. Import multiplicity, call scope, aliases,
+dynamic-name rejection and older mutation controls remain active.
+
+On Techbox, the official Linux archive (383,295,504 bytes; SHA256
+`84098912789dc450e95697c4184fb8a90acbe5111c2ba4aede3fecb57806a168`) was
+verified against the official Blender 5.2.2 checksum listing and normalized as
+data only. Its 6,547 members yielded 5,672 regular output files, including 79
+independent alias copies totaling 511,833,496 bytes. Every alias hash matched its
+resolved regular source and no filesystem links were created. Neither Blender
+nor its Python/runtime was executed; this is not native Linux qualification.

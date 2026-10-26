@@ -83,50 +83,104 @@ def fetch(record, target):
     )
 
 
-def extract(archive, destination):
-    """File-only extraction, portable names, finite expansion; no archive links."""
-    destination.mkdir()
-    seen, total = set(), 0
-
-    def copy(name, mode, size, source):
-        nonlocal total
+def archive_plan(rows):
+    """Validate all explicit/implicit path components before any extraction write."""
+    entries, spellings, kinds, total = {}, {}, {}, 0
+    for name, directory, mode, size, item in rows:
+        require(len(entries) < 100_000, "Archive entry count exceeds budget")
         require("\\" not in name, "Nonportable archive separator")
         parts = A.source_path_parts(name)
-        key = name.casefold()
-        require(key not in seen and len(seen) < 100_000, "Duplicate/oversized archive")
-        seen.add(key)
+        require(name not in entries, "Duplicate archive member")
+        for depth in range(1, len(parts) + 1):
+            prefix = "/".join(parts[:depth])
+            require(
+                spellings.setdefault(prefix.casefold(), prefix) == prefix,
+                "Case-ambiguous archive path component",
+            )
+            kind = "directory" if depth < len(parts) or directory else "file"
+            require(
+                prefix not in kinds or kinds[prefix] == kind, "Archive file/directory collision"
+            )
+            kinds[prefix] = kind
+        require(type(size) is int and 0 <= size <= 2_000_000_000, "Member size budget")
+        require(not directory or size == 0, "Directory payload is unsupported")
         total += size
-        require(0 <= size <= 2_000_000_000 and total <= 8_000_000_000, "Expansion limit")
-        path = destination.joinpath(*parts)
-        path.parent.mkdir(parents=True, exist_ok=True)
-        with path.open("xb") as target:
-            shutil.copyfileobj(source, target, 1024 * 1024)
-        require(path.stat().st_size == size, "Extracted size mismatch")
-        path.chmod(0o755 if mode & 0o111 else 0o644)
+        require(total <= 8_000_000_000, "Archive expansion exceeds budget")
+        entries[name] = (directory, mode, size, item)
+    return entries
+
+
+def extract(archive, destination):
+    """Strict file-only input extraction; Blender link normalization is separate."""
+
+    def output(bundle, rows):
+        entries = archive_plan(rows)
+        A.checked_path(destination.parent)
+        destination.mkdir(exist_ok=False)
+        for name, (directory, mode, size, item) in entries.items():
+            path = destination / name
+            if directory:
+                path.mkdir(parents=True, exist_ok=True)
+                continue
+            path.parent.mkdir(parents=True, exist_ok=True)
+            source = (
+                bundle.open(item)
+                if isinstance(bundle, zipfile.ZipFile)
+                else bundle.extractfile(item)
+            )
+            total = 0
+            with source, path.open("xb") as target:
+                while chunk := source.read(min(1024 * 1024, size - total + 1)):
+                    total += len(chunk)
+                    require(total <= size, "Archive member grew during extraction")
+                    target.write(chunk)
+            require(total == size, "Extracted size mismatch")
+            path.chmod(0o755 if mode & 0o111 else 0o644)
 
     if zipfile.is_zipfile(archive):
         with zipfile.ZipFile(archive) as bundle:
-            for item in bundle.infolist():
-                require(
-                    item.orig_filename == item.filename and "\\" not in item.orig_filename,
-                    "Normalized ZIP member name is not authoritative",
-                )
-                if item.is_dir():
-                    A.source_path_parts(item.filename.rstrip("/"))
-                    continue
-                mode = item.external_attr >> 16
-                require(stat.S_IFMT(mode) in {0, stat.S_IFREG}, "Nonregular ZIP entry")
-                with bundle.open(item) as source:
-                    copy(item.filename, mode, item.file_size, source)
+
+            def rows():
+                for item in bundle.infolist():
+                    require(
+                        item.orig_filename == item.filename and "\\" not in item.orig_filename,
+                        "Normalized ZIP member name is not authoritative",
+                    )
+                    mode, directory = item.external_attr >> 16, item.is_dir()
+                    require(
+                        stat.S_IFMT(mode)
+                        in ({0, stat.S_IFDIR} if directory else {0, stat.S_IFREG}),
+                        "Nonregular ZIP entry",
+                    )
+                    yield (
+                        item.filename.rstrip("/") if directory else item.filename,
+                        directory,
+                        mode,
+                        item.file_size,
+                        item,
+                    )
+
+            output(bundle, rows())
     else:
         with tarfile.open(archive) as bundle:
-            for item in bundle:
-                if item.isdir():
-                    A.source_path_parts(item.name.rstrip("/"))
-                    continue
-                require(item.isfile(), "Nonregular TAR entry")
-                with bundle.extractfile(item) as source:
-                    copy(item.name, item.mode, item.size, source)
+
+            def rows():
+                for item in bundle:
+                    require(item.isdir() or item.isfile(), "Nonregular TAR entry")
+                    require(
+                        item.sparse is None
+                        and not any(k.startswith("GNU.sparse") for k in item.pax_headers),
+                        "Sparse TAR entry",
+                    )
+                    yield (
+                        item.name.rstrip("/") if item.isdir() else item.name,
+                        item.isdir(),
+                        item.mode,
+                        item.size,
+                        item,
+                    )
+
+            output(bundle, rows())
 
 
 def config(path):
@@ -160,6 +214,21 @@ def config(path):
     return value
 
 
+def acquire_runtime(platform, acquisition_lock, work):
+    """Use the same reviewed data-only adapter for both Linux-built target locks."""
+    require(read(acquisition_lock)["platform"] == platform, "Acquisition lock target mismatch")
+    acquired = load("acquire_release_inputs").acquire(acquisition_lock, work)
+    require(
+        acquired["platform"] == platform and acquired["native_execution"] is False,
+        "Acquisition platform mismatch",
+    )
+    require(
+        acquired["acquisition_lock_sha256"] == identity(acquisition_lock)[0],
+        "Acquisition lock receipt mismatch",
+    )
+    return acquired
+
+
 def build(platform, configuration, work, commit, tag, candidate_only=False):
     require(sys.platform == "linux", "Both targets are assembled on Linux")
     row = config(configuration)["platforms"][platform]
@@ -171,18 +240,8 @@ def build(platform, configuration, work, commit, tag, candidate_only=False):
         {p.name for p in inputs.iterdir()} == {"materials", "metadata", "review.json"},
         "Prepared inputs must supply materials, metadata and review only",
     )
-    acquisition_name = (
-        "acquire_release_inputs" if platform == "linux-x64" else "acquire_windows_release_inputs"
-    )
-    require(
-        (ROOT / "scripts" / (acquisition_name + ".py")).is_file(),
-        "Windows acquisition adapter is pending; no substitute permitted",
-    )
-    acquired = load(acquisition_name).acquire(ROOT / row["acquisition_lock"], work / "acquired")
-    require(
-        acquired["platform"] == platform and acquired["native_execution"] is False,
-        "Acquisition platform mismatch",
-    )
+    acquisition_lock = ROOT / row["acquisition_lock"]
+    acquire_runtime(platform, acquisition_lock, work / "acquired")
     shutil.move(work / "acquired/runtime", inputs / "runtime")
     require(
         read(work / "acquired/runtime-inventory.json")
@@ -225,7 +284,18 @@ def qualify(platform, configuration, work, commit, tag, candidate_only=False):
     )
     row = config(configuration)["platforms"][platform]
     fetch(row["blender"], work / "blender.archive")
-    extract(work / "blender.archive", work / "blender")
+    if platform == "linux-x64":
+        archive_policy = load("blender_release_archive")
+        require(
+            row["blender_path"] == archive_policy.PREFIX + "/blender",
+            "Unexpected pinned Linux Blender executable",
+        )
+        normalized = archive_policy.extract(
+            work / "blender.archive", work / "blender", row["blender"]
+        )
+        write(work / "blender-normalization.json", normalized)
+    else:
+        extract(work / "blender.archive", work / "blender")
     summary = load("qualify_standalone_candidate").qualify(
         blender=work / "blender" / row["blender_path"],
         archive=work / "candidate.zip",

@@ -46,6 +46,29 @@ class GitHub:
         return self.call(method, path, P.A.canonical(value))
 
 
+def tag_releases(api, tag):
+    """Authenticated complete draft-inclusive listing, or fail closed at 1,000 rows."""
+    found, seen = [], set()
+    for page in range(1, 11):
+        batch = api.call("GET", f"releases?per_page=100&page={page}")
+        P.require(type(batch) is list and len(batch) <= 100, "Release listing is unconfirmed")
+        for release in batch:
+            P.require(
+                type(release) is dict
+                and type(release.get("id")) is int
+                and release["id"] > 0
+                and release["id"] not in seen
+                and type(release.get("tag_name")) is str,
+                "Release listing is ambiguous or changed during pagination",
+            )
+            seen.add(release["id"])
+            if release["tag_name"] == tag:
+                found.append(release)
+        if len(batch) < 100:
+            return found
+    raise ValueError("Release listing completeness limit reached; inspect remote drafts")
+
+
 def publish(api, root, admission, run):
     tag, commit = admission["tag"], admission["source_commit"]
     # Never create/move a tag implicitly. Resolve annotated tags without trusting target_commitish.
@@ -58,8 +81,7 @@ def publish(api, root, admission, run):
         P.require(obj["type"] == "tag", "Unexpected tag target")
         obj = api.call("GET", "git/tags/" + obj["sha"])["object"]
     P.require(obj.get("type") == "commit" and obj.get("sha") == commit, "Tag changed")
-    tag_path = "releases/tags/" + tag
-    P.require(api.call("GET", tag_path) is None, "Existing release: never overwrite or adopt")
+    P.require(not tag_releases(api, tag), "Existing release/draft: never overwrite or adopt")
     body = (
         "Mechanical CAD release admission\nRun: " + run + "\n" + P.A.canonical(admission).decode()
     )
@@ -86,17 +108,31 @@ def publish(api, root, admission, run):
             },
         )
     except (OSError, ValueError):
-        # One read reconciliation; no second create, deletion or blanket adoption.
-        release = api.call("GET", tag_path)
+        # Drafts are not proven absent/present by the published-release-by-tag API.
+        # Complete authenticated listing identifies exactly one matching empty
+        # draft from this operation; then reread that draft by its immutable id.
+        matches = tag_releases(api, tag)
+        P.require(len(matches) == 1, "Release creation uncertain; ambiguous/missing draft")
+        release = matches[0]
         P.require(
-            same(release) and release.get("draft") is True,
+            same(release) and release.get("draft") is True and release.get("assets") == [],
             "Release creation uncertain; inspect remote state before any further write",
         )
+        release = api.call("GET", f"releases/{release['id']}")
     P.require(
-        same(release) and release.get("draft") is True and not release.get("assets"),
+        same(release) and release.get("draft") is True and release.get("assets") == [],
         "Unexpected draft state; stop",
     )
     release_id = release["id"]
+    matches = tag_releases(api, tag)
+    P.require(
+        len(matches) == 1
+        and matches[0]["id"] == release_id
+        and same(matches[0])
+        and matches[0].get("draft") is True
+        and matches[0].get("assets") == [],
+        "Draft identity/set changed before upload; inspect remote state",
+    )
     files = {
         f"mechanical-cad-{tag[1:]}-{platform}.zip": root / platform / "candidate.zip"
         for platform in sorted(P.PLATFORMS)
