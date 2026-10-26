@@ -1,0 +1,33 @@
+{
+  "files": {
+    "backend_selection.py": {
+      "BackendSelection.capture_bundled": "1e708f37e9c85913a62ffb800b2e86a1ad7ff13e8e21554a3827c4a0c4f0ab2d",
+      "_DEFAULT_TIMEOUT": "874a1dffe27ae622db899a92e830c7569201751fa67ed4c79d58700d43834708",
+      "default_timeout_seconds": "2b0aa4882aaebff80811f352f8efa0983d204eadc4384eb80c314cce35e90272"
+    },
+    "runtime_bundle_launch.py": {
+      "BundledLaunchConstants.__post_init__": "e229b9f3913fe7f5556648b5fc629a7e772edd8961f75ed8a7cb97db11235192"
+    },
+    "windows_cache.py": {
+      "WindowsCacheLocation.__post_init__": "f098b09d7a596092d54d574e013d3a9817ee7ad52a06f5bc078000e9232db851",
+      "WindowsCacheLocation.package_family": "7a51a2358c9a606a9b9e2a10d6002be920e2af046f2ed3cc5b884bb3ff622ac6",
+      "WindowsCacheLocation.package_full_name": "fbaccd61de39191b4522e81b9e5102ce05763d361efd5e064d189ad809214ec6",
+      "WindowsCacheLocation.provider": "cfbab6d9e635a2920fdd9494d168beec29f0698d0ef2c770c71a58011956e36e",
+      "WindowsCacheOwner.__init__": "f9b7473e00ea1b648be7d7d4303ec620083be779e33b6be233417089115e3a53",
+      "WindowsCacheOwner._acquire": "ac3c762db754b53651e53bee1809bd0102ea46a94b349c869edc15895fa9b430",
+      "WindowsCacheOwner._validate_info": "a483e9de21876123ca397fcdb1d4168eb4709a1c150fc81cb51f17ee3af8533c",
+      "_MESSAGES": "800e8145795628cf2498fb68a16ee6bc93ad85402bff99828b10f6cf04358c48",
+      "_OWNER_RIGHTS": "2a6361e961f80d705c2b0e506e49851c2b0a2968e29f7687baa183be9509b9ca",
+      "_private_security": "46665c41dbed1b0712f6263d36a8800267fda48f836663a754bb1e6d5dd93d09",
+      "query_windows_automatic_cache_location": "dd648a0ea0b9d9011c10042c05641b6e959604e084e4f2fa637d6582e0976110",
+      "query_windows_package_cache_location": "09d488982af6c4ed87f044e3705b6f4df8cd7a6248b56d69835eb2e6ac8fced4"
+    },
+    "windows_runtime.py": {
+      "WindowsRuntimeValidation._same_anchor": "9e0cb59d9b5adb6063ebeff2a368e1a17bcc95d5114577d0346ecc31e52ce243",
+      "WindowsRuntimeValidation._system_directory": "b6649ca98e60a608da77a7e08f099221e858eb8efb9b68cb33a23f487103827c"
+    }
+  },
+  "schema_version": 1,
+  "source_commit": "c407db478ad54488c31484c568422a858cdda400",
+  "source_tree": "505b86a0b88f1d7c3f37dc93da9392d8f01977e2"
+}

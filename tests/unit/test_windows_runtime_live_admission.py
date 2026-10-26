@@ -24,6 +24,44 @@ def test_clean_current_source_passes_live_cache_policy():
 
 
 @pytest.mark.parametrize(
+    "filename,before,after",
+    [
+        ("backend_selection.py", b"_DEFAULT_TIMEOUT = object()", b"_DEFAULT_TIMEOUT = None"),
+        (
+            "backend_selection.py",
+            b'return 240.0 if bundled_platform == "windows-x64" else 60.0',
+            b'return 241.0 if bundled_platform == "windows-x64" else 60.0',
+        ),
+        (
+            "windows_cache.py",
+            b'provider: str = "local-app-data"',
+            b'provider: str = "caller-selected"',
+        ),
+    ],
+)
+def test_later_reviewed_policy_symbols_require_exact_current_bytes(
+    tmp_path, filename, before, after
+):
+    gates.assert_windows_runtime_cache_finite_symbols(ROOT)
+    for name in (
+        "backend_selection.py",
+        "runtime_bundle_launch.py",
+        "windows_cache.py",
+        "windows_runtime.py",
+    ):
+        source = ROOT / "blender_addon/mechanical_cad_blender" / name
+        target = tmp_path / source.relative_to(ROOT)
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_bytes(source.read_bytes())
+    target = tmp_path / "blender_addon/mechanical_cad_blender" / filename
+    raw = target.read_bytes()
+    assert raw.count(before) == 1
+    target.write_bytes(raw.replace(before, after))
+    with pytest.raises(AssertionError):
+        gates.assert_windows_runtime_cache_finite_symbols(tmp_path)
+
+
+@pytest.mark.parametrize(
     "filename, statement",
     [
         ("registration.py", "query_windows_cache_location()"),

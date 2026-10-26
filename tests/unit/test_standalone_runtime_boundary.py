@@ -2396,9 +2396,22 @@ def test_windows_runtime_cache_harness_normalizes_no_other_digest_slot(tmp_path,
 
 
 def assert_windows_runtime_cache_finite_symbols(root):
-    """Only the reviewed methods, exact imports and one policy field may change."""
+    """Finite older methods plus exact separately reviewed later policy symbols."""
     namespace = guard_namespace()
     _, originals = namespace["windows_runtime_cache_originals"](historical_runtime_root())
+    # Later approved Windows policy is bound to exact symbols from public c407,
+    # also byte-identical in 065be4a. Unlike the older finite method exemptions,
+    # these additions require exact current bytes, including fields and defaults.
+    # Current ROOT/ADDON remain live; the sealed archive supplies predecessors only.
+    review_bytes = (ROOT / "tests/fixtures/standalone/current_windows_policy_symbols.json").read_bytes()
+    assert hashlib.sha256(review_bytes).hexdigest() == (
+        "9f1b8300d92eca5e7593a369ac46bec3da23df50abd2eed72b906bce8b40f3d9"
+    )
+    review = json.loads(review_bytes)
+    assert set(review) == {"schema_version", "source_commit", "source_tree", "files"}
+    assert review["schema_version"] == 1
+    assert review["source_commit"] == "c407db478ad54488c31484c568422a858cdda400"
+    assert review["source_tree"] == "505b86a0b88f1d7c3f37dc93da9392d8f01977e2"
     allowed = {
         "backend_selection.py": {"BackendSelection._capture_windows_bundled_transport"},
         "runtime_bundle_launch.py": {
@@ -2435,7 +2448,10 @@ def assert_windows_runtime_cache_finite_symbols(root):
             "from dataclasses import dataclass, replace",
             "from .windows_cache import WindowsCacheOwner",
         ),
-        "windows_cache.py": (),
+        "windows_cache.py": (
+            "from dataclasses import dataclass, replace",
+            "from .windows_package_cache import PackageCacheAPI, PackageCacheCleanupError",
+        ),
     }
     added = {
         "WindowsRuntimeAPI.stream_handle",
@@ -2448,12 +2464,28 @@ def assert_windows_runtime_cache_finite_symbols(root):
         found = set()
         found_imports = []
         found_fields = []
+        reviewed_symbols = set()
 
         def members(nodes, parent=""):
             result = []
             for node in nodes:
                 name = getattr(node, "name", "")
                 name = f"{parent}.{name}" if parent else name
+                symbol = name
+                if isinstance(node, ast.Assign) and len(node.targets) == 1:
+                    target = node.targets[0]
+                    if isinstance(target, ast.Name):
+                        symbol = f"{parent}.{target.id}" if parent else target.id
+                elif isinstance(node, ast.AnnAssign) and isinstance(node.target, ast.Name):
+                    symbol = f"{parent}.{node.target.id}" if parent else node.target.id
+                if symbol in review["files"][filename]:
+                    assert symbol not in reviewed_symbols
+                    reviewed_symbols.add(symbol)
+                    if current:
+                        start = min([node.lineno] + [d.lineno for d in getattr(node, "decorator_list", [])])
+                        raw = b"".join(lines[start - 1:node.end_lineno])
+                        assert hashlib.sha256(raw).hexdigest() == review["files"][filename][symbol], symbol
+                    continue
                 if (
                     isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
                     and name in allowed[filename]
@@ -2506,6 +2538,7 @@ def assert_windows_runtime_cache_finite_symbols(root):
         expected = allowed[filename] if current else allowed[filename] - added
         assert found == expected, (filename, found, expected)
         if current:
+            assert reviewed_symbols == set(review["files"][filename]), filename
             assert sorted(found_imports) == sorted(imports[filename]), filename
             assert found_fields == (
                 ["windows_cache: WindowsCacheLocation | None = field(default=None, repr=False)"]
@@ -2514,6 +2547,7 @@ def assert_windows_runtime_cache_finite_symbols(root):
             ), filename
         return result
 
+    assert set(review["files"]) == set(allowed)
     for filename in allowed:
         relative = "blender_addon/mechanical_cad_blender/" + filename
         assert protected((root / relative).read_bytes(), filename, current=True) == protected(
