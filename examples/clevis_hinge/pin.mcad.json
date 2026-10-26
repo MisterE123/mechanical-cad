@@ -1,0 +1,39 @@
+{
+  "active_feature": "body",
+  "features": [
+    {
+      "id": "profile",
+      "inputs": {},
+      "kind": "sketch_circle",
+      "label": "Pin cross-section",
+      "params": {
+        "radius": "pin_radius",
+        "x": 0,
+        "y": 0,
+        "z": "start_z"
+      }
+    },
+    {
+      "id": "body",
+      "inputs": {
+        "profile": "profile"
+      },
+      "kind": "extrude",
+      "label": "Extrude plain pin",
+      "params": {
+        "length": "length"
+      }
+    }
+  ],
+  "id": "mechanism-pin",
+  "name": "Plain fixed pin: parameter-driven diameter",
+  "parameters": {
+    "bore_radius": 2.5,
+    "length": 20,
+    "pin_radius": "bore_radius - radial_gap",
+    "radial_gap": 0.2,
+    "start_z": -10
+  },
+  "schema_version": 2,
+  "units": "mm"
+}

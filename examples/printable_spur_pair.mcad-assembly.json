@@ -1,0 +1,290 @@
+{
+  "active_verification_preset": null,
+  "angle_unit": "rad",
+  "assembly_schema_version": 1,
+  "gear_relations": [
+    {
+      "driven_joint": "shaft_b",
+      "driver_joint": "shaft_a",
+      "id": "external_mesh",
+      "name": "External spur mesh (kinematic)",
+      "offset_rad": 3.220132469929538,
+      "ratio": -0.5
+    }
+  ],
+  "ground": {
+    "wxyz": [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "xyz_mm": [
+      0.0,
+      0.0,
+      0.0
+    ]
+  },
+  "grounded_instance": "instance_0",
+  "id": "gear_pair_4eff86709ffb491f82f51d02cab6a05a",
+  "instances": [
+    {
+      "id": "instance_0",
+      "name": "Reference base \u2014 NOT FOR PRINT",
+      "part_id": "part_0"
+    },
+    {
+      "id": "instance_1",
+      "name": "Gear A (20 teeth)",
+      "part_id": "part_1"
+    },
+    {
+      "id": "instance_2",
+      "name": "Gear B (40 teeth)",
+      "part_id": "part_2"
+    }
+  ],
+  "joints": [
+    {
+      "child": "instance_1",
+      "child_frame": "origin",
+      "coordinate": 0.0,
+      "id": "shaft_a",
+      "kind": "revolute",
+      "limits": null,
+      "name": "Gear A shaft (+Z)",
+      "parent": "instance_0",
+      "parent_frame": "axis_a"
+    },
+    {
+      "child": "instance_2",
+      "child_frame": "origin",
+      "coordinate": null,
+      "id": "shaft_b",
+      "kind": "revolute",
+      "limits": null,
+      "name": "Gear B shaft (+Z)",
+      "parent": "instance_0",
+      "parent_frame": "axis_b"
+    }
+  ],
+  "kind": "assembly",
+  "length_unit": "mm",
+  "name": "Printable spur gear pair",
+  "part_sources": [
+    {
+      "document": {
+        "active_feature": "reference_base",
+        "features": [
+          {
+            "id": "reference_profile",
+            "inputs": {},
+            "kind": "sketch_rectangle",
+            "label": "Reference Profile",
+            "params": {
+              "height": 2.0,
+              "width": 2.0,
+              "x": -1.0,
+              "y": -1.0,
+              "z": -5.0
+            }
+          },
+          {
+            "id": "reference_base",
+            "inputs": {
+              "profile": "reference_profile"
+            },
+            "kind": "extrude",
+            "label": "Reference Base",
+            "params": {
+              "length": 1.0
+            }
+          }
+        ],
+        "id": "source_5592d51ec90b4265bfb48b85654a0ed9",
+        "name": "Reference base \u2014 NOT FOR PRINT",
+        "parameters": {},
+        "schema_version": 1,
+        "units": "mm"
+      },
+      "source_digest": "8dd4379b9e25ecfb72e0dfcbeaf32c1a58f109abb2cc9d8912afae77d6e389d8",
+      "source_document_id": "source_5592d51ec90b4265bfb48b85654a0ed9"
+    },
+    {
+      "document": {
+        "active_feature": "gear",
+        "features": [
+          {
+            "id": "gear",
+            "inputs": {},
+            "kind": "spur_gear",
+            "label": "Gear",
+            "params": {
+              "backlash": "backlash",
+              "bore_diameter": "bore_diameter",
+              "clearance": "clearance",
+              "module": "module",
+              "pressure_angle": "pressure_angle",
+              "profile_tolerance": "profile_tolerance",
+              "thickness": "thickness",
+              "tooth_count": "tooth_count"
+            }
+          }
+        ],
+        "id": "source_5332fc4a3ff74e7eb27b632ee2a08310",
+        "name": "Gear A (20 teeth)",
+        "parameters": {
+          "backlash": 0.1,
+          "bore_diameter": 5.0,
+          "clearance": 0.25,
+          "module": 2.0,
+          "pressure_angle": 20.0,
+          "profile_tolerance": 0.01,
+          "thickness": 8.0,
+          "tooth_count": 20
+        },
+        "schema_version": 1,
+        "units": "mm"
+      },
+      "source_digest": "5874ea6e63b4971d8a8d3dd4753ce10234f69b51670f07c1229c289e5d5db23f",
+      "source_document_id": "source_5332fc4a3ff74e7eb27b632ee2a08310"
+    },
+    {
+      "document": {
+        "active_feature": "gear",
+        "features": [
+          {
+            "id": "gear",
+            "inputs": {},
+            "kind": "spur_gear",
+            "label": "Gear",
+            "params": {
+              "backlash": "backlash",
+              "bore_diameter": "bore_diameter",
+              "clearance": "clearance",
+              "module": "module",
+              "pressure_angle": "pressure_angle",
+              "profile_tolerance": "profile_tolerance",
+              "thickness": "thickness",
+              "tooth_count": "tooth_count"
+            }
+          }
+        ],
+        "id": "source_07e1be44eb3f4b359b8ea91a0396f07a",
+        "name": "Gear B (40 teeth)",
+        "parameters": {
+          "backlash": 0.1,
+          "bore_diameter": 5.0,
+          "clearance": 0.25,
+          "module": 2.0,
+          "pressure_angle": 20.0,
+          "profile_tolerance": 0.01,
+          "thickness": 8.0,
+          "tooth_count": 40
+        },
+        "schema_version": 1,
+        "units": "mm"
+      },
+      "source_digest": "47008d47ffcffc7002cf34d88a6add08a72e23e228c72513ab83e96de493a4fe",
+      "source_document_id": "source_07e1be44eb3f4b359b8ea91a0396f07a"
+    }
+  ],
+  "parts": [
+    {
+      "id": "part_0",
+      "mate_frames": [
+        {
+          "id": "axis_a",
+          "name": "Gear A +Z shaft",
+          "placement": {
+            "wxyz": [
+              1.0,
+              0.0,
+              0.0,
+              0.0
+            ],
+            "xyz_mm": [
+              0.0,
+              0.0,
+              0.0
+            ]
+          }
+        },
+        {
+          "id": "axis_b",
+          "name": "Gear B +Z shaft",
+          "placement": {
+            "wxyz": [
+              1.0,
+              0.0,
+              0.0,
+              0.0
+            ],
+            "xyz_mm": [
+              60.0,
+              0.0,
+              0.0
+            ]
+          }
+        }
+      ],
+      "name": "Reference base \u2014 NOT FOR PRINT",
+      "output_feature_id": "reference_base",
+      "source_digest": "8dd4379b9e25ecfb72e0dfcbeaf32c1a58f109abb2cc9d8912afae77d6e389d8",
+      "source_document_id": "source_5592d51ec90b4265bfb48b85654a0ed9"
+    },
+    {
+      "id": "part_1",
+      "mate_frames": [
+        {
+          "id": "origin",
+          "name": "Shaft +Z / tooth zero +X",
+          "placement": {
+            "wxyz": [
+              1.0,
+              0.0,
+              0.0,
+              0.0
+            ],
+            "xyz_mm": [
+              0.0,
+              0.0,
+              0.0
+            ]
+          }
+        }
+      ],
+      "name": "Gear A (20 teeth)",
+      "output_feature_id": "gear",
+      "source_digest": "5874ea6e63b4971d8a8d3dd4753ce10234f69b51670f07c1229c289e5d5db23f",
+      "source_document_id": "source_5332fc4a3ff74e7eb27b632ee2a08310"
+    },
+    {
+      "id": "part_2",
+      "mate_frames": [
+        {
+          "id": "origin",
+          "name": "Shaft +Z / tooth zero +X",
+          "placement": {
+            "wxyz": [
+              1.0,
+              0.0,
+              0.0,
+              0.0
+            ],
+            "xyz_mm": [
+              0.0,
+              0.0,
+              0.0
+            ]
+          }
+        }
+      ],
+      "name": "Gear B (40 teeth)",
+      "output_feature_id": "gear",
+      "source_digest": "47008d47ffcffc7002cf34d88a6add08a72e23e228c72513ab83e96de493a4fe",
+      "source_document_id": "source_07e1be44eb3f4b359b8ea91a0396f07a"
+    }
+  ],
+  "verification_presets": []
+}

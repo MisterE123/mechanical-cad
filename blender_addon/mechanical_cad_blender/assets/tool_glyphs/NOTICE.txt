@@ -1,0 +1,14 @@
+Original Mechanical CAD toolbar glyphs
+
+The geometry in ../../tool_glyphs.py and its generated PNG and SVG representations
+were created for Mechanical CAD by Mechanical CAD contributors and are licensed
+GPL-3.0-or-later, matching the project. See the repository LICENSE and
+../icons/licenses/GPL-3.0-or-later.txt. No proprietary or Google artwork was traced
+or incorporated into these glyphs.
+
+scripts/build_tool_glyphs.py deterministically renders menu previews from the same
+bounded polygons used for native Blender button shapes. design_manifest.json
+records the four targeted new/revised CAD designs and generated file hashes.
+SVG exports use currentColor and the same 24-unit geometry, with Y flipped for
+SVG coordinates. Native button drawing additionally insets artwork to 72% of the
+hit area; these SVG exports do not change hit targets, names, or tooltips.

@@ -1,0 +1,49 @@
+{
+  "active_feature": "s",
+  "features": [
+    {
+      "id": "p",
+      "inputs": {},
+      "kind": "sketch_rectangle",
+      "label": "Rectangle",
+      "params": {
+        "height": 15,
+        "width": 20
+      }
+    },
+    {
+      "id": "b",
+      "inputs": {
+        "profile": "p"
+      },
+      "kind": "extrude",
+      "label": "Box",
+      "params": {
+        "length": 10
+      }
+    },
+    {
+      "id": "s",
+      "inputs": {
+        "base": "b"
+      },
+      "kind": "shell",
+      "label": "Enclosure",
+      "opening_faces": [
+        "b/face/cap.start",
+        "b/face/cap.end"
+      ],
+      "params": {
+        "thickness": "wall"
+      }
+    }
+  ],
+  "id": "through-sleeve",
+  "name": "Two-opening sleeve",
+  "parameters": {
+    "wall": 1
+  },
+  "schema_version": 1,
+  "units": "mm"
+}
+

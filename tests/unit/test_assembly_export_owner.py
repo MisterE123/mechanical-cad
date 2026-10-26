@@ -1,0 +1,334 @@
+"""Owner/file-outcome contracts with real opaque evidence and synthetic host ports.
+
+No native process or destination write occurs here. Actual STEP geometry and
+registered Blender operators have separate focused integration checks.
+"""
+
+import copy
+import importlib
+import itertools
+import json
+import sys
+import types
+from dataclasses import replace
+from pathlib import Path
+from types import SimpleNamespace
+from unittest.mock import patch
+
+import pytest
+from test_arc_guarded_evidence import synthetic_outer
+from test_assembly_export_contracts import pair
+
+ROOT = Path(__file__).resolve().parents[2]
+NAMES = itertools.count()
+
+
+@pytest.fixture(params=[2, 3], ids=["result2", "result3"])
+def host(request, monkeypatch, tmp_path):
+    name = "mcad_assembly_export_owner_tests_" + str(next(NAMES))
+    package = types.ModuleType(name)
+    package.__path__ = [str(ROOT / "blender_addon/mechanical_cad_blender")]
+    display, workspace, bpy = (types.ModuleType(label) for label in ("display", "workspace", "bpy"))
+    display.trusted_display = lambda *args, **kwargs: True
+    workspace.active_draft = lambda: False
+    workspace.has_draft = lambda _context: False
+    with patch.dict(
+        sys.modules,
+        {
+            name: package,
+            "bpy": bpy,
+            name + ".assembly_display": display,
+            name + ".workspace": workspace,
+        },
+    ):
+        owner = importlib.import_module(name + ".assembly_export_owner")
+        modules = {
+            key: value
+            for key, value in sys.modules.items()
+            if key == name or key.startswith(name + ".")
+        }
+    for key, value in modules.items():
+        monkeypatch.setitem(sys.modules, key, value)
+    state_api = owner.assembly_state
+    selections = importlib.import_module(name + ".backend_selection")
+    selected = selections.BackendSelection.capture(
+        str(ROOT), sys.executable, generation=2, lifetime_id="assembly-step-host", environment={}
+    )
+    current = [selected]
+    monkeypatch.setattr(state_api.backend_runtime, "capture", lambda _context: current[0])
+    monkeypatch.setattr(
+        state_api.backend_runtime, "configuration", lambda _context: (current[0], 0.1)
+    )
+
+    def assert_selection(expected, _context):
+        if current[0] != expected:
+            raise ValueError("Backend selection changed")
+        return current[0]
+
+    monkeypatch.setattr(state_api.backend_runtime, "assert_current", assert_selection)
+    path = str(tmp_path / "assembly.step")
+    operation, response = pair(monkeypatch, version=request.param, path=path)
+    fields = {key: "" for key in state_api._STATE_FIELDS}
+    fields.update(
+        owner_id="accepted-owner",
+        document_json=state_api._json(operation["assembly"]),
+        status="READY",
+        display_status="CURRENT",
+        verification_status="CURRENT",
+        export_receipt_json="",
+        export_message="",
+    )
+    state = SimpleNamespace(**fields)
+    scene = SimpleNamespace(
+        as_pointer=lambda: 420,
+        mechanical_cad_assembly=state,
+        mechanical_cad=SimpleNamespace(document_json="working-part", sketch_draft_json=""),
+        unit_settings=SimpleNamespace(scale_length=1.0),
+    )
+    bpy.data = SimpleNamespace(scenes=[scene])
+    context = SimpleNamespace(
+        scene=scene, window=SimpleNamespace(as_pointer=lambda: 421), preferences=object()
+    )
+    check_request = owner.assembly_export_bridge.check_request(operation)
+    prepared = owner.backend_contracts.prepare_request(check_request)
+    report_token = object()
+    report_evidence = owner.guarded_evidence.accept_response(
+        prepared,
+        synthetic_outer(prepared, response["result"], selected),
+        selected,
+        owner_token=report_token,
+    )
+    report_evidence.publication.consume(
+        selected,
+        owner_token=report_token,
+        expected_action="assembly_check",
+        expected_result_version=request.param,
+    )
+    state.report_json = state_api._json(response["result"])
+    state.report_request_json = state_api._json(check_request)
+    state.report_document_json = state.document_json
+    state.report_working_part_json = scene.mechanical_cad.document_json
+    state.report_preset_id = operation["assembly"]["active_verification_preset"]
+    state_api._RUNTIME[420] = {
+        "owner_id": state.owner_id,
+        "display_document_json": state.document_json,
+        "display_evidence": object(),
+        "display_owner_token": object(),
+        "report_binding": state_api._binding(state),
+        "report_evidence": report_evidence,
+        "report_owner_token": report_token,
+    }
+    result = SimpleNamespace(
+        owner=owner,
+        state_api=state_api,
+        context=context,
+        state=state,
+        current=current,
+        selected=selected,
+        path=path,
+        operation=operation,
+        response=response,
+        version=request.param,
+        transport_execute=owner.guarded_transport.execute,
+        launches=[],
+        completions=[],
+        after=lambda evidence: evidence,
+    )
+
+    def execute(prepared, selection, *, owner_token, current_selection):
+        assert prepared.operation_request() == operation
+        assert current_selection() == selection
+        result.launches.append(prepared)
+        evidence = owner.guarded_evidence.accept_response(
+            prepared,
+            synthetic_outer(prepared, response, selected),
+            selected,
+            owner_token=owner_token,
+        )
+        result.completions.append((evidence, owner_token))
+        return result.after(evidence)
+
+    monkeypatch.setattr(owner.guarded_transport, "execute", execute)
+    yield result
+    assert not owner.execution_lease.is_busy()
+    assert not state_api._BUSY
+
+
+def protected(host):
+    return copy.deepcopy(
+        {
+            key: getattr(host.state, key)
+            for key in host.state_api._STATE_FIELDS
+            if key != "last_action_error"
+        }
+    )
+
+
+def test_checked_export_consumes_once_and_only_records_historical_file_facts(host):
+    before = protected(host)
+    snapshot = host.owner.capture(host.context)
+    assert host.owner.run_export(host.context, host.path, snapshot=snapshot)["ok"]
+    assert protected(host) == before
+    assert host.state_api.report_is_current(host.context)
+    receipt = json.loads(host.state.export_receipt_json)
+    assert receipt["outcome"] == "WRITTEN" and receipt["export"] == host.response["export"]
+    evidence, token = host.completions[0]
+    with pytest.raises(ValueError, match="no longer available"):
+        evidence.publication.consume(
+            host.selected,
+            owner_token=token,
+            expected_action=host.owner.ACTION,
+            expected_result_version=host.version,
+        )
+    with pytest.raises(host.owner.bridge.BridgeError, match="already been used"):
+        host.owner.run_export(host.context, host.path, snapshot=snapshot)
+    assert len(host.launches) == 1
+
+
+def test_saved_pass_and_unchanged_json_cannot_replace_live_report(host):
+    host.state_api._RUNTIME[420]["report_evidence"] = copy.deepcopy(host.response["result"])
+    before = protected(host)
+    assert host.owner.availability_reason(host.context)
+    with pytest.raises((ValueError, RuntimeError)):
+        host.owner.run_export(host.context, host.path)
+    assert not host.launches and protected(host) == before
+
+
+def test_changed_dialog_report_rejects_before_launch(host):
+    snapshot = host.owner.capture(host.context)
+    host.state_api._RUNTIME[420]["report_owner_token"] = object()
+    with pytest.raises((ValueError, RuntimeError)):
+        host.owner.run_export(host.context, host.path, snapshot=snapshot)
+    assert not host.launches and not host.state.export_receipt_json
+
+
+def test_busy_guard_reads_no_context_or_rna(host):
+    lease = host.owner.execution_lease.try_acquire()
+    try:
+        with pytest.raises(RuntimeError):
+            host.owner.run_export(object(), host.path)
+        assert not host.launches
+    finally:
+        host.owner.execution_lease.release(lease)
+
+
+def test_lost_or_plain_completion_is_unknown_without_current_authority_mutation(host):
+    before = protected(host)
+    host.after = lambda _evidence: copy.deepcopy(host.response)
+    with pytest.raises(host.owner.guarded_transport.GuardedOperationError) as raised:
+        host.owner.run_export(host.context, host.path)
+    assert raised.value.outcome_unknown
+    assert json.loads(host.state.export_receipt_json)["outcome"] == "UNKNOWN"
+    assert len(host.launches) == 1 and protected(host) == before
+
+
+def test_valid_write_survives_backend_aba_as_history_and_cancels_only_new_claim(host):
+    previous = host.state_api._RUNTIME[420]["report_evidence"]
+
+    def change(evidence):
+        host.current[0] = replace(host.selected, generation=host.selected.generation + 2)
+        return evidence
+
+    host.after = change
+    with pytest.raises(host.owner.guarded_transport.GuardedOperationError) as raised:
+        host.owner.run_export(host.context, host.path)
+    assert not raised.value.outcome_unknown
+    assert raised.value.historical_export is host.completions[0][0]
+    assert json.loads(host.state.export_receipt_json)["outcome"] == "WRITTEN"
+    assert host.state_api._RUNTIME[420]["report_evidence"] is previous
+    assert not host.state_api.report_is_current(host.context)
+    evidence, token = host.completions[0]
+    with pytest.raises(ValueError, match="cancelled"):
+        evidence.revalidate(
+            host.selected,
+            owner_token=token,
+            expected_action=host.owner.ACTION,
+            expected_result_version=host.version,
+        )
+    assert len(host.launches) == 1
+
+
+def test_valid_write_and_receipt_storage_failure_still_reports_written(host, monkeypatch):
+    def fail(*_args):
+        raise ReferenceError("Scene RNA was removed")
+
+    monkeypatch.setattr(host.owner, "_record", fail)
+    with pytest.raises(host.owner.guarded_transport.GuardedOperationError) as raised:
+        host.owner.run_export(host.context, host.path)
+    assert "written" in str(raised.value) and "storage failed" in str(raised.value)
+    assert raised.value.historical_export is host.completions[0][0]
+    assert not raised.value.outcome_unknown and len(host.launches) == 1
+
+
+@pytest.mark.parametrize("error_type", [ReferenceError, AttributeError, TypeError])
+@pytest.mark.parametrize("after_launch", [False, True])
+def test_rna_selection_failure_retains_launch_uncertainty(
+    host, monkeypatch, error_type, after_launch
+):
+    owner = host.owner
+    progress = {"constructed": False, "starts": 0}
+
+    class FakeJob:
+        def __init__(self, prepared):
+            self.prepared, self.state = prepared, "created"
+            progress["constructed"] = True
+
+        @classmethod
+        def from_selection(cls, prepared, selected):
+            return cls(prepared)
+
+        def request_snapshot(self):
+            return self.prepared.guarded_request()
+
+        def start(self):
+            progress["starts"] += 1
+            self.state = "ready"
+
+        def wait(self, timeout=None):
+            return True
+
+        def cancel(self):
+            self.state = "cancelled"
+            return True
+
+        @property
+        def done(self):
+            return True
+
+        def result(self):
+            pytest.fail("Selection failure must prevent completion handoff")
+
+    original_selection = host.state_api._current_selection
+
+    def current_selection(context, snapshot):
+        if progress["constructed"] and (not after_launch or progress["starts"]):
+            raise error_type("Scene RNA was removed")
+        return original_selection(context, snapshot)
+
+    monkeypatch.setattr(owner.guarded_transport, "execute", host.transport_execute)
+    monkeypatch.setattr(owner.guarded_transport, "SidecarJob", FakeJob)
+    monkeypatch.setattr(host.state_api, "_current_selection", current_selection)
+    with pytest.raises(owner.guarded_transport.GuardedOperationError) as raised:
+        owner.run_export(host.context, host.path)
+    assert progress["starts"] == int(after_launch)
+    assert raised.value.outcome_unknown is after_launch
+    receipt = json.loads(host.state.export_receipt_json)
+    assert receipt["outcome"] == ("UNKNOWN" if after_launch else "FAILED")
+    assert not Path(host.path).exists()
+
+
+def test_repeated_export_poll_never_admits_a_live_interaction(host):
+    before = protected(host)
+    revision = host.state_api.interaction_revision()
+    for _ in range(20):
+        assert host.owner.availability_reason(host.context) == ""
+    assert host.state_api.interaction_revision() == revision
+    assert protected(host) == before
+    # Stale display is a normal reopen/panel state, still not authoring admission.
+    host.state_api._RUNTIME.clear()
+    for _ in range(20):
+        assert host.owner.availability_reason(host.context)
+    assert host.state_api.interaction_revision() == revision
+    with pytest.raises(RuntimeError):
+        host.owner.capture(host.context)
+    assert host.state_api.interaction_revision() == revision + 1

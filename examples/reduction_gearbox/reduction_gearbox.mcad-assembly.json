@@ -1,0 +1,1541 @@
+{
+  "kind": "assembly",
+  "assembly_schema_version": 1,
+  "id": "two_stage_reduction",
+  "name": "Two-stage 4:1 spur reduction demonstrator",
+  "length_unit": "mm",
+  "angle_unit": "rad",
+  "part_sources": [
+    {
+      "source_document_id": "gearbox_housing",
+      "source_digest": "1e4da013a5e075ee804c06fa0d325f522b9667277061ff7b7860bd431d892676",
+      "document": {
+        "schema_version": 1,
+        "id": "gearbox_housing",
+        "name": "Shelled housing with screw pillars and mounting ears",
+        "units": "mm",
+        "parameters": {
+          "wall": 4,
+          "width": 200,
+          "depth": 100,
+          "height": 42,
+          "spacing": 60,
+          "edge_radius": 8,
+          "bore_radius": 4.3,
+          "mount_radius": 2.6
+        },
+        "features": [
+          {
+            "id": "stock_profile",
+            "kind": "sketch_rectangle",
+            "label": "Stock Profile",
+            "params": {
+              "x": -30,
+              "y": "-depth/2",
+              "z": 0,
+              "width": "width",
+              "height": "depth"
+            },
+            "inputs": {}
+          },
+          {
+            "id": "stock",
+            "kind": "extrude",
+            "label": "Stock",
+            "params": {
+              "length": "height"
+            },
+            "inputs": {
+              "profile": "stock_profile"
+            }
+          },
+          {
+            "id": "outer_blends",
+            "kind": "fillet",
+            "label": "Outer Blends",
+            "params": {
+              "radius": "edge_radius"
+            },
+            "inputs": {
+              "base": "stock"
+            },
+            "edge_pairs": [
+              [
+                "stock/face/side.x_max",
+                "stock/face/side.y_max"
+              ],
+              [
+                "stock/face/side.x_max",
+                "stock/face/side.y_min"
+              ],
+              [
+                "stock/face/side.x_min",
+                "stock/face/side.y_max"
+              ],
+              [
+                "stock/face/side.x_min",
+                "stock/face/side.y_min"
+              ]
+            ]
+          },
+          {
+            "id": "open_shell",
+            "kind": "shell",
+            "label": "Open Shell",
+            "params": {
+              "thickness": "wall"
+            },
+            "inputs": {
+              "base": "outer_blends"
+            },
+            "opening_faces": [
+              "stock/face/cap.end"
+            ]
+          },
+          {
+            "id": "ear_0_profile",
+            "kind": "sketch_circle",
+            "label": "Ear 0 Profile",
+            "params": {
+              "x": -30,
+              "y": -40,
+              "z": 0,
+              "radius": 8
+            },
+            "inputs": {}
+          },
+          {
+            "id": "ear_0",
+            "kind": "extrude",
+            "label": "Ear 0",
+            "params": {
+              "length": 6
+            },
+            "inputs": {
+              "profile": "ear_0_profile"
+            }
+          },
+          {
+            "id": "ear_union_0",
+            "kind": "union",
+            "label": "Ear Union 0",
+            "params": {},
+            "inputs": {
+              "base": "open_shell",
+              "tool": "ear_0"
+            }
+          },
+          {
+            "id": "mount_hole_0_profile",
+            "kind": "sketch_circle",
+            "label": "Mount Hole 0 Profile",
+            "params": {
+              "x": -30,
+              "y": -40,
+              "z": -1,
+              "radius": "mount_radius"
+            },
+            "inputs": {}
+          },
+          {
+            "id": "mount_hole_0",
+            "kind": "extrude",
+            "label": "Mount Hole 0",
+            "params": {
+              "length": 8
+            },
+            "inputs": {
+              "profile": "mount_hole_0_profile"
+            }
+          },
+          {
+            "id": "mount_cut_0",
+            "kind": "cut",
+            "label": "Mount Cut 0",
+            "params": {},
+            "inputs": {
+              "base": "ear_union_0",
+              "tool": "mount_hole_0"
+            }
+          },
+          {
+            "id": "ear_1_profile",
+            "kind": "sketch_circle",
+            "label": "Ear 1 Profile",
+            "params": {
+              "x": -30,
+              "y": 40,
+              "z": 0,
+              "radius": 8
+            },
+            "inputs": {}
+          },
+          {
+            "id": "ear_1",
+            "kind": "extrude",
+            "label": "Ear 1",
+            "params": {
+              "length": 6
+            },
+            "inputs": {
+              "profile": "ear_1_profile"
+            }
+          },
+          {
+            "id": "ear_union_1",
+            "kind": "union",
+            "label": "Ear Union 1",
+            "params": {},
+            "inputs": {
+              "base": "mount_cut_0",
+              "tool": "ear_1"
+            }
+          },
+          {
+            "id": "mount_hole_1_profile",
+            "kind": "sketch_circle",
+            "label": "Mount Hole 1 Profile",
+            "params": {
+              "x": -30,
+              "y": 40,
+              "z": -1,
+              "radius": "mount_radius"
+            },
+            "inputs": {}
+          },
+          {
+            "id": "mount_hole_1",
+            "kind": "extrude",
+            "label": "Mount Hole 1",
+            "params": {
+              "length": 8
+            },
+            "inputs": {
+              "profile": "mount_hole_1_profile"
+            }
+          },
+          {
+            "id": "mount_cut_1",
+            "kind": "cut",
+            "label": "Mount Cut 1",
+            "params": {},
+            "inputs": {
+              "base": "ear_union_1",
+              "tool": "mount_hole_1"
+            }
+          },
+          {
+            "id": "ear_2_profile",
+            "kind": "sketch_circle",
+            "label": "Ear 2 Profile",
+            "params": {
+              "x": "width-30",
+              "y": -40,
+              "z": 0,
+              "radius": 8
+            },
+            "inputs": {}
+          },
+          {
+            "id": "ear_2",
+            "kind": "extrude",
+            "label": "Ear 2",
+            "params": {
+              "length": 6
+            },
+            "inputs": {
+              "profile": "ear_2_profile"
+            }
+          },
+          {
+            "id": "ear_union_2",
+            "kind": "union",
+            "label": "Ear Union 2",
+            "params": {},
+            "inputs": {
+              "base": "mount_cut_1",
+              "tool": "ear_2"
+            }
+          },
+          {
+            "id": "mount_hole_2_profile",
+            "kind": "sketch_circle",
+            "label": "Mount Hole 2 Profile",
+            "params": {
+              "x": "width-30",
+              "y": -40,
+              "z": -1,
+              "radius": "mount_radius"
+            },
+            "inputs": {}
+          },
+          {
+            "id": "mount_hole_2",
+            "kind": "extrude",
+            "label": "Mount Hole 2",
+            "params": {
+              "length": 8
+            },
+            "inputs": {
+              "profile": "mount_hole_2_profile"
+            }
+          },
+          {
+            "id": "mount_cut_2",
+            "kind": "cut",
+            "label": "Mount Cut 2",
+            "params": {},
+            "inputs": {
+              "base": "ear_union_2",
+              "tool": "mount_hole_2"
+            }
+          },
+          {
+            "id": "ear_3_profile",
+            "kind": "sketch_circle",
+            "label": "Ear 3 Profile",
+            "params": {
+              "x": "width-30",
+              "y": 40,
+              "z": 0,
+              "radius": 8
+            },
+            "inputs": {}
+          },
+          {
+            "id": "ear_3",
+            "kind": "extrude",
+            "label": "Ear 3",
+            "params": {
+              "length": 6
+            },
+            "inputs": {
+              "profile": "ear_3_profile"
+            }
+          },
+          {
+            "id": "ear_union_3",
+            "kind": "union",
+            "label": "Ear Union 3",
+            "params": {},
+            "inputs": {
+              "base": "mount_cut_2",
+              "tool": "ear_3"
+            }
+          },
+          {
+            "id": "mount_hole_3_profile",
+            "kind": "sketch_circle",
+            "label": "Mount Hole 3 Profile",
+            "params": {
+              "x": "width-30",
+              "y": 40,
+              "z": -1,
+              "radius": "mount_radius"
+            },
+            "inputs": {}
+          },
+          {
+            "id": "mount_hole_3",
+            "kind": "extrude",
+            "label": "Mount Hole 3",
+            "params": {
+              "length": 8
+            },
+            "inputs": {
+              "profile": "mount_hole_3_profile"
+            }
+          },
+          {
+            "id": "mount_cut_3",
+            "kind": "cut",
+            "label": "Mount Cut 3",
+            "params": {},
+            "inputs": {
+              "base": "ear_union_3",
+              "tool": "mount_hole_3"
+            }
+          },
+          {
+            "id": "pillar_0_profile",
+            "kind": "sketch_circle",
+            "label": "Pillar 0 Profile",
+            "params": {
+              "x": -20,
+              "y": -39,
+              "z": "wall-1",
+              "radius": 5
+            },
+            "inputs": {}
+          },
+          {
+            "id": "pillar_0",
+            "kind": "extrude",
+            "label": "Pillar 0",
+            "params": {
+              "length": "height-wall+1"
+            },
+            "inputs": {
+              "profile": "pillar_0_profile"
+            }
+          },
+          {
+            "id": "pillar_union_0",
+            "kind": "union",
+            "label": "Pillar Union 0",
+            "params": {},
+            "inputs": {
+              "base": "mount_cut_3",
+              "tool": "pillar_0"
+            }
+          },
+          {
+            "id": "screw_0_profile",
+            "kind": "sketch_circle",
+            "label": "Screw 0 Profile",
+            "params": {
+              "x": -20,
+              "y": -39,
+              "z": 5,
+              "radius": 1.7
+            },
+            "inputs": {}
+          },
+          {
+            "id": "screw_0",
+            "kind": "extrude",
+            "label": "Screw 0",
+            "params": {
+              "length": "height"
+            },
+            "inputs": {
+              "profile": "screw_0_profile"
+            }
+          },
+          {
+            "id": "screw_cut_0",
+            "kind": "cut",
+            "label": "Screw Cut 0",
+            "params": {},
+            "inputs": {
+              "base": "pillar_union_0",
+              "tool": "screw_0"
+            }
+          },
+          {
+            "id": "pillar_1_profile",
+            "kind": "sketch_circle",
+            "label": "Pillar 1 Profile",
+            "params": {
+              "x": -20,
+              "y": 39,
+              "z": "wall-1",
+              "radius": 5
+            },
+            "inputs": {}
+          },
+          {
+            "id": "pillar_1",
+            "kind": "extrude",
+            "label": "Pillar 1",
+            "params": {
+              "length": "height-wall+1"
+            },
+            "inputs": {
+              "profile": "pillar_1_profile"
+            }
+          },
+          {
+            "id": "pillar_union_1",
+            "kind": "union",
+            "label": "Pillar Union 1",
+            "params": {},
+            "inputs": {
+              "base": "screw_cut_0",
+              "tool": "pillar_1"
+            }
+          },
+          {
+            "id": "screw_1_profile",
+            "kind": "sketch_circle",
+            "label": "Screw 1 Profile",
+            "params": {
+              "x": -20,
+              "y": 39,
+              "z": 5,
+              "radius": 1.7
+            },
+            "inputs": {}
+          },
+          {
+            "id": "screw_1",
+            "kind": "extrude",
+            "label": "Screw 1",
+            "params": {
+              "length": "height"
+            },
+            "inputs": {
+              "profile": "screw_1_profile"
+            }
+          },
+          {
+            "id": "screw_cut_1",
+            "kind": "cut",
+            "label": "Screw Cut 1",
+            "params": {},
+            "inputs": {
+              "base": "pillar_union_1",
+              "tool": "screw_1"
+            }
+          },
+          {
+            "id": "pillar_2_profile",
+            "kind": "sketch_circle",
+            "label": "Pillar 2 Profile",
+            "params": {
+              "x": "width-40",
+              "y": -39,
+              "z": "wall-1",
+              "radius": 5
+            },
+            "inputs": {}
+          },
+          {
+            "id": "pillar_2",
+            "kind": "extrude",
+            "label": "Pillar 2",
+            "params": {
+              "length": "height-wall+1"
+            },
+            "inputs": {
+              "profile": "pillar_2_profile"
+            }
+          },
+          {
+            "id": "pillar_union_2",
+            "kind": "union",
+            "label": "Pillar Union 2",
+            "params": {},
+            "inputs": {
+              "base": "screw_cut_1",
+              "tool": "pillar_2"
+            }
+          },
+          {
+            "id": "screw_2_profile",
+            "kind": "sketch_circle",
+            "label": "Screw 2 Profile",
+            "params": {
+              "x": "width-40",
+              "y": -39,
+              "z": 5,
+              "radius": 1.7
+            },
+            "inputs": {}
+          },
+          {
+            "id": "screw_2",
+            "kind": "extrude",
+            "label": "Screw 2",
+            "params": {
+              "length": "height"
+            },
+            "inputs": {
+              "profile": "screw_2_profile"
+            }
+          },
+          {
+            "id": "screw_cut_2",
+            "kind": "cut",
+            "label": "Screw Cut 2",
+            "params": {},
+            "inputs": {
+              "base": "pillar_union_2",
+              "tool": "screw_2"
+            }
+          },
+          {
+            "id": "pillar_3_profile",
+            "kind": "sketch_circle",
+            "label": "Pillar 3 Profile",
+            "params": {
+              "x": "width-40",
+              "y": 39,
+              "z": "wall-1",
+              "radius": 5
+            },
+            "inputs": {}
+          },
+          {
+            "id": "pillar_3",
+            "kind": "extrude",
+            "label": "Pillar 3",
+            "params": {
+              "length": "height-wall+1"
+            },
+            "inputs": {
+              "profile": "pillar_3_profile"
+            }
+          },
+          {
+            "id": "pillar_union_3",
+            "kind": "union",
+            "label": "Pillar Union 3",
+            "params": {},
+            "inputs": {
+              "base": "screw_cut_2",
+              "tool": "pillar_3"
+            }
+          },
+          {
+            "id": "screw_3_profile",
+            "kind": "sketch_circle",
+            "label": "Screw 3 Profile",
+            "params": {
+              "x": "width-40",
+              "y": 39,
+              "z": 5,
+              "radius": 1.7
+            },
+            "inputs": {}
+          },
+          {
+            "id": "screw_3",
+            "kind": "extrude",
+            "label": "Screw 3",
+            "params": {
+              "length": "height"
+            },
+            "inputs": {
+              "profile": "screw_3_profile"
+            }
+          },
+          {
+            "id": "screw_cut_3",
+            "kind": "cut",
+            "label": "Screw Cut 3",
+            "params": {},
+            "inputs": {
+              "base": "pillar_union_3",
+              "tool": "screw_3"
+            }
+          },
+          {
+            "id": "bearing_0_profile",
+            "kind": "sketch_circle",
+            "label": "Bearing 0 Profile",
+            "params": {
+              "x": 0,
+              "y": 0,
+              "z": -1,
+              "radius": "bore_radius"
+            },
+            "inputs": {}
+          },
+          {
+            "id": "bearing_0",
+            "kind": "extrude",
+            "label": "Bearing 0",
+            "params": {
+              "length": "wall+2"
+            },
+            "inputs": {
+              "profile": "bearing_0_profile"
+            }
+          },
+          {
+            "id": "bearing_cut_0",
+            "kind": "cut",
+            "label": "Bearing Cut 0",
+            "params": {},
+            "inputs": {
+              "base": "screw_cut_3",
+              "tool": "bearing_0"
+            }
+          },
+          {
+            "id": "bearing_1_profile",
+            "kind": "sketch_circle",
+            "label": "Bearing 1 Profile",
+            "params": {
+              "x": "spacing",
+              "y": 0,
+              "z": -1,
+              "radius": "bore_radius"
+            },
+            "inputs": {}
+          },
+          {
+            "id": "bearing_1",
+            "kind": "extrude",
+            "label": "Bearing 1",
+            "params": {
+              "length": "wall+2"
+            },
+            "inputs": {
+              "profile": "bearing_1_profile"
+            }
+          },
+          {
+            "id": "bearing_cut_1",
+            "kind": "cut",
+            "label": "Bearing Cut 1",
+            "params": {},
+            "inputs": {
+              "base": "bearing_cut_0",
+              "tool": "bearing_1"
+            }
+          },
+          {
+            "id": "bearing_2_profile",
+            "kind": "sketch_circle",
+            "label": "Bearing 2 Profile",
+            "params": {
+              "x": "2*spacing",
+              "y": 0,
+              "z": -1,
+              "radius": "bore_radius"
+            },
+            "inputs": {}
+          },
+          {
+            "id": "bearing_2",
+            "kind": "extrude",
+            "label": "Bearing 2",
+            "params": {
+              "length": "wall+2"
+            },
+            "inputs": {
+              "profile": "bearing_2_profile"
+            }
+          },
+          {
+            "id": "bearing_cut_2",
+            "kind": "cut",
+            "label": "Bearing Cut 2",
+            "params": {},
+            "inputs": {
+              "base": "bearing_cut_1",
+              "tool": "bearing_2"
+            }
+          }
+        ],
+        "active_feature": "bearing_cut_2"
+      }
+    },
+    {
+      "source_document_id": "gearbox_cover",
+      "source_digest": "62236aa0cc2409b6f20b571ad88e90d50e5d6885fd502748e8a798805565d48b",
+      "document": {
+        "schema_version": 1,
+        "id": "gearbox_cover",
+        "name": "Removable bored cover",
+        "units": "mm",
+        "parameters": {
+          "width": 200,
+          "depth": 100,
+          "thickness": 5,
+          "spacing": 60,
+          "bore_radius": 4.3
+        },
+        "features": [
+          {
+            "id": "plate_profile",
+            "kind": "sketch_rectangle",
+            "label": "Plate Profile",
+            "params": {
+              "x": -30,
+              "y": "-depth/2",
+              "z": 0,
+              "width": "width",
+              "height": "depth"
+            },
+            "inputs": {}
+          },
+          {
+            "id": "plate",
+            "kind": "extrude",
+            "label": "Plate",
+            "params": {
+              "length": "thickness"
+            },
+            "inputs": {
+              "profile": "plate_profile"
+            }
+          },
+          {
+            "id": "cover_blends",
+            "kind": "fillet",
+            "label": "Cover Blends",
+            "params": {
+              "radius": 2
+            },
+            "inputs": {
+              "base": "plate"
+            },
+            "edge_pairs": [
+              [
+                "plate/face/side.x_max",
+                "plate/face/side.y_max"
+              ],
+              [
+                "plate/face/side.x_max",
+                "plate/face/side.y_min"
+              ],
+              [
+                "plate/face/side.x_min",
+                "plate/face/side.y_max"
+              ],
+              [
+                "plate/face/side.x_min",
+                "plate/face/side.y_min"
+              ]
+            ]
+          },
+          {
+            "id": "hole_0_profile",
+            "kind": "sketch_circle",
+            "label": "Hole 0 Profile",
+            "params": {
+              "x": 0,
+              "y": 0,
+              "z": -1,
+              "radius": "bore_radius"
+            },
+            "inputs": {}
+          },
+          {
+            "id": "hole_0",
+            "kind": "extrude",
+            "label": "Hole 0",
+            "params": {
+              "length": "thickness+2"
+            },
+            "inputs": {
+              "profile": "hole_0_profile"
+            }
+          },
+          {
+            "id": "hole_cut_0",
+            "kind": "cut",
+            "label": "Hole Cut 0",
+            "params": {},
+            "inputs": {
+              "base": "cover_blends",
+              "tool": "hole_0"
+            }
+          },
+          {
+            "id": "hole_1_profile",
+            "kind": "sketch_circle",
+            "label": "Hole 1 Profile",
+            "params": {
+              "x": "spacing",
+              "y": 0,
+              "z": -1,
+              "radius": "bore_radius"
+            },
+            "inputs": {}
+          },
+          {
+            "id": "hole_1",
+            "kind": "extrude",
+            "label": "Hole 1",
+            "params": {
+              "length": "thickness+2"
+            },
+            "inputs": {
+              "profile": "hole_1_profile"
+            }
+          },
+          {
+            "id": "hole_cut_1",
+            "kind": "cut",
+            "label": "Hole Cut 1",
+            "params": {},
+            "inputs": {
+              "base": "hole_cut_0",
+              "tool": "hole_1"
+            }
+          },
+          {
+            "id": "hole_2_profile",
+            "kind": "sketch_circle",
+            "label": "Hole 2 Profile",
+            "params": {
+              "x": "2*spacing",
+              "y": 0,
+              "z": -1,
+              "radius": "bore_radius"
+            },
+            "inputs": {}
+          },
+          {
+            "id": "hole_2",
+            "kind": "extrude",
+            "label": "Hole 2",
+            "params": {
+              "length": "thickness+2"
+            },
+            "inputs": {
+              "profile": "hole_2_profile"
+            }
+          },
+          {
+            "id": "hole_cut_2",
+            "kind": "cut",
+            "label": "Hole Cut 2",
+            "params": {},
+            "inputs": {
+              "base": "hole_cut_1",
+              "tool": "hole_2"
+            }
+          },
+          {
+            "id": "hole_3_profile",
+            "kind": "sketch_circle",
+            "label": "Hole 3 Profile",
+            "params": {
+              "x": -20,
+              "y": -39,
+              "z": -1,
+              "radius": 2
+            },
+            "inputs": {}
+          },
+          {
+            "id": "hole_3",
+            "kind": "extrude",
+            "label": "Hole 3",
+            "params": {
+              "length": "thickness+2"
+            },
+            "inputs": {
+              "profile": "hole_3_profile"
+            }
+          },
+          {
+            "id": "hole_cut_3",
+            "kind": "cut",
+            "label": "Hole Cut 3",
+            "params": {},
+            "inputs": {
+              "base": "hole_cut_2",
+              "tool": "hole_3"
+            }
+          },
+          {
+            "id": "hole_4_profile",
+            "kind": "sketch_circle",
+            "label": "Hole 4 Profile",
+            "params": {
+              "x": -20,
+              "y": 39,
+              "z": -1,
+              "radius": 2
+            },
+            "inputs": {}
+          },
+          {
+            "id": "hole_4",
+            "kind": "extrude",
+            "label": "Hole 4",
+            "params": {
+              "length": "thickness+2"
+            },
+            "inputs": {
+              "profile": "hole_4_profile"
+            }
+          },
+          {
+            "id": "hole_cut_4",
+            "kind": "cut",
+            "label": "Hole Cut 4",
+            "params": {},
+            "inputs": {
+              "base": "hole_cut_3",
+              "tool": "hole_4"
+            }
+          },
+          {
+            "id": "hole_5_profile",
+            "kind": "sketch_circle",
+            "label": "Hole 5 Profile",
+            "params": {
+              "x": "width-40",
+              "y": -39,
+              "z": -1,
+              "radius": 2
+            },
+            "inputs": {}
+          },
+          {
+            "id": "hole_5",
+            "kind": "extrude",
+            "label": "Hole 5",
+            "params": {
+              "length": "thickness+2"
+            },
+            "inputs": {
+              "profile": "hole_5_profile"
+            }
+          },
+          {
+            "id": "hole_cut_5",
+            "kind": "cut",
+            "label": "Hole Cut 5",
+            "params": {},
+            "inputs": {
+              "base": "hole_cut_4",
+              "tool": "hole_5"
+            }
+          },
+          {
+            "id": "hole_6_profile",
+            "kind": "sketch_circle",
+            "label": "Hole 6 Profile",
+            "params": {
+              "x": "width-40",
+              "y": 39,
+              "z": -1,
+              "radius": 2
+            },
+            "inputs": {}
+          },
+          {
+            "id": "hole_6",
+            "kind": "extrude",
+            "label": "Hole 6",
+            "params": {
+              "length": "thickness+2"
+            },
+            "inputs": {
+              "profile": "hole_6_profile"
+            }
+          },
+          {
+            "id": "hole_cut_6",
+            "kind": "cut",
+            "label": "Hole Cut 6",
+            "params": {},
+            "inputs": {
+              "base": "hole_cut_5",
+              "tool": "hole_6"
+            }
+          }
+        ],
+        "active_feature": "hole_cut_6"
+      }
+    },
+    {
+      "source_document_id": "reference_shaft",
+      "source_digest": "b899357d2c56fdd7fa7989dc4ba91597d0fd2c4ffcb82714d208ab339bae99d3",
+      "document": {
+        "schema_version": 1,
+        "id": "reference_shaft",
+        "name": "Reference 8 mm shaft \u2014 NOT FOR PRINT",
+        "units": "mm",
+        "parameters": {},
+        "features": [
+          {
+            "id": "shaft_profile",
+            "kind": "sketch_circle",
+            "label": "Shaft Profile",
+            "params": {
+              "x": 0,
+              "y": 0,
+              "z": -5,
+              "radius": 4
+            },
+            "inputs": {}
+          },
+          {
+            "id": "shaft",
+            "kind": "extrude",
+            "label": "Shaft",
+            "params": {
+              "length": 57
+            },
+            "inputs": {
+              "profile": "shaft_profile"
+            }
+          }
+        ],
+        "active_feature": "shaft"
+      }
+    },
+    {
+      "source_document_id": "pinion",
+      "source_digest": "1a8ecb343d9b94eb26aded10414d082d52229820fb4df2721593b83952dd7a59",
+      "document": {
+        "schema_version": 1,
+        "id": "pinion",
+        "name": "20-tooth module-2 gear",
+        "units": "mm",
+        "parameters": {
+          "module": 2,
+          "tooth_count": 20,
+          "thickness": 8,
+          "bore_diameter": 8.4,
+          "pressure_angle": 20,
+          "backlash": 0.1,
+          "clearance": 0.25,
+          "profile_tolerance": 0.01
+        },
+        "features": [
+          {
+            "id": "gear",
+            "kind": "spur_gear",
+            "label": "Gear",
+            "params": {
+              "pressure_angle": "pressure_angle",
+              "bore_diameter": "bore_diameter",
+              "backlash": "backlash",
+              "clearance": "clearance",
+              "profile_tolerance": "profile_tolerance",
+              "module": "module",
+              "tooth_count": "tooth_count",
+              "thickness": "thickness"
+            },
+            "inputs": {}
+          }
+        ],
+        "active_feature": "gear"
+      }
+    },
+    {
+      "source_document_id": "wheel",
+      "source_digest": "7184dececc4838c75f8016e0d906f0c286d7ccfec46ef1118b966b1de4410a90",
+      "document": {
+        "schema_version": 1,
+        "id": "wheel",
+        "name": "40-tooth module-2 gear",
+        "units": "mm",
+        "parameters": {
+          "module": 2,
+          "tooth_count": 40,
+          "thickness": 8,
+          "bore_diameter": 8.4,
+          "pressure_angle": 20,
+          "backlash": 0.1,
+          "clearance": 0.25,
+          "profile_tolerance": 0.01
+        },
+        "features": [
+          {
+            "id": "gear",
+            "kind": "spur_gear",
+            "label": "Gear",
+            "params": {
+              "pressure_angle": "pressure_angle",
+              "bore_diameter": "bore_diameter",
+              "backlash": "backlash",
+              "clearance": "clearance",
+              "profile_tolerance": "profile_tolerance",
+              "module": "module",
+              "tooth_count": "tooth_count",
+              "thickness": "thickness"
+            },
+            "inputs": {}
+          }
+        ],
+        "active_feature": "gear"
+      }
+    }
+  ],
+  "parts": [
+    {
+      "id": "gearbox_housing",
+      "name": "Shelled housing with screw pillars and mounting ears",
+      "source_digest": "1e4da013a5e075ee804c06fa0d325f522b9667277061ff7b7860bd431d892676",
+      "source_document_id": "gearbox_housing",
+      "output_feature_id": "bearing_cut_2",
+      "mate_frames": [
+        {
+          "id": "origin",
+          "name": "Origin",
+          "placement": {
+            "xyz_mm": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "wxyz": [
+              1.0,
+              0.0,
+              0.0,
+              0.0
+            ]
+          }
+        },
+        {
+          "id": "cover",
+          "name": "Cover",
+          "placement": {
+            "xyz_mm": [
+              0.0,
+              0.0,
+              42.0
+            ],
+            "wxyz": [
+              1.0,
+              0.0,
+              0.0,
+              0.0
+            ]
+          }
+        },
+        {
+          "id": "axis_input",
+          "name": "Axis Input",
+          "placement": {
+            "xyz_mm": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "wxyz": [
+              1.0,
+              0.0,
+              0.0,
+              0.0
+            ]
+          }
+        },
+        {
+          "id": "axis_middle",
+          "name": "Axis Middle",
+          "placement": {
+            "xyz_mm": [
+              60.0,
+              0.0,
+              0.0
+            ],
+            "wxyz": [
+              1.0,
+              0.0,
+              0.0,
+              0.0
+            ]
+          }
+        },
+        {
+          "id": "axis_output",
+          "name": "Axis Output",
+          "placement": {
+            "xyz_mm": [
+              120.0,
+              0.0,
+              0.0
+            ],
+            "wxyz": [
+              1.0,
+              0.0,
+              0.0,
+              0.0
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "gearbox_cover",
+      "name": "Removable bored cover",
+      "source_digest": "62236aa0cc2409b6f20b571ad88e90d50e5d6885fd502748e8a798805565d48b",
+      "source_document_id": "gearbox_cover",
+      "output_feature_id": "hole_cut_6",
+      "mate_frames": [
+        {
+          "id": "origin",
+          "name": "Origin",
+          "placement": {
+            "xyz_mm": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "wxyz": [
+              1.0,
+              0.0,
+              0.0,
+              0.0
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "reference_shaft",
+      "name": "Reference 8 mm shaft \u2014 NOT FOR PRINT",
+      "source_digest": "b899357d2c56fdd7fa7989dc4ba91597d0fd2c4ffcb82714d208ab339bae99d3",
+      "source_document_id": "reference_shaft",
+      "output_feature_id": "shaft",
+      "mate_frames": [
+        {
+          "id": "origin",
+          "name": "Origin",
+          "placement": {
+            "xyz_mm": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "wxyz": [
+              1.0,
+              0.0,
+              0.0,
+              0.0
+            ]
+          }
+        },
+        {
+          "id": "stage_one",
+          "name": "Stage One",
+          "placement": {
+            "xyz_mm": [
+              0.0,
+              0.0,
+              8.0
+            ],
+            "wxyz": [
+              1.0,
+              0.0,
+              0.0,
+              0.0
+            ]
+          }
+        },
+        {
+          "id": "stage_two",
+          "name": "Stage Two",
+          "placement": {
+            "xyz_mm": [
+              0.0,
+              0.0,
+              24.0
+            ],
+            "wxyz": [
+              1.0,
+              0.0,
+              0.0,
+              0.0
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "pinion",
+      "name": "20-tooth module-2 gear",
+      "source_digest": "1a8ecb343d9b94eb26aded10414d082d52229820fb4df2721593b83952dd7a59",
+      "source_document_id": "pinion",
+      "output_feature_id": "gear",
+      "mate_frames": [
+        {
+          "id": "origin",
+          "name": "Origin",
+          "placement": {
+            "xyz_mm": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "wxyz": [
+              1.0,
+              0.0,
+              0.0,
+              0.0
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "wheel",
+      "name": "40-tooth module-2 gear",
+      "source_digest": "7184dececc4838c75f8016e0d906f0c286d7ccfec46ef1118b966b1de4410a90",
+      "source_document_id": "wheel",
+      "output_feature_id": "gear",
+      "mate_frames": [
+        {
+          "id": "origin",
+          "name": "Origin",
+          "placement": {
+            "xyz_mm": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "wxyz": [
+              1.0,
+              0.0,
+              0.0,
+              0.0
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "instances": [
+    {
+      "id": "housing",
+      "part_id": "gearbox_housing",
+      "name": "Printable shelled housing"
+    },
+    {
+      "id": "cover",
+      "part_id": "gearbox_cover",
+      "name": "Printable removable cover"
+    },
+    {
+      "id": "input_shaft",
+      "part_id": "reference_shaft",
+      "name": "Input shaft reference NOT FOR PRINT"
+    },
+    {
+      "id": "middle_shaft",
+      "part_id": "reference_shaft",
+      "name": "Shared intermediate shaft reference NOT FOR PRINT"
+    },
+    {
+      "id": "output_shaft",
+      "part_id": "reference_shaft",
+      "name": "Output shaft reference NOT FOR PRINT"
+    },
+    {
+      "id": "input_gear",
+      "part_id": "pinion",
+      "name": "Stage 1 input pinion"
+    },
+    {
+      "id": "middle_wheel",
+      "part_id": "wheel",
+      "name": "Stage 1 intermediate wheel"
+    },
+    {
+      "id": "middle_pinion",
+      "part_id": "pinion",
+      "name": "Stage 2 intermediate pinion"
+    },
+    {
+      "id": "output_wheel",
+      "part_id": "wheel",
+      "name": "Stage 2 output wheel"
+    }
+  ],
+  "joints": [
+    {
+      "id": "cover_fixed",
+      "name": "Cover Fixed",
+      "kind": "fixed",
+      "parent": "housing",
+      "child": "cover",
+      "parent_frame": "cover",
+      "child_frame": "origin"
+    },
+    {
+      "id": "input_rotation",
+      "name": "Input Rotation",
+      "kind": "revolute",
+      "parent": "housing",
+      "child": "input_shaft",
+      "parent_frame": "axis_input",
+      "child_frame": "origin",
+      "coordinate": 0.0,
+      "limits": null
+    },
+    {
+      "id": "middle_rotation",
+      "name": "Middle Rotation",
+      "kind": "revolute",
+      "parent": "housing",
+      "child": "middle_shaft",
+      "parent_frame": "axis_middle",
+      "child_frame": "origin",
+      "coordinate": null,
+      "limits": null
+    },
+    {
+      "id": "output_rotation",
+      "name": "Output Rotation",
+      "kind": "revolute",
+      "parent": "housing",
+      "child": "output_shaft",
+      "parent_frame": "axis_output",
+      "child_frame": "origin",
+      "coordinate": null,
+      "limits": null
+    },
+    {
+      "id": "input_gear_fixed",
+      "name": "Input Gear Fixed",
+      "kind": "fixed",
+      "parent": "input_shaft",
+      "child": "input_gear",
+      "parent_frame": "stage_one",
+      "child_frame": "origin"
+    },
+    {
+      "id": "middle_wheel_fixed",
+      "name": "Middle Wheel Fixed",
+      "kind": "fixed",
+      "parent": "middle_shaft",
+      "child": "middle_wheel",
+      "parent_frame": "stage_one",
+      "child_frame": "origin"
+    },
+    {
+      "id": "middle_pinion_fixed",
+      "name": "Middle Pinion Fixed",
+      "kind": "fixed",
+      "parent": "middle_shaft",
+      "child": "middle_pinion",
+      "parent_frame": "stage_two",
+      "child_frame": "origin"
+    },
+    {
+      "id": "output_wheel_fixed",
+      "name": "Output Wheel Fixed",
+      "kind": "fixed",
+      "parent": "output_shaft",
+      "child": "output_wheel",
+      "parent_frame": "stage_two",
+      "child_frame": "origin"
+    }
+  ],
+  "grounded_instance": "housing",
+  "ground": {
+    "xyz_mm": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "wxyz": [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ]
+  },
+  "verification_presets": [],
+  "active_verification_preset": null,
+  "gear_relations": [
+    {
+      "id": "stage_1",
+      "name": "External stage 1",
+      "driver_joint": "input_rotation",
+      "driven_joint": "middle_rotation",
+      "ratio": -0.5,
+      "offset_rad": 3.220132469929538
+    },
+    {
+      "id": "stage_2",
+      "name": "External stage 2",
+      "driver_joint": "middle_rotation",
+      "driven_joint": "output_rotation",
+      "ratio": -0.5,
+      "offset_rad": 3.220132469929538
+    }
+  ]
+}

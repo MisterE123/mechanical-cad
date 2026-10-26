@@ -1,0 +1,171 @@
+"""Exact-request binding for solve-only evidence, with one-way add-on dependencies.
+
+The canonical Part receipt normalizer is reused rather than independently copied.
+There is no transport, native solver/kernel import, or document publication here.
+"""
+
+from __future__ import annotations
+
+import copy
+
+from . import part_contracts as snapshots
+from .sketch_bridge import (
+    _SUCCESS,
+    _error_record,
+    _identifier,
+    _keys,
+    _line_connectivity,
+    _require,
+    validate_sketch_report_v2,
+)
+
+
+def _validate_context_replay(canonical, replay):
+    from .part_result_bridge import validate_response
+
+    request = {"protocol_version": 1, "result_version": 2, "document": canonical}
+    validate_response(
+        request,
+        {
+            "protocol_version": 1,
+            "result_version": 2,
+            "input_fingerprint": snapshots.input_fingerprint(request),
+            "ok": True,
+            "result": replay,
+            "error": None,
+        },
+    )
+
+
+def validate_solve_response(response, request):
+    """Return detached solve-only evidence bound to the complete exact request.
+
+    A validated error is returned for callers to display. It is never a solved
+    draft or a reusable profile. No transport, kernel, or core imports occur here.
+    """
+    request = snapshots.snapshot_request(request)
+    snapshots._bounded_response(response)
+    _keys(request, {"protocol_version", "action", "result_version", "document", "feature_id"})
+    _require(
+        type(request["protocol_version"]) is int
+        and request["protocol_version"] == 1
+        and type(request["result_version"]) is int
+        and request["result_version"] == 2
+        and request["action"] == "solve_sketch",
+        "invalid solve-only request contract",
+    )
+    _require(
+        type(response) is dict
+        and type(response.get("protocol_version")) is int
+        and response["protocol_version"] == 1
+        and type(response.get("result_version")) is int
+        and response["result_version"] == 2
+        and type(response.get("ok")) is bool,
+        "unsupported solve-only response contract",
+    )
+    # Process-level validation failures may precede action dispatch/fingerprinting.
+    # An action-level failure must still bind its exact action and fingerprint.
+    if response.get("result") is None and response["ok"] is False and "action" not in response:
+        _keys(response, {"protocol_version", "result_version", "ok", "result", "error"})
+        _error_record(response["error"])
+        return copy.deepcopy(response)
+    _keys(
+        response,
+        {
+            "protocol_version",
+            "action",
+            "result_version",
+            "input_fingerprint",
+            "ok",
+            "result",
+            "error",
+        },
+    )
+    expected_fingerprint = snapshots.input_fingerprint(request)
+    _require(
+        response["action"] == "solve_sketch"
+        and response["input_fingerprint"] == expected_fingerprint,
+        "solve response action or raw request fingerprint mismatch",
+    )
+    if response["result"] is None:
+        _require(response["ok"] is False, "successful solve is missing its result")
+        _error_record(response["error"])
+        return copy.deepcopy(response)
+    result = response["result"]
+    canonical = snapshots._expected_document(request["document"])
+    source = next((f for f in canonical["features"] if f["id"] == request["feature_id"]), None)
+    from .sketch_support_evidence import contextual, validate_solve_context
+
+    fields = {"document_id", "document_hash", "feature_id", "sketch", "profile_check"}
+    if source is not None and contextual(source):
+        fields.add("support_context")
+    _keys(result, fields)
+    expected_hash = snapshots.document_hash(canonical)
+    _require(
+        result["document_id"] == canonical["id"] and result["document_hash"] == expected_hash,
+        "solve response canonical document identity/hash mismatch",
+    )
+    _identifier(request["feature_id"])
+    source = next((f for f in canonical["features"] if f["id"] == request["feature_id"]), None)
+    _require(
+        source is not None
+        and source["kind"] == "sketch_constrained"
+        and result["feature_id"] == request["feature_id"],
+        "solve response feature mismatch",
+    )
+    if contextual(source):
+        source = validate_solve_context(
+            canonical, source, result["support_context"], _validate_context_replay
+        )
+    feature = {
+        "id": source["id"],
+        "kind": source["kind"],
+        "status": "ok" if response["ok"] else "failed",
+        "sketch": result["sketch"],
+    }
+    validate_sketch_report_v2(feature, source)
+    _require(
+        type(result["sketch"]) is dict
+        and response["ok"] == (result["sketch"]["status"] in _SUCCESS),
+        "solve response success contradicts native report",
+    )
+    if not response["ok"]:
+        _error_record(response["error"])
+        _require(
+            response["error"]["code"] == "sketch_solve_failed" and result["profile_check"] is None,
+            "failed solve cannot claim profile readiness",
+        )
+        return copy.deepcopy(response)
+    _require(response["error"] is None, "successful solve also contains an error")
+    profile = result["profile_check"]
+    _keys(profile, {"ready", "error"})
+    _require(type(profile["ready"]) is bool, "profile readiness must be boolean")
+    solved = result["sketch"]["solved"]
+    from .sketch_bridge import profile_geometry
+
+    circles = profile_geometry(solved)["circles"]
+    if profile["ready"]:
+        _require(profile["error"] is None, "ready profile also contains an error")
+        from .region_profile_bridge import expected_region_kind
+
+        expected_region_kind(solved)
+    else:
+        _error_record(profile["error"])
+        _require(
+            profile["error"]["code"]
+            in {
+                "open_profile",
+                "invalid_profile",
+                "degenerate_profile",
+                "self_intersecting_profile",
+                "unresolved_coincidence",
+                "branched_profile",
+                "mixed_profile_regions",
+                "multiple_profile_regions",
+            },
+            "unknown profile-check error",
+        )
+        if profile["error"]["code"] == "open_profile":
+            _require(not circles, "an analytic circle cannot be an open chain")
+            _line_connectivity(solved, closed=False)
+    return copy.deepcopy(response)

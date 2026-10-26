@@ -1,0 +1,56 @@
+"""Portable user-facing check must identify both source and native behavior."""
+
+import json
+import os
+import subprocess
+import sys
+import tomllib
+from pathlib import Path
+
+import pytest
+
+pytest.importorskip("slvs")
+ROOT = Path(__file__).resolve().parents[2]
+PROJECT_VERSION = tomllib.loads((ROOT / "pyproject.toml").read_text())["project"]["version"]
+SCRIPT = ROOT / "scripts/verify_sidecar_install.py"
+
+
+def run(root):
+    return subprocess.run(
+        [sys.executable, str(SCRIPT), "--project-root", str(root)],
+        env=dict(os.environ, PYTHONPATH=""),
+        text=True,
+        capture_output=True,
+        timeout=30,
+    )
+
+
+def test_actual_core_identity_and_cycle_guard_are_required():
+    process = run(ROOT)
+    assert process.returncode == 0, process.stderr
+    result = json.loads(process.stdout)
+    assert result["ok"] and result["core_version"] == PROJECT_VERSION
+    assert result["project_root"] == str(ROOT)
+    assert result["solver_path"] == str(ROOT / "src/mechanical_cad/sketch_solver.py")
+    assert result["cyclic_equality"] == "rejected: solver_dof_indeterminate"
+    assert result["acyclic_native_control"] == "passed: 2 remaining DoF"
+
+
+def test_missing_source_root_fails_readably(tmp_path):
+    process = run(tmp_path)
+    assert process.returncode == 1 and process.stdout == ""
+    result = json.loads(process.stderr)
+    assert not result["ok"] and "Project Root" in result["error"]
+
+
+def test_old_core_version_is_rejected_before_native_import(tmp_path):
+    package = tmp_path / "src/mechanical_cad"
+    package.mkdir(parents=True)
+    (package / "__init__.py").write_text('__version__ = "0.5.0"\n')
+    (package / "sketch_solver.py").write_text("# Old core identity fixture; no native code.\n")
+    process = run(tmp_path)
+    assert process.returncode == 1 and process.stdout == ""
+    result = json.loads(process.stderr)
+    assert (
+        not result["ok"] and result["error"] == f"Expected core {PROJECT_VERSION}; imported 0.5.0"
+    )

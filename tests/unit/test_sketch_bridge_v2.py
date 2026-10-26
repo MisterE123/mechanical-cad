@@ -1,0 +1,594 @@
+"""Adversarial, native-free checks of explicitly versioned sketch evidence."""
+
+import copy
+import importlib.util
+import subprocess
+import sys
+import types
+from pathlib import Path
+
+import pytest
+
+ROOT = Path(__file__).resolve().parents[2]
+MODULE = ROOT / "blender_addon/mechanical_cad_blender/sketch_bridge.py"
+PACKAGE = "mcad_sketch_action_v2_test_package"
+package = types.ModuleType(PACKAGE)
+package.__path__ = [str(MODULE.parent)]
+sys.modules[PACKAGE] = package
+SPEC = importlib.util.spec_from_file_location(PACKAGE + ".sketch_bridge", MODULE)
+sketch_bridge = importlib.util.module_from_spec(SPEC)
+sys.modules[SPEC.name] = sketch_bridge
+SPEC.loader.exec_module(sketch_bridge)
+ACTION_SPEC = importlib.util.spec_from_file_location(
+    PACKAGE + ".sketch_action_bridge", MODULE.with_name("sketch_action_bridge.py")
+)
+sketch_action_bridge = importlib.util.module_from_spec(ACTION_SPEC)
+sys.modules[ACTION_SPEC.name] = sketch_action_bridge
+ACTION_SPEC.loader.exec_module(sketch_action_bridge)
+
+
+def definition():
+    return {
+        "schema_version": 2,
+        "id": "geometry",
+        "units": "mm",
+        "plane": {"id": "xy", "origin": [0, 0, 0], "quaternion": [1, 0, 0, 0]},
+        "points": [{"id": "center", "u": 3, "v": 4}],
+        "lines": [],
+        "circles": [{"id": "rim", "center": "center", "radius": 7}],
+        "constraints": [
+            {
+                "id": "radius",
+                "kind": "radius",
+                "refs": ["rim"],
+                "value": "shaft_radius + clearance",
+            },
+            {"id": "anchor", "kind": "fixed", "refs": ["center"], "target": [3, 4]},
+        ],
+    }
+
+
+def evidence():
+    """Synthetic valid protocol fixture, not a claim that a native solve ran."""
+    source = {"id": "sketch", "kind": "sketch_constrained", "sketch": definition()}
+    solved = sketch_bridge.normalize_sketch_v2(source["sketch"])
+    next(c for c in solved["constraints"] if c["id"] == "radius")["value"] = 5.0
+    solved["circles"][0]["radius"] = 5.0
+    report = {
+        "solver": "libslvs",
+        "solver_version": "3.2",
+        "status": "okay",
+        "remaining_dof": 0,
+        "failed_constraints": [],
+        "redundant_constraints": [],
+        "max_residual_mm": 0.0,
+        "solved": solved,
+        "dimensions": {"radius": 5.0},
+    }
+    feature = {
+        "id": "sketch",
+        "kind": "sketch_constrained",
+        "status": "ok",
+        "error": None,
+        "sketch": report,
+        "output": {
+            "kind": "sketch",
+            "display": "solved_sketch",
+            "profile": {"state": "available", "region_kind": "circle"},
+        },
+        "stats": None,
+        "mesh": {
+            "vertices": [[0, 0, 0], [1, 0, 0], [0, 1, 0]],
+            "triangles": [[0, 1, 2]],
+            "triangle_face_ids": ["sketch/face/profile"],
+        },
+        "topology": [{"id": "sketch/face/profile", "feature_id": "sketch", "kind": "face"}],
+    }
+    return feature, source
+
+
+def open_evidence(*, version=2):
+    feature, source = evidence()
+    sketch = source["sketch"]
+    sketch.update(
+        schema_version=version,
+        points=[{"id": "a", "u": 0, "v": 0}, {"id": "b", "u": 5, "v": 0}],
+        lines=[{"id": "edge", "start": "a", "end": "b"}],
+        constraints=[{"id": "length", "kind": "distance", "refs": ["a", "b"], "value": 5}],
+        circles=[],
+    )
+    if version == 1:
+        sketch.pop("circles")
+    solved = sketch_bridge._normalized_sketch(sketch)
+    feature["sketch"].update(solved=solved, dimensions={"length": 5}, remaining_dof=3)
+    feature.update(
+        mesh=None,
+        topology=[],
+        output={
+            "kind": "sketch",
+            "display": "solved_sketch",
+            "profile": {
+                "state": "unavailable",
+                "reason": {"code": "open_profile", "message": "Close chain."},
+            },
+        },
+    )
+    return feature, source
+
+
+def test_strict_report_accepts_detached_circle_solution_without_mutation():
+    feature, source = evidence()
+    before = copy.deepcopy((feature, source))
+    sketch_bridge.validate_sketch_report_v2(feature, source)
+    sketch_bridge.validate_output(feature, source)
+    assert (feature, source) == before
+    assert source["sketch"]["circles"][0]["radius"] == 7
+    assert source["sketch"]["constraints"][0]["value"] == "shaft_radius + clearance"
+
+
+@pytest.mark.parametrize(
+    "change",
+    [
+        lambda r: r.update(solver="invented"),
+        lambda r: r.update(solver_version="3.3"),
+        lambda r: r.update(status=[]),
+        lambda r: r.update(status="success"),
+        lambda r: r.update(extra=True),
+        lambda r: r.update(remaining_dof=True),
+        lambda r: r.update(remaining_dof=-1),
+        lambda r: r.update(remaining_dof=4),  # Candidate has only 3 active scalars.
+        lambda r: r.update(remaining_dof=None),
+        lambda r: r.update(max_residual_mm=None),
+        lambda r: r.update(max_residual_mm=True),
+        lambda r: r.update(max_residual_mm=float("nan")),
+        lambda r: r.update(max_residual_mm=1e-6),
+        lambda r: r.update(failed_constraints=["radius"]),
+        lambda r: r.update(failed_constraints=["missing"]),
+        lambda r: r.update(redundant_constraints=["radius"]),
+        lambda r: r.update(status="redundant_okay", redundant_constraints=["radius", "radius"]),
+        lambda r: r.update(status="redundant_okay", redundant_constraints=[{}]),
+        lambda r: r.update(dimensions={"diameter": 10}),
+        lambda r: r.update(dimensions={"radius": True}),
+        lambda r: r.update(dimensions={"radius": "shaft_radius + clearance"}),
+        lambda r: r.update(dimensions={"radius": 10}),
+        lambda r: r.update(solved=None),
+        lambda r: r["solved"].update(schema_version=True),
+        lambda r: r["solved"].update(schema_version=3),
+        lambda r: r["solved"].update(id="other"),
+        lambda r: r["solved"].update(units="m"),
+        lambda r: r["solved"].update(extra="field"),
+        lambda r: r["solved"].pop("circles"),
+        lambda r: r["solved"]["plane"].update(origin=[1, 0, 0]),
+        lambda r: r["solved"]["plane"].update(quaternion=[-1, 0, 0, 0]),
+        lambda r: r["solved"]["points"][0].update(id="other"),
+        lambda r: r["solved"]["points"][0].update(u=True),
+        lambda r: r["solved"]["points"][0].update(u=10**1000),
+        lambda r: r["solved"]["points"][0].update(u=3.1),
+        lambda r: r["solved"]["circles"][0].update(id="forged"),
+        lambda r: r["solved"]["circles"][0].update(center="missing"),
+        lambda r: r["solved"]["circles"][0].update(radius=-5),
+        lambda r: r["solved"]["circles"][0].update(radius=0),
+        lambda r: r["solved"]["circles"][0].update(radius=1e6 + 1),
+        lambda r: r["solved"]["circles"][0].update(radius=float("inf")),
+        lambda r: r["solved"]["circles"][0].update(radius=5.01),
+        lambda r: r["solved"]["circles"][0].update(radius=True),
+        lambda r: r["solved"]["circles"].append(copy.deepcopy(r["solved"]["circles"][0])),
+        lambda r: r["solved"]["constraints"][1].update(value="shaft_radius + clearance"),
+        lambda r: r["solved"]["constraints"][1].update(value=10),
+        lambda r: r["solved"]["constraints"][1].update(kind="diameter"),
+        lambda r: r["solved"]["constraints"][1].pop("target"),
+    ],
+)
+def test_forged_circle_report_is_rejected(change):
+    feature, source = evidence()
+    change(feature["sketch"])
+    with pytest.raises(ValueError):
+        sketch_bridge.validate_sketch_report_v2(feature, source)
+
+
+def test_literal_target_cannot_be_changed_consistently_in_both_map_and_solution():
+    feature, source = evidence()
+    source["sketch"]["constraints"][0]["value"] = 7
+    with pytest.raises(ValueError, match="authored numeric target"):
+        sketch_bridge.validate_sketch_report_v2(feature, source)
+
+
+def test_solved_circle_cannot_switch_to_another_existing_center():
+    feature, source = evidence()
+    for sketch in (source["sketch"], feature["sketch"]["solved"]):
+        sketch["points"].append({"id": "other", "u": 3, "v": 4})
+    feature["sketch"]["solved"]["circles"][0]["center"] = "other"
+    with pytest.raises(ValueError, match="centers"):
+        sketch_bridge.validate_sketch_report_v2(feature, source)
+
+
+def test_solved_line_cannot_reverse_persistent_endpoints_or_constraint_refs():
+    feature, source = open_evidence()
+    line = feature["sketch"]["solved"]["lines"][0]
+    line["start"], line["end"] = line["end"], line["start"]
+    with pytest.raises(ValueError, match="endpoints"):
+        sketch_bridge.validate_sketch_report_v2(feature, source)
+    feature, source = open_evidence()
+    feature["sketch"]["solved"]["constraints"][0]["refs"].reverse()
+    with pytest.raises(ValueError, match="intent"):
+        sketch_bridge.validate_sketch_report_v2(feature, source)
+
+
+def test_free_point_and_radius_may_move_with_unchanged_identity_and_numeric_bounds():
+    feature, source = evidence()
+    source["sketch"]["constraints"] = []
+    solved = feature["sketch"]["solved"]
+    solved["constraints"] = []
+    solved["points"][0].update(u=12.0, v=-17.0)
+    solved["circles"][0]["radius"] = 25.0
+    feature["sketch"].update(remaining_dof=3, dimensions={})
+    sketch_bridge.validate_sketch_report_v2(feature, source)
+
+
+@pytest.mark.parametrize("status", ["inconsistent", "didnt_converge", "too_many_unknowns"])
+def test_failed_solve_retains_only_bounded_diagnostics(status):
+    feature, source = evidence()
+    feature.update(
+        status="failed",
+        output=None,
+        mesh=None,
+        topology=[],
+        error={"code": "sketch_solve_failed", "message": "Solve failed."},
+    )
+    report = feature["sketch"]
+    report.update(
+        status=status,
+        remaining_dof=None,
+        solved=None,
+        max_residual_mm=None,
+        failed_constraints=["radius"],
+    )
+    sketch_bridge.validate_output(feature, source)
+    report["remaining_dof"] = 0
+    with pytest.raises(ValueError, match="failed sketch"):
+        sketch_bridge.validate_sketch_report_v2(feature, source)
+
+
+def test_successful_solver_report_may_survive_profile_stage_failure():
+    feature, source = evidence()
+    feature.update(
+        status="failed",
+        output=None,
+        mesh=None,
+        topology=[],
+        error={"code": "invalid_profile", "message": "Kernel face failed."},
+    )
+    sketch_bridge.validate_output(feature, source)
+    feature["sketch"] = None  # Errors before native solve may omit the report.
+    sketch_bridge.validate_output(feature, source)
+
+
+def test_open_profile_has_solved_display_and_no_shape_evidence():
+    feature, source = open_evidence()
+    sketch_bridge.validate_output(feature, source)
+    feature, source = open_evidence(version=1)
+    sketch_bridge.validate_sketch_report_v2(feature, source)
+    with pytest.raises(ValueError, match="explicit v2"):
+        sketch_bridge.validate_output(feature, source)
+
+
+@pytest.mark.parametrize(
+    "change",
+    [
+        lambda f: f.pop("output"),
+        lambda f: f.update(output=None),
+        lambda f: f.update(status="unknown"),
+        lambda f: f.update(id="other"),
+        lambda f: f.update(kind="sketch_circle"),
+        lambda f: f.update(sketch=None),
+        lambda f: f.update(error={"code": "contradiction", "message": "Failed"}),
+        lambda f: f["output"].update(kind="profile"),
+        lambda f: f["output"].update(display="mesh"),
+        lambda f: f["output"].update(extra=True),
+        lambda f: f["output"]["profile"].update(state="ready"),
+        lambda f: f["output"]["profile"].update(region_kind="line_loop"),
+        lambda f: f["output"]["profile"].update(region_kind="ellipse"),
+        lambda f: f["output"]["profile"].update(reason={"code": "open_profile", "message": "Open"}),
+        lambda f: f.update(mesh=None),
+        lambda f: f["mesh"].update(vertices=[]),
+        lambda f: f["mesh"].update(triangles=[]),
+        lambda f: f["mesh"]["vertices"][0].__setitem__(0, float("nan")),
+        lambda f: f["mesh"]["triangles"][0].__setitem__(0, True),
+        lambda f: f["mesh"]["triangle_face_ids"].__setitem__(0, "other"),
+        lambda f: f.update(topology=[]),
+        lambda f: f["topology"][0].update(feature_id="another"),
+        lambda f: f.update(stats={"solids": 1}),
+    ],
+)
+def test_forged_available_output_is_rejected(change):
+    feature, source = evidence()
+    change(feature)
+    with pytest.raises(ValueError):
+        sketch_bridge.validate_output(feature, source)
+
+
+@pytest.mark.parametrize("field,value", [("mesh", {}), ("stats", {}), ("topology", [{}])])
+def test_open_output_cannot_publish_fabricated_face(field, value):
+    feature, source = open_evidence()
+    feature[field] = value
+    with pytest.raises(ValueError, match="open sketch"):
+        sketch_bridge.validate_output(feature, source)
+
+
+@pytest.mark.parametrize(
+    "field,value", [("code", "invalid_profile"), ("message", ""), ("message", 4), ("extra", True)]
+)
+def test_open_reason_has_exact_contract(field, value):
+    feature, source = open_evidence()
+    feature["output"]["profile"]["reason"][field] = value
+    with pytest.raises(ValueError):
+        sketch_bridge.validate_output(feature, source)
+
+
+def test_closed_line_result_keeps_real_face_display_and_explicit_version():
+    feature, source = evidence()
+    sketch = source["sketch"]
+    sketch.update(
+        points=[
+            {"id": "a", "u": 0, "v": 0},
+            {"id": "b", "u": 5, "v": 0},
+            {"id": "c", "u": 0, "v": 5},
+        ],
+        lines=[
+            {"id": "ab", "start": "a", "end": "b"},
+            {"id": "bc", "start": "b", "end": "c"},
+            {"id": "ca", "start": "c", "end": "a"},
+        ],
+        circles=[],
+        constraints=[],
+    )
+    feature["sketch"].update(
+        solved=sketch_bridge.normalize_sketch_v2(sketch), dimensions={}, remaining_dof=6
+    )
+    feature["output"]["profile"]["region_kind"] = "line_loop"
+    sketch_bridge.validate_output(feature, source)
+    feature.update(mesh=None, topology=[])
+    feature["output"]["profile"] = {
+        "state": "unavailable",
+        "reason": {"code": "open_profile", "message": "Pretend this closed loop is open."},
+    }
+    with pytest.raises(ValueError, match="connectivity"):
+        sketch_bridge.validate_output(feature, source)
+
+
+@pytest.mark.parametrize("kind", ["sketch_rectangle", "sketch_circle", "extrude", "cut"])
+def test_primitive_and_solid_discriminants_keep_mesh_evidence(kind):
+    feature, _ = evidence()
+    solid = kind in ("extrude", "cut")
+    feature.update(kind=kind, output={"kind": "solid" if solid else "profile", "display": "mesh"})
+    feature.pop("sketch")
+    source = {"id": feature["id"], "kind": kind}
+    if solid:
+        feature["stats"] = {"valid": True, "solids": 1, "faces": 1, "volume": 10, "area": 20}
+    sketch_bridge.validate_output(feature, source)
+    feature["output"]["kind"] = "sketch"
+    with pytest.raises(ValueError, match="discriminant"):
+        sketch_bridge.validate_output(feature, source)
+
+
+def test_real_native_circle_report_matches_strict_evidence_contract():
+    pytest.importorskip("slvs")
+    from mechanical_cad.sketch_evaluation import evaluate_sketch
+    from mechanical_cad.sketch_model import SketchDefinition
+
+    feature, source = evidence()
+    report, feature["sketch"] = evaluate_sketch(
+        SketchDefinition.from_dict(source["sketch"]), {"shaft_radius": 4, "clearance": 1}
+    )
+    assert report.success and report.remaining_dof == 0
+    assert report.sketch.circles[0].radius == pytest.approx(5)
+    sketch_bridge.validate_sketch_report_v2(feature, source)
+
+
+def test_new_validator_import_is_native_free():
+    code = f"""
+import builtins, importlib.util, sys, types
+original = builtins.__import__
+def guarded(name, *args, **kwargs):
+    if name.split('.')[0] in {{'bpy', 'OCP', 'slvs', 'mechanical_cad'}} or name.endswith('bridge'):
+        raise AssertionError('forbidden dependency: ' + name)
+    return original(name, *args, **kwargs)
+builtins.__import__ = guarded
+package = types.ModuleType('standalone')
+package.__path__ = [{str(MODULE.parent)!r}]
+sys.modules['standalone'] = package
+spec = importlib.util.spec_from_file_location('standalone.sketch_evidence', {str(MODULE)!r})
+module = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(module)
+assert callable(module.validate_sketch_report_v2) and callable(module.validate_output)
+"""
+    process = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True)
+    assert process.returncode == 0, process.stderr
+
+
+def solve_request(kind="circle"):
+    _, source = evidence() if kind == "circle" else open_evidence(version=1 if kind == "v1" else 2)
+    return {
+        "protocol_version": 1,
+        "action": "solve_sketch",
+        "result_version": 2,
+        "feature_id": source["id"],
+        "document": {
+            "schema_version": 2,
+            "id": "doc",
+            "name": "Solve-only candidate",
+            "units": "mm",
+            "parameters": {"shaft_radius": 4, "clearance": 1},
+            "features": [source],
+            "active_feature": source["id"],
+        },
+    }
+
+
+def solve_response(request):
+    pytest.importorskip("slvs")
+    from mechanical_cad.sidecar import process_request
+
+    return process_request(request)
+
+
+@pytest.mark.parametrize("kind", ["circle", "open", "v1"])
+def test_whole_real_solve_action_is_bound_detached_and_has_separate_profile_readiness(kind):
+    request = solve_request(kind)
+    response = solve_response(request)
+    before = copy.deepcopy((request, response))
+    validated = sketch_action_bridge.validate_solve_response(response, request)
+    assert validated == response and (request, response) == before
+    assert validated["ok"] and validated["result"]["profile_check"]["ready"] == (kind == "circle")
+    validated["result"]["sketch"]["solved"]["points"][0]["u"] = 123
+    assert response == before[1]
+
+
+@pytest.mark.parametrize(
+    "change",
+    [
+        lambda r: r.update(protocol_version=True),
+        lambda r: r.update(protocol_version=2),
+        lambda r: r.update(result_version=True),
+        lambda r: r.update(result_version=1),
+        lambda r: r.pop("result_version"),
+        lambda r: r.update(action="replay"),
+        lambda r: r.update(input_fingerprint="0" * 64),
+        lambda r: r.update(ok=1),
+        lambda r: r.update(ok=False),
+        lambda r: r.update(error={"code": "forged", "message": "Not successful"}),
+        lambda r: r.update(extra=True),
+        lambda r: r.update(result=None),
+        lambda r: r["result"].update(document_id="other"),
+        lambda r: r["result"].update(document_hash="0" * 64),
+        lambda r: r["result"].update(feature_id="other"),
+        lambda r: r["result"].update(extra=True),
+        lambda r: r["result"].update(sketch=None),
+        lambda r: r["result"].update(profile_check=None),
+        lambda r: r["result"]["profile_check"].update(ready=1),
+        lambda r: r["result"]["profile_check"].update(extra=True),
+        lambda r: r["result"]["profile_check"].update(
+            error={"code": "open_profile", "message": "Open"}
+        ),
+        lambda r: r["result"].update(profile_check={"ready": False, "error": None}),
+        lambda r: r["result"].update(
+            profile_check={"ready": False, "error": {"code": "unknown", "message": "No"}}
+        ),
+        lambda r: r["result"].update(
+            profile_check={"ready": False, "error": {"code": "open_profile", "message": "Open"}}
+        ),
+    ],
+)
+def test_forged_solve_action_envelope_or_profile_evidence_fails_closed(change):
+    request = solve_request()
+    response = solve_response(request)
+    change(response)
+    with pytest.raises(ValueError):
+        sketch_action_bridge.validate_solve_response(response, request)
+
+
+def test_same_canonical_hash_cannot_substitute_a_different_raw_request():
+    from mechanical_cad.model import Document
+
+    request = solve_request()
+    response = solve_response(request)
+    canonical_request = {**request, "document": Document.from_dict(request["document"]).to_dict()}
+    assert canonical_request != request
+    assert (
+        response["result"]["document_hash"]
+        == Document.from_dict(canonical_request["document"]).content_hash
+    )
+    with pytest.raises(ValueError, match="fingerprint"):
+        sketch_action_bridge.validate_solve_response(response, canonical_request)
+
+
+def test_failed_native_solve_has_no_profile_check_and_no_success_flag():
+    request = solve_request()
+    request["document"]["features"][0]["sketch"]["constraints"].append(
+        {"id": "conflict", "kind": "radius", "refs": ["rim"], "value": 20}
+    )
+    response = solve_response(request)
+    assert not response["ok"]
+    sketch_action_bridge.validate_solve_response(response, request)
+    response["result"]["profile_check"] = {
+        "ready": False,
+        "error": {"code": "open_profile", "message": "Open"},
+    }
+    with pytest.raises(ValueError, match="failed solve"):
+        sketch_action_bridge.validate_solve_response(response, request)
+
+
+@pytest.mark.parametrize("feature_id", ["missing", None, []])
+def test_expected_action_errors_remain_fingerprint_bound_without_success_evidence(feature_id):
+    request = solve_request()
+    request["feature_id"] = feature_id
+    response = solve_response(request)
+    assert not response["ok"] and response["result"] is None
+    assert sketch_action_bridge.validate_solve_response(response, request) == response
+    response["input_fingerprint"] = "0" * 64
+    with pytest.raises(ValueError, match="fingerprint"):
+        sketch_action_bridge.validate_solve_response(response, request)
+
+
+def test_expected_wire_validation_error_has_no_action_result_or_evidence():
+    request = solve_request()
+    response = {
+        "protocol_version": 1,
+        "result_version": 2,
+        "ok": False,
+        "result": None,
+        "error": {"code": "invalid_document", "message": "No valid document."},
+    }
+    assert sketch_action_bridge.validate_solve_response(response, request) == response
+    response["result"] = {}
+    with pytest.raises(ValueError):
+        sketch_action_bridge.validate_solve_response(response, request)
+
+
+def test_open_profile_cannot_be_forged_ready_or_assigned_face_output():
+    request = solve_request("open")
+    response = solve_response(request)
+    response["result"]["profile_check"] = {"ready": True, "error": None}
+    with pytest.raises(ValueError, match="connectivity"):
+        sketch_action_bridge.validate_solve_response(response, request)
+
+
+@pytest.mark.parametrize("kind", ["circle", "open"])
+def test_real_kernel_typed_replay_evidence_matches_new_output_validator(kind):
+    pytest.importorskip("slvs")
+    pytest.importorskip("OCP")
+    from mechanical_cad.sidecar import process_request
+
+    request = solve_request(kind)
+    document = request["document"]
+    document["features"].append(
+        {"id": "pad", "kind": "extrude", "params": {"length": 10}, "inputs": {"profile": "sketch"}}
+    )
+    document["active_feature"] = "pad"
+    response = process_request({"protocol_version": 1, "result_version": 2, "document": document})
+    for feature, source in zip(response["result"]["features"], document["features"], strict=True):
+        sketch_bridge.validate_output(feature, source)
+    assert response["ok"] == (kind == "circle")
+
+
+def test_action_validator_does_not_import_core_kernel_solver_or_blender():
+    code = f"""
+import builtins, importlib.util, sys, types, types
+original = builtins.__import__
+def guarded(name, *args, **kwargs):
+    if name.split('.')[0] in {{'bpy', 'OCP', 'slvs', 'mechanical_cad'}}:
+        raise AssertionError('forbidden dependency: ' + name)
+    return original(name, *args, **kwargs)
+builtins.__import__ = guarded
+package = types.ModuleType('mcad_native_free_action')
+package.__path__ = [{str(MODULE.parent)!r}]
+sys.modules[package.__name__] = package
+spec = importlib.util.spec_from_file_location(package.__name__ + '.sketch_action_bridge',
+                                            {str(MODULE.with_name("sketch_action_bridge.py"))!r})
+module = importlib.util.module_from_spec(spec)
+sys.modules[spec.name] = module
+spec.loader.exec_module(module)
+assert callable(module.validate_solve_response)
+"""
+    process = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True)
+    assert process.returncode == 0, process.stderr

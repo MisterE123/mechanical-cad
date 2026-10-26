@@ -1,0 +1,166 @@
+{
+  "active_feature": "plate_body",
+  "features": [
+    {
+      "id": "plate_outline",
+      "inputs": {},
+      "kind": "sketch_constrained",
+      "label": "Explicit plate outline",
+      "params": {},
+      "sketch": {
+        "circles": [],
+        "constraints": [
+          {
+            "id": "depth_driver",
+            "kind": "distance",
+            "refs": [
+              "corner_east",
+              "corner_far"
+            ],
+            "target": null,
+            "value": "depth"
+          },
+          {
+            "id": "east_axis",
+            "kind": "vertical",
+            "refs": [
+              "edge_east"
+            ],
+            "target": null,
+            "value": null
+          },
+          {
+            "id": "north_axis",
+            "kind": "horizontal",
+            "refs": [
+              "edge_north"
+            ],
+            "target": null,
+            "value": null
+          },
+          {
+            "id": "origin_lock",
+            "kind": "fixed",
+            "refs": [
+              "corner_origin"
+            ],
+            "target": [
+              0.0,
+              0.0
+            ],
+            "value": null
+          },
+          {
+            "id": "south_axis",
+            "kind": "horizontal",
+            "refs": [
+              "edge_south"
+            ],
+            "target": null,
+            "value": null
+          },
+          {
+            "id": "west_axis",
+            "kind": "vertical",
+            "refs": [
+              "edge_west"
+            ],
+            "target": null,
+            "value": null
+          },
+          {
+            "id": "width_driver",
+            "kind": "distance",
+            "refs": [
+              "corner_origin",
+              "corner_east"
+            ],
+            "target": null,
+            "value": "width"
+          }
+        ],
+        "id": "plate_line_sketch",
+        "lines": [
+          {
+            "end": "corner_far",
+            "id": "edge_east",
+            "start": "corner_east"
+          },
+          {
+            "end": "corner_north",
+            "id": "edge_north",
+            "start": "corner_far"
+          },
+          {
+            "end": "corner_east",
+            "id": "edge_south",
+            "start": "corner_origin"
+          },
+          {
+            "end": "corner_origin",
+            "id": "edge_west",
+            "start": "corner_north"
+          }
+        ],
+        "plane": {
+          "id": "plate_xy",
+          "origin": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "quaternion": [
+            1.0,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        "points": [
+          {
+            "id": "corner_east",
+            "u": 39.0,
+            "v": 0.5
+          },
+          {
+            "id": "corner_far",
+            "u": 39.5,
+            "v": 24.5
+          },
+          {
+            "id": "corner_north",
+            "u": -0.25,
+            "v": 25.5
+          },
+          {
+            "id": "corner_origin",
+            "u": 0.0,
+            "v": 0.0
+          }
+        ],
+        "schema_version": 2,
+        "units": "mm"
+      }
+    },
+    {
+      "id": "plate_body",
+      "inputs": {
+        "profile": "plate_outline"
+      },
+      "kind": "extrude",
+      "label": "Plate thickness",
+      "params": {
+        "length": "thickness"
+      }
+    }
+  ],
+  "id": "explicit_constraint_plate",
+  "name": "Explicit constraint plate",
+  "parameters": {
+    "depth": 25,
+    "thickness": 8,
+    "width": 40
+  },
+  "schema_version": 2,
+  "units": "mm"
+}

@@ -1,0 +1,681 @@
+{
+  "active_verification_preset": "nominal_running_clearance",
+  "angle_unit": "rad",
+  "assembly_schema_version": 1,
+  "ground": {
+    "wxyz": [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "xyz_mm": [
+      0.0,
+      0.0,
+      0.0
+    ]
+  },
+  "grounded_instance": "base",
+  "id": "clevis-hinge-benchmark",
+  "instances": [
+    {
+      "id": "base",
+      "name": "Grounded clevis",
+      "part_id": "base"
+    },
+    {
+      "id": "leaf",
+      "name": "Revolute moving leaf",
+      "part_id": "leaf"
+    },
+    {
+      "id": "pin",
+      "name": "Fixed plain pin",
+      "part_id": "pin"
+    }
+  ],
+  "joints": [
+    {
+      "child": "leaf",
+      "child_frame": "bore_midplane",
+      "coordinate": 0.0,
+      "id": "hinge",
+      "kind": "revolute",
+      "limits": [
+        -1.0471975511965976,
+        1.0471975511965976
+      ],
+      "name": "Leaf rotation about +Z",
+      "parent": "base",
+      "parent_frame": "bore_axis"
+    },
+    {
+      "child": "pin",
+      "child_frame": "pin_midplane",
+      "id": "pin_fixed",
+      "kind": "fixed",
+      "name": "Pin fixed to clevis by explicit idealization",
+      "parent": "base",
+      "parent_frame": "bore_axis"
+    }
+  ],
+  "kind": "assembly",
+  "length_unit": "mm",
+  "name": "Three-part clevis hinge benchmark",
+  "part_sources": [
+    {
+      "document": {
+        "active_feature": "body",
+        "features": [
+          {
+            "id": "profile",
+            "inputs": {},
+            "kind": "sketch_constrained",
+            "label": "Dimensioned rectangular stock",
+            "params": {},
+            "sketch": {
+              "constraints": [
+                {
+                  "id": "anchor",
+                  "kind": "fixed",
+                  "refs": [
+                    "p0"
+                  ],
+                  "target": [
+                    0.0,
+                    0.0
+                  ],
+                  "value": null
+                },
+                {
+                  "id": "axis0",
+                  "kind": "horizontal",
+                  "refs": [
+                    "l0"
+                  ],
+                  "target": null,
+                  "value": null
+                },
+                {
+                  "id": "axis1",
+                  "kind": "vertical",
+                  "refs": [
+                    "l1"
+                  ],
+                  "target": null,
+                  "value": null
+                },
+                {
+                  "id": "axis2",
+                  "kind": "horizontal",
+                  "refs": [
+                    "l2"
+                  ],
+                  "target": null,
+                  "value": null
+                },
+                {
+                  "id": "axis3",
+                  "kind": "vertical",
+                  "refs": [
+                    "l3"
+                  ],
+                  "target": null,
+                  "value": null
+                },
+                {
+                  "id": "depth",
+                  "kind": "distance",
+                  "refs": [
+                    "p1",
+                    "p2"
+                  ],
+                  "target": null,
+                  "value": "depth"
+                },
+                {
+                  "id": "width",
+                  "kind": "distance",
+                  "refs": [
+                    "p0",
+                    "p1"
+                  ],
+                  "target": null,
+                  "value": "width"
+                }
+              ],
+              "id": "stock_profile_geometry",
+              "lines": [
+                {
+                  "end": "p1",
+                  "id": "l0",
+                  "start": "p0"
+                },
+                {
+                  "end": "p2",
+                  "id": "l1",
+                  "start": "p1"
+                },
+                {
+                  "end": "p3",
+                  "id": "l2",
+                  "start": "p2"
+                },
+                {
+                  "end": "p0",
+                  "id": "l3",
+                  "start": "p3"
+                }
+              ],
+              "plane": {
+                "id": "stock_xy",
+                "origin": [
+                  -6.0,
+                  -12.0,
+                  -9.0
+                ],
+                "quaternion": [
+                  1.0,
+                  0.0,
+                  0.0,
+                  0.0
+                ]
+              },
+              "points": [
+                {
+                  "id": "p0",
+                  "u": 0.0,
+                  "v": 0.0
+                },
+                {
+                  "id": "p1",
+                  "u": 12.0,
+                  "v": 0.0
+                },
+                {
+                  "id": "p2",
+                  "u": 12.0,
+                  "v": 20.0
+                },
+                {
+                  "id": "p3",
+                  "u": 0.0,
+                  "v": 20.0
+                }
+              ],
+              "schema_version": 1,
+              "units": "mm"
+            }
+          },
+          {
+            "id": "pad",
+            "inputs": {
+              "profile": "profile"
+            },
+            "kind": "extrude",
+            "label": "Extrude 18 mm stock",
+            "params": {
+              "length": "height"
+            }
+          },
+          {
+            "id": "slot_profile",
+            "inputs": {},
+            "kind": "sketch_rectangle",
+            "label": "Overshooting open slot cutter",
+            "params": {
+              "height": "slot_depth",
+              "width": "slot_width",
+              "x": "slot_x",
+              "y": "slot_y",
+              "z": "slot_z"
+            }
+          },
+          {
+            "id": "slot_tool",
+            "inputs": {
+              "profile": "slot_profile"
+            },
+            "kind": "extrude",
+            "label": "Slot cutter solid",
+            "params": {
+              "length": "slot_opening"
+            }
+          },
+          {
+            "id": "slotted",
+            "inputs": {
+              "base": "pad",
+              "tool": "slot_tool"
+            },
+            "kind": "cut",
+            "label": "Cut 10 mm fork opening",
+            "params": {}
+          },
+          {
+            "id": "bore_profile",
+            "inputs": {},
+            "kind": "sketch_circle",
+            "label": "Concentric 5 mm bore",
+            "params": {
+              "radius": "bore_radius",
+              "x": 0,
+              "y": 0,
+              "z": "bore_z"
+            }
+          },
+          {
+            "id": "bore_tool",
+            "inputs": {
+              "profile": "bore_profile"
+            },
+            "kind": "extrude",
+            "label": "Through-bore cutter",
+            "params": {
+              "length": "bore_tool_length"
+            }
+          },
+          {
+            "id": "body",
+            "inputs": {
+              "base": "slotted",
+              "tool": "bore_tool"
+            },
+            "kind": "cut",
+            "label": "Finished clevis",
+            "params": {}
+          }
+        ],
+        "id": "mechanism-clevis",
+        "name": "Clevis base: slotted and bored",
+        "parameters": {
+          "bore_radius": 2.5,
+          "bore_tool_length": 20,
+          "bore_z": -10,
+          "depth": 20,
+          "height": 18,
+          "slot_depth": 16,
+          "slot_opening": 10,
+          "slot_width": 14,
+          "slot_x": -7,
+          "slot_y": -7,
+          "slot_z": -5,
+          "width": 12
+        },
+        "schema_version": 2,
+        "units": "mm"
+      },
+      "source_digest": "db46fce5c0221ae395129b06cd05dc4d9433c6d68058678a49cdd198c74fe785",
+      "source_document_id": "mechanism-clevis"
+    },
+    {
+      "document": {
+        "active_feature": "body",
+        "features": [
+          {
+            "id": "profile",
+            "inputs": {},
+            "kind": "sketch_constrained",
+            "label": "Dimensioned rectangular stock",
+            "params": {},
+            "sketch": {
+              "constraints": [
+                {
+                  "id": "anchor",
+                  "kind": "fixed",
+                  "refs": [
+                    "p0"
+                  ],
+                  "target": [
+                    0.0,
+                    0.0
+                  ],
+                  "value": null
+                },
+                {
+                  "id": "axis0",
+                  "kind": "horizontal",
+                  "refs": [
+                    "l0"
+                  ],
+                  "target": null,
+                  "value": null
+                },
+                {
+                  "id": "axis1",
+                  "kind": "vertical",
+                  "refs": [
+                    "l1"
+                  ],
+                  "target": null,
+                  "value": null
+                },
+                {
+                  "id": "axis2",
+                  "kind": "horizontal",
+                  "refs": [
+                    "l2"
+                  ],
+                  "target": null,
+                  "value": null
+                },
+                {
+                  "id": "axis3",
+                  "kind": "vertical",
+                  "refs": [
+                    "l3"
+                  ],
+                  "target": null,
+                  "value": null
+                },
+                {
+                  "id": "depth",
+                  "kind": "distance",
+                  "refs": [
+                    "p1",
+                    "p2"
+                  ],
+                  "target": null,
+                  "value": "depth"
+                },
+                {
+                  "id": "width",
+                  "kind": "distance",
+                  "refs": [
+                    "p0",
+                    "p1"
+                  ],
+                  "target": null,
+                  "value": "width"
+                }
+              ],
+              "id": "stock_profile_geometry",
+              "lines": [
+                {
+                  "end": "p1",
+                  "id": "l0",
+                  "start": "p0"
+                },
+                {
+                  "end": "p2",
+                  "id": "l1",
+                  "start": "p1"
+                },
+                {
+                  "end": "p3",
+                  "id": "l2",
+                  "start": "p2"
+                },
+                {
+                  "end": "p0",
+                  "id": "l3",
+                  "start": "p3"
+                }
+              ],
+              "plane": {
+                "id": "stock_xy",
+                "origin": [
+                  -4.0,
+                  -4.0,
+                  0.0
+                ],
+                "quaternion": [
+                  1.0,
+                  0.0,
+                  0.0,
+                  0.0
+                ]
+              },
+              "points": [
+                {
+                  "id": "p0",
+                  "u": 0.0,
+                  "v": 0.0
+                },
+                {
+                  "id": "p1",
+                  "u": 8.0,
+                  "v": 0.0
+                },
+                {
+                  "id": "p2",
+                  "u": 8.0,
+                  "v": 20.0
+                },
+                {
+                  "id": "p3",
+                  "u": 0.0,
+                  "v": 20.0
+                }
+              ],
+              "schema_version": 1,
+              "units": "mm"
+            }
+          },
+          {
+            "id": "pad",
+            "inputs": {
+              "profile": "profile"
+            },
+            "kind": "extrude",
+            "label": "Extrude leaf thickness",
+            "params": {
+              "length": "thickness"
+            }
+          },
+          {
+            "id": "bore_profile",
+            "inputs": {},
+            "kind": "sketch_circle",
+            "label": "Concentric 5 mm bore",
+            "params": {
+              "radius": "bore_radius",
+              "x": 0,
+              "y": 0,
+              "z": 0
+            }
+          },
+          {
+            "id": "bore_tool",
+            "inputs": {
+              "profile": "bore_profile"
+            },
+            "kind": "extrude",
+            "label": "Through-bore cutter",
+            "params": {
+              "length": "thickness"
+            }
+          },
+          {
+            "id": "body",
+            "inputs": {
+              "base": "pad",
+              "tool": "bore_tool"
+            },
+            "kind": "cut",
+            "label": "Finished leaf",
+            "params": {}
+          }
+        ],
+        "id": "mechanism-leaf",
+        "name": "Moving leaf: dimensioned stock and bore",
+        "parameters": {
+          "bore_radius": 2.5,
+          "depth": 20,
+          "side_gap": 0.25,
+          "slot_opening": 10,
+          "thickness": "slot_opening - 2 * side_gap",
+          "width": 8
+        },
+        "schema_version": 2,
+        "units": "mm"
+      },
+      "source_digest": "5d8a0b005a6ab9eaddadf4dd52f122afd71883011aa76eae72259317a63bf96d",
+      "source_document_id": "mechanism-leaf"
+    },
+    {
+      "document": {
+        "active_feature": "body",
+        "features": [
+          {
+            "id": "profile",
+            "inputs": {},
+            "kind": "sketch_circle",
+            "label": "Pin cross-section",
+            "params": {
+              "radius": "pin_radius",
+              "x": 0,
+              "y": 0,
+              "z": "start_z"
+            }
+          },
+          {
+            "id": "body",
+            "inputs": {
+              "profile": "profile"
+            },
+            "kind": "extrude",
+            "label": "Extrude plain pin",
+            "params": {
+              "length": "length"
+            }
+          }
+        ],
+        "id": "mechanism-pin",
+        "name": "Plain fixed pin: parameter-driven diameter",
+        "parameters": {
+          "bore_radius": 2.5,
+          "length": 20,
+          "pin_radius": "bore_radius - radial_gap",
+          "radial_gap": 0.2,
+          "start_z": -10
+        },
+        "schema_version": 2,
+        "units": "mm"
+      },
+      "source_digest": "8571b305aa4763e0ee50d19917b32e2d0e172dc6f5f4e9f77ca553f2bc0f56e9",
+      "source_document_id": "mechanism-pin"
+    }
+  ],
+  "parts": [
+    {
+      "id": "base",
+      "mate_frames": [
+        {
+          "id": "bore_axis",
+          "name": "Bore axis at fork midplane",
+          "placement": {
+            "wxyz": [
+              1.0,
+              0.0,
+              0.0,
+              0.0
+            ],
+            "xyz_mm": [
+              0.0,
+              0.0,
+              0.0
+            ]
+          }
+        }
+      ],
+      "name": "Clevis base: slotted and bored",
+      "output_feature_id": "body",
+      "source_digest": "db46fce5c0221ae395129b06cd05dc4d9433c6d68058678a49cdd198c74fe785",
+      "source_document_id": "mechanism-clevis"
+    },
+    {
+      "id": "leaf",
+      "mate_frames": [
+        {
+          "id": "bore_midplane",
+          "name": "Bore axis at literal z=4.75 mm",
+          "placement": {
+            "wxyz": [
+              1.0,
+              0.0,
+              0.0,
+              0.0
+            ],
+            "xyz_mm": [
+              0.0,
+              0.0,
+              4.75
+            ]
+          }
+        }
+      ],
+      "name": "Moving leaf: dimensioned stock and bore",
+      "output_feature_id": "body",
+      "source_digest": "5d8a0b005a6ab9eaddadf4dd52f122afd71883011aa76eae72259317a63bf96d",
+      "source_document_id": "mechanism-leaf"
+    },
+    {
+      "id": "pin",
+      "mate_frames": [
+        {
+          "id": "pin_midplane",
+          "name": "Pin axis at pin midplane",
+          "placement": {
+            "wxyz": [
+              1.0,
+              0.0,
+              0.0,
+              0.0
+            ],
+            "xyz_mm": [
+              0.0,
+              0.0,
+              0.0
+            ]
+          }
+        }
+      ],
+      "name": "Plain fixed pin: parameter-driven diameter",
+      "output_feature_id": "body",
+      "source_digest": "8571b305aa4763e0ee50d19917b32e2d0e172dc6f5f4e9f77ca553f2bc0f56e9",
+      "source_document_id": "mechanism-pin"
+    }
+  ],
+  "verification_presets": [
+    {
+      "id": "nominal_running_clearance",
+      "kind": "clearance",
+      "name": "Illustrative running-clearance requirements",
+      "policy": {
+        "linear_deflection_mm": 0.05,
+        "linear_tolerance_mm": 1e-06,
+        "volume_tolerance_mm3": 1e-09
+      },
+      "requirements": [
+        {
+          "id": "fork_leaf_gap",
+          "instances": [
+            "base",
+            "leaf"
+          ],
+          "minimum_mm": 0.2,
+          "name": "Fork-to-leaf minimum surface gap"
+        },
+        {
+          "id": "fork_pin_gap",
+          "instances": [
+            "base",
+            "pin"
+          ],
+          "minimum_mm": 0.15,
+          "name": "Fork-to-pin minimum radial gap"
+        },
+        {
+          "id": "leaf_pin_gap",
+          "instances": [
+            "leaf",
+            "pin"
+          ],
+          "minimum_mm": 0.15,
+          "name": "Leaf-to-pin minimum radial gap"
+        }
+      ]
+    }
+  ]
+}

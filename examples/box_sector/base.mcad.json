@@ -1,0 +1,38 @@
+{
+  "active_feature": "pad",
+  "features": [
+    {
+      "id": "profile",
+      "inputs": {},
+      "kind": "sketch_rectangle",
+      "label": "Base rectangle",
+      "params": {
+        "height": "depth",
+        "width": "width",
+        "x": 0,
+        "y": 0,
+        "z": 0
+      }
+    },
+    {
+      "id": "pad",
+      "inputs": {
+        "profile": "profile"
+      },
+      "kind": "extrude",
+      "label": "Base extrusion",
+      "params": {
+        "length": "height"
+      }
+    }
+  ],
+  "id": "box_sector_base",
+  "name": "Box base 40 x 30 x 10 mm",
+  "parameters": {
+    "depth": 30.0,
+    "height": 10.0,
+    "width": 40.0
+  },
+  "schema_version": 1,
+  "units": "mm"
+}

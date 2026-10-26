@@ -1,0 +1,41 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mechanical-cad"
+version = "1.29.0"
+description = "An experimental, replayable B-rep CAD foundation for Blender"
+readme = "README.md"
+requires-python = ">=3.11,<3.15"
+license = "GPL-3.0-or-later"
+authors = [{name = "Mechanical CAD contributors"}]
+dependencies = ["cadquery-ocp-novtk==8.0.1.1.0"]
+
+[project.optional-dependencies]
+sketch = ["slvs==3.2"]
+dev = ["pytest==9.1.1", "ruff==0.17.1"]
+
+[project.scripts]
+mechanical-cad = "mechanical_cad.cli:main"
+
+[tool.mechanical_cad.release]
+scope = "Integrated modeling development: constrained sketches and analytic profiles with holes, datum planes and associative planar-face primitives, editable solid features, rooted-tree mechanical assemblies, checked STEP/STL; Linux Blender 5.2.2 integration; Windows 1.15 bounded background qualification, see docs/RELEASE_115_WINDOWS.md"
+blender_minimum = [5, 2, 0]
+qualified_runtime = "Native Blender 5.2.2 LTS on Linux x86_64; CPython 3.12 sidecar"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests", "scripts/tests"]
+pythonpath = ["src"]
+markers = ["kernel: requires the pinned Open CASCADE backend"]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+exclude = [".venv", "dist"]
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F", "B", "I"]

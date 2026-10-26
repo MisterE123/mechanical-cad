@@ -1,0 +1,428 @@
+import json
+import math
+from dataclasses import FrozenInstanceError, replace
+from pathlib import Path
+
+import pytest
+
+from mechanical_cad.assembly_model import (
+    MAX_ASSEMBLY_BYTES,
+    MAX_INSTANCES,
+    MAX_JOINTS,
+    MAX_PART_DEFINITIONS,
+    MAX_PART_SOURCES,
+    AssemblyDocument,
+    Frame,
+    Instance,
+    Joint,
+    MateFrame,
+    PartDefinition,
+    PartSource,
+    replace_source,
+)
+from mechanical_cad.errors import CADException
+from mechanical_cad.model import Document, Feature, load_document
+
+
+def document(identity="doc"):
+    return Document(
+        identity,
+        "User plate",
+        {"width": 10},
+        (
+            Feature("profile", "sketch_rectangle", "Rectangle", {"width": "width", "height": 4}),
+            Feature("solid", "extrude", "Extrusion", {"length": 2}, {"profile": "profile"}),
+        ),
+        "solid",
+    )
+
+
+def assembly(kind="revolute"):
+    # Canonicalize ordinary Part construction, just as the existing document API does.
+    doc = Document.from_dict(document().to_dict())
+    source = PartSource.from_document(doc)
+    part = PartDefinition("p", doc.content_hash, doc.id, "solid", (MateFrame("axis"),))
+    return AssemblyDocument(
+        "assembly",
+        "Mechanism",
+        (source,),
+        (part,),
+        (Instance("base", "p"), Instance("child", "p")),
+        (Joint("joint", kind, "base", "child", "axis", "axis"),),
+        "base",
+    )
+
+
+def test_canonical_roundtrip_names_and_hash():
+    a = assembly()
+    parsed = AssemblyDocument.from_json(a.to_json())
+    assert parsed == a
+    assert parsed.to_json() == a.to_json()
+    assert parsed.content_hash == a.fingerprint
+    assert a.parts[0].name == "p"
+    assert a.parts[0].mate_frames[0].name == "axis"
+    assert a.instances[0].name == "base"
+    assert a.joints[0].name == "joint"
+    data = a.to_dict()
+    del data["parts"][0]["name"]
+    assert AssemblyDocument.from_dict(data).to_json() == a.to_json()
+    assert replace(a, name="Renamed").content_hash != a.content_hash
+
+
+def test_snapshot_does_not_alias_any_mutable_inputs():
+    a = assembly()
+    data = a.to_dict()
+    b = AssemblyDocument.from_dict(data)
+    data["part_sources"][0]["document"]["parameters"]["width"] = 90
+    data["parts"][0]["mate_frames"][0]["placement"]["xyz_mm"][0] = 90
+    data["instances"][0]["name"] = "Changed"
+    assert b.to_json() == a.to_json()
+    with pytest.raises(TypeError):
+        b.part_sources[0].document.parameters["width"] = 90
+    with pytest.raises(TypeError):
+        b.source_hashes["doc"] = "a" * 64
+    with pytest.raises(FrozenInstanceError):
+        b.parts[0].mate_frames[0].placement.xyz_mm = (3, 4, 5)
+    frames = [MateFrame("axis")]
+    part = replace(a.parts[0], mate_frames=frames)
+    frames.clear()
+    assert len(part.mate_frames) == 1
+    xyz = [1, 2, 3]
+    frame = Frame(xyz)
+    xyz[0] = 100
+    assert frame.xyz_mm == (1, 2, 3)
+
+
+@pytest.mark.parametrize(
+    "location",
+    [
+        (),
+        ("ground",),
+        ("parts", 0),
+        ("parts", 0, "mate_frames", 0),
+        ("parts", 0, "mate_frames", 0, "placement"),
+        ("instances", 0),
+        ("joints", 0),
+        ("part_sources", 0),
+        ("part_sources", 0, "document"),
+        ("part_sources", 0, "document", "features", 0),
+    ],
+)
+def test_unknown_keys_rejected_at_every_level(location):
+    data = assembly().to_dict()
+    node = data
+    for key in location:
+        node = node[key]
+    node["unexpected"] = "ignored?"
+    with pytest.raises(CADException):
+        AssemblyDocument.from_dict(data)
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        '{"kind":"assembly","kind":"assembly"}',
+        '{"nested":{"id":"a","id":"b"}}',
+        '{"number":NaN}',
+        '{"number":Infinity}',
+        '{"number":1e999}',
+        '{"number":' + "1" * 129 + "}",
+        "[",
+        "[]",
+        "null",
+        "[" * 21 + "0" + "]" * 21,
+    ],
+)
+def test_invalid_json_and_bounded_numeric_tokens(text):
+    with pytest.raises(CADException):
+        AssemblyDocument.from_json(text)
+
+
+def test_total_bytes_and_unicode_guards():
+    with pytest.raises(CADException) as error:
+        AssemblyDocument.from_json(" " * (MAX_ASSEMBLY_BYTES + 1))
+    assert error.value.code == "assembly_too_large"
+    with pytest.raises(CADException):
+        AssemblyDocument.from_json('"' + "é" * MAX_ASSEMBLY_BYTES + '"')
+    with pytest.raises(CADException):
+        AssemblyDocument.from_json("\ud800")
+    with pytest.raises(CADException):
+        replace(assembly(), name="\ud800")
+
+
+@pytest.mark.parametrize(
+    "field,value",
+    [
+        ("kind", "part"),
+        ("assembly_schema_version", True),
+        ("assembly_schema_version", 2),
+        ("length_unit", "m"),
+        ("angle_unit", "deg"),
+        ("id", "../path"),
+        ("ground", None),
+        ("part_sources", {}),
+        ("name", ""),
+    ],
+)
+def test_invalid_envelope(field, value):
+    data = assembly().to_dict()
+    data[field] = value
+    with pytest.raises(CADException):
+        AssemblyDocument.from_dict(data)
+
+
+@pytest.mark.parametrize("value", [True, "1", None, math.nan, math.inf, 1e7, 10**1000])
+def test_strict_numeric_frames_and_joints(value):
+    with pytest.raises(CADException):
+        Frame((value, 0, 0))
+    with pytest.raises(CADException):
+        replace(assembly(), joints=(replace(assembly().joints[0], coordinate=value),))
+
+
+def test_unit_quaternion_limits_and_fixed_wire_contract():
+    with pytest.raises(CADException):
+        Frame(wxyz=(0.5, 0, 0, 0))
+    with pytest.raises(CADException):
+        Frame(wxyz=(1, 0, 0))
+    for limits in [(0, 0), (1, 0), (0, True), (0, 10001), [1]]:
+        with pytest.raises(CADException):
+            replace(assembly().joints[0], limits=limits)
+    with pytest.raises(CADException):
+        replace(assembly().joints[0], limits=(1, 2))
+    data = assembly("fixed").to_dict()
+    assert "coordinate" not in data["joints"][0]
+    assert "limits" not in data["joints"][0]
+    data["joints"][0]["coordinate"] = 0
+    with pytest.raises(CADException):
+        AssemblyDocument.from_dict(data)
+
+
+@pytest.mark.parametrize(
+    "mutate,code",
+    [
+        (lambda a: replace(a, grounded_instance="missing"), "missing_ground"),
+        (lambda a: replace(a, joints=()), "disconnected"),
+        (lambda a: replace(a, parts=()), "missing_part"),
+        (lambda a: replace(a, part_sources=()), "missing_source"),
+        (lambda a: replace(a, joints=(replace(a.joints[0], child="missing"),)), "missing_instance"),
+        (
+            lambda a: replace(a, joints=(replace(a.joints[0], child_frame="missing"),)),
+            "missing_frame",
+        ),
+        (lambda a: replace(a, joints=(replace(a.joints[0], parent="child"),)), "unsupported_graph"),
+        (lambda a: replace(a, joints=(replace(a.joints[0], child="base"),)), "unsupported_graph"),
+        (
+            lambda a: replace(a, joints=(*a.joints, replace(a.joints[0], id="j2"))),
+            "multiple_parents",
+        ),
+        (lambda a: replace(a, instances=(*a.instances, a.instances[0])), "duplicate_id"),
+        (lambda a: replace(a, part_sources=(*a.part_sources, a.part_sources[0])), "duplicate_id"),
+        (
+            lambda a: replace(a, parts=(replace(a.parts[0], source_digest="a" * 64),)),
+            "source_mismatch",
+        ),
+        (
+            lambda a: replace(a, parts=(replace(a.parts[0], output_feature_id="profile"),)),
+            "invalid_output",
+        ),
+        (
+            lambda a: replace(a, parts=(replace(a.parts[0], output_feature_id="missing"),)),
+            "invalid_output",
+        ),
+    ],
+)
+def test_graph_and_source_validation_before_acceptance(mutate, code):
+    with pytest.raises(CADException) as error:
+        mutate(assembly())
+    assert error.value.code == code
+
+
+def test_disconnected_cycle_rejected():
+    a = assembly()
+    with pytest.raises(CADException) as error:
+        replace(
+            a,
+            instances=(*a.instances, Instance("other", "p")),
+            joints=(
+                replace(a.joints[0], parent="other"),
+                Joint("cycle", "fixed", "child", "other", "axis", "axis"),
+            ),
+        )
+    assert error.value.code == "unsupported_cycle"
+
+
+def test_all_count_limits_and_total_frame_limit():
+    a = assembly()
+    limits = {
+        "parts": MAX_PART_DEFINITIONS,
+        "instances": MAX_INSTANCES,
+        "part_sources": MAX_PART_SOURCES,
+        "joints": MAX_JOINTS,
+    }
+    for field, limit in limits.items():
+        data = a.to_dict()
+        data[field] = [data[field][0]] * (limit + 1)
+        with pytest.raises(CADException) as error:
+            AssemblyDocument.from_dict(data)
+        assert error.value.code == "resource_limit"
+    frames = tuple(MateFrame(f"f{i}") for i in range(128))
+    part = replace(a.parts[0], mate_frames=frames)
+    with pytest.raises(CADException) as error:
+        replace(a, parts=(part, replace(part, id="p2")))
+    assert error.value.code == "resource_limit"
+
+
+def test_source_hash_is_verified_and_source_ids_cannot_be_forked_implicitly():
+    a = assembly()
+    with pytest.raises(CADException) as error:
+        replace(a.part_sources[0], source_digest="0" * 64)
+    assert error.value.code == "source_mismatch"
+    with pytest.raises(CADException):
+        replace_source(a, "doc", replace(a.part_sources[0].document, id="fork"))
+    with pytest.raises(CADException):
+        replace_source(a, "absent", a.part_sources[0].document)
+
+
+def test_atomic_source_update_preserves_ids_and_literal_frames_and_old_snapshot():
+    a = assembly()
+    old_hash, old_json = a.content_hash, a.to_json()
+    frame = Frame((0, 0, 1), (math.sqrt(0.5), 0, math.sqrt(0.5), 0))
+    a = replace(a, parts=(replace(a.parts[0], mate_frames=(MateFrame("axis", frame),)),))
+    # Two definitions and repeated instances share the same accepted source revision.
+    a = replace(
+        a,
+        parts=(*a.parts, replace(a.parts[0], id="copy")),
+        instances=(a.instances[0], replace(a.instances[1], part_id="copy")),
+    )
+    updated = a.part_sources[0].document.with_parameter("width", 20)
+    b = a.replace_source("doc", updated)
+    assert b.content_hash != a.content_hash
+    assert all(p.source_digest == updated.content_hash for p in b.parts)
+    assert b.instances == a.instances and b.joints == a.joints
+    assert [p.id for p in b.parts] == [p.id for p in a.parts]
+    assert [p.mate_frames for p in b.parts] == [p.mate_frames for p in a.parts]
+    assert a.part_sources[0].document.parameters["width"] == 10
+    assert AssemblyDocument.from_json(old_json).content_hash == old_hash
+    broken = replace(updated, features=(updated.features[0],), active_feature="profile")
+    with pytest.raises(CADException):
+        a.replace_source("doc", broken)
+    assert a.part_sources[0].document.parameters["width"] == 10
+    assert AssemblyDocument.from_json(b.to_json()) == b
+
+
+@pytest.mark.parametrize("filename", ["drilled_plate.mcad.json", "constrained_plate.mcad.json"])
+def test_legacy_part_bytes_and_hashes_are_unchanged_by_embedding(filename):
+    path = Path(__file__).resolve().parents[2] / "examples" / filename
+    doc = load_document(path)
+    before, digest = doc.to_json(), doc.content_hash
+    source = PartSource.from_document(doc)
+    part = PartDefinition("p", digest, doc.id, doc.active_feature, ())
+    a = AssemblyDocument(
+        "assembly", "Embedded", (source,), (part,), (Instance("base", "p"),), (), "base"
+    )
+    restored = AssemblyDocument.from_json(a.to_json()).part_sources[0].document
+    assert doc.to_json() == restored.to_json() == before
+    assert doc.content_hash == restored.content_hash == digest
+    assert restored.schema_version == doc.schema_version
+
+
+def test_source_changes_cannot_alias_mutable_serialized_values():
+    a = assembly()
+    source = a.part_sources[0].to_dict()
+    assert json.loads(json.dumps(source))["document"]["id"] == "doc"
+    source["document"]["parameters"]["width"] = 42
+    assert a.part_sources[0].document.parameters["width"] == 10
+
+
+def test_legacy_golden_hashes_are_pinned():
+    root = Path(__file__).resolve().parents[2] / "examples"
+    expected = {
+        "drilled_plate.mcad.json": "777d634152cce17a17247b347e433b311410ee2c67fcc70927176e02d8ac59e9",
+        "constrained_plate.mcad.json": "0c68f787945e27be09169fba8c576d9abc44394e0daf2b3cb2e9eefd85e24434",
+    }
+    for filename, digest in expected.items():
+        doc = load_document(root / filename)
+        assert doc.content_hash == digest
+        assert PartSource.from_document(doc).document.content_hash == digest
+
+
+def test_embedded_schema_two_workplane_quaternion_is_never_rewritten():
+    root = Path(__file__).resolve().parents[2] / "examples"
+    doc = load_document(root / "constrained_plate.mcad.json")
+    feature = next(f for f in doc.features if f.sketch is not None)
+    q = (math.sqrt(1 + 5e-10), 0.0, 0.0, 0.0)
+    sketch = replace(feature.sketch, plane=replace(feature.sketch.plane, quaternion=q))
+    doc = doc.with_feature(replace(feature, sketch=sketch), make_active=False)
+    before, digest = doc.to_json(), doc.content_hash
+    source = PartSource.from_document(doc)
+    assert source.document.to_json() == before
+    assert source.source_digest == digest
+    assert next(f for f in source.document.features if f.sketch).sketch.plane.quaternion == q
+
+
+def test_direct_python_payload_nonfinite_or_cyclic_data_is_expected_failure():
+    data = assembly().to_dict()
+    data["part_sources"][0]["document"]["features"][0]["params"]["width"] = math.inf
+    with pytest.raises(CADException):
+        AssemblyDocument.from_dict(data)
+    data = assembly().to_dict()
+    data["part_sources"][0]["document"]["parameters"]["bad"] = data
+    with pytest.raises(CADException):
+        AssemblyDocument.from_dict(data)
+    doc = replace(
+        assembly().part_sources[0].document,
+        features=(Feature("profile", "sketch_rectangle", "Bad", {"width": math.inf, "height": 1}),),
+    )
+    with pytest.raises(CADException):
+        PartSource.from_document(doc)
+
+
+@pytest.mark.parametrize("collection", ["parts", "instances", "joints"])
+def test_explicit_null_names_are_not_missing_names(collection):
+    data = assembly().to_dict()
+    data[collection][0]["name"] = None
+    with pytest.raises(CADException):
+        AssemblyDocument.from_dict(data)
+
+
+def test_direct_source_numeric_tokens_match_text_loader_policy():
+    data = Document.from_dict(document().to_dict()).to_dict()
+    data["features"][1]["params"]["length"] = 10**128
+    source = Document.from_dict(data)
+    with pytest.raises(CADException, match="numeric token"):
+        PartSource.from_document(source)
+    with pytest.raises(CADException, match="numeric token"):
+        replace_source(assembly(), "doc", source)
+
+
+def test_persisted_preset_nested_duplicates_unknown_fields_and_partial_defaults():
+    from mechanical_cad.assembly_requirements import ClearanceRequirement, VerificationPreset
+
+    p = VerificationPreset(
+        "fit", "Fit check", (ClearanceRequirement("gap", "Running gap", ("base", "child"), 0.5),)
+    )
+    a = replace(assembly(), verification_presets=(p,), active_verification_preset="fit")
+    duplicated = a.to_json().replace('"minimum_mm": 0.5', '"minimum_mm": 0.5, "minimum_mm": 1.0')
+    with pytest.raises(CADException) as error:
+        AssemblyDocument.from_json(duplicated)
+    assert error.value.code == "invalid_json"
+    for path in (
+        ("verification_presets", 0),
+        ("verification_presets", 0, "policy"),
+        ("verification_presets", 0, "requirements", 0),
+    ):
+        data = a.to_dict()
+        node = data
+        for key in path:
+            node = node[key]
+        node["unknown"] = 1
+        with pytest.raises(CADException):
+            AssemblyDocument.from_dict(data)
+    data = a.to_dict()
+    del data["active_verification_preset"]
+    assert AssemblyDocument.from_dict(data).active_verification_preset is None
+    data = a.to_dict()
+    del data["verification_presets"]
+    with pytest.raises(CADException) as error:
+        AssemblyDocument.from_dict(data)
+    assert error.value.code == "missing_verification_preset"

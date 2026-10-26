@@ -1,0 +1,167 @@
+{
+  "active_feature": "boss",
+  "features": [
+    {
+      "id": "footprint",
+      "inputs": {},
+      "kind": "sketch_rectangle",
+      "label": "Footprint",
+      "params": {
+        "height": 20,
+        "width": 20,
+        "x": 0,
+        "y": 0,
+        "z": 0
+      }
+    },
+    {
+      "id": "block",
+      "inputs": {
+        "profile": "footprint"
+      },
+      "kind": "extrude",
+      "label": "Block",
+      "params": {
+        "length": "depth"
+      }
+    },
+    {
+      "id": "slot_profile",
+      "inputs": {},
+      "kind": "sketch_rectangle",
+      "label": "slot_profile",
+      "params": {
+        "height": 22,
+        "width": 2,
+        "x": 9,
+        "y": -1,
+        "z": 7
+      }
+    },
+    {
+      "id": "slot_tool",
+      "inputs": {
+        "profile": "slot_profile"
+      },
+      "kind": "extrude",
+      "label": "slot_tool",
+      "params": {
+        "length": 1
+      }
+    },
+    {
+      "id": "slotted",
+      "inputs": {
+        "base": "block",
+        "tool": "slot_tool"
+      },
+      "kind": "cut",
+      "label": "slotted",
+      "params": {}
+    },
+    {
+      "id": "attached",
+      "inputs": {
+        "support": "slotted"
+      },
+      "kind": "sketch_constrained",
+      "label": "Drawn face sketch",
+      "params": {},
+      "sketch": {
+        "circles": [
+          {
+            "center": "center",
+            "id": "circle",
+            "radius": 2.0
+          }
+        ],
+        "constraints": [
+          {
+            "id": "anchor",
+            "kind": "fixed",
+            "refs": [
+              "center"
+            ],
+            "target": [
+              0.0,
+              0.0
+            ],
+            "value": null
+          },
+          {
+            "id": "size",
+            "kind": "radius",
+            "refs": [
+              "circle"
+            ],
+            "target": null,
+            "value": 2.0
+          }
+        ],
+        "id": "drawn",
+        "lines": [],
+        "plane": {
+          "id": "workplane",
+          "origin": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "quaternion": [
+            1.0,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        "points": [
+          {
+            "id": "center",
+            "u": 0.0,
+            "v": 0.0
+          }
+        ],
+        "schema_version": 2,
+        "units": "mm"
+      },
+      "support_face": "block/face/cap.end",
+      "support_intent": {
+        "policy": "preserve_plane",
+        "signature": {
+          "area": 400,
+          "centroid": [
+            10,
+            10,
+            10
+          ],
+          "normal": [
+            0,
+            0,
+            1
+          ],
+          "surface": "plane"
+        },
+        "version": 1
+      }
+    },
+    {
+      "id": "boss",
+      "inputs": {
+        "profile": "attached"
+      },
+      "kind": "extrude",
+      "label": "boss",
+      "params": {
+        "length": 2
+      }
+    }
+  ],
+  "id": "d",
+  "name": "Attached constrained pocket",
+  "parameters": {
+    "depth": 10
+  },
+  "schema_version": 2,
+  "units": "mm"
+}
+

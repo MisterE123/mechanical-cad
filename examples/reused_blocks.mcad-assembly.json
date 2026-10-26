@@ -1,0 +1,158 @@
+{
+  "active_verification_preset": null,
+  "angle_unit": "rad",
+  "assembly_schema_version": 1,
+  "ground": {
+    "wxyz": [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "xyz_mm": [
+      0.0,
+      0.0,
+      0.0
+    ]
+  },
+  "grounded_instance": "root",
+  "id": "assembly",
+  "instances": [
+    {
+      "id": "root",
+      "name": "root",
+      "part_id": "block"
+    },
+    {
+      "id": "a",
+      "name": "a",
+      "part_id": "block"
+    },
+    {
+      "id": "b",
+      "name": "b",
+      "part_id": "block"
+    }
+  ],
+  "joints": [
+    {
+      "child": "a",
+      "child_frame": "origin",
+      "coordinate": 100.0,
+      "id": "slide_a",
+      "kind": "slider",
+      "limits": [
+        0.0,
+        300.0
+      ],
+      "name": "slide_a",
+      "parent": "root",
+      "parent_frame": "origin"
+    },
+    {
+      "child": "b",
+      "child_frame": "origin",
+      "coordinate": 100.0,
+      "id": "slide_b",
+      "kind": "slider",
+      "limits": [
+        0.0,
+        300.0
+      ],
+      "name": "slide_b",
+      "parent": "root",
+      "parent_frame": "offset"
+    }
+  ],
+  "kind": "assembly",
+  "length_unit": "mm",
+  "name": "Three user blocks",
+  "part_sources": [
+    {
+      "document": {
+        "active_feature": "pad",
+        "features": [
+          {
+            "id": "profile",
+            "inputs": {},
+            "kind": "sketch_rectangle",
+            "label": "Profile",
+            "params": {
+              "height": 10,
+              "width": "width",
+              "x": 0,
+              "y": 0,
+              "z": 0
+            }
+          },
+          {
+            "id": "pad",
+            "inputs": {
+              "profile": "profile"
+            },
+            "kind": "extrude",
+            "label": "Block",
+            "params": {
+              "length": 10
+            }
+          }
+        ],
+        "id": "user_part",
+        "name": "User-authored block",
+        "parameters": {
+          "width": 10
+        },
+        "schema_version": 1,
+        "units": "mm"
+      },
+      "source_digest": "1bd185df2b3c64e0736d6a038b875705617c71a49fb3045e0330dd03cdda8e6d",
+      "source_document_id": "user_part"
+    }
+  ],
+  "parts": [
+    {
+      "id": "block",
+      "mate_frames": [
+        {
+          "id": "origin",
+          "name": "origin",
+          "placement": {
+            "wxyz": [
+              1.0,
+              0.0,
+              0.0,
+              0.0
+            ],
+            "xyz_mm": [
+              0.0,
+              0.0,
+              0.0
+            ]
+          }
+        },
+        {
+          "id": "offset",
+          "name": "offset",
+          "placement": {
+            "wxyz": [
+              1.0,
+              0.0,
+              0.0,
+              0.0
+            ],
+            "xyz_mm": [
+              30.0,
+              0.0,
+              0.0
+            ]
+          }
+        }
+      ],
+      "name": "Block",
+      "output_feature_id": "pad",
+      "source_digest": "1bd185df2b3c64e0736d6a038b875705617c71a49fb3045e0330dd03cdda8e6d",
+      "source_document_id": "user_part"
+    }
+  ],
+  "verification_presets": []
+}

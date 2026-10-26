@@ -1,0 +1,18 @@
+{
+  "passed": true,
+  "checks": 2818,
+  "svg_count": 44,
+  "png_count": 440,
+  "unique_32px_silhouettes": 44,
+  "opaque_ink_contrast_ratios": {
+    "dark": 11.91,
+    "light": 15.42
+  },
+  "errors": [],
+  "limitations": [
+    "No Blender UI integration or icon cache loading tested.",
+    "Unique pixels do not prove intuitive semantics; contact sheets require human review.",
+    "Contrast measurements use the documented sample surfaces, not every possible Blender theme.",
+    "Hover descriptions for future tools are proposals and must be reconciled with the implementation before wiring."
+  ]
+}

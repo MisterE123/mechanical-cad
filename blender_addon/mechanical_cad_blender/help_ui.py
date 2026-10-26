@@ -1,0 +1,164 @@
+"""Bounded contextual explanations and readable diagnostic UI.
+
+Authoring help is drawn inside the same modal operator to preserve draft fields.
+Standalone help popups paginate long text instead of relying on clipped labels."""
+
+import textwrap
+
+from bpy.props import BoolProperty, IntProperty, StringProperty
+from bpy.types import Operator
+
+from .help_topics import HELP_TOPICS
+
+
+def _feature_help_previous(self, context):
+    if self.help_previous:
+        self.help_page = max(1, self.help_page - 1)
+        self.help_previous = False
+
+
+def _feature_help_next(self, context):
+    if self.help_next:
+        _title, pages = _help_pages(self.help_topic)
+        self.help_page = min(len(pages), self.help_page + 1)
+        self.help_next = False
+
+
+def _draw_feature_help(operator, context, *, detail=""):
+    """Bounded help belongs to the authoring operator, never a nested modal."""
+    box = operator.layout.box()
+    box.prop(
+        operator,
+        "show_help",
+        text="Help: inputs, recovery and limits",
+        icon="TRIA_DOWN" if operator.show_help else "TRIA_RIGHT",
+        emboss=False,
+    )
+    _title, pages = _help_pages(operator.help_topic, detail)
+    page = min(operator.help_page, len(pages))
+    lines = pages[page - 1] if operator.show_help else operator.help_summary
+    # Reserve the same two-line space when collapsed; opening help never
+    # pushes Apply/Cancel below a small window or changes any draft field.
+    for index in range(2):
+        box.label(text=lines[index] if index < len(lines) else " ")
+    row = box.row(align=True)
+    previous = row.row(align=True)
+    previous.enabled = operator.show_help and operator.help_page > 1
+    previous.prop(operator, "help_previous", text="Previous", icon="TRIA_LEFT", toggle=True)
+    row.label(text=f"{page} / {len(pages)}" if operator.show_help else "Details collapsed")
+    following = row.row(align=True)
+    following.enabled = operator.show_help and page < len(pages)
+    following.prop(operator, "help_next", text="Next", icon="TRIA_RIGHT", toggle=True)
+
+
+def _help_button(layout, topic, text=""):
+    operator = layout.operator("mcad.help", text=text, icon="QUESTION", emboss=bool(text))
+    operator.topic = topic
+
+
+def _help_pages(topic, detail=""):
+    title, paragraphs = HELP_TOPICS.get(topic, HELP_TOPICS["workflow.overview"])
+    if detail:
+        paragraphs = [detail, *paragraphs]
+    pages = []
+    for paragraph in paragraphs:
+        lines = textwrap.wrap(paragraph, width=64)
+        pages.extend(lines[index : index + 2] for index in range(0, len(lines), 2))
+    return title, pages or [["No help is available for this topic."]]
+
+
+def _help_page_changed(self, context):
+    _title, pages = _help_pages(self.topic, self.detail)
+    bounded = max(1, min(self.page, len(pages)))
+    if bounded != self.page:
+        self.page = bounded
+
+
+def _help_previous(self, context):
+    if self.previous_page:
+        self.page = max(1, self.page - 1)
+        self.previous_page = False
+
+
+def _help_next(self, context):
+    if self.next_page:
+        _title, pages = _help_pages(self.topic, self.detail)
+        self.page = min(len(pages), self.page + 1)
+        self.next_page = False
+
+
+class MCAD_OT_help(Operator):
+    bl_idname = "mcad.help"
+    bl_label = "Mechanical CAD Help"
+    bl_description = (
+        "Read a short paged explanation; use the Page arrows for inputs, recovery and limitations"
+    )
+    topic: StringProperty(
+        name="Help topic", default="workflow.overview", description="Contextual help topic"
+    )
+    detail: StringProperty(
+        name="Diagnostic",
+        description="Complete diagnostic to read in bounded pages",
+        options={"HIDDEN", "SKIP_SAVE"},
+    )
+    page: IntProperty(
+        name="Page",
+        description="Previous or next help page; all recovery advice and limitations remain available",
+        default=1,
+        min=1,
+        update=_help_page_changed,
+        options={"SKIP_SAVE"},
+    )
+
+    previous_page: BoolProperty(
+        name="Previous",
+        description="Read the previous explanation page",
+        update=_help_previous,
+        options={"SKIP_SAVE"},
+    )
+    next_page: BoolProperty(
+        name="Next",
+        description="Read the next explanation page",
+        update=_help_next,
+        options={"SKIP_SAVE"},
+    )
+
+    def invoke(self, context, event):
+        self.page = 1
+        # Keep every page to two body lines. This bounds popup height even when
+        # invoked from a feature dialog near the bottom of a short window.
+        return context.window_manager.invoke_popup(self, width=540)
+
+    def draw(self, context):
+        title, pages = _help_pages(self.topic, self.detail)
+        self.layout.label(text=title, icon="INFO")
+        for line in pages[min(self.page, len(pages)) - 1]:
+            self.layout.label(text=line)
+        row = self.layout.row(align=True)
+        previous = row.row(align=True)
+        previous.enabled = self.page > 1
+        previous.prop(self, "previous_page", text="Previous", icon="TRIA_LEFT", toggle=True)
+        row.label(text=f"{self.page} / {len(pages)}")
+        following = row.row(align=True)
+        following.enabled = self.page < len(pages)
+        following.prop(self, "next_page", text="Next", icon="TRIA_RIGHT", toggle=True)
+        self.layout.label(text="Press Esc or click outside to close.")
+
+    def execute(self, context):
+        return {"FINISHED"}
+
+
+def _panel_wrap(context, message):
+    # Blender label widgets do not wrap or expose their clipped suffix. Derive
+    # a conservative character width from the actual sidebar and UI scale.
+    scale = max(float(context.preferences.system.ui_scale), 0.5)
+    width = max(12, min(80, int((context.region.width - 42) / (7.5 * scale))))
+    return textwrap.wrap(str(message), width=width, break_long_words=True, break_on_hyphens=False)
+
+
+def _diagnostic_button(layout, message, *, failed=False):
+    operator = layout.operator(
+        "mcad.help", text="Read full error and fix" if failed else "Read full message", icon="INFO"
+    )
+    operator.topic = "error.rebuild" if failed else "error.details"
+    operator.detail = message

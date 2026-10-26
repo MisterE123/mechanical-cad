@@ -1,0 +1,278 @@
+"""Pure UI draft math and immutable canonical candidate tests (no bpy)."""
+
+import copy
+import importlib.util
+import json
+import sys
+import types
+from pathlib import Path
+
+import pytest
+
+ROOT = Path(__file__).resolve().parents[2]
+PACKAGE = "mcad_sketch_draft_test_package"
+package = types.ModuleType(PACKAGE)
+package.__path__ = [str(ROOT / "blender_addon/mechanical_cad_blender")]
+sys.modules[PACKAGE] = package
+SPEC = importlib.util.spec_from_file_location(
+    PACKAGE + ".sketch_draft", ROOT / "blender_addon/mechanical_cad_blender/sketch_draft.py"
+)
+drafts = importlib.util.module_from_spec(SPEC)
+sys.modules[SPEC.name] = drafts
+SPEC.loader.exec_module(drafts)
+
+
+def blank():
+    return {
+        "schema_version": 1,
+        "id": "doc",
+        "name": "Part",
+        "units": "mm",
+        "parameters": {},
+        "features": [],
+        "active_feature": None,
+    }
+
+
+def placed():
+    draft = drafts.RectangleDraft(json.dumps(blank()))
+    draft.first_point((5, 7))
+    assert draft.second_point((45, 37))
+    return draft
+
+
+def test_two_clicks_create_no_committed_changes():
+    draft = placed()
+    assert json.loads(draft.document_json) == blank()
+    assert draft.anchor == (5, 7)
+    assert draft.width == 40 and draft.height == 30
+    candidate = draft.candidate()
+    assert candidate["schema_version"] == 2
+    assert candidate["active_feature"] == draft.feature_id
+    assert len(candidate["features"]) == 1
+    assert candidate["features"][0]["sketch"]["constraints"][0]["target"] == [5, 7]
+    assert draft.solver_report is None
+
+
+@pytest.mark.parametrize("corner", [(45, 37), (-35, 37), (-35, -23), (45, -23)])
+def test_rectangle_handles_all_drag_quadrants(corner):
+    draft = drafts.RectangleDraft(json.dumps(blank()))
+    draft.first_point((5, 7))
+    assert draft.second_point(corner)
+    assert draft.width == 40 and draft.height == 30
+    assert min(point[0] for point in draft.points()) == min(5, corner[0])
+
+
+@pytest.mark.parametrize("point", [(float("nan"), 0), (True, 1), (1e7, 0), (10**1000, 0)])
+def test_invalid_pointer_coordinates_are_rejected(point):
+    with pytest.raises(drafts.DraftError):
+        drafts.rectangle_bounds((0, 0), point)
+
+
+def test_zero_size_stays_editable():
+    draft = drafts.RectangleDraft(json.dumps(blank()))
+    draft.first_point((0, 0))
+    assert not draft.second_point((40, 0))
+    assert draft.phase == "SECOND_POINT"
+    assert draft.error
+    assert draft.second_point((40, 30))
+
+
+def test_edit_preserves_identity_seeds_downstream_output_and_untouched_double():
+    document = placed().candidate()
+    document["parameters"]["sketch_1_height"] = 30.123456789123456
+    document["features"].append(
+        {
+            "id": "pad",
+            "kind": "extrude",
+            "label": "Solid",
+            "params": {"length": 10},
+            "inputs": {"profile": "sketch_1"},
+        }
+    )
+    document["active_feature"] = "pad"
+    original = copy.deepcopy(document)
+    draft = drafts.RectangleDraft(json.dumps(document), feature_id="sketch_1", is_edit=True)
+    draft.set_dimensions("60.123456789123456", draft.height_text)
+    candidate = draft.candidate()
+    assert candidate["active_feature"] == "pad"
+    assert candidate["features"] == original["features"]
+    assert candidate["parameters"]["sketch_1_height"] == original["parameters"]["sketch_1_height"]
+    assert candidate["parameters"]["sketch_1_width"] == "60.123456789123456"
+    assert len(candidate["features"]) == 2
+    assert document == original
+
+
+def test_rejected_input_preserves_typed_text_and_last_valid_preview():
+    draft = placed()
+    before = draft.points()
+    draft.set_dimensions("-5", "unknown_parameter")
+    assert draft.points() == before
+    result = {
+        "status": "failed",
+        "features": [
+            {"id": "sketch_1", "status": "failed", "error": {"message": "Invalid dimension"}}
+        ],
+    }
+    assert not draft.accept_replay(draft.candidate(), result)
+    assert draft.width_text == "-5" and draft.height_text == "unknown_parameter"
+    assert draft.points() == before
+    assert draft.error == "Invalid dimension"
+
+
+def test_exact_base_snapshot_protects_against_external_edit():
+    draft = placed()
+    draft.require_current(draft.document_json)
+    changed = blank()
+    changed["name"] = "Externally changed"
+    with pytest.raises(drafts.DraftError, match="changed while"):
+        draft.require_current(json.dumps(changed))
+
+
+def test_preview_status_only_comes_from_solver_report():
+    draft = placed()
+    candidate = draft.candidate()
+    result = {
+        "status": "ok",
+        "features": [
+            {
+                "id": "sketch_1",
+                "status": "ok",
+                "sketch": {
+                    "status": "okay",
+                    "remaining_dof": 0,
+                    "failed_constraints": [],
+                    "dimensions": {"width": 60.123456789, "height": 30},
+                    "solved": {
+                        "points": [
+                            {"id": f"p{i}", "u": x, "v": y}
+                            for i, (x, y) in enumerate(
+                                [(5, 7), (65.123456789, 7), (65.123456789, 37), (5, 37)]
+                            )
+                        ]
+                    },
+                },
+            }
+        ],
+    }
+    assert draft.accept_replay(candidate, result)
+    assert draft.width == 60.123456789
+    assert draft.candidate() == candidate
+    assert json.loads(draft.validated_json) == draft.candidate()
+    assert draft.solver_report["remaining_dof"] == 0
+    result["features"][0]["sketch"]["remaining_dof"] = 9
+    assert draft.solver_report["remaining_dof"] == 0
+
+
+def test_position_toggle_changes_only_explicit_anchor_relation():
+    draft = placed()
+    draft.set_dimensions(draft.width_text, draft.height_text, fix_corner=False)
+    document = draft.candidate()
+    assert not any(
+        item["id"] == "anchor" for item in document["features"][0]["sketch"]["constraints"]
+    )
+    edit = drafts.RectangleDraft(json.dumps(document), feature_id="sketch_1", is_edit=True)
+    assert not edit.fix_corner
+    edit.anchor = (8.25, 9.5)
+    edit.set_dimensions(edit.width_text, edit.height_text, fix_corner=True)
+    updated = edit.candidate()
+    before = document["features"][0]["sketch"]
+    after = updated["features"][0]["sketch"]
+    assert before["points"] == after["points"]
+    assert after["constraints"][1:] == before["constraints"]
+    assert after["constraints"][0] == {
+        "id": "anchor",
+        "kind": "fixed",
+        "refs": ["p0"],
+        "target": [8.25, 9.5],
+    }
+    assert updated["features"][0]["id"] == "sketch_1"
+
+
+def test_current_solved_coordinates_do_not_rewrite_untouched_fixed_target():
+    document = placed().candidate()
+    document["features"][0]["sketch"]["constraints"][0]["value"] = None
+    draft = drafts.RectangleDraft(json.dumps(document), feature_id="sketch_1", is_edit=True)
+    draft.anchor = (5.000000000000001, 7.000000000000001)
+    draft.set_dimensions("60", draft.height_text)
+    assert draft.candidate()["features"] == document["features"]
+
+
+def test_new_free_draft_keeps_authoring_seeds_when_solver_moves_preview():
+    draft = placed()
+    draft.set_dimensions("60", "30", fix_corner=False)
+    candidate = draft.candidate()
+    report = {
+        "status": "okay",
+        "remaining_dof": 2,
+        "dimensions": {"width": 60, "height": 30},
+        "solved": {
+            "points": [
+                {"id": f"p{i}", "u": x, "v": y}
+                for i, (x, y) in enumerate([(-5, 7), (55, 7), (55, 37), (-5, 37)])
+            ]
+        },
+    }
+    assert draft.accept_replay(
+        candidate,
+        {"status": "ok", "features": [{"id": draft.feature_id, "status": "ok", "sketch": report}]},
+    )
+    assert draft.anchor == (-5, 7)
+    assert draft.candidate() == candidate
+    assert json.loads(draft.validated_json) == draft.candidate()
+
+
+def test_release_reseeds_current_solution_only_after_explicit_position_edit():
+    document = placed().candidate()
+    draft = drafts.RectangleDraft(json.dumps(document), feature_id="sketch_1", is_edit=True)
+    points = [
+        {"id": f"p{i}", "u": x, "v": y}
+        for i, (x, y) in enumerate([(5, 7), (65, 7), (65, 37), (5, 37)])
+    ]
+    draft.last_solved_points = copy.deepcopy(points)
+    draft.width = 60
+    draft.set_dimensions("60", "30", fix_corner=False)
+    released = draft.candidate()
+    assert released["features"][0]["sketch"]["points"] == points
+    assert json.loads(draft.document_json) == document
+    assert released["features"][0]["sketch"]["lines"] == document["features"][0]["sketch"]["lines"]
+    assert all(item["id"] != "anchor" for item in released["features"][0]["sketch"]["constraints"])
+
+
+@pytest.mark.parametrize("axis", ["u", "v"])
+def test_reversed_imported_seed_order_is_outside_bounded_editor(axis):
+    document = placed().candidate()
+    for point in document["features"][0]["sketch"]["points"]:
+        point[axis] = (10 if axis == "u" else 14) - point[axis]
+    with pytest.raises(drafts.DraftError, match=r"\+X/\+Y"):
+        drafts.RectangleDraft(json.dumps(document), feature_id="sketch_1", is_edit=True)
+
+
+@pytest.mark.parametrize("axis", ["u", "v"])
+def test_reversed_solved_branch_clears_current_report_before_rejection(axis):
+    draft = placed()
+    before = draft.points()
+    draft.solver_report = {"status": "okay", "remaining_dof": 0}
+    draft.validated_json = "old report"
+    points = [{"id": f"p{i}", "u": x, "v": y} for i, (x, y) in enumerate(before[:4])]
+    for point in points:
+        point[axis] = (10 if axis == "u" else 14) - point[axis]
+    result = {
+        "status": "ok",
+        "features": [
+            {
+                "id": draft.feature_id,
+                "status": "ok",
+                "sketch": {
+                    "status": "okay",
+                    "remaining_dof": 0,
+                    "dimensions": {"width": 40, "height": 30},
+                    "solved": {"points": points},
+                },
+            }
+        ],
+    }
+    with pytest.raises(drafts.DraftError, match="orientation is reversed"):
+        draft.accept_replay(draft.candidate(), result)
+    assert draft.solver_report is None and not draft.validated_json
+    assert draft.points() == before

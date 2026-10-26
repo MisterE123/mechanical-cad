@@ -1,0 +1,1869 @@
+"""Finite fake Win32 observations only; no native cache, Windows or Blender proof."""
+
+import ast
+import ctypes
+import importlib
+import ntpath
+import sys
+import threading
+import types
+from dataclasses import FrozenInstanceError, replace
+from pathlib import Path
+
+import pytest
+
+ROOT = Path(__file__).resolve().parents[2]
+PACKAGE = "mcad_windows_cache_test"
+package = sys.modules.setdefault(PACKAGE, types.ModuleType(PACKAGE))
+package.__path__ = [str(ROOT / "blender_addon/mechanical_cad_blender")]
+w = importlib.import_module(PACKAGE + ".windows_cache")
+m = importlib.import_module(PACKAGE + ".runtime_bundle_manifest")
+USER = bytes.fromhex("010200000000000515000000e8030000")
+OTHER = bytes.fromhex("010100000000000100000000")
+KNOWN = "C:\\Users\\Alice\\AppData\\Local"
+
+
+def recipe(known=KNOWN):
+    return w.WindowsCacheLocation(known, ntpath.join(known, "MechanicalCAD", "r"))
+
+
+def release():
+    identity = m.bundle_identity("a" * 40, "b" * 64, "windows-x64")
+    return m.ReleaseManifest(
+        identity,
+        "a" * 40,
+        "b" * 64,
+        "windows-x64",
+        f"_backend/{identity}/bundle-manifest.json",
+        "c" * 64,
+        f"_backend/{identity}/payload.zip",
+        "d" * 64,
+        10,
+    )
+
+
+def manifest(rel=None, *paths):
+    rel = rel or release()
+    names = ("python/python.exe", "bootstrap.py", *paths)
+    return m.BundleManifest(
+        rel.bundle_id,
+        rel.platform,
+        names[0],
+        names[1],
+        tuple(m.BundleFile(name, 1, "e" * 64, 0o644) for name in names),
+    )
+
+
+def secure(*, directory=True, protected=True):
+    flags = 3 if directory else 0
+    return w._Security(
+        USER,
+        True,
+        protected,
+        (
+            w._Ace(USER, w._FILE_ALL_ACCESS, flags),
+            w._Ace(w._SYSTEM, w._FILE_ALL_ACCESS, flags),
+            w._Ace(w._ADMINISTRATORS, w._FILE_ALL_ACCESS, flags),
+        ),
+    )
+
+
+def worker(function):
+    results, failures = [], []
+
+    def target():
+        try:
+            results.append(function())
+        except BaseException as exc:
+            failures.append(exc)
+
+    thread = threading.Thread(target=target)
+    thread.start()
+    thread.join(10)
+    assert not thread.is_alive(), "inert worker should finish without waiting on OS"
+    if failures:
+        raise failures[0]
+    return results[0]
+
+
+class FakeAPI:
+    """Exact path/handle/security records; nothing touches the fake DOS filesystem."""
+
+    def __init__(self, location=None):
+        self.location = location or recipe()
+        self.events, self.handles, self.allocations, self.paths = [], {}, {}, {}
+        self.close_calls, self.free_calls, self.co_free_calls = [], [], []
+        self.next_handle, self.next_allocation = 100, 10000
+        self.hook = lambda event: None
+        self.info_change = lambda value: value
+        self.security_change = lambda value: value
+        self.volume_value = w._Volume("NTFS", True, 255, True)
+        self.local_result = None
+        self.query_value, self.query_hresult, self.query_pointer = (
+            self.location.known_folder,
+            0,
+            9999,
+        )
+        self.collision_count = 0
+        self.stage_creates = 0
+        self.owner = None
+        drive, tail = ntpath.splitdrive(self.location.known_folder)
+        path = drive + "\\"
+        self.add(path)
+        for part in tail[1:].split("\\"):
+            if part:
+                path = ntpath.join(path, part)
+                self.add(path)
+
+    def hit(self, *event):
+        self.events.append(event)
+        self.hook(event)
+
+    def add(self, path, *, directory=True, security=None, **changes):
+        info = w._Info((77, len(self.paths) + 1), path, 16 if directory else 0, True, directory, 1)
+        self.paths[path] = (replace(info, **changes), security or secure(directory=directory))
+
+    def known_folder(self, output):
+        self.hit("query")
+        output.value = self.query_pointer
+        return self.query_hresult
+
+    def read_known_folder(self, pointer):
+        self.hit("query_copy", pointer)
+        return self.query_value
+
+    def co_task_mem_free(self, pointer):
+        self.co_free_calls.append(pointer)
+        self.hit("co_free", pointer)
+
+    def open_token(self, output):
+        self.next_handle += 1
+        output.value = self.next_handle
+        self.handles[output.value] = None
+        self.hit("token_open", output.value)
+
+    def token_user(self, handle):
+        self.hit("token_user", handle)
+        return USER
+
+    def close_handle(self, handle):
+        assert handle not in self.close_calls, "original handle close must never retry"
+        self.close_calls.append(handle)
+        self.hit("close", handle)
+        del self.handles[handle]
+
+    def allocate(self, kind, value, output):
+        self.next_allocation += 1
+        output.value = self.next_allocation
+        self.allocations[output.value] = (kind, value)
+        self.hit("allocate", kind, output.value)
+
+    def convert_descriptor(self, sddl, output):
+        assert (
+            sddl == "O:S-1-5-21-1000D:P(A;OICI;FA;;;S-1-5-21-1000)(A;OICI;FA;;;SY)(A;OICI;FA;;;BA)"
+        )
+        self.allocate("converted", secure(), output)
+        return 0
+
+    def security_descriptor(self, handle, output):
+        path = self.handles[handle][0].path
+        self.allocate("observed", self.paths[path][1], output)
+        return 0
+
+    def parse_security(self, pointer):
+        self.hit("parse", self.allocations[pointer][0], pointer)
+        assert self.owner is None or any(r.value == pointer for r in self.owner._resources)
+        return self.security_change(self.allocations[pointer][1])
+
+    def local_free(self, pointer):
+        assert pointer not in self.free_calls, "original LocalFree allocation must never retry"
+        self.free_calls.append(pointer)
+        self.hit("free", self.allocations[pointer][0], pointer)
+        return self.local_result
+
+    def create_directory(self, path, descriptor):
+        assert descriptor in self.allocations and descriptor not in self.free_calls
+        self.hit("create", path, descriptor)
+        if ntpath.basename(path).startswith(".stage-"):
+            self.stage_creates += 1
+            if self.collision_count:
+                self.collision_count -= 1
+                return False
+        if path in self.paths:
+            return False
+        self.add(path)
+        # No post-success helper cleanup or hook is hidden before the return.
+        return True
+
+    def attributes(self, path):
+        self.hit("attributes", path)
+        return self.paths[path][0].attributes
+
+    def open_entry(self, path, *, security):
+        self.hit("open", path, security)
+        self.next_handle += 1
+        self.handles[self.next_handle] = self.paths[path]
+        return self.next_handle
+
+    def info(self, handle):
+        self.hit("info", handle)
+        return self.info_change(self.handles[handle][0])
+
+    def volume(self, handle, path):
+        self.hit("volume", handle, path)
+        return self.volume_value
+
+    def rename(self, stage, final):
+        original = self.paths.pop(stage)
+        self.paths[final] = (replace(original[0], path=final), original[1])
+
+
+def owner(api=None, *, location=None, package_root="C:\\Installed é", rel=None):
+    api = api or FakeAPI(location)
+    value = w.WindowsCacheOwner(
+        location or api.location,
+        package_root=package_root,
+        expected_platform="windows-x64",
+        release=rel or release(),
+        api=api,
+    )
+    api.owner = value
+    return value, api
+
+
+def use_owner(callback, *, api=None, location=None):
+    value, api = owner(api, location=location)
+
+    def execute():
+        try:
+            value.acquire()
+            return callback(value, api)
+        finally:
+            if not value.cleanup_uncertain:
+                value.close()
+
+    result = worker(execute)
+    assert not api.handles
+    assert all(resource.closed for resource in value._resources)
+    return result
+
+
+@pytest.mark.parametrize("known", [KNOWN, "C:\\Users\\Éva\\本地", "C:\\Users\\😀\\Local"])
+def test_known_folder_exact_unicode_frozen_and_freed(known):
+    api = FakeAPI(recipe(known))
+    location = w.query_windows_cache_location(api=api)
+    assert location == recipe(known)
+    assert api.co_free_calls == [9999]
+    with pytest.raises(FrozenInstanceError):
+        location.cache_root = "C:\\other"
+    assert [event[0] for event in api.events] == ["query", "query_copy", "co_free"]
+
+
+@pytest.mark.parametrize(
+    "result,pointer",
+    [(-1, 9999), (-2147024891, 9999), (-1, None), (0, None), (True, 9999), (0x80000000, 9999)],
+)
+def test_query_failure_always_frees_nonnull_without_read(result, pointer):
+    api = FakeAPI()
+    api.query_hresult, api.query_pointer = result, pointer
+    with pytest.raises(w.WindowsCacheError):
+        w.query_windows_cache_location(api=api)
+    assert api.co_free_calls == ([pointer] if pointer else [])
+    assert not any(event[0] == "query_copy" for event in api.events)
+
+
+@pytest.mark.parametrize("phase", ["query_copy", "co_free"])
+def test_query_copy_and_free_exceptions_cannot_escape_record(phase):
+    api = FakeAPI()
+
+    def fail(event):
+        if event[0] == phase:
+            raise OSError("private user path must not be displayed")
+
+    api.hook = fail
+    with pytest.raises(w.WindowsCacheError) as error:
+        w.query_windows_cache_location(api=api)
+    assert api.co_free_calls == [9999]
+    assert "private user" not in str(error.value)
+    assert error.value.code == (
+        "cleanup_blocked" if phase == "co_free" else "windows_known_folder_unavailable"
+    )
+
+
+def test_nonwindows_query_and_owner_binding_do_not_bind_dll(monkeypatch):
+    monkeypatch.setattr(w.sys, "platform", "linux")
+    monkeypatch.setattr(w, "_WindowsAPI", lambda: pytest.fail("no DLL binding"))
+    with pytest.raises(w.WindowsCacheError):
+        w.query_windows_cache_location()
+    value, api = owner()
+    assert not api.events
+    with pytest.raises(w.WindowsCacheError, match="original worker"):
+        value.acquire()
+    assert not api.events
+
+
+@pytest.mark.parametrize(
+    "value",
+    [
+        "c:\\Users\\Alice",
+        "C:relative",
+        "\\rooted",
+        "relative",
+        "C:/Users/Alice",
+        "C:\\x%y",
+        "\\\\server\\share",
+        "\\\\?\\C:\\Users",
+        "\\\\.\\C:\\Users",
+        "C:\\x:stream",
+        "C:\\x\\..\\y",
+        "C:\\x\\.\\y",
+        "C:\\x.",
+        "C:\\x ",
+        "C:\\x\\",
+        "C:\\x\0y",
+        "C:\\x\ny",
+        "C:\\e\u0301",
+        "C:\\CON",
+        "C:\\COM1.txt",
+        "C:\\x\ud800",
+        "C:\\x//y",
+        "",
+    ],
+)
+def test_local_path_policy_rejects_unsupported_spelling(value):
+    with pytest.raises(w.WindowsCacheError):
+        w._windows_path(value)
+
+
+@pytest.mark.parametrize("directory,accepted", [(False, 259), (True, 247)])
+def test_utf16_exact_boundaries(directory, accepted):
+    prefix = "C:\\😀\\"
+    path = prefix + "a" * (accepted - len(prefix.encode("utf-16-le")) // 2)
+    assert w._windows_path(path, directory=directory) == path
+    with pytest.raises(w.WindowsCacheError) as error:
+        w._windows_path(path + "a", directory=directory)
+    assert error.value.code == "windows_cache_path_too_long"
+
+
+def test_recipe_rejects_pathlike_subclass_and_wrong_fixed_suffix():
+    class PathLike:
+        def __fspath__(self):
+            pytest.fail("recipe must not invoke an arbitrary path callback")
+
+    for value in [PathLike(), Path("foo"), 7]:
+        with pytest.raises(w.WindowsCacheError):
+            w.WindowsCacheLocation(value, recipe().cache_root)
+    for suffix in ["r2", "R", "runtime", "r\\x"]:
+        with pytest.raises(w.WindowsCacheError):
+            w.WindowsCacheLocation(KNOWN, ntpath.join(KNOWN, "MechanicalCAD", suffix))
+
+    class SubRecipe(w.WindowsCacheLocation):
+        pass
+
+    with pytest.raises(w.WindowsCacheError):
+        owner(location=SubRecipe(KNOWN, recipe().cache_root))
+
+    class SubOwner(w.WindowsCacheOwner):
+        pass
+
+    with pytest.raises(w.WindowsCacheError):
+        SubOwner(
+            recipe(),
+            package_root="C:\\Installed",
+            expected_platform="windows-x64",
+            release=release(),
+        )
+
+
+@pytest.mark.parametrize(
+    "field,value",
+    [
+        ("platform", "linux-x64"),
+        ("bundle_id", "f" * 64),
+        ("payload_size", True),
+        ("manifest_sha256", "bad"),
+        ("manifest_path", "other"),
+        ("source_commit", "bad"),
+    ],
+)
+def test_constructor_rejects_forged_release_before_api(field, value):
+    api = FakeAPI()
+    with pytest.raises(w.WindowsCacheError):
+        owner(api, rel=replace(release(), **{field: value}))
+    assert not api.events
+
+
+def test_installed_budget_rejects_before_any_io_and_exact_binding():
+    rel = release()
+    suffix = 1 + len(rel.manifest_path)
+    package_path = "C:\\" + "a" * (259 - suffix - 3)
+    value, api = owner(package_root=package_path)
+    assert not api.events
+    assert len(ntpath.join(package_path, *rel.manifest_path.split("/"))) == 259
+    with pytest.raises(w.WindowsCacheError) as error:
+        owner(package_root=package_path + "a")
+    assert error.value.code == "windows_install_path_too_long"
+    with pytest.raises(w.WindowsCacheError):
+        value.check_installed_paths("C:\\other", rel)
+    with pytest.raises(w.WindowsCacheError):
+        value.check_installed_paths(package_path, replace(rel, payload_sha256="e" * 64))
+    assert not api.events
+
+
+def test_acyclic_leaf_imports_only_stdlib_and_manifest():
+    path = ROOT / "blender_addon/mechanical_cad_blender/windows_cache.py"
+    source = path.read_text()
+    tree = ast.parse(source)
+    imported = []
+    for node in ast.walk(tree):
+        if isinstance(node, ast.ImportFrom):
+            if node.level:
+                assert node.level == 1 and node.module in {
+                    "runtime_bundle_manifest",
+                    "windows_package_cache",
+                    "windows_package_host",
+                }
+            imported.append(node.module)
+        elif isinstance(node, ast.Import):
+            imported.extend(alias.name for alias in node.names)
+        elif isinstance(node, ast.Call):
+            assert not (isinstance(node.func, ast.Name) and node.func.id == "__import__")
+            assert not (
+                isinstance(node.func, ast.Attribute)
+                and node.func.attr in {"import_module", "exec_module"}
+            )
+    assert set(imported) <= {
+        "__future__",
+        "ctypes",
+        "ntpath",
+        "pathlib",
+        "re",
+        "secrets",
+        "sys",
+        "threading",
+        "dataclasses",
+        "runtime_bundle_manifest",
+        "windows_package_cache",
+        "windows_package_host",
+    }
+    assert "environ" not in source and "winreg" not in source
+    provider = ast.parse((path.parent / "windows_package_cache.py").read_text())
+    assert not any(isinstance(node, ast.ImportFrom) and node.level for node in ast.walk(provider))
+
+
+def test_local_policy_matches_frozen_launch_boundary_without_reverse_import():
+    # Import both siblings in the test only; the production cache leaf never imports launch.
+    launch = importlib.import_module(PACKAGE + ".runtime_bundle_launch")
+    cases = [
+        "C:\\",
+        "C:\\Éva\\😀",
+        "c:\\x",
+        "C:\\x%y",
+        "C:\\e\u0301",
+        "C:\\CON",
+        "C:\\a\\..\\b",
+        "\\\\?\\C:\\x",
+        "C:\\x:ads",
+        "C:\\x ",
+    ]
+    cases += ["C:\\" + "a" * size for size in (243, 244, 245, 255, 256, 257)]
+    for value in cases:
+        for directory in (False, True):
+            outcomes = []
+            for function in (w._windows_path, launch._windows_path):
+                try:
+                    function(value, directory=directory)
+                    outcomes.append(True)
+                except m.BundleError:
+                    outcomes.append(False)
+            assert outcomes[0] == outcomes[1], (value, directory)
+
+
+def test_acquire_creates_only_fixed_suffix_with_retained_ancestry():
+    def check(value, api):
+        created = [event[1] for event in api.events if event[0] == "create"]
+        assert created == [ntpath.dirname(value.cache_root), value.cache_root]
+        first_create = next(n for n, event in enumerate(api.events) if event[0] == "create")
+        opened = [event[1] for event in api.events[:first_create] if event[0] == "open"]
+        assert opened[-1] == KNOWN
+        assert len(api.handles) == len(opened) + 2
+        assert all(not a.resource.closed for a in value._anchors)
+        assert all(a.private == (a.path in created) for a in value._anchors)
+        assert all(resource.attempted for resource in value._resources if resource.kind == "local")
+        assert value.release == release()
+
+    use_owner(check)
+
+
+@pytest.mark.parametrize("existing_only", [False, True])
+def test_preexisting_suffix_requires_actual_acl_and_no_repair(existing_only):
+    api = FakeAPI()
+    for path in (ntpath.dirname(api.location.cache_root), api.location.cache_root):
+        api.add(path)
+    value, api = owner(api)
+
+    def execute():
+        try:
+            (value.acquire_existing if existing_only else value.acquire)()
+            value.assert_held()
+            assert len(api.paths) == 7
+        finally:
+            value.close()
+
+    worker(execute)
+    assert bool([event for event in api.events if event[0] == "create"]) != existing_only
+    assert not api.handles
+
+
+def test_existing_acquisition_never_creates_missing_folder():
+    value, api = owner()
+
+    def execute():
+        try:
+            with pytest.raises(w.WindowsCacheError):
+                value.acquire_existing()
+        finally:
+            value.close()
+
+    worker(execute)
+    assert not any(event[0] == "create" for event in api.events)
+    assert not api.handles
+
+
+@pytest.mark.parametrize(
+    "field,bad",
+    [
+        ("owner", OTHER),
+        ("present", False),
+        ("present", 1),
+        ("aces", None),
+        ("aces", ()),
+        ("protected", False),
+        ("aces", (w._Ace(OTHER, w._FILE_ALL_ACCESS, 3),)),
+        ("aces", (w._Ace(USER, 1, 3),)),
+        ("aces", tuple(w._Ace(USER, 1, 3) for _ in range(17))),
+    ],
+)
+def test_private_security_rejects_wrong_owner_null_unbounded_or_weak_acl(field, bad):
+    with pytest.raises(w.WindowsCacheError):
+        w._private_security(replace(secure(), **{field: bad}), USER, directory=True, protected=True)
+
+
+@pytest.mark.parametrize(
+    "changes",
+    [
+        {"kind": 1},
+        {"kind": 5},
+        {"kind": 9},
+        {"kind": True},
+        {"flags": 0x20},
+        {"flags": -1},
+        {"mask": 0x80000000},
+        {"mask": True},
+        {"flags": 3 | 8},
+        {"flags": 3 | 4},
+        {"flags": 0},
+        {"flags": 1},
+        {"flags": 2},
+    ],
+)
+def test_finite_ace_predicate_separates_effective_and_propagating_grants(changes):
+    bad = replace(secure(), aces=(replace(w._Ace(USER, w._FILE_ALL_ACCESS, 3), **changes),))
+    with pytest.raises(w.WindowsCacheError):
+        w._private_security(bad, USER, directory=True)
+
+
+def test_effective_and_inherited_subset_acl_is_supported():
+    current = w._Ace(USER, w._FILE_ALL_ACCESS, 0)
+    propagation = w._Ace(USER, w._FILE_ALL_ACCESS, 3 | 8 | 16)
+    value = w._Security(USER, True, False, (current, propagation))
+    w._private_security(value, USER, directory=True)
+    w._private_security(w._Security(USER, True, False, (current,)), USER, directory=False)
+    w._private_security(secure(protected=False), USER, directory=True)
+
+
+@pytest.mark.parametrize("attributes", [w._REPARSE | 16, w._OFFLINE | 16, 0])
+@pytest.mark.parametrize("index", range(5))
+def test_reparse_offline_wrong_kind_at_each_ancestor_never_creates(attributes, index):
+    api = FakeAPI()
+    path = list(api.paths)[index]
+    old, acl = api.paths[path]
+    api.paths[path] = (replace(old, attributes=attributes), acl)
+    value, api = owner(api)
+
+    def execute():
+        try:
+            with pytest.raises(w.WindowsCacheError):
+                value.acquire()
+        finally:
+            value.close()
+
+    worker(execute)
+    assert not any(event[0] == "create" for event in api.events)
+    assert not api.handles
+
+
+@pytest.mark.parametrize(
+    "volume",
+    [
+        w._Volume("FAT", False, 255, True),
+        w._Volume("ReFS", True, 255, True),
+        w._Volume("NTFS", True, 255, False),
+        w._Volume("NTFS", False, 255, True),
+        w._Volume("NTFS", True, 0, True),
+        w._Volume("NTFS", True, True, True),
+    ],
+)
+def test_unsupported_volume_never_creates(volume):
+    api = FakeAPI()
+    api.volume_value = volume
+    value, api = owner(api)
+
+    def execute():
+        try:
+            with pytest.raises(w.WindowsCacheError):
+                value.acquire()
+        finally:
+            value.close()
+
+    worker(execute)
+    assert not any(event[0] == "create" for event in api.events)
+
+
+def test_volume_component_limit_applies_before_suffix_creation():
+    api = FakeAPI()
+    api.volume_value = w._Volume("NTFS", True, 10, True)
+    value, api = owner(api)
+
+    def execute():
+        try:
+            with pytest.raises(w.WindowsCacheError):
+                value.acquire()
+        finally:
+            value.close()
+
+    worker(execute)
+    assert not any(event[0] == "create" for event in api.events)
+
+
+@pytest.mark.parametrize("phase", ["token_open", "token_user", "open", "info", "volume", "parse"])
+def test_partial_acquisition_owns_before_inspection_and_closes_once(phase):
+    api = FakeAPI()
+    fired = []
+
+    def fail(event):
+        if event[0] == phase and not fired:
+            fired.append(event)
+            raise OSError("inert access denied")
+
+    api.hook = fail
+    value, api = owner(api)
+
+    def execute():
+        try:
+            with pytest.raises(w.WindowsCacheError):
+                value.acquire()
+        finally:
+            value.close()
+            value.close()
+
+    worker(execute)
+    assert not api.handles
+    assert len(api.close_calls) == len(set(api.close_calls))
+    assert len(api.free_calls) == len(set(api.free_calls))
+
+
+@pytest.mark.parametrize("kind", ["converted", "observed"])
+@pytest.mark.parametrize("result", [42, True, "bad", "throw"])
+def test_localfree_uncertainty_is_absorbing_and_never_retried(kind, result):
+    value, api = owner()
+
+    def fail(event):
+        if event[:2] == ("free", kind):
+            if result == "throw":
+                raise OSError("inert uncertain free")
+            api.local_result = result
+
+    api.hook = fail
+
+    def execute():
+        with pytest.raises(w.WindowsCacheError) as error:
+            value.acquire()
+        assert error.value.code == "cleanup_blocked"
+        assert value.cleanup_uncertain
+        calls = list(api.free_calls), list(api.close_calls)
+        for _ in range(2):
+            with pytest.raises(w.WindowsCacheError):
+                value.close()
+        assert calls == (api.free_calls, api.close_calls)
+
+    worker(execute)
+
+
+def test_close_failure_is_absorbing_all_original_handles_attempted_once():
+    value, api = owner()
+
+    def execute():
+        value.acquire()
+        failing = value._anchors[-1].resource.value
+
+        def fail(event):
+            if event == ("close", failing):
+                raise OSError("inert uncertain close")
+
+        api.hook = fail
+        with pytest.raises(w.WindowsCacheError):
+            value.close()
+        assert value.cleanup_uncertain
+        before = list(api.close_calls)
+        with pytest.raises(w.WindowsCacheError):
+            value.close()
+        assert api.close_calls == before
+        assert all(r.attempted for r in value._resources)
+
+    worker(execute)
+
+
+def cleanup_resources(value, api, first_kind):
+    """Retain real owner resources with fake raw leaves, including a pending allocation."""
+    value.acquire()
+    if first_kind == "local":
+        value._allocation(api.security_descriptor, value._anchors[-1].resource.value)
+    return [resource for resource in reversed(value._resources) if not resource.attempted]
+
+
+@pytest.mark.parametrize("first_kind", ["handle", "local"])
+def test_checkpointed_close_brackets_each_original_release_and_final_completion(first_kind):
+    value, api = owner()
+
+    def execute():
+        pending = cleanup_resources(value, api, first_kind)
+        previously_closed = [resource for resource in value._resources if resource.closed]
+        before_close, before_free = list(api.close_calls), list(api.free_calls)
+        trace = []
+
+        def checkpoint():
+            assert value._state != "closed"
+            trace.append(("checkpoint", sum(resource.closed for resource in pending)))
+
+        def native(event):
+            resource = next(resource for resource in pending if resource.value == event[-1])
+            assert resource.attempted and not resource.closed
+            trace.append(("release", resource.value))
+
+        api.hook = native
+        value.close(cleanup_checkpoint=checkpoint)
+        expected = [("checkpoint", 0)]
+        for index, resource in enumerate(pending):
+            expected.extend(
+                [("checkpoint", index), ("release", resource.value), ("checkpoint", index + 1)]
+            )
+        expected.append(("checkpoint", len(pending)))
+        assert trace == expected
+        assert value._state == "closed"
+        assert all(resource.attempted and resource.closed for resource in value._resources)
+        assert all(resource.attempted and resource.closed for resource in previously_closed)
+        assert api.close_calls == [
+            *before_close,
+            *(resource.value for resource in pending if resource.kind == "handle"),
+        ]
+        assert api.free_calls == [
+            *before_free,
+            *(resource.value for resource in pending if resource.kind == "local"),
+        ]
+        assert not api.handles
+        before = list(api.events)
+        value.close()
+        assert api.events == before
+
+    worker(execute)
+
+
+@pytest.mark.parametrize("first_kind", ["handle", "local"])
+@pytest.mark.parametrize(
+    "phase", ["entry", "pre_first", "post_first", "pre_next", "post_next", "final"]
+)
+@pytest.mark.parametrize("failure", [TimeoutError, w.WindowsCacheCancelled, KeyboardInterrupt])
+def test_checkpointed_close_rejection_stops_successors_and_is_absorbing(first_kind, phase, failure):
+    value, api = owner()
+
+    def execute():
+        pending = cleanup_resources(value, api, first_kind)
+        previously_closed = [resource for resource in value._resources if resource.closed]
+        calls = []
+        reject_at, released = {
+            "entry": (1, 0),
+            "pre_first": (2, 0),
+            "post_first": (3, 1),
+            "pre_next": (4, 1),
+            "post_next": (5, 2),
+            "final": (2 + 2 * len(pending), len(pending)),
+        }[phase]
+
+        def checkpoint():
+            assert value._state != "closed"
+            calls.append(len(calls) + 1)
+            if len(calls) == reject_at:
+                raise failure()
+
+        with pytest.raises(w.WindowsCacheError) as error:
+            value.close(cleanup_checkpoint=checkpoint)
+        assert error.value.code == "cleanup_blocked" and error.value.owner is value
+        assert value.cleanup_uncertain and len(calls) == reject_at
+        assert all(resource.attempted and resource.closed for resource in pending[:released])
+        assert all(
+            not resource.attempted and not resource.closed for resource in pending[released:]
+        )
+        assert all(resource.attempted and resource.closed for resource in previously_closed)
+        before = list(api.events)
+        for callback in (None, checkpoint):
+            with pytest.raises(w.WindowsCacheError):
+                value.close(cleanup_checkpoint=callback)
+        if released < len(pending):
+            with pytest.raises(w.WindowsCacheError):
+                value._finish(pending[released], cleanup_checkpoint=checkpoint)
+        assert api.events == before and len(calls) == reject_at
+
+    worker(execute)
+
+
+@pytest.mark.parametrize("first_kind", ["handle", "local"])
+def test_checkpointed_close_late_return_records_success_without_renewing_deadline(first_kind):
+    value, api = owner()
+
+    def execute():
+        pending = cleanup_resources(value, api, first_kind)
+        clock, deadline, checks = [0.0], 5.0, []
+
+        def checkpoint():
+            checks.append(clock[0])
+            if clock[0] >= deadline:
+                raise TimeoutError("original cleanup deadline expired")
+
+        def late_return(event):
+            assert event[-1] == pending[0].value
+            assert pending[0].attempted and not pending[0].closed
+            clock[0] = 6.0
+
+        api.hook = late_return
+        with pytest.raises(w.WindowsCacheError):
+            value.close(cleanup_checkpoint=checkpoint)
+        assert checks == [0.0, 0.0, 6.0]
+        assert pending[0].attempted and pending[0].closed
+        assert all(not resource.attempted and not resource.closed for resource in pending[1:])
+        assert value.cleanup_uncertain
+        before = list(api.events)
+        clock[0] = 0.0  # A later caller cannot reset an uncertain owner into a retry.
+        with pytest.raises(w.WindowsCacheError):
+            value.close(cleanup_checkpoint=checkpoint)
+        assert api.events == before and checks == [0.0, 0.0, 6.0]
+
+    worker(execute)
+
+
+@pytest.mark.parametrize("first_kind", ["handle", "local"])
+@pytest.mark.parametrize("failure", [OSError, KeyboardInterrupt, SystemExit])
+@pytest.mark.parametrize("checkpointed", [False, True])
+@pytest.mark.parametrize("release_index", [0, 1])
+def test_close_native_failure_keeps_default_drain_but_checkpointed_stops(
+    first_kind, failure, checkpointed, release_index
+):
+    value, api = owner()
+
+    def execute():
+        pending = cleanup_resources(value, api, first_kind)
+        checks = []
+
+        def fail(event):
+            if event[-1] == pending[release_index].value:
+                assert pending[release_index].attempted and not pending[release_index].closed
+                raise failure("inert uncertain release")
+
+        api.hook = fail
+        callback = (lambda: checks.append("check")) if checkpointed else None
+        with pytest.raises(w.WindowsCacheError):
+            value.close(cleanup_checkpoint=callback)
+        assert value.cleanup_uncertain
+        assert pending[release_index].attempted and not pending[release_index].closed
+        assert all(resource.attempted and resource.closed for resource in pending[:release_index])
+        if checkpointed:
+            assert checks == ["check"] * (2 + 2 * release_index)
+            assert all(
+                not resource.attempted and not resource.closed
+                for resource in pending[release_index + 1 :]
+            )
+        else:
+            assert not checks
+            assert all(
+                resource.attempted and resource.closed for resource in pending[release_index + 1 :]
+            )
+        before = list(api.events)
+        with pytest.raises(w.WindowsCacheError):
+            value.close(cleanup_checkpoint=callback)
+        assert api.events == before
+
+    worker(execute)
+
+
+@pytest.mark.parametrize("result", [42, True, "unconfirmed"])
+def test_checkpointed_localfree_unconfirmed_return_stops_before_postcheck(result):
+    value, api = owner()
+
+    def execute():
+        pending = cleanup_resources(value, api, "local")
+        checks = []
+        api.local_result = result
+        with pytest.raises(w.WindowsCacheError):
+            value.close(cleanup_checkpoint=lambda: checks.append("check"))
+        assert checks == ["check", "check"]
+        assert pending[0].attempted and not pending[0].closed
+        assert all(not resource.attempted and not resource.closed for resource in pending[1:])
+        assert value.cleanup_uncertain
+
+    worker(execute)
+
+
+@pytest.mark.parametrize("method", ["close", "_finish"])
+@pytest.mark.parametrize("invalid", [False, 0, 1, "not a callback", object()])
+def test_cleanup_callback_validation_rejects_without_resource_operations(method, invalid):
+    value, api = owner()
+
+    def execute():
+        pending = cleanup_resources(value, api, "local")
+        before = list(api.events)
+        with pytest.raises(w.WindowsCacheError) as error:
+            if method == "close":
+                value.close(cleanup_checkpoint=invalid)
+            else:
+                value._finish(pending[0], cleanup_checkpoint=invalid)
+        assert error.value.code == "cleanup_blocked" and error.value.owner is value
+        assert value.cleanup_uncertain and api.events == before
+        assert all(not resource.attempted and not resource.closed for resource in pending)
+        with pytest.raises(w.WindowsCacheError):
+            value.close()
+        assert api.events == before
+
+    worker(execute)
+
+
+@pytest.mark.parametrize("first_kind", ["handle", "local"])
+@pytest.mark.parametrize("reject_at", [1, 2])
+def test_direct_finish_checks_before_and_after_native_release(first_kind, reject_at):
+    value, api = owner()
+
+    def execute():
+        pending = cleanup_resources(value, api, first_kind)
+        checks = []
+
+        def checkpoint():
+            checks.append((pending[0].attempted, pending[0].closed))
+            if len(checks) == reject_at:
+                raise KeyboardInterrupt("inert cancelled cleanup")
+
+        with pytest.raises(w.WindowsCacheError):
+            value._finish(pending[0], cleanup_checkpoint=checkpoint)
+        assert checks == ([(False, False)] if reject_at == 1 else [(False, False), (True, True)])
+        assert pending[0].attempted is (reject_at == 2)
+        assert pending[0].closed is (reject_at == 2)
+        assert all(not resource.attempted and not resource.closed for resource in pending[1:])
+        assert value.cleanup_uncertain
+        before = list(api.events)
+        with pytest.raises(w.WindowsCacheError):
+            value.close()
+        assert api.events == before
+
+    worker(execute)
+
+
+@pytest.mark.parametrize("reject_at", [None, 1, 2])
+def test_checkpointed_empty_owner_checks_entry_and_completion_without_native_api(reject_at):
+    value, api = owner()
+    checks = []
+
+    def checkpoint():
+        assert value._state != "closed"
+        checks.append(value._state)
+        if len(checks) == reject_at:
+            raise w.WindowsCacheCancelled(owner=value)
+
+    if reject_at is None:
+        value.close(cleanup_checkpoint=checkpoint)
+        assert checks == ["new", "closing"] and value._state == "closed"
+    else:
+        with pytest.raises(w.WindowsCacheError):
+            value.close(cleanup_checkpoint=checkpoint)
+        assert len(checks) == reject_at and value.cleanup_uncertain
+    assert not api.events and not value._resources
+
+
+def test_retained_identity_change_revokes_owner_without_requery():
+    def check(value, api):
+        api.query_value = "D:\\Unrelated new configuration"
+        captured = value._anchors[1].info
+        api.info_change = lambda info: (
+            replace(info, identity=(77, 999)) if info == captured else info
+        )
+        with pytest.raises(w.WindowsCacheError):
+            value.assert_held()
+        assert not any(event[0] == "query" for event in api.events)
+
+    use_owner(check)
+
+
+def test_changed_knownfolder_configuration_does_not_rewrite_captured_path():
+    api = FakeAPI()
+    original = w.query_windows_cache_location(api=api)
+    api.query_value = "C:\\Users\\Another\\Local"
+    value, api = owner(api, location=original)
+
+    def execute():
+        try:
+            value.acquire()
+            value.assert_held()
+            assert value.cache_root == original.cache_root
+        finally:
+            value.close()
+
+    worker(execute)
+    assert sum(event[0] == "query" for event in api.events) == 1
+    fresh = w.query_windows_cache_location(api=api)
+    assert fresh.known_folder == api.query_value
+    assert fresh != original
+
+
+def test_actual_canonical_alias_is_rejected():
+    api = FakeAPI()
+    api.info_change = lambda info: replace(info, path=info.path.lower())
+    value, api = owner(api)
+
+    def execute():
+        try:
+            with pytest.raises(w.WindowsCacheError):
+                value.acquire()
+        finally:
+            value.close()
+
+    worker(execute)
+    assert not any(event[0] == "create" for event in api.events)
+
+
+@pytest.mark.parametrize("name", ["payload.bin", ".bundle-ready.json"])
+@pytest.mark.parametrize("links", [0, 2, None, True, 1.0, "1"])
+def test_every_file_including_marker_requires_exact_int_one_link(name, links):
+    def check(value, api):
+        path = ntpath.join(value.cache_root, value.release.bundle_id, name)
+        api.add(path, directory=False, links=links)
+        with pytest.raises(w.WindowsCacheError):
+            value.check_private_entry(path, directory=False)
+        handles = [r for r in value._resources if r.kind == "handle"]
+        assert handles[-1].closed
+
+    use_owner(check)
+
+
+@pytest.mark.parametrize(
+    "name", ["payload.bin", ".bundle-ready.json", ".bundle-pins\\" + release().bundle_id + ".lock"]
+)
+def test_private_one_link_file_passes_original_handle_proof(name):
+    def check(value, api):
+        path = ntpath.join(value.cache_root, name)
+        api.add(path, directory=False)
+        value.check_private_entry(path, directory=False)
+        assert value._resources[-2].closed  # actual entry handle; descriptor closes first
+
+    use_owner(check)
+
+
+def test_borrowed_handle_is_never_reopened_or_closed():
+    def check(value, api):
+        path = ntpath.join(value.cache_root, ".jobs", "a" * 32, "tmpabcd")
+        api.add(path, directory=False)
+        handle = api.open_entry(path, security=True)
+        count = len(api.events)
+        value.check_private_handle(handle, path, directory=False)
+        assert not any(event[0] == "open" for event in api.events[count:])
+        assert handle not in api.close_calls
+        api.close_handle(handle)
+
+    use_owner(check)
+
+
+@pytest.mark.parametrize("target", [".bundle-pins", "runtime-file", ".bundle-ready.json"])
+def test_private_parent_does_not_prove_child_security(target):
+    def check(value, api):
+        path = ntpath.join(value.cache_root, target)
+        api.add(path, directory=target == ".bundle-pins", security=replace(secure(), owner=OTHER))
+        with pytest.raises(w.WindowsCacheError):
+            value.check_private_entry(path, directory=target == ".bundle-pins")
+
+    use_owner(check)
+
+
+def test_manifest_path_budget_current_81_unit_shape_at_96_and_97_roots(monkeypatch):
+    monkeypatch.setattr(w.secrets, "token_hex", lambda count: "abcdef12")
+    for root_length in (96, 97):
+        known = "C:\\" + "a" * (root_length - len("\\MechanicalCAD\\r") - 3)
+        location = recipe(known)
+        assert len(location.cache_root) == root_length
+        api = FakeAPI(location)
+        value, api = owner(api)
+        relative = "packages/" + "x" * (81 - len("packages/"))
+        data = manifest(value.release, relative)
+
+        def execute(value=value, api=api, data=data, relative=relative, root_length=root_length):
+            try:
+                value.acquire()
+                if root_length == 96:
+                    stage = value.create_stage(value.release, data)
+                    assert len(ntpath.join(stage, *relative.split("/"))) == 259
+                else:
+                    with pytest.raises(w.WindowsCacheError) as error:
+                        value.create_stage(value.release, data)
+                    assert error.value.code == "windows_cache_path_too_long"
+                    assert api.stage_creates == 0
+                    assert value.owned_stage_path is None
+            finally:
+                value.close()
+
+        worker(execute)
+
+
+def test_changed_future_manifest_is_budgeted_in_full_before_creation(monkeypatch):
+    monkeypatch.setattr(w.secrets, "token_hex", lambda count: "12345678")
+
+    def check(value, api):
+        data = manifest(value.release, "source/" + "x" * 180)
+        with pytest.raises(w.WindowsCacheError):
+            value.create_stage(value.release, data)
+        assert api.stage_creates == 0
+        assert value.owned_stage_path is None
+
+    use_owner(check)
+
+
+@pytest.mark.parametrize("collisions", [0, 3, 16])
+def test_stage_fixed_names_collision_ownership_and_finite_limit(monkeypatch, collisions):
+    names = iter(f"{index:08x}" for index in range(16))
+    monkeypatch.setattr(w.secrets, "token_hex", lambda count: next(names))
+
+    def check(value, api):
+        api.collision_count = collisions
+        if collisions == 16:
+            with pytest.raises(w.WindowsCacheError):
+                value.create_stage(value.release, manifest(value.release))
+            assert value.owned_stage_path is None
+            assert api.stage_creates == 16
+        else:
+            stage = value.create_stage(value.release, manifest(value.release))
+            assert (
+                ntpath.basename(stage) == ".stage-" + value.release.bundle_id + f"-{collisions:08x}"
+            )
+            assert value.owned_stage_path == stage
+            assert api.stage_creates == collisions + 1
+
+    use_owner(check)
+
+
+@pytest.mark.parametrize("failure", ["cancelled", "free", "open", "info", "parse"])
+def test_created_stage_record_precedes_every_postcreate_failure(monkeypatch, failure):
+    monkeypatch.setattr(w.secrets, "token_hex", lambda count: "deadbeef")
+    value, api = owner()
+    created = ntpath.join(value.cache_root, ".stage-" + value.release.bundle_id + "-deadbeef")
+
+    def execute():
+        value.acquire(cancelled=lambda: failure == "cancelled" and created in api.paths)
+
+        def fail(event):
+            if created not in api.paths:
+                return
+            # This is the earliest call following raw CreateDirectory success.
+            assert value.owned_stage_path == created
+            if event[0] == failure and (failure != "parse" or event[1] == "observed"):
+                raise OSError("inert post-create failure")
+
+        api.hook = fail
+        try:
+            with pytest.raises((w.WindowsCacheError, OSError)):
+                value.create_stage(value.release, manifest(value.release))
+            assert value.owned_stage_path == created
+            before = list(api.events)
+            assert value.owned_stage_path == created
+            assert api.events == before  # diagnostic has no exists/open/metadata recovery
+            assert not any(event[0] == "query" for event in api.events)
+        finally:
+            api.hook = lambda event: None
+            if value.cleanup_uncertain:
+                before = list(api.free_calls), list(api.close_calls)
+                with pytest.raises(w.WindowsCacheError):
+                    value.close()
+                assert before == (api.free_calls, api.close_calls)
+            else:
+                value.close()
+
+    worker(execute)
+
+
+def test_stage_rename_closes_only_stage_before_final_identity_proof(monkeypatch):
+    monkeypatch.setattr(w.secrets, "token_hex", lambda count: "12345678")
+
+    def check(value, api):
+        stage = value.create_stage(value.release, manifest(value.release))
+        final = ntpath.join(value.cache_root, value.release.bundle_id)
+        stage_handle = value._stage_anchor.resource.value
+        before = list(api.close_calls)
+        value.before_stage_rename(stage, final)
+        assert api.close_calls == [*before, stage_handle]
+        assert all(not a.resource.closed for a in value._anchors if a.path != stage)
+        api.rename(stage, final)
+        value.after_stage_rename(final)
+        assert value.owned_stage_path == stage
+        assert value._anchors[-1].info.identity == value._stage_anchor.info.identity
+        value.assert_held()
+
+    use_owner(check)
+
+
+def test_stage_close_uncertainty_prevents_rename_and_never_retries(monkeypatch):
+    monkeypatch.setattr(w.secrets, "token_hex", lambda count: "12345678")
+    value, api = owner()
+
+    def execute():
+        value.acquire()
+        stage = value.create_stage(value.release, manifest(value.release))
+        handle = value._stage_anchor.resource.value
+
+        def fail(event):
+            if event == ("close", handle):
+                raise OSError("inert close uncertainty")
+
+        api.hook = fail
+        with pytest.raises(w.WindowsCacheError):
+            value.before_stage_rename(stage, ntpath.join(value.cache_root, value.release.bundle_id))
+        assert value.cleanup_uncertain
+        assert stage in api.paths
+        before = list(api.close_calls)
+        with pytest.raises(w.WindowsCacheError):
+            value.close()
+        assert before == api.close_calls
+
+    worker(execute)
+
+
+def test_final_identity_must_match_original_stage(monkeypatch):
+    monkeypatch.setattr(w.secrets, "token_hex", lambda count: "12345678")
+
+    def check(value, api):
+        stage = value.create_stage(value.release, manifest(value.release))
+        final = ntpath.join(value.cache_root, value.release.bundle_id)
+        value.before_stage_rename(stage, final)
+        api.add(final, identity=(77, 99999))
+        with pytest.raises(w.WindowsCacheError):
+            value.after_stage_rename(final)
+        assert stage in api.paths
+
+    use_owner(check)
+
+
+class Function:
+    def __init__(self, callback=lambda *args: 1):
+        self.callback = callback
+        self.argtypes, self.restype = None, "unset"
+        self.calls = []
+
+    def __call__(self, *args):
+        self.calls.append(args)
+        return self.callback(*args)
+
+
+class Library:
+    def __init__(self):
+        self.functions = {}
+
+    def __getattr__(self, name):
+        return self.functions.setdefault(name, Function())
+
+
+def raw_api():
+    api = object.__new__(w._WindowsAPI)
+    api.kernel, api.advapi, api.shell, api.ole = Library(), Library(), Library(), Library()
+    api._bind()
+    return api
+
+
+def test_exact_fixed_width_abi_and_knownfolder_flags():
+    api = raw_api()
+    query = api.shell.SHGetKnownFolderPath
+    assert query.restype is ctypes.c_int32
+    assert query.argtypes == [
+        ctypes.POINTER(w._GUID),
+        ctypes.c_uint32,
+        ctypes.c_void_p,
+        ctypes.POINTER(ctypes.c_void_p),
+    ]
+    assert ctypes.sizeof(w._GUID) == 16
+    assert bytes(w._LOCAL_APP_DATA) == bytes.fromhex("8527b3f1ba6fcf4f9d557b8e7f157091")
+    assert ctypes.sizeof(w._FileInformation) == 52
+    assert api.ole.CoTaskMemFree.restype is None
+    assert api.kernel.LocalFree.restype is ctypes.c_void_p
+    assert api.kernel.CloseHandle.restype is ctypes.c_int32
+    output = ctypes.c_void_p()
+    api.known_folder(output)
+    args = query.calls[0]
+    assert args[1:3] == (0x4000, None)
+    assert ctypes.cast(args[3], ctypes.POINTER(ctypes.c_void_p)).contents.value is None
+    for library in (api.kernel, api.advapi, api.shell, api.ole):
+        assert all(
+            function.argtypes is not None and function.restype != "unset"
+            for function in library.functions.values()
+        )
+
+
+@pytest.mark.parametrize(
+    "units,error",
+    [
+        ([ord("C"), 58, 92, 0], False),
+        ([0xD83D, 0xDE00, 0], False),
+        ([0xD800, 0], True),
+        ([65] * 4097, True),
+        ([65] * 4096 + [0], False),
+    ],
+)
+def test_native_knownfolder_copy_is_bounded_utf16_not_host_wchar(units, error):
+    api = raw_api()
+    buffer = (ctypes.c_uint16 * len(units))(*units)
+    if error:
+        with pytest.raises((UnicodeError, w.WindowsCacheError)):
+            api.read_known_folder(ctypes.addressof(buffer))
+    else:
+        value = api.read_known_folder(ctypes.addressof(buffer))
+        assert value.encode("utf-16-le") == bytes(buffer)[:-2]
+
+
+def test_native_open_create_metadata_contract_without_native_calls():
+    api = raw_api()
+    api.kernel.CreateFileW.callback = lambda *args: 1234
+    assert api.open_entry("C:\\x", security=True) == 1234
+    args = api.kernel.CreateFileW.calls[0]
+    assert args == ("C:\\x", 0x20080, 3, None, 3, 0x02200000, None)
+    captured = []
+
+    def create(path, pointer):
+        attributes = ctypes.cast(pointer, ctypes.POINTER(w._SecurityAttributes)).contents
+        captured.append((path, attributes.length, attributes.descriptor, attributes.inherit))
+        return 1
+
+    api.kernel.CreateDirectoryW.callback = create
+    assert api.create_directory("C:\\x", 4567)
+    assert captured == [("C:\\x", ctypes.sizeof(w._SecurityAttributes), 4567, 0)]
+
+
+def test_detached_original_captures_survive_caller_frozen_object_mutation():
+    location, rel = recipe(), release()
+    value, api = owner(location=location, rel=rel)
+    assert value.location is not location and value.release is not rel
+    original_location, original_release = value.location, value.release
+    object.__setattr__(location, "cache_root", "C:\\other")
+    object.__setattr__(rel, "payload_sha256", "f" * 64)
+    assert value.location == original_location == recipe()
+    assert value.release == original_release == release()
+    assert not api.events
+
+
+@pytest.mark.parametrize(
+    "method",
+    [
+        "check_installed_paths",
+        "check_manifest_paths",
+        "check_private_entry",
+        "check_private_handle",
+        "before_stage_rename",
+        "after_stage_rename",
+    ],
+)
+def test_all_hooks_reject_arbitrary_path_callbacks_without_calling_them(method):
+    class HostilePath:
+        def __fspath__(self):
+            pytest.fail("arbitrary callback must not execute")
+
+        def __str__(self):
+            pytest.fail("arbitrary string callback must not execute")
+
+    bad = HostilePath()
+
+    def check(value, api):
+        arguments = {
+            "check_installed_paths": (bad, value.release),
+            "check_manifest_paths": (value.release, manifest(value.release), bad),
+            "check_private_entry": (bad,),
+            "check_private_handle": (999, bad),
+            "before_stage_rename": (bad, ntpath.join(value.cache_root, value.release.bundle_id)),
+            "after_stage_rename": (bad,),
+        }
+        kwargs = {"directory": False} if method.startswith("check_private") else {}
+        with pytest.raises(w.WindowsCacheError):
+            getattr(value, method)(*arguments[method], **kwargs)
+
+    use_owner(check)
+
+
+def test_path_subclass_does_not_gain_callback_authority():
+    class HostilePath(type(Path())):
+        def __str__(self):
+            pytest.fail("subclass callback must not execute")
+
+    with pytest.raises(w.WindowsCacheError):
+        w._path_string(HostilePath("x"))
+    assert w._path_string(Path("inert")) == "inert"
+
+
+def test_path_error_is_safe_surface_length_and_limit_only():
+    path = "C:\\" + "a" * 257
+    with pytest.raises(w.WindowsCacheError) as error:
+        w._windows_path(path)
+    assert error.value.surface == "cache file"
+    assert error.value.length == 260 and error.value.limit == 259
+    assert "260 UTF-16 units; limit 259" in str(error.value)
+    assert path not in str(error.value)
+    rel = release()
+    package_path = "C:\\" + "a" * (260 - 1 - len(rel.manifest_path) - 3)
+    with pytest.raises(w.WindowsCacheError) as error:
+        owner(package_root=package_path)
+    assert error.value.surface == "installed file"
+    assert error.value.length == 260 and error.value.limit == 259
+    assert package_path not in str(error.value)
+
+
+def test_second_thread_cannot_close_original_worker_even_if_numeric_id_reused(monkeypatch):
+    value, api = owner()
+
+    def execute():
+        value.acquire()
+        try:
+            original_thread = value._thread
+            # A forged new Thread object remains different even if ident is reused.
+            impostor = threading.Thread()
+            impostor._ident = original_thread.ident
+            monkeypatch.setattr(w.threading, "current_thread", lambda: impostor)
+            with pytest.raises(w.WindowsCacheError):
+                value.assert_held()
+            with pytest.raises(w.WindowsCacheError):
+                value.close()
+            monkeypatch.undo()
+        finally:
+            value.close()
+
+    worker(execute)
+    assert not api.handles
+
+
+@pytest.mark.parametrize("phase", ["converted", "observed"])
+@pytest.mark.parametrize("throw", [False, True])
+def test_failed_allocation_with_nonnull_output_stays_owned_until_cleanup(phase, throw):
+    api = FakeAPI()
+    original = api.convert_descriptor if phase == "converted" else api.security_descriptor
+
+    def fail(*args):
+        original(*args)
+        if throw:
+            raise OSError("inert failure with allocated output")
+        return 5
+
+    if phase == "converted":
+        api.convert_descriptor = fail
+    else:
+        api.security_descriptor = fail
+    value, api = owner(api)
+
+    def execute():
+        try:
+            with pytest.raises(w.WindowsCacheError):
+                value.acquire()
+        finally:
+            value.close()
+        allocated = set(api.allocations)
+        assert allocated == set(api.free_calls)
+        assert not api.handles
+
+    worker(execute)
+
+
+def test_query_throw_after_setting_output_still_frees_exact_pointer():
+    api = FakeAPI()
+
+    def fail(output):
+        output.value = 123456
+        raise OSError("inert failure after output")
+
+    api.known_folder = fail
+    with pytest.raises(w.WindowsCacheError):
+        w.query_windows_cache_location(api=api)
+    assert api.co_free_calls == [123456]
+
+
+def test_void_cotaskfree_result_is_not_interpreted_as_boolean():
+    api = FakeAPI()
+
+    def free(pointer):
+        api.co_free_calls.append(pointer)
+        return 7
+
+    api.co_task_mem_free = free
+    assert w.query_windows_cache_location(api=api) == recipe()
+    assert api.co_free_calls == [9999]
+
+
+@pytest.mark.parametrize("result", [None, 0])
+def test_localfree_null_success_retires_all_allocations(result):
+    api = FakeAPI()
+    api.local_result = result
+    use_owner(lambda value, api: value.assert_held(), api=api)
+
+
+@pytest.mark.parametrize("change", ["attributes", "identity", "inheritable", "serial"])
+def test_acquisition_observation_inconsistency_retains_handle_before_failure(change):
+    api = FakeAPI()
+    target = list(api.paths)[1]
+    if change == "attributes":
+        counts = []
+        original = api.attributes
+
+        def attributes(path):
+            value = original(path)
+            if path == target:
+                counts.append(path)
+                return value if len(counts) == 1 else value | w._REPARSE
+            return value
+
+        api.attributes = attributes
+    elif change == "identity":
+        seen = []
+
+        def changed(info):
+            if info.path == target:
+                seen.append(info)
+                if len(seen) > 1:
+                    return replace(info, identity=(77, 999))
+            return info
+
+        api.info_change = changed
+    elif change == "inheritable":
+        api.info_change = lambda info: replace(info, inheritable=True)
+    else:
+        api.info_change = lambda info: (
+            replace(info, identity=(88, info.identity[1])) if info.path == target else info
+        )
+    value, api = owner(api)
+
+    def execute():
+        try:
+            with pytest.raises(w.WindowsCacheError):
+                value.acquire()
+        finally:
+            value.close()
+
+    worker(execute)
+    assert not api.handles
+    assert all(resource.attempted for resource in value._resources)
+
+
+def put(pointer, ctype, value):
+    ctypes.cast(pointer, ctypes.POINTER(ctype)).contents.value = value
+
+
+class SecurityMemory:
+    """Caller-owned synthetic bytes used only by bounded ctypes accessor tests."""
+
+    def __init__(self):
+        self.api = raw_api()
+        self.buffer = ctypes.create_string_buffer(512)
+        self.base = ctypes.addressof(self.buffer)
+        self.owner, self.acl = self.base + 64, self.base + 128
+        self.ace = self.acl + ctypes.sizeof(w._Acl)
+        ctypes.memmove(self.owner, USER, len(USER))
+        header = w._Acl.from_address(self.acl)
+        header.revision, header.count, header.size = 2, 1, 8 + 8 + len(USER)
+        ace = w._AceHeader.from_address(self.ace)
+        ace.kind, ace.flags, ace.size = 0, 3, 8 + len(USER)
+        w._DWORD.from_address(self.ace + 4).value = w._FILE_ALL_ACCESS
+        ctypes.memmove(self.ace + 8, USER, len(USER))
+        self.length, self.control, self.revision = len(self.buffer), 0x9000, 1
+        self.present, self.dacl_pointer, self.owner_pointer, self.ace_pointer = (
+            1,
+            self.acl,
+            self.owner,
+            self.ace,
+        )
+        self.api.advapi.GetSecurityDescriptorLength.callback = lambda pointer: self.length
+
+        def get_owner(pointer, output, defaulted):
+            put(output, ctypes.c_void_p, self.owner_pointer)
+            put(defaulted, ctypes.c_int32, 0)
+            return 1
+
+        def get_dacl(pointer, present, output, defaulted):
+            put(present, ctypes.c_int32, self.present)
+            put(output, ctypes.c_void_p, self.dacl_pointer)
+            return 1
+
+        def get_control(pointer, control, revision):
+            put(control, ctypes.c_uint16, self.control)
+            put(revision, ctypes.c_uint32, self.revision)
+            return 1
+
+        def get_ace(pointer, index, output):
+            put(output, ctypes.c_void_p, self.ace_pointer)
+            return 1
+
+        self.api.advapi.GetSecurityDescriptorOwner.callback = get_owner
+        self.api.advapi.GetSecurityDescriptorDacl.callback = get_dacl
+        self.api.advapi.GetSecurityDescriptorControl.callback = get_control
+        self.api.advapi.GetAce.callback = get_ace
+        self.api.advapi.GetLengthSid.callback = lambda pointer: (
+            8 + ctypes.string_at(pointer, 2)[1] * 4
+        )
+
+    def parse(self):
+        return self.api.parse_security(self.base)
+
+
+def test_bounded_native_security_accessors_copy_borrowed_interiors_only():
+    value = SecurityMemory()
+    security = value.parse()
+    w._private_security(security, USER, directory=True, protected=True)
+    assert security.owner is not USER and security.owner == USER
+    assert security.aces == (w._Ace(USER, w._FILE_ALL_ACCESS, 3),)
+    assert value.api.kernel.LocalFree.calls == []
+    assert value.api.kernel.CloseHandle.calls == []
+    assert value.api.ole.CoTaskMemFree.calls == []
+
+
+@pytest.mark.parametrize(
+    "mutation",
+    [
+        "length_short",
+        "length_long",
+        "owner_before",
+        "owner_after",
+        "owner_null",
+        "acl_after",
+        "acl_size",
+        "acl_revision",
+        "ace_count",
+        "ace_after",
+        "ace_size",
+        "ace_kind",
+        "sid_revision",
+        "sid_count",
+        "sid_padding",
+        "descriptor_revision",
+    ],
+)
+def test_native_descriptor_acl_ace_sid_bounds_fail_closed(mutation):
+    value = SecurityMemory()
+    if mutation == "length_short":
+        value.length = 19
+    elif mutation == "length_long":
+        value.length = 65537
+    elif mutation == "owner_before":
+        value.owner_pointer = value.base - 1
+    elif mutation == "owner_after":
+        value.owner_pointer = value.base + 510
+    elif mutation == "owner_null":
+        value.owner_pointer = None
+    elif mutation == "acl_after":
+        value.dacl_pointer = value.base + 510
+    elif mutation == "acl_size":
+        w._Acl.from_address(value.acl).size = 65535
+    elif mutation == "acl_revision":
+        w._Acl.from_address(value.acl).revision = 3
+    elif mutation == "ace_count":
+        w._Acl.from_address(value.acl).count = 17
+    elif mutation == "ace_after":
+        value.ace_pointer = value.base + 511
+    elif mutation == "ace_size":
+        w._AceHeader.from_address(value.ace).size = 15
+    elif mutation == "ace_kind":
+        w._AceHeader.from_address(value.ace).kind = 5
+    elif mutation == "sid_revision":
+        ctypes.c_ubyte.from_address(value.ace + 8).value = 2
+    elif mutation == "sid_count":
+        ctypes.c_ubyte.from_address(value.ace + 9).value = 16
+    elif mutation == "sid_padding":
+        w._Acl.from_address(value.acl).size += 4
+        w._AceHeader.from_address(value.ace).size += 4
+    else:
+        value.revision = 2
+    with pytest.raises(w.WindowsCacheError):
+        value.parse()
+
+
+@pytest.mark.parametrize("present,pointer", [(0, None), (1, None)])
+def test_native_null_or_missing_dacl_observation_is_never_private(present, pointer):
+    value = SecurityMemory()
+    value.present, value.dacl_pointer = present, pointer
+    with pytest.raises(w.WindowsCacheError):
+        w._private_security(value.parse(), USER, directory=True)
+
+
+@pytest.mark.parametrize(
+    "name",
+    [
+        "IsValidSecurityDescriptor",
+        "GetSecurityDescriptorOwner",
+        "GetSecurityDescriptorDacl",
+        "GetSecurityDescriptorControl",
+        "IsValidAcl",
+        "GetAce",
+        "IsValidSid",
+        "GetLengthSid",
+    ],
+)
+def test_native_security_accessor_failure_never_implies_private(name):
+    value = SecurityMemory()
+    getattr(value.api.advapi, name).callback = lambda *args: 0
+    with pytest.raises(w.WindowsCacheError):
+        value.parse()
+
+
+@pytest.mark.parametrize(
+    "mode", ["valid", "too_large", "too_short", "growing", "outside", "inheritable", "denied"]
+)
+def test_token_user_buffer_has_exact_bounded_borrowed_sid_lifetime(monkeypatch, mode):
+    api = raw_api()
+    monkeypatch.setattr(w.ctypes, "get_last_error", lambda: 122, raising=False)
+
+    def flags(handle, output):
+        put(output, ctypes.c_uint32, int(mode == "inheritable"))
+        return 1
+
+    api.kernel.GetHandleInformation.callback = flags
+
+    def token(handle, kind, buffer, capacity, needed):
+        assert kind == 1
+        if not capacity:
+            put(
+                needed,
+                ctypes.c_uint32,
+                4097 if mode == "too_large" else 1 if mode == "too_short" else 64,
+            )
+            return 0
+        if mode == "denied":
+            return 0
+        put(needed, ctypes.c_uint32, 65 if mode == "growing" else 64)
+        base = ctypes.addressof(buffer)
+        item = w._TokenUser.from_buffer(buffer)
+        item.sid = base + (63 if mode == "outside" else 32)
+        ctypes.memmove(base + 32, USER, len(USER))
+        return 1
+
+    api.advapi.GetTokenInformation.callback = token
+    api.advapi.GetLengthSid.callback = lambda pointer: len(USER)
+    if mode == "valid":
+        assert api.token_user(1234) == USER
+    else:
+        with pytest.raises(w.WindowsCacheError):
+            api.token_user(1234)
+    assert not api.kernel.LocalFree.calls
+    assert not api.kernel.CloseHandle.calls
+
+
+@pytest.mark.parametrize("handle", [None, 0, ctypes.c_void_p(-1).value])
+def test_native_open_invalid_handle_rejected_without_metadata(handle):
+    api = raw_api()
+    api.kernel.CreateFileW.callback = lambda *args: handle
+    with pytest.raises(w.WindowsCacheError):
+        api.open_entry("C:\\x", security=True)
+    assert not api.kernel.GetHandleInformation.calls
+    assert not api.kernel.GetFileInformationByHandle.calls
+
+
+def test_raw_create_success_does_not_hide_cleanup_or_post_create_work():
+    tree = ast.parse((ROOT / "blender_addon/mechanical_cad_blender/windows_cache.py").read_text())
+    api_class = next(
+        node for node in tree.body if isinstance(node, ast.ClassDef) and node.name == "_WindowsAPI"
+    )
+    function = next(
+        node
+        for node in api_class.body
+        if isinstance(node, ast.FunctionDef) and node.name == "create_directory"
+    )
+    native_create = next(node for node in function.body if isinstance(node, ast.If))
+    assert isinstance(native_create.body[0], ast.Return)
+    assert native_create.body[0].value.value is True
+    owner_class = next(
+        node
+        for node in tree.body
+        if isinstance(node, ast.ClassDef) and node.name == "WindowsCacheOwner"
+    )
+    create = next(
+        node
+        for node in owner_class.body
+        if isinstance(node, ast.FunctionDef) and node.name == "_create"
+    )
+    body = next(node.body for node in create.body if isinstance(node, ast.Try))
+    raw_call = next(index for index, node in enumerate(body) if isinstance(node, ast.Assign))
+    assert isinstance(body[raw_call + 1], ast.If)
+    success = body[raw_call + 1].body[0]
+    assert isinstance(success, ast.If)
+    assignment = success.body[0]
+    assert isinstance(assignment, ast.Assign)
+    assert assignment.targets[0].attr == "_owned_stage_path"
+
+
+@pytest.mark.parametrize("name", ["payload.bin", ".bundle-ready.json"])
+@pytest.mark.parametrize("borrowed", [False, True])
+def test_file_volume_serial_must_match_retained_drive(name, borrowed):
+    def check(value, api):
+        path = ntpath.join(value.cache_root, value.release.bundle_id, name)
+        api.add(path, directory=False, identity=(999, 10))
+        handle = api.open_entry(path, security=True) if borrowed else None
+        try:
+            with pytest.raises(w.WindowsCacheError):
+                if borrowed:
+                    value.check_private_handle(handle, path, directory=False)
+                else:
+                    value.check_private_entry(path, directory=False)
+            if borrowed:
+                assert handle not in api.close_calls
+        finally:
+            if borrowed:
+                api.close_handle(handle)
+
+    use_owner(check)
+
+
+@pytest.mark.parametrize("root_length", [115, 116])
+def test_full_staged_directory_bound_is_247_not_248(monkeypatch, root_length):
+    monkeypatch.setattr(w.secrets, "token_hex", lambda count: "12345678")
+    known = "C:\\" + "a" * (root_length - len("\\MechanicalCAD\\r") - 3)
+    location = recipe(known)
+    relative = "d" * 50 + "/x"
+
+    def check(value, api):
+        data = manifest(value.release, relative)
+        if root_length == 115:
+            stage = value.create_stage(value.release, data)
+            assert len(ntpath.join(stage, "d" * 50).encode("utf-16-le")) // 2 == 247
+        else:
+            with pytest.raises(w.WindowsCacheError) as error:
+                value.create_stage(value.release, data)
+            assert error.value.surface == "staging directory"
+            assert error.value.length == 248 and error.value.limit == 247
+            assert api.stage_creates == 0
+
+    use_owner(check, location=location)
+
+
+@pytest.mark.parametrize("known", ["C:\\Users\\Firstname.Lastname\\AppData\\Local", KNOWN])
+def test_representative_current_inventory_budget_retains_full64_ids(known):
+    relative = "packages/cadquery_ocp_novtk.libs/OpenEXRCore-68c33f2c309d9810ec2942109eb9ec80.dll"
+    assert len(relative) == 81
+
+    def check(value, api):
+        value.check_manifest_paths(value.release, manifest(value.release, relative))
+        stage = value.create_stage(value.release, manifest(value.release, relative))
+        assert value.release.bundle_id in stage and len(value.release.bundle_id) == 64
+        pin_path = ntpath.join(value.cache_root, ".bundle-pins", value.release.bundle_id + ".lock")
+        assert len(pin_path) == len(value.cache_root) + 83
+
+    use_owner(check, location=recipe(known))

@@ -1,0 +1,479 @@
+{
+  "schema_version": 1,
+  "id": "ventilated_body",
+  "name": "Ventilated Body",
+  "units": "mm",
+  "parameters": {
+    "width": 100,
+    "depth": 70,
+    "height": 35,
+    "wall": 2.4,
+    "cover": 3.6,
+    "vent_count": 7,
+    "vent_pitch": 10,
+    "duct_middle": 20,
+    "duct_wall": 2
+  },
+  "features": [
+    {
+      "id": "blank_profile",
+      "kind": "sketch_rectangle",
+      "label": "Blank Profile",
+      "params": {
+        "x": 0,
+        "y": 0,
+        "z": 0,
+        "width": "width",
+        "height": "depth"
+      },
+      "inputs": {}
+    },
+    {
+      "id": "blank",
+      "kind": "extrude",
+      "label": "Blank",
+      "params": {
+        "length": "height"
+      },
+      "inputs": {
+        "profile": "blank_profile"
+      }
+    },
+    {
+      "id": "corner_rounds",
+      "kind": "fillet",
+      "label": "Corner Rounds",
+      "params": {
+        "radius": 3
+      },
+      "inputs": {
+        "base": "blank"
+      },
+      "edge_pairs": [
+        [
+          "blank/face/side.x_max",
+          "blank/face/side.y_max"
+        ],
+        [
+          "blank/face/side.x_max",
+          "blank/face/side.y_min"
+        ],
+        [
+          "blank/face/side.x_min",
+          "blank/face/side.y_max"
+        ],
+        [
+          "blank/face/side.x_min",
+          "blank/face/side.y_min"
+        ]
+      ]
+    },
+    {
+      "id": "open_shell",
+      "kind": "shell",
+      "label": "Open Shell",
+      "params": {
+        "thickness": "wall"
+      },
+      "inputs": {
+        "base": "corner_rounds"
+      },
+      "opening_faces": [
+        "blank/face/cap.end"
+      ]
+    },
+    {
+      "id": "bottom_bevel",
+      "kind": "chamfer",
+      "label": "Bottom Bevel",
+      "params": {
+        "distance": 0.5
+      },
+      "inputs": {
+        "base": "open_shell"
+      },
+      "edge_pairs": [
+        [
+          "blank/face/cap.start",
+          "blank/face/side.x_max"
+        ],
+        [
+          "blank/face/cap.start",
+          "blank/face/side.x_min"
+        ]
+      ]
+    },
+    {
+      "id": "vent_tool_profile",
+      "kind": "sketch_rectangle",
+      "label": "Vent Tool Profile",
+      "params": {
+        "x": 18,
+        "y": 20,
+        "z": -1,
+        "width": 4,
+        "height": 30
+      },
+      "inputs": {}
+    },
+    {
+      "id": "vent_tool",
+      "kind": "extrude",
+      "label": "Vent Tool",
+      "params": {
+        "length": "wall+2"
+      },
+      "inputs": {
+        "profile": "vent_tool_profile"
+      }
+    },
+    {
+      "id": "bottom_vents",
+      "kind": "linear_cut_pattern",
+      "label": "Bottom Vents",
+      "params": {
+        "dx": "vent_pitch",
+        "dy": 0,
+        "dz": 0,
+        "count": "vent_count"
+      },
+      "inputs": {
+        "base": "bottom_bevel",
+        "tool": "vent_tool"
+      }
+    },
+    {
+      "id": "rib_0_profile",
+      "kind": "sketch_rectangle",
+      "label": "Rib 0 Profile",
+      "params": {
+        "x": "wall",
+        "y": 13,
+        "z": "wall-0.2",
+        "width": "width-2*wall",
+        "height": 3
+      },
+      "inputs": {}
+    },
+    {
+      "id": "rib_0",
+      "kind": "extrude",
+      "label": "Rib 0",
+      "params": {
+        "length": 5
+      },
+      "inputs": {
+        "profile": "rib_0_profile"
+      }
+    },
+    {
+      "id": "join_rib_0",
+      "kind": "union",
+      "label": "Join Rib 0",
+      "params": {},
+      "inputs": {
+        "base": "bottom_vents",
+        "tool": "rib_0"
+      }
+    },
+    {
+      "id": "rib_1_profile",
+      "kind": "sketch_rectangle",
+      "label": "Rib 1 Profile",
+      "params": {
+        "x": "wall",
+        "y": "depth-16",
+        "z": "wall-0.2",
+        "width": "width-2*wall",
+        "height": 3
+      },
+      "inputs": {}
+    },
+    {
+      "id": "rib_1",
+      "kind": "extrude",
+      "label": "Rib 1",
+      "params": {
+        "length": 5
+      },
+      "inputs": {
+        "profile": "rib_1_profile"
+      }
+    },
+    {
+      "id": "join_rib_1",
+      "kind": "union",
+      "label": "Join Rib 1",
+      "params": {},
+      "inputs": {
+        "base": "join_rib_0",
+        "tool": "rib_1"
+      }
+    },
+    {
+      "id": "post_profile_0",
+      "kind": "sketch_circle",
+      "label": "Post Profile 0",
+      "params": {
+        "x": 7,
+        "y": 7,
+        "z": "wall-0.2",
+        "radius": 4.5
+      },
+      "inputs": {}
+    },
+    {
+      "id": "post_0",
+      "kind": "extrude",
+      "label": "Post 0",
+      "params": {
+        "length": "height-wall+0.2"
+      },
+      "inputs": {
+        "profile": "post_profile_0"
+      }
+    },
+    {
+      "id": "join_post_0",
+      "kind": "union",
+      "label": "Join Post 0",
+      "params": {},
+      "inputs": {
+        "base": "join_rib_1",
+        "tool": "post_0"
+      }
+    },
+    {
+      "id": "pilot_profile_0",
+      "kind": "sketch_circle",
+      "label": "Pilot Profile 0",
+      "params": {
+        "x": 7,
+        "y": 7,
+        "z": "height-10",
+        "radius": 1.3
+      },
+      "inputs": {}
+    },
+    {
+      "id": "pilot_tool_0",
+      "kind": "extrude",
+      "label": "Pilot Tool 0",
+      "params": {
+        "length": 11
+      },
+      "inputs": {
+        "profile": "pilot_profile_0"
+      }
+    },
+    {
+      "id": "pilot_0",
+      "kind": "cut",
+      "label": "Pilot 0",
+      "params": {},
+      "inputs": {
+        "base": "join_post_0",
+        "tool": "pilot_tool_0"
+      }
+    },
+    {
+      "id": "post_profile_1",
+      "kind": "sketch_circle",
+      "label": "Post Profile 1",
+      "params": {
+        "x": "width-7",
+        "y": 7,
+        "z": "wall-0.2",
+        "radius": 4.5
+      },
+      "inputs": {}
+    },
+    {
+      "id": "post_1",
+      "kind": "extrude",
+      "label": "Post 1",
+      "params": {
+        "length": "height-wall+0.2"
+      },
+      "inputs": {
+        "profile": "post_profile_1"
+      }
+    },
+    {
+      "id": "join_post_1",
+      "kind": "union",
+      "label": "Join Post 1",
+      "params": {},
+      "inputs": {
+        "base": "pilot_0",
+        "tool": "post_1"
+      }
+    },
+    {
+      "id": "pilot_profile_1",
+      "kind": "sketch_circle",
+      "label": "Pilot Profile 1",
+      "params": {
+        "x": "width-7",
+        "y": 7,
+        "z": "height-10",
+        "radius": 1.3
+      },
+      "inputs": {}
+    },
+    {
+      "id": "pilot_tool_1",
+      "kind": "extrude",
+      "label": "Pilot Tool 1",
+      "params": {
+        "length": 11
+      },
+      "inputs": {
+        "profile": "pilot_profile_1"
+      }
+    },
+    {
+      "id": "pilot_1",
+      "kind": "cut",
+      "label": "Pilot 1",
+      "params": {},
+      "inputs": {
+        "base": "join_post_1",
+        "tool": "pilot_tool_1"
+      }
+    },
+    {
+      "id": "post_profile_2",
+      "kind": "sketch_circle",
+      "label": "Post Profile 2",
+      "params": {
+        "x": 7,
+        "y": "depth-7",
+        "z": "wall-0.2",
+        "radius": 4.5
+      },
+      "inputs": {}
+    },
+    {
+      "id": "post_2",
+      "kind": "extrude",
+      "label": "Post 2",
+      "params": {
+        "length": "height-wall+0.2"
+      },
+      "inputs": {
+        "profile": "post_profile_2"
+      }
+    },
+    {
+      "id": "join_post_2",
+      "kind": "union",
+      "label": "Join Post 2",
+      "params": {},
+      "inputs": {
+        "base": "pilot_1",
+        "tool": "post_2"
+      }
+    },
+    {
+      "id": "pilot_profile_2",
+      "kind": "sketch_circle",
+      "label": "Pilot Profile 2",
+      "params": {
+        "x": 7,
+        "y": "depth-7",
+        "z": "height-10",
+        "radius": 1.3
+      },
+      "inputs": {}
+    },
+    {
+      "id": "pilot_tool_2",
+      "kind": "extrude",
+      "label": "Pilot Tool 2",
+      "params": {
+        "length": 11
+      },
+      "inputs": {
+        "profile": "pilot_profile_2"
+      }
+    },
+    {
+      "id": "pilot_2",
+      "kind": "cut",
+      "label": "Pilot 2",
+      "params": {},
+      "inputs": {
+        "base": "join_post_2",
+        "tool": "pilot_tool_2"
+      }
+    },
+    {
+      "id": "post_profile_3",
+      "kind": "sketch_circle",
+      "label": "Post Profile 3",
+      "params": {
+        "x": "width-7",
+        "y": "depth-7",
+        "z": "wall-0.2",
+        "radius": 4.5
+      },
+      "inputs": {}
+    },
+    {
+      "id": "post_3",
+      "kind": "extrude",
+      "label": "Post 3",
+      "params": {
+        "length": "height-wall+0.2"
+      },
+      "inputs": {
+        "profile": "post_profile_3"
+      }
+    },
+    {
+      "id": "join_post_3",
+      "kind": "union",
+      "label": "Join Post 3",
+      "params": {},
+      "inputs": {
+        "base": "pilot_2",
+        "tool": "post_3"
+      }
+    },
+    {
+      "id": "pilot_profile_3",
+      "kind": "sketch_circle",
+      "label": "Pilot Profile 3",
+      "params": {
+        "x": "width-7",
+        "y": "depth-7",
+        "z": "height-10",
+        "radius": 1.3
+      },
+      "inputs": {}
+    },
+    {
+      "id": "pilot_tool_3",
+      "kind": "extrude",
+      "label": "Pilot Tool 3",
+      "params": {
+        "length": 11
+      },
+      "inputs": {
+        "profile": "pilot_profile_3"
+      }
+    },
+    {
+      "id": "pilot_3",
+      "kind": "cut",
+      "label": "Pilot 3",
+      "params": {},
+      "inputs": {
+        "base": "join_post_3",
+        "tool": "pilot_tool_3"
+      }
+    }
+  ],
+  "active_feature": "pilot_3"
+}

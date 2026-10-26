@@ -1,0 +1,526 @@
+"""Deterministic offline extension *contract* builder, not a release command.
+
+The inputs are an externally frozen source inventory and an explicitly prepared
+runtime inventory. This tool never fetches or executes a candidate runtime. It
+executes only the checked local child bootstrap's trusted build-time factory. It
+does not establish licensing, native closure, platform qualification or live
+backend integration. Every output says UNQUALIFIED_CONTRACT_ARTIFACT. Production
+release admission is deliberately absent until those separate gates close.
+
+The build copies exact core source into a compressed private payload and flattens
+only the Blender package at extension root. Native dependencies never appear in
+manifest wheels or Blender's module path. No Git executable is needed.
+"""
+
+from __future__ import annotations
+
+import hashlib
+import importlib.util
+import json
+import os
+import re
+import stat
+import sys
+import tempfile
+import tomllib
+import zipfile
+from contextlib import contextmanager
+from dataclasses import asdict
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+CONTRACT_PATH = ROOT / "blender_addon/mechanical_cad_blender/runtime_bundle_manifest.py"
+_SPEC = importlib.util.spec_from_file_location("_mcad_build_bundle_manifest", CONTRACT_PATH)
+assert _SPEC is not None and _SPEC.loader is not None
+CONTRACTS = importlib.util.module_from_spec(_SPEC)
+sys.modules[_SPEC.name] = CONTRACTS
+_SPEC.loader.exec_module(CONTRACTS)
+
+ADDON_PREFIX = "blender_addon/mechanical_cad_blender/"
+CORE_PREFIX = "src/mechanical_cad/"
+STATUS = "UNQUALIFIED_CONTRACT_ARTIFACT"
+BOOTSTRAP_SOURCE_PATH = "scripts/standalone_child_bootstrap.py"
+GENERATED_LAUNCH_MODULE = "standalone_launch_constants.py"
+MAX_BOOTSTRAP_BYTES = 64 * 1024
+MAX_ENTRY_LOADER_BYTES = 4096
+PYTHON_PATHS = {
+    "linux-x64": "python/bin/python3.12",
+    "windows-x64": "python/python.exe",
+}
+
+
+class BuildError(CONTRACTS.BundleError):
+    """Rejected build input; no final archive is published on failure."""
+
+
+def _json(value):
+    return (json.dumps(value, sort_keys=True, separators=(",", ":")) + "\n").encode("utf-8")
+
+
+def _digest(data):
+    return hashlib.sha256(data).hexdigest()
+
+
+def _path(path):
+    path = Path(os.path.abspath(path))
+    for item in (*reversed(path.parents), path):
+        info = item.lstat()
+        if stat.S_ISLNK(info.st_mode) or getattr(info, "st_file_attributes", 0) & 0x400:
+            raise BuildError("Symlink/reparse build inputs are unsupported.")
+    return path
+
+
+@contextmanager
+def _open(path):
+    path = _path(path)
+    if not stat.S_ISREG(path.lstat().st_mode):
+        raise BuildError("Build input must be a regular file.")
+    fd = os.open(
+        path,
+        os.O_RDONLY
+        | getattr(os, "O_NOFOLLOW", 0)
+        | getattr(os, "O_NONBLOCK", 0)
+        | getattr(os, "O_BINARY", 0),
+    )
+    try:
+        if not stat.S_ISREG(os.fstat(fd).st_mode):
+            raise BuildError("Build input must be a regular file.")
+        # fdopen may close its partial wrapper before raising; closefd=False
+        # leaves raw ownership here even on that construction failure.
+        stream = os.fdopen(fd, "rb", closefd=False)
+        try:
+            yield stream
+        finally:
+            stream.close()
+    finally:
+        # One attempt only; a failed close may already have consumed this fd.
+        os.close(fd)
+
+
+def _copy_checked(stream, target, item, limits):
+    digest, total = hashlib.sha256(), 0
+    while True:
+        chunk = stream.read(min(limits.chunk_bytes, item.size - total + 1))
+        if not chunk:
+            break
+        total += len(chunk)
+        if total > item.size:
+            raise BuildError(f"Build input grew: {item.path}")
+        digest.update(chunk)
+        if target is not None:
+            target.write(chunk)
+    if total != item.size or digest.hexdigest() != item.sha256:
+        raise BuildError(f"Build input bytes differ: {item.path}")
+
+
+def _read(root, item, limits):
+    # Only small metadata is read into memory. Runtime content always streams.
+    if item.size > limits.max_json_bytes:
+        raise BuildError("Build metadata exceeds trusted limit.")
+    with _open(root / item.path) as stream:
+        data = stream.read(item.size + 1)
+    if len(data) != item.size or _digest(data) != item.sha256:
+        raise BuildError(f"Build input bytes differ: {item.path}")
+    return data
+
+
+def _tree_files(root, limits):
+    root, found, pending, visited = _path(root), set(), [], 0
+    pending.append(root)
+    while pending:
+        parent = pending.pop()
+        with os.scandir(parent) as scan:
+            for entry in scan:
+                visited += 1
+                if visited > limits.max_files + limits.max_files * limits.max_path_depth:
+                    raise BuildError("Build tree exceeds trusted entry count.")
+                path = parent / entry.name
+                relative = path.relative_to(root).as_posix()
+                CONTRACTS.validate_path(relative, limits)
+                info = entry.stat(follow_symlinks=False)
+                if stat.S_ISLNK(info.st_mode) or getattr(info, "st_file_attributes", 0) & 0x400:
+                    raise BuildError("Symlink/reparse entry in build tree.")
+                if stat.S_ISDIR(info.st_mode):
+                    pending.append(path)
+                elif stat.S_ISREG(info.st_mode):
+                    found.add(relative)
+                else:
+                    raise BuildError("Special file in build tree.")
+                if len(found) + len(pending) > limits.max_files:
+                    raise BuildError("Build tree exceeds trusted file count.")
+    return found
+
+
+def _entry(path, data, mode=0o644):
+    return {"path": path, "size": len(data), "sha256": _digest(data), "mode": mode}
+
+
+def _zip_info(name, mode, *, stored=False):
+    info = zipfile.ZipInfo(name, date_time=(1980, 1, 1, 0, 0, 0))
+    info.create_system = 3
+    info.external_attr = (stat.S_IFREG | mode) << 16
+    info.compress_type = zipfile.ZIP_STORED if stored else zipfile.ZIP_DEFLATED
+    info._compresslevel = 9
+    return info
+
+
+def _write_archive(path, entries, limits):
+    """Entries pair an immutable inventory item with bytes or a source Path."""
+    with zipfile.ZipFile(path, "x", allowZip64=False) as archive:
+        for item, source in sorted(entries, key=lambda pair: pair[0].path):
+            info = _zip_info(item.path, item.mode, stored=item.path.endswith("/payload.zip"))
+            info.file_size = item.size
+            with archive.open(info, "w") as target:
+                if isinstance(source, bytes):
+                    if len(source) != item.size or _digest(source) != item.sha256:
+                        raise BuildError("Generated build data changed.")
+                    target.write(source)
+                else:
+                    with _open(source) as stream:
+                        _copy_checked(stream, target, item, limits)
+
+
+def _manifest(version, platform):
+    if re.fullmatch(r"(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)", version) is None:
+        raise BuildError("A plain three-component release version is required.")
+    return (
+        'schema_version = "1.0.0"\n'
+        'id = "mechanical_cad"\n'
+        f'version = "{version}"\n'
+        'name = "Mechanical CAD"\n'
+        'tagline = "Parametric mechanical CAD with an isolated backend"\n'
+        'maintainer = "Mechanical CAD contributors"\n'
+        'type = "add-on"\n'
+        'blender_version_min = "5.2.2"\n'
+        'blender_version_max = "5.2.3"\n'
+        'license = ["SPDX:GPL-3.0-or-later"]\n'
+        f'platforms = ["{platform}"]\n'
+        "\n[permissions]\n"
+        'files = "Prepare the bundled runtime and read or save CAD documents"\n'
+        'clipboard = "Copy and paste explicit sketch dimension text"\n'
+    ).encode("utf-8")
+
+
+def _trusted_bootstrap(source_root, source_by_path, limits):
+    """Match inventoried source to local trusted bytes before any factory runs."""
+    item = source_by_path[BOOTSTRAP_SOURCE_PATH]
+    if not 0 < item.size <= MAX_BOOTSTRAP_BYTES:
+        raise BuildError("Trusted bootstrap exceeds its fixed byte limit.")
+    trusted = _read(ROOT, item, limits)
+    if trusted != _read(source_root, item, limits):
+        raise BuildError("Source bootstrap differs from the trusted local bootstrap.")
+    return trusted
+
+
+def _entry_loader(bootstrap_data):
+    """Run the trusted child factory at build time, never in the Blender package."""
+    namespace = {
+        "__name__": "_mcad_trusted_bootstrap_build_factory",
+        "__file__": str(ROOT / BOOTSTRAP_SOURCE_PATH),
+    }
+    try:
+        exec(compile(bootstrap_data, namespace["__file__"], "exec"), namespace)
+        loader = namespace["entry_loader"](_digest(bootstrap_data))
+    except Exception as exc:
+        raise BuildError("Trusted bootstrap launch factory failed.") from exc
+    if (
+        type(loader) is not str
+        or not loader
+        or not loader.isascii()
+        or "\0" in loader
+        or len(loader) > MAX_ENTRY_LOADER_BYTES
+    ):
+        raise BuildError("Trusted bootstrap loader exceeds its fixed launch contract.")
+    return loader
+
+
+def _launch_constants(bootstrap_data, loader, release, release_data, python_path):
+    """Literal assignments only; final release hash stays outside the payload."""
+    values = {
+        "SCHEMA_VERSION": 1,
+        "BUILD_STATUS": STATUS,
+        "SOURCE_COMMIT": release["source_commit"],
+        "RUNTIME_LOCK_SHA256": release["runtime_lock_sha256"],
+        "BUNDLE_ID": release["bundle_id"],
+        "PLATFORM": release["platform"],
+        "PYTHON_IMPLEMENTATION": "cpython",
+        "PYTHON_VERSION": (3, 12, 10 if release["platform"] == "windows-x64" else 15, "final", 0),
+        "PYTHON_CACHE_TAG": "cpython-312",
+        "PYTHON_BITS": 64,
+        "PYTHON_PATH": python_path,
+        "PYTHON_FLAGS": ("-I", "-S", "-B", "-X", "utf8", "-c"),
+        "BOOTSTRAP_PATH": "bootstrap.py",
+        "BOOTSTRAP_SHA256": _digest(bootstrap_data),
+        "RELEASE_IDENTITY_PATH": "release_identity.json",
+        "RELEASE_IDENTITY_BYTES": release_data,
+        "RELEASE_IDENTITY_SHA256": _digest(release_data),
+        "BUNDLE_MANIFEST_SHA256": release["manifest_sha256"],
+        "PAYLOAD_SHA256": release["payload_sha256"],
+        "ENTRY_LOADER": loader,
+    }
+    return (
+        "# Generated trusted build constants; setup identity is not CAD evidence.\n"
+        + "".join(f"{name} = {value!r}\n" for name, value in values.items())
+    ).encode("ascii")
+
+
+def stage_contract_extension(
+    *,
+    source_root,
+    source_commit,
+    source_files,
+    runtime_root,
+    runtime_files,
+    runtime_lock,
+    platform,
+    python_path,
+    work_root,
+    limits=None,
+):
+    """Build one internally labeled candidate from exact explicit inventories.
+
+    The supplied source commit/inventory must have independently verified Git
+    correspondence; this offline leaf proves only the passed bytes. Runtime lock
+    bytes identify the separately audited closure recipe, not an approval flag.
+    Runtime input supplies all dependency/license/source material; it cannot
+    shadow src/ or bootstrap.py. The exact inventoried trusted child source is
+    copied as bootstrap.py. Source and runtime trees are never modified.
+    Return only a private, unqualified work artifact and its exact hash receipt.
+    No destination is published and no hard-link operation is attempted. The
+    separate publication entry point keeps its original no-clobber semantics.
+    """
+    limits = CONTRACTS.BundleLimits() if limits is None else limits
+    source_root, runtime_root = _path(source_root), _path(runtime_root)
+    output_root = _path(work_root)
+    if any(
+        output_root == root or root in output_root.parents for root in (source_root, runtime_root)
+    ):
+        raise BuildError("Build output must be outside both input trees.")
+    if type(runtime_lock) is not bytes or not 0 < len(runtime_lock) <= limits.max_json_bytes:
+        raise BuildError("Runtime lock must be bounded immutable bytes.")
+    bundle_id = CONTRACTS.bundle_identity(source_commit, _digest(runtime_lock), platform)
+    source = CONTRACTS.validate_file_inventory(source_files, limits=limits)
+    runtime = CONTRACTS.validate_file_inventory(runtime_files, limits=limits)
+    source_by_path = {item.path: item for item in source}
+    required = {
+        "pyproject.toml",
+        "LICENSE",
+        "THIRD_PARTY_NOTICES.md",
+        ADDON_PREFIX + "__init__.py",
+        CORE_PREFIX + "__init__.py",
+        BOOTSTRAP_SOURCE_PATH,
+    }
+    if not required <= source_by_path.keys():
+        raise BuildError("Source snapshot lacks required package, core or license entries.")
+    for item in source:
+        if item.path.startswith(ADDON_PREFIX):
+            relative = item.path.removeprefix(ADDON_PREFIX)
+            if relative.split("/", 1)[0].casefold() == "_backend":
+                raise BuildError("Blender source cannot supply the generated backend namespace.")
+            parts = relative.casefold().split("/")
+            stem = GENERATED_LAUNCH_MODULE.removesuffix(".py")
+            if (
+                parts[0] == stem
+                or parts[0].startswith(stem + ".")
+                or (
+                    parts[0] == "__pycache__" and len(parts) > 1 and parts[1].startswith(stem + ".")
+                )
+            ):
+                raise BuildError("Blender source cannot supply the generated launch namespace.")
+    for prefix in (ADDON_PREFIX, CORE_PREFIX):
+        observed = {prefix + p for p in _tree_files(source_root / prefix, limits)}
+        if observed != {item.path for item in source if item.path.startswith(prefix)}:
+            raise BuildError("Packaged source tree differs from its exact inventory.")
+    if _tree_files(runtime_root, limits) != {item.path for item in runtime}:
+        raise BuildError("Runtime tree differs from its exact inventory.")
+    if any(item.path == "src" or item.path.startswith("src/") for item in runtime):
+        raise BuildError("Runtime inputs cannot supply or shadow canonical core source.")
+    if any(item.path.split("/", 1)[0].casefold() == "bootstrap.py" for item in runtime):
+        raise BuildError("Generated bootstrap.py namespace collision in runtime inputs.")
+    if python_path != PYTHON_PATHS[platform]:
+        raise BuildError("Runtime profile requires its direct bundled CPython 3.12 interpreter.")
+    # Verify all inventoried source, including files not included in this ZIP.
+    for item in source:
+        with _open(source_root / item.path) as stream:
+            _copy_checked(stream, None, item, limits)
+    bootstrap_data = _trusted_bootstrap(source_root, source_by_path, limits)
+    loader = _entry_loader(bootstrap_data)
+    metadata = tomllib.loads(_read(source_root, source_by_path["pyproject.toml"], limits).decode())
+    version = metadata["project"]["version"]
+    manifest_data = _manifest(version, platform)
+    payload = [(item, runtime_root / item.path) for item in runtime]
+    (bootstrap_item,) = CONTRACTS.validate_file_inventory(
+        [_entry("bootstrap.py", bootstrap_data)], limits=limits
+    )
+    payload.append((bootstrap_item, bootstrap_data))
+    payload += [
+        (item, source_root / item.path) for item in source if item.path.startswith(CORE_PREFIX)
+    ]
+    payload_records = [asdict(item) for item, _ in payload]
+    bundle_data = _json(
+        {
+            "schema_version": 1,
+            "bundle_id": bundle_id,
+            "platform": platform,
+            "python_path": python_path,
+            "bootstrap_path": "bootstrap.py",
+            "files": sorted(payload_records, key=lambda item: item["path"]),
+        }
+    )
+    relative_manifest = f"_backend/{bundle_id}/bundle-manifest.json"
+    relative_payload = f"_backend/{bundle_id}/payload.zip"
+    # Parse before writing; actual payload hash/size are filled after streaming.
+    release = {
+        "schema_version": 1,
+        "bundle_id": bundle_id,
+        "source_commit": source_commit,
+        "runtime_lock_sha256": _digest(runtime_lock),
+        "platform": platform,
+        "manifest_path": relative_manifest,
+        "manifest_sha256": _digest(bundle_data),
+        "payload_path": relative_payload,
+        "payload_sha256": "0" * 64,
+        "payload_size": 0,
+    }
+    parsed = CONTRACTS.parse_release_manifest(
+        _json(release), expected_platform=platform, limits=limits
+    )
+    CONTRACTS.parse_bundle_manifest(bundle_data, parsed, limits=limits)
+    work = Path(tempfile.mkdtemp(prefix="standalone-contract-", dir=output_root))
+    payload_path = work / "payload.zip"
+    _write_archive(payload_path, payload, limits)
+    with _open(payload_path) as stream:
+        release["payload_sha256"] = hashlib.file_digest(stream, "sha256").hexdigest()
+    release["payload_size"] = payload_path.stat().st_size
+    release_data = _json(release)
+    parsed = CONTRACTS.parse_release_manifest(
+        release_data, expected_platform=platform, limits=limits
+    )
+    CONTRACTS.parse_bundle_manifest(bundle_data, parsed, limits=limits)
+    launch_data = _launch_constants(bootstrap_data, loader, release, release_data, python_path)
+    record = _json(
+        {
+            "status": STATUS,
+            "source_commit": source_commit,
+            "source_inventory_sha256": _digest(
+                _json(sorted(source_files, key=lambda i: i["path"]))
+            ),
+            "runtime_inventory_sha256": _digest(
+                _json(sorted(runtime_files, key=lambda i: i["path"]))
+            ),
+            "builder_sha256": _digest(Path(__file__).read_bytes()),
+            "contract_sha256": _digest(CONTRACT_PATH.read_bytes()),
+            "runtime_lock_sha256": _digest(runtime_lock),
+            "bootstrap_source_path": BOOTSTRAP_SOURCE_PATH,
+            "bootstrap_sha256": _digest(bootstrap_data),
+            "release_identity_sha256": _digest(release_data),
+            "generated_launch_sha256": _digest(launch_data),
+            "bundle_id": bundle_id,
+            "qualification": "Synthetic build contracts only; no runtime or release approval",
+        }
+    )
+    outer = []
+    for item in source:
+        if item.path.startswith(ADDON_PREFIX):
+            mapped = asdict(item) | {"path": item.path.removeprefix(ADDON_PREFIX), "mode": 0o644}
+            outer.append((mapped, source_root / item.path))
+        elif item.path in {"LICENSE", "THIRD_PARTY_NOTICES.md"}:
+            outer.append((asdict(item) | {"mode": 0o644}, source_root / item.path))
+    for name, data in (
+        ("blender_manifest.toml", manifest_data),
+        ("release_identity.json", release_data),
+        ("BUILD_CONTRACT.json", record),
+        ("runtime-lock.json", runtime_lock),
+        (GENERATED_LAUNCH_MODULE, launch_data),
+        (relative_manifest, bundle_data),
+    ):
+        outer.append((_entry(name, data), data))
+    outer.append(
+        (
+            {
+                "path": relative_payload,
+                "size": release["payload_size"],
+                "sha256": release["payload_sha256"],
+                "mode": 0o644,
+            },
+            payload_path,
+        )
+    )
+    outer_inventory = CONTRACTS.validate_file_inventory([item for item, _ in outer], limits=limits)
+    archive_path = work / "extension.zip"
+    _write_archive(
+        archive_path, list(zip(outer_inventory, [value for _, value in outer], strict=True)), limits
+    )
+    with _open(archive_path) as stream:
+        archive_hash = hashlib.file_digest(stream, "sha256").hexdigest()
+    receipt = {
+        "status": STATUS,
+        "destination": None,
+        "archive_path": str(archive_path),
+        "work_directory": str(work),
+        "sha256": archive_hash,
+        "bytes": archive_path.stat().st_size,
+        "bundle_id": bundle_id,
+        "source_commit": source_commit,
+        "platform": platform,
+        "version": version,
+        "payload_bytes": release["payload_size"],
+        "payload_expanded_bytes": sum(i.size for i, _ in payload),
+        "payload_files": len(payload),
+        "outer_files": len(outer),
+        "published": False,
+        "receipt_phase": "private_stage_complete",
+    }
+    (work / "BUILD_RECEIPT.json").write_bytes(_json(receipt))
+    return receipt
+
+
+def build_contract_extension(
+    *,
+    source_root,
+    source_commit,
+    source_files,
+    runtime_root,
+    runtime_files,
+    runtime_lock,
+    platform,
+    python_path,
+    destination,
+    limits=None,
+):
+    """Build and no-clobber publish a candidate; publication errors fail closed.
+
+    Private staging is an independent entry point, never an alternate route to
+    publication. Callers must not retry a denied publication through another API.
+    """
+    destination = Path(os.path.abspath(destination))
+    if os.path.lexists(destination):
+        raise BuildError("Build destination already exists.")
+    receipt = stage_contract_extension(
+        source_root=source_root,
+        source_commit=source_commit,
+        source_files=source_files,
+        runtime_root=runtime_root,
+        runtime_files=runtime_files,
+        runtime_lock=runtime_lock,
+        platform=platform,
+        python_path=python_path,
+        work_root=destination.parent,
+        limits=limits,
+    )
+    work = Path(receipt["work_directory"])
+    archive_path = Path(receipt["archive_path"])
+    receipt["destination"] = str(destination)
+    receipt["receipt_phase"] = "before_publication"
+    (work / "BUILD_RECEIPT.json").write_bytes(_json(receipt))
+    os.link(archive_path, destination)
+    receipt["published"] = True
+    receipt["receipt_phase"] = "after_publication"
+    try:
+        (work / "BUILD_RECEIPT.json").write_bytes(_json(receipt))
+    except OSError as exc:
+        # The archive already exists. Never turn a receipt-storage failure into
+        # an ambiguous build failure or retry/delete a committed destination.
+        receipt["receipt_write_error"] = type(exc).__name__
+        receipt["receipt_phase"] = "after_publication_receipt_write_failed"
+    return receipt

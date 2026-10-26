@@ -1,0 +1,274 @@
+{
+  "schema_version": 2,
+  "id": "edge_projection_demo",
+  "name": "Pocket and edge fillet projection example",
+  "units": "mm",
+  "parameters": {
+    "extrude_1_length": 10.0,
+    "fillet_1_radius": "1"
+  },
+  "features": [
+    {
+      "id": "sketch_1",
+      "kind": "sketch_constrained",
+      "label": "Sketch",
+      "params": {},
+      "inputs": {},
+      "sketch": {
+        "circles": [],
+        "constraints": [
+          {
+            "id": "r_d9",
+            "kind": "horizontal",
+            "refs": [
+              "l_d5"
+            ]
+          },
+          {
+            "id": "r_d10",
+            "kind": "vertical",
+            "refs": [
+              "l_d6"
+            ]
+          },
+          {
+            "id": "r_d11",
+            "kind": "horizontal",
+            "refs": [
+              "l_d7"
+            ]
+          },
+          {
+            "id": "r_d12",
+            "kind": "vertical",
+            "refs": [
+              "l_d8"
+            ]
+          }
+        ],
+        "id": "sketch_1_geometry",
+        "lines": [
+          {
+            "end": "p_d2",
+            "id": "l_d5",
+            "start": "p_d1"
+          },
+          {
+            "end": "p_d3",
+            "id": "l_d6",
+            "start": "p_d2"
+          },
+          {
+            "end": "p_d4",
+            "id": "l_d7",
+            "start": "p_d3"
+          },
+          {
+            "end": "p_d1",
+            "id": "l_d8",
+            "start": "p_d4"
+          }
+        ],
+        "plane": {
+          "id": "xy",
+          "origin": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "quaternion": [
+            1,
+            0,
+            0,
+            0
+          ]
+        },
+        "points": [
+          {
+            "id": "p_d1",
+            "u": -33.838504791259766,
+            "v": -15.204970359802246
+          },
+          {
+            "id": "p_d2",
+            "u": 16.099376678466797,
+            "v": -15.204970359802246
+          },
+          {
+            "id": "p_d3",
+            "u": 16.099376678466797,
+            "v": 14.608696937561035
+          },
+          {
+            "id": "p_d4",
+            "u": -33.838504791259766,
+            "v": 14.608696937561035
+          }
+        ],
+        "schema_version": 2,
+        "units": "mm"
+      }
+    },
+    {
+      "id": "extrude_1",
+      "kind": "extrude",
+      "label": "Extrusion",
+      "params": {
+        "length": "extrude_1_length"
+      },
+      "inputs": {
+        "profile": "sketch_1"
+      }
+    },
+    {
+      "id": "sketch_2",
+      "kind": "sketch_constrained",
+      "label": "Sketch",
+      "params": {},
+      "inputs": {
+        "support": "extrude_1"
+      },
+      "support_face": "extrude_1/face/cap.end",
+      "sketch": {
+        "circles": [],
+        "constraints": [
+          {
+            "id": "r_d9",
+            "kind": "horizontal",
+            "refs": [
+              "l_d5"
+            ]
+          },
+          {
+            "id": "r_d10",
+            "kind": "vertical",
+            "refs": [
+              "l_d6"
+            ]
+          },
+          {
+            "id": "r_d11",
+            "kind": "horizontal",
+            "refs": [
+              "l_d7"
+            ]
+          },
+          {
+            "id": "r_d12",
+            "kind": "vertical",
+            "refs": [
+              "l_d8"
+            ]
+          },
+          {
+            "id": "r_d13",
+            "kind": "distance",
+            "refs": [
+              "p_d3",
+              "p_d4"
+            ],
+            "value": "20"
+          }
+        ],
+        "id": "sketch_2_geometry",
+        "lines": [
+          {
+            "end": "p_d2",
+            "id": "l_d5",
+            "start": "p_d1"
+          },
+          {
+            "end": "p_d3",
+            "id": "l_d6",
+            "start": "p_d2"
+          },
+          {
+            "end": "p_d4",
+            "id": "l_d7",
+            "start": "p_d3"
+          },
+          {
+            "end": "p_d1",
+            "id": "l_d8",
+            "start": "p_d4"
+          }
+        ],
+        "plane": {
+          "id": "xy",
+          "origin": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "quaternion": [
+            1,
+            0,
+            0,
+            0
+          ]
+        },
+        "points": [
+          {
+            "id": "p_d1",
+            "u": -14.459625244140625,
+            "v": -6.260870456695557
+          },
+          {
+            "id": "p_d2",
+            "u": 6.4099366664886475,
+            "v": -6.260870456695557
+          },
+          {
+            "id": "p_d3",
+            "u": 6.4099366664886475,
+            "v": 6.409938335418701
+          },
+          {
+            "id": "p_d4",
+            "u": -14.459625244140625,
+            "v": 6.409938335418701
+          }
+        ],
+        "schema_version": 2,
+        "units": "mm"
+      }
+    },
+    {
+      "id": "extrude_2",
+      "kind": "extrude",
+      "label": "Remove extrusion depth",
+      "params": {
+        "length": "-7"
+      },
+      "inputs": {
+        "profile": "sketch_2"
+      }
+    },
+    {
+      "id": "cut_1",
+      "kind": "cut",
+      "label": "Remove extrusion",
+      "params": {},
+      "inputs": {
+        "base": "extrude_1",
+        "tool": "extrude_2"
+      }
+    },
+    {
+      "id": "fillet_1",
+      "kind": "fillet",
+      "label": "Fillet",
+      "params": {
+        "radius": "fillet_1_radius"
+      },
+      "inputs": {
+        "base": "cut_1"
+      },
+      "edge_faces": [
+        "extrude_1/face/cap.end",
+        "extrude_1/face/side.line.l_d6"
+      ]
+    }
+  ],
+  "active_feature": "fillet_1"
+}

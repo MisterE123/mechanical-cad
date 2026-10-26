@@ -1,0 +1,26 @@
+Mechanical CAD next-version icon assets
+
+This distribution includes Google Material Symbols Outlined, provided by Google
+under the Apache License, Version 2.0. See licenses/Apache-2.0.txt.
+Upstream: https://github.com/google/material-design-icons
+Pinned upstream commit: 49d4db35df873165d6bd6ba09b063c7dafbac2f4
+Retrieved: 2026-10-16
+
+The upstream repository contains no root NOTICE file at that commit. Its SVG
+paths are retained in vendor/google. Normalized SVGs and themed PNGs change the
+coordinate wrapper, color, and raster representation, not Google's path design.
+Every derived asset identifies its exact upstream file, commit, blob identity,
+local source hash, and modifications in manifest.json.
+
+Original CAD-specific vector geometry, build/validation scripts, and pack
+documentation were created for Mechanical CAD and are provided under
+GPL-3.0-or-later, matching that project's license. See
+licenses/GPL-3.0-or-later.txt and original_geometry.json.
+
+Google's trademarks and brand names are not licensed by the Apache license.
+No affiliation with or endorsement by Google is implied.
+
+Primary references checked 2026-10-16:
+https://developers.google.com/fonts/docs/material_symbols
+https://github.com/google/material-design-icons
+https://github.com/google/material-design-icons/blob/49d4db35df873165d6bd6ba09b063c7dafbac2f4/LICENSE
