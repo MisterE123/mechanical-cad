@@ -110,6 +110,24 @@ def source_identity(repo, commit, tag, main_ref):
     return tag[1:]
 
 
+def validation_identity(args):
+    """Explicit candidate path never fabricates main or creates a version tag."""
+    if not getattr(args, "candidate_only", False):
+        return source_identity(args.source_repo, args.source_commit, args.tag, args.main_ref)
+    if re.fullmatch(r"[0-9a-f]{40}", args.source_commit) is None:
+        raise CandidateError("Candidate must name a full exact commit")
+    if git(args.source_repo, "rev-parse", "--verify", args.source_commit + "^{commit}") != args.source_commit:
+        raise CandidateError("Candidate commit identity mismatch")
+    metadata = strict_json(canonical(tomllib.loads(git(
+        args.source_repo, "show", args.source_commit + ":pyproject.toml"))))
+    version = metadata["project"]["version"]
+    if re.fullmatch(r"(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)", version) is None:
+        raise CandidateError("Candidate requires a plain project version")
+    if args.tag != "v" + version:
+        raise CandidateError("Candidate version label mismatch")
+    return version
+
+
 def source_path_parts(name):
     """Validate portable spelling BEFORE any export filesystem operation."""
     if not name or unicodedata.normalize("NFC", name) != name:
@@ -238,7 +256,7 @@ def build(args):
             raise CandidateError("Output/receipt already exists; no overwrite or retry")
         if any(path == root or root in path.parents for root in (repo, inputs)):
             raise CandidateError("Outputs must be outside source and input trees")
-    version = source_identity(repo, args.source_commit, args.tag, args.main_ref)
+    version = validation_identity(args)
     if args.platform not in {"linux-x64", "windows-x64"}:
         raise CandidateError("Unsupported platform")
     if {p.name for p in inputs.iterdir()} != {"runtime", "materials", "metadata"}:
@@ -290,7 +308,7 @@ def build(args):
                         or built.get("receipt_phase") != "after_publication"
                         or built.get("sha256") != actual_hash or built.get("bytes") != output.stat().st_size):
                     raise CandidateError("Candidate publication/receipt unconfirmed; inspect, do not retry")
-                source_identity(repo, args.source_commit, args.tag, args.main_ref)
+                validation_identity(args)
                 result = {
                     "schema_version": 1, "status": STATUS, "qualification": "NOT_RUN",
                     "source_commit": args.source_commit, "tag": args.tag, "version": version,
@@ -305,6 +323,8 @@ def build(args):
                         builder.C.validate_file_inventory(materials_files, limits=builder.MaterialsLimits())),
                     "unresolved_material_issue_ids": sorted(i["id"] for i in materials_map["unresolved_issues"]),
                 }
+                if getattr(args, "candidate_only", False):
+                    result["candidate_validation_only"] = True
             except Exception as error:
                 receipt_stream.write(canonical({"schema_version": 1, "status": "BUILD_UNCONFIRMED",
                     "error_type": type(error).__name__, "candidate_exists": os.path.lexists(output)}))
@@ -322,6 +342,8 @@ def parser():
         result.add_argument("--" + name, required=True)
     result.add_argument("--main-ref", default="refs/remotes/origin/main",
                         choices=("refs/heads/main", "refs/remotes/origin/main"))
+    result.add_argument("--candidate-only", action="store_true",
+                        help="Nonpublishing exact-commit validation; no main/tag admission")
     return result
 
 

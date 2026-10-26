@@ -85,6 +85,17 @@ def test_real_offline_build_preserves_status_and_immutable_source(prepared):
     assert str(prepared.output.parent) not in prepared.receipt.read_text()
 
 
+def test_explicit_candidate_identity_needs_neither_tag_nor_main(prepared):
+    git(prepared.source_repo, "checkout", "--detach", prepared.source_commit)
+    git(prepared.source_repo, "tag", "-d", prepared.tag)
+    git(prepared.source_repo, "branch", "-D", "main")
+    prepared.candidate_only = True
+    assert adapter.validation_identity(prepared) == prepared.tag[1:]
+    prepared.candidate_only = False
+    with pytest.raises(subprocess.CalledProcessError):
+        adapter.validation_identity(prepared)
+
+
 @pytest.mark.parametrize("change", ["bad_sha", "bad_tag", "leading_zero", "not_main", "wrong_platform",
     "lock_hash", "map_hash", "extra_metadata", "duplicate_metadata", "runtime_mutation",
     "runtime_extra", "material_mutation", "output_exists", "receipt_exists", "stale_map"])

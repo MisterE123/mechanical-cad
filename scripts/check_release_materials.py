@@ -275,7 +275,7 @@ def verify_project_source(path, source_files):
 def check(args):
     repo, inputs = A.checked_path(args.source_repo), A.checked_path(args.inputs_root)
     work_parent = A.checked_path(args.work_parent)
-    version = A.source_identity(repo, args.source_commit, args.tag, args.main_ref)
+    version = A.validation_identity(args)
     require(args.platform in {"linux-x64", "windows-x64"}, "Unsupported platform")
     require(
         {p.name for p in inputs.iterdir()} == {"runtime", "materials", "metadata"},
@@ -333,7 +333,7 @@ def check(args):
     require(A.read_metadata(Path(args.review)) == review_bytes, "Review changed during check")
     for name, data in values.items():
         require(A.read_metadata(metadata / name) == data, "Metadata changed during check")
-    A.source_identity(repo, args.source_commit, args.tag, args.main_ref)
+    A.validation_identity(args)
     result.update(
         review_sha256=A.digest(review_bytes),
         runtime_lock_sha256=args.runtime_lock_sha256,
@@ -341,6 +341,8 @@ def check(args):
         runtime_inventory_sha256=materials_map["runtime_inventory_sha256"],
         materials_inventory_sha256=materials_map["materials_inventory_sha256"],
     )
+    if getattr(args, "candidate_only", False):
+        result["candidate_validation_only"] = True
     return result
 
 
@@ -364,6 +366,7 @@ def main():
         default="refs/remotes/origin/main",
         choices=("refs/heads/main", "refs/remotes/origin/main"),
     )
+    parser.add_argument("--candidate-only", action="store_true")
     try:
         result = check(parser.parse_args())
         print(A.canonical(result).decode(), end="")
