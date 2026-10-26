@@ -1,6 +1,9 @@
 name: Qualified Linux and Windows release
 on:
   push:
+    # Push workflows are read from the pushed branch, so candidate validation
+    # works before this file is registered on the default branch.
+    branches: ['techbox/release-pipeline']
     tags: ['v[0-9]*.[0-9]*.[0-9]*']
   workflow_dispatch:
     inputs:

@@ -12,6 +12,7 @@ import urllib.request
 from pathlib import Path
 
 import release_pipeline as P
+from check_pipeline_source import release_event
 
 
 class GitHub:
@@ -144,6 +145,16 @@ def publish(api, root, admission, run):
     return final
 
 
+def require_publication_event(environment, admission):
+    P.require(
+        environment.get("GITHUB_ACTIONS") == "true"
+        and release_event(environment)
+        and environment.get("GITHUB_REF") == "refs/tags/" + admission["tag"]
+        and environment.get("GITHUB_SHA") == admission["source_commit"],
+        "Publication requires the matching tag workflow",
+    )
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--work", type=Path, required=True)
@@ -151,13 +162,7 @@ def main():
     stored = P.read(args.work / "admission.json")
     admission = P.admit(args.work, stored["source_commit"], stored["tag"])
     P.require(admission == stored, "Admission changed")
-    P.require(
-        os.environ.get("GITHUB_ACTIONS") == "true"
-        and os.environ.get("GITHUB_EVENT_NAME") == "push"
-        and os.environ.get("GITHUB_REF") == "refs/tags/" + admission["tag"]
-        and os.environ.get("GITHUB_SHA") == admission["source_commit"],
-        "Publication requires the matching tag workflow",
-    )
+    require_publication_event(os.environ, admission)
     api = GitHub(os.environ["GITHUB_REPOSITORY"], os.environ["GH_TOKEN"])
     result = publish(
         api,

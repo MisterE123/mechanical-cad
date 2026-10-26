@@ -15,7 +15,17 @@ commit pins resolved from their public repositories. No additional secret is use
 Process-level Git configuration disables checkout line-ending conversion so sealed
 fixtures retain exact blob bytes on Windows; no global Git setting is changed.
 
-Manual dispatch requires a full development commit SHA and always runs in explicit
+Before the workflow exists on default main, pushes to the exact approved branch
+`techbox/release-pipeline` run the workflow definition from that pushed commit.
+These pushes use its exact `GITHUB_SHA` and always select nonpublishing candidate
+mode. They require neither dispatch discovery on main nor a default-branch change.
+Other development branches and pull-request events are not admitted. Adding a
+candidate branch requires changing both the workflow filter and source policy.
+The read-only jobs run; the tag-only publisher job is skipped on candidate pushes.
+Missing prepared materials/review and failing tests still block subsequent stages.
+
+Manual dispatch, once discoverable on the default branch, requires a full
+development commit SHA and always runs in explicit
 `--candidate-only` mode. That path checks committed version/core metadata through
 the exact source export, without requiring or creating a tag or main membership.
 Its receipts contain `candidate_validation_only: true`; release admission rejects
