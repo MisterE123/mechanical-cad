@@ -12,6 +12,8 @@ Blender processes on its target OS, admits both results, and publishes one relea
 Failed matrix jobs block publication. Only the final job gets `contents: write`;
 only its publish step receives the built-in token. Official actions have full
 commit pins resolved from their public repositories. No additional secret is used.
+Process-level Git configuration disables checkout line-ending conversion so sealed
+fixtures retain exact blob bytes on Windows; no global Git setting is changed.
 
 Manual dispatch requires a full development commit SHA and always runs in explicit
 `--candidate-only` mode. That path checks committed version/core metadata through

@@ -17,6 +17,10 @@ defaults:
   run:
     shell: bash
 env:
+  # Preserve sealed fixture/source Git blobs on Windows without changing global Git configuration.
+  GIT_CONFIG_COUNT: '1'
+  GIT_CONFIG_KEY_0: core.autocrlf
+  GIT_CONFIG_VALUE_0: 'false'
   CANDIDATE_COMMIT: ${{ inputs.commit }}
   PYTHONNOUSERSITE: '1'
   PYTHONDONTWRITEBYTECODE: '1'
