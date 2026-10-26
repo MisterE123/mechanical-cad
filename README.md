@@ -7,6 +7,13 @@ inside Blender. It does not claim complete Onshape feature parity. The earlier
 frozen 0.9.x packages remain unchanged. See [1.0 scope and evidence](docs/RELEASE_100.md)
 and [current limitations](docs/INTEGRATED_MODELING.md).
 
+Release infrastructure now includes [checksum-locked Linux runtime acquisition](docs/RUNTIME_ACQUISITION.md),
+an [offline tag-bound candidate builder](docs/RELEASE_CANDIDATE_BUILDER.md)
+and [exact-installed standalone smoke harness](docs/STANDALONE_QUALIFICATION.md).
+The read-only release-readiness workflow runs regressions; it does **not** publish
+releases. Complete-source, runtime/material, and native-platform admission gates
+remain required before a tagged-main candidate can become a release.
+
 Development also adds [contextual arc captions](docs/QUIET_SOLVED_ARCS.md):
 current solved arcs stay compact until selected, with dimensions and actionable
 unverified/discrepancy guidance retained. GUI qualification is pending.

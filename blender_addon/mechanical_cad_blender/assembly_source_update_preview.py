@@ -7,23 +7,20 @@ import bpy
 from bpy.types import Operator
 
 from . import assembly_joint_overlay as overlay
-from . import assembly_joint_viewport, assembly_pending, assembly_state, execution_lease
+from . import (
+    assembly_joint_viewport,
+    assembly_pending,
+    assembly_source_preview_registry,
+    assembly_state,
+    execution_lease,
+)
 from .assembly_joint_draft import transform_points
 from .assembly_source_preview_contract import source_preview_fingerprint
+from .assembly_source_preview_registry import active as active
 from .bridge import BridgeError
 from .extrusion_preview_geometry import boundary_edges
 
-_ACTIVE = None
 MAX_GHOST_EDGES = 24000
-
-
-def active(context=None):
-    owner = _ACTIVE
-    return (
-        owner
-        if owner and owner.alive and (context is None or owner.light_binding(context))
-        else None
-    )
 
 
 def cancel_active(reason="Source update preview cancelled"):
@@ -56,6 +53,14 @@ def _draw_pixel(owner):
 class SourceUpdatePreview:
     """One scene/window/viewport owner over a detached source-update candidate."""
 
+    title = "Update source · not saved / checked"
+    apply_label = "Apply all instances"
+    cancel_label = "Cancel Source Update Preview"
+    header = "Source update preview · all instances together · Apply saves · Esc cancels"
+    prepare_message = "Preparing exact source update · accepted display retained"
+    failure_message = "Update refused · accepted source retained"
+    success_message = "Source updated. Run an explicit check again."
+
     def __init__(self, context):
         if active() or assembly_joint_viewport.active():
             raise BridgeError("Finish or cancel the existing Assembly preview first.")
@@ -69,7 +74,7 @@ class SourceUpdatePreview:
         self.scene, self.window, self.area = context.scene, context.window, context.area
         self.region = next((r for r in self.area.regions if r.type == "WINDOW"), None)
         if self.window is None or self.region is None:
-            raise BridgeError("Source update preview requires a live viewport.")
+            raise BridgeError("Assembly preview requires a live viewport.")
         self.view_layer, self.workspace = context.view_layer, context.window.workspace
         self.manager = context.window_manager
         self.snapshot = assembly_state._capture(context, self.scene)
@@ -84,7 +89,7 @@ class SourceUpdatePreview:
         self.revisions = ""
         self.page = 0
         self.error, self.hover, self.hint = "", "", ""
-        self.message = "Preparing exact source update · accepted display retained"
+        self.message = self.prepare_message
         self.handlers, self.timer, self.watchdog = [], None, None
 
     def light_binding(self, context):
@@ -109,7 +114,7 @@ class SourceUpdatePreview:
 
     def assert_current(self, context):
         if not self.light_binding(context):
-            raise BridgeError("Source update inputs or owning viewport changed. Preview again.")
+            raise BridgeError("Assembly preview inputs or owning viewport changed. Preview again.")
         assembly_state._assert_current(context, self.snapshot, drafts=True)
         if not assembly_state.display_is_current(context):
             raise BridgeError("Accepted display changed. Rebuild and preview again.")
@@ -125,40 +130,44 @@ class SourceUpdatePreview:
         except (AttributeError, ReferenceError):
             return False
 
+    def prepare_pending(self, context):
+        return assembly_pending.prepare_source_update_preview(
+            context,
+            expected_json=self.snapshot["fields"]["document_json"],
+            expected_working_part=self.snapshot["working_part"],
+        )
+
+    def describe_candidate(self):
+        original = assembly_state.read_assembly(self.scene.mechanical_cad_assembly)
+        old = {p["id"]: p for p in original["parts"]}
+        changed = {
+            p["id"]
+            for p in self.candidate["parts"]
+            if p["source_digest"] != old[p["id"]]["source_digest"]
+        }
+        self.affected = [i["name"] for i in self.candidate["instances"] if i["part_id"] in changed]
+        first = next(p for p in self.candidate["parts"] if p["id"] in changed)
+        self.revisions = (
+            old[first["id"]]["source_digest"][:10] + " → " + first["source_digest"][:10]
+        )
+
+    def summary(self):
+        return f"All {len(self.affected)} affected instances update together"
+
     def start(self, context):
-        global _ACTIVE
         if active():
             raise BridgeError("Another source update preview is active.")
-        _ACTIVE = self
+        assembly_source_preview_registry._ACTIVE = self
         try:
-            self.pending = assembly_pending.prepare_source_update_preview(
-                context,
-                expected_json=self.snapshot["fields"]["document_json"],
-                expected_working_part=self.snapshot["working_part"],
-            )
+            self.pending = self.prepare_pending(context)
             self.candidate = self.pending.request_snapshot()["assembly"]
-            original = assembly_state.read_assembly(self.scene.mechanical_cad_assembly)
-            old = {p["id"]: p for p in original["parts"]}
-            changed = {
-                p["id"]
-                for p in self.candidate["parts"]
-                if p["source_digest"] != old[p["id"]]["source_digest"]
-            }
-            self.affected = [
-                i["name"] for i in self.candidate["instances"] if i["part_id"] in changed
-            ]
-            first = next(p for p in self.candidate["parts"] if p["id"] in changed)
-            self.revisions = (
-                old[first["id"]]["source_digest"][:10] + " → " + first["source_digest"][:10]
-            )
+            self.describe_candidate()
             for callback, stage in ((_draw_view, "POST_VIEW"), (_draw_pixel, "POST_PIXEL")):
                 self.handlers.append(
                     bpy.types.SpaceView3D.draw_handler_add(callback, (self,), "WINDOW", stage)
                 )
             self.timer = self.manager.event_timer_add(0.4, window=self.window)
-            self.area.header_text_set(
-                "Source update preview · all instances together · Apply saves · Esc cancels"
-            )
+            self.area.header_text_set(self.header)
 
             def watchdog():
                 if not self.alive:
@@ -244,22 +253,21 @@ class SourceUpdatePreview:
             self.error = str(exc)
             self.expectation = None
             self.ghost_positions = ()
-            self.message = "Update refused · accepted source retained"
+            self.message = self.failure_message
             return False
         finally:
             self.committing = False
         self.finished = True
-        self.cancel("Source updated. Run an explicit check again.")
+        self.cancel(self.success_message)
         return True
 
     def cancel(self, reason="Source update preview cancelled"):
-        global _ACTIVE
         self.alive = False
         self.expectation = None
         self.ghost_positions = ()
         self.message = reason
-        if _ACTIVE is self:
-            _ACTIVE = None
+        if assembly_source_preview_registry._ACTIVE is self:
+            assembly_source_preview_registry._ACTIVE = None
         if self.pending is not None:
             pending, self.pending = self.pending, None
             try:
@@ -299,9 +307,9 @@ class SourceUpdatePreview:
         x, y = left + 10 * scale, bottom + 327 * scale
         labels = []
         for text in (
-            "Update source · not saved / checked",
+            self.title,
             self.revisions,
-            f"All {len(self.affected)} affected instances update together",
+            self.summary(),
         ):
             labels.append(
                 overlay.Label(text, (x, y), overlay.GOLD if not labels else overlay.TEXT, text)
@@ -338,7 +346,7 @@ class SourceUpdatePreview:
             ),
             overlay.Button(
                 "apply",
-                "Apply all instances",
+                self.apply_label,
                 "Freshly replay and save only the exact previewed update",
                 (x, bottom + 10 * scale, x + 210 * scale, bottom + 40 * scale),
                 enabled=self.ready(),

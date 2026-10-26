@@ -24,7 +24,7 @@ class CornerPlan:
 
 
 def prepare_corner(sketch, line_ids, radius, positions):
-    from .general_sketch_commands import DraftError, _identifier
+    from .general_sketch_validation import DraftError, _identifier
 
     def require(condition, message):
         if not condition:
@@ -218,7 +218,7 @@ def make_record(sketch, line_ids, radius, positions, point_ids, arc_id, constrai
 
 
 def apply_record(sketch, command):
-    from .general_sketch_commands import _keys, _require
+    from .general_sketch_validation import _keys, _require
 
     _keys(
         command,

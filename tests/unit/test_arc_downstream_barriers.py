@@ -75,15 +75,23 @@ def assembly(source=None, *, unused=False):
 def owners(monkeypatch):
     result = ports.load_owners()
     package = ports.PACKAGE
+    # Assembly operators now import the shared job UI. This suite never draws,
+    # but its existing inert help module must expose that UI's wrapping port.
+    monkeypatch.setattr(sys.modules[package + ".help_ui"], "_panel_wrap", ports.noop, raising=False)
+    bpy_types = ports.module("bpy.types", Operator=type("Operator", (), {}))
+    monkeypatch.setattr(result.bpy, "types", bpy_types, raising=False)
     with patch.dict(
         sys.modules,
         {
             "bpy": result.bpy,
             "bpy.props": ports.module(
                 "bpy.props",
-                **{name: ports.noop for name in ("BoolProperty", "StringProperty", "EnumProperty")},
+                **{
+                    name: ports.noop
+                    for name in ("BoolProperty", "StringProperty", "EnumProperty", "IntProperty")
+                },
             ),
-            "bpy.types": ports.module("bpy.types", Operator=type("Operator", (), {})),
+            "bpy.types": bpy_types,
             "bpy_extras": ports.module("bpy_extras"),
             "bpy_extras.io_utils": ports.module(
                 "bpy_extras.io_utils",

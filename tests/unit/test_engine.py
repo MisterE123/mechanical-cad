@@ -119,3 +119,65 @@ def test_feature_formula_error_has_feature_and_parameter(plate):
     replay = regenerate(Document.from_dict(data), RecordingKernel())
     error = replay.result["features"][0]["error"]
     assert error["code"] == "unknown_parameter" and "profile.width" in error["message"]
+
+
+@pytest.mark.parametrize("version", [1, 2, 3])
+def test_canonical_identity_rejection_precedes_all_kernel_access(plate, monkeypatch, version):
+    before = plate.to_json()
+    calls = []
+    rejection = CADException("document_too_large", "Canonical snapshot exceeds budget")
+
+    def reject_hash(_):
+        raise rejection
+
+    class ForbiddenKernel:
+        def __getattr__(self, name):
+            calls.append(name)
+            raise AssertionError("Kernel access must follow canonical identity preflight")
+
+    monkeypatch.setattr(Document, "content_hash", property(reject_hash))
+    with pytest.raises(CADException) as error:
+        regenerate(plate, ForbiddenKernel(), result_version=version)
+    assert error.value is rejection
+    assert calls == []
+    assert plate.to_json() == before
+
+
+@pytest.mark.parametrize("version", [1, 2, 3])
+def test_topology_policy_follows_identity_and_precedes_geometry(plate, monkeypatch, version):
+    before = plate.to_json()
+    expected_hash = plate.content_hash
+    events = []
+
+    def record_hash(_):
+        events.append("identity")
+        return expected_hash
+
+    class PolicyKernel(RecordingKernel):
+        def set_topology_result_version(self, result_version):
+            events.append(("policy", result_version))
+
+        def rectangle(self, **params):
+            events.append("geometry")
+            return super().rectangle(**params)
+
+    monkeypatch.setattr(Document, "content_hash", property(record_hash))
+    replay = regenerate(plate, PolicyKernel(), result_version=version)
+    assert replay.ok
+    assert events == ["identity", ("policy", version), "geometry"]
+    assert plate.to_json() == before
+
+
+@pytest.mark.parametrize("version", [None, False, True, 0, 4, 2.0, "2"])
+def test_invalid_result_version_still_precedes_identity_and_kernel(plate, monkeypatch, version):
+    def forbidden_hash(_):
+        raise AssertionError("Version validation must precede canonical identity")
+
+    class ForbiddenKernel:
+        def __getattr__(self, name):
+            raise AssertionError("Version validation must precede kernel access")
+
+    monkeypatch.setattr(Document, "content_hash", property(forbidden_hash))
+    with pytest.raises(CADException) as error:
+        regenerate(plate, ForbiddenKernel(), result_version=version)
+    assert error.value.code == "unsupported_result_version"

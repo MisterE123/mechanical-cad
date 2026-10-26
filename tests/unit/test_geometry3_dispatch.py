@@ -19,7 +19,7 @@ from pathlib import Path
 from types import ModuleType, SimpleNamespace
 
 import pytest
-from test_arc_profile_native_end_cap import geometry_revision_originals
+from historical_geometry_source import historical_geometry_source
 
 from mechanical_cad import (
     actions,
@@ -40,8 +40,7 @@ OMITTED = object()
 
 def recovered_69d0_sidecar():
     """Load sealed original bytes, without Git, an external tree, or live patching."""
-    _, originals = geometry_revision_originals(ROOT)
-    raw = originals["src/mechanical_cad/sidecar.py"]
+    raw = historical_geometry_source("sidecar")
     assert hashlib.sha256(raw).hexdigest() == (
         "ae6180f7ff15efe54cb8a50db1e80349a58f940f7a00d3aa51dcd0c1e12d91e3"
     )

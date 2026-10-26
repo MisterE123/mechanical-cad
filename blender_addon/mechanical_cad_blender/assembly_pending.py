@@ -55,6 +55,7 @@ class PendingReport:
         *,
         preview=False,
         source_preview=False,
+        insert_preview=False,
         rebuild=False,
         candidate=False,
         editing=False,
@@ -65,6 +66,7 @@ class PendingReport:
         self._editing = editing
         self._preview = preview
         self._source_preview = source_preview
+        self._insert_preview = insert_preview
         self._rebuild = rebuild
         self._transaction = transaction
         self._prepared = prepared
@@ -115,6 +117,7 @@ class PendingReport:
                 "replay": self._replay,
                 "preview": self._preview,
                 "source_preview": self._source_preview,
+                "insert_preview": self._insert_preview,
                 "rebuild": self._rebuild,
                 "error": self._error,
                 "elapsed_seconds": max(0.0, time.monotonic() - self._started),
@@ -297,6 +300,102 @@ def prepare_source_update_preview(context, *, expected_json, expected_working_pa
         prepared = assembly_state._prepare_operation(snapshot, candidate)
         job = _JOB_FACTORY(prepared, snapshot["selection"], owner_token=snapshot["owner_token"])
         pending = PendingReport(transaction, prepared, job, token, preview=True, source_preview=True)
+        _ACTIVE[transaction["key"]] = pending
+        job.start(assembly_state._current_selection(context, snapshot))
+        return pending
+    except Exception as exc:
+        if pending is not None:
+            _abort(pending, exc)
+            if pending._job.done:
+                _finish_failure(pending)
+        else:
+            if transaction is not None:
+                assembly_state._BUSY.discard(transaction["key"])
+            execution_lease.release(token)
+        raise
+
+
+def prepare_insert_preview(context, draft, *, expected_json, expected_working_part):
+    """Replay one canonically constructed insertion draft without publishing it."""
+    from .assembly_insert_preview_draft import InsertPreviewDraft
+
+    _main_thread()
+    if execution_lease.is_busy():
+        raise bridge.BridgeError(execution_lease.BUSY_MESSAGE)
+    if type(draft) is not InsertPreviewDraft:
+        raise bridge.BridgeError("Insertion preview requires a newly constructed insertion draft.")
+    state = assembly_state._state(context)
+    if (state.document_json != expected_json
+            or assembly_state._working_part(context.scene) != expected_working_part):
+        raise bridge.BridgeError("Assembly or working Part changed. Reopen Insert.")
+    if assembly_bridge.fingerprint(draft.original()) != assembly_bridge.fingerprint(
+            assembly_state.read_assembly(state)):
+        raise bridge.BridgeError("Insertion draft belongs to a different accepted Assembly.")
+    candidate = draft.candidate()
+    assembly_state._preflight_assembly(candidate, "assembly_replay")
+    token = execution_lease.try_acquire()
+    if token is None:
+        raise bridge.BridgeError(execution_lease.BUSY_MESSAGE)
+    transaction = pending = None
+    try:
+        transaction = assembly_state._prepare_report(context, "assembly_replay", transient=True)
+        snapshot = transaction["snapshot"]
+        if (snapshot["fields"]["document_json"] != expected_json
+                or snapshot["working_part"] != expected_working_part):
+            raise bridge.BridgeError("Insertion inputs changed before replay.")
+        prepared = assembly_state._prepare_operation(snapshot, candidate)
+        job = _JOB_FACTORY(prepared, snapshot["selection"], owner_token=snapshot["owner_token"])
+        pending = PendingReport(transaction, prepared, job, token, preview=True,
+                                source_preview=True, insert_preview=True)
+        _ACTIVE[transaction["key"]] = pending
+        job.start(assembly_state._current_selection(context, snapshot))
+        return pending
+    except Exception as exc:
+        if pending is not None:
+            _abort(pending, exc)
+            if pending._job.done:
+                _finish_failure(pending)
+        else:
+            if transaction is not None:
+                assembly_state._BUSY.discard(transaction["key"])
+            execution_lease.release(token)
+        raise
+
+
+def prepare_insert_mate_preview(context, draft, *, expected_json, expected_working_part):
+    """Replay only a paired detached insertion mate; never publish accepted state."""
+    from .assembly_insert_mate_draft import InsertMateDraft
+
+    _main_thread()
+    if execution_lease.is_busy():
+        raise bridge.BridgeError(execution_lease.BUSY_MESSAGE)
+    if type(draft) is not InsertMateDraft:
+        raise bridge.BridgeError("Face insertion preview requires a newly constructed insertion mate draft.")
+    if not draft.has_face_pair:
+        raise bridge.BridgeError("Choose both stable planar faces before previewing insertion.")
+    state = assembly_state._state(context)
+    if (state.document_json != expected_json
+            or assembly_state._working_part(context.scene) != expected_working_part):
+        raise bridge.BridgeError("Assembly or working Part changed. Reopen Insert.")
+    if assembly_bridge.fingerprint(draft.original()) != assembly_bridge.fingerprint(
+            assembly_state.read_assembly(state)):
+        raise bridge.BridgeError("Insertion draft belongs to a different accepted Assembly.")
+    candidate = draft.candidate()
+    assembly_state._preflight_assembly(candidate, "assembly_replay")
+    token = execution_lease.try_acquire()
+    if token is None:
+        raise bridge.BridgeError(execution_lease.BUSY_MESSAGE)
+    transaction = pending = None
+    try:
+        transaction = assembly_state._prepare_report(context, "assembly_replay", transient=True)
+        snapshot = transaction["snapshot"]
+        if (snapshot["fields"]["document_json"] != expected_json
+                or snapshot["working_part"] != expected_working_part):
+            raise bridge.BridgeError("Insertion inputs changed before replay.")
+        prepared = assembly_state._prepare_operation(snapshot, candidate)
+        job = _JOB_FACTORY(prepared, snapshot["selection"], owner_token=snapshot["owner_token"])
+        pending = PendingReport(transaction, prepared, job, token, preview=True,
+                                source_preview=True, insert_preview=True)
         _ACTIVE[transaction["key"]] = pending
         job.start(assembly_state._current_selection(context, snapshot))
         return pending

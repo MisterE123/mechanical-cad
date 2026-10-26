@@ -3,7 +3,7 @@
 import copy
 
 from .fillet_intent import CornerFilletIntent, validate_structure
-from .general_sketch_commands import _identifier, _json, _keys, _require, _validate_sketch
+from .general_sketch_validation import _identifier, _json, _keys, _require, _validate_sketch
 from .request_contracts import snapshot_request
 
 

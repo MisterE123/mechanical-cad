@@ -1,5 +1,6 @@
 """Exact corner restoration and refusal contracts, without native execution."""
 
+import copy
 import importlib
 import json
 
@@ -130,18 +131,32 @@ def test_annotation_retirement_is_visible_and_survives_resume_undo_redo():
     ui.command_draft.execute(c.RemoveCornerFillet(arc["id"]))
     remove.retain_removal_ui(ui, record)
     assert ui.selection == []
-    assert ui.annotations == annotations
+    retired_annotations = copy.deepcopy(annotations)
+    retired_annotations[radius["id"]]["retirement"] = {
+        "schema_version": 1, "reason": "restore_sharp_corner",
+    }
+    assert ui.annotations == retired_annotations
     status = {s.identifier: s for s in ui.status.annotations}
-    assert status[radius["id"]].state == "missing"
+    assert status[radius["id"]].state == "retired"
     assert sum(s.available for s in ui.status.annotations) == 1
+    assert radius["id"] not in ui.display_annotations
     restored = dispatch.restore(dispatch.dumps(ui), ui.document_json)
-    assert restored.annotations == annotations
+    assert restored.annotations == retired_annotations
     restored.command_draft.undo()
+    # Command Undo restores geometry, not UI history. A retirement marker must
+    # not hide a now-existing identity before the explicit UI restoration.
+    status = {s.identifier: s for s in restored.status.annotations}
+    assert status[radius["id"]].state == "changed"
+    assert restored.annotations == retired_annotations
+    assert radius["id"] in restored.display_annotations
+    remove.restore_removal_ui(restored, record)
     assert all(s.available for s in restored.status.annotations)
     assert restored.annotations == annotations
     restored.command_draft.redo()
     remove.retain_removal_ui(restored, record)
-    assert restored.annotations == annotations
+    assert restored.annotations == retired_annotations
+    status = {s.identifier: s for s in restored.status.annotations}
+    assert status[radius["id"]].state == "retired"
     assert sum(s.available for s in restored.status.annotations) == 1
 
 

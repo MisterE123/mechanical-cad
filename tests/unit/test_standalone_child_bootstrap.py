@@ -346,6 +346,19 @@ def test_fixed_dispatch_and_exact_stdin_are_preserved(tmp_path, monkeypatch, win
         b"[" * 7000 + b"]" * 7000,
         b'{"schema_version": Infinity}',
     ],
+    ids=[
+        "empty",
+        "text-not-bytes",
+        "over-byte-budget",
+        "invalid-utf8",
+        "trailing-json",
+        "array",
+        "null",
+        "duplicate-key",
+        "nan",
+        "over-depth-budget",
+        "infinity",
+    ],
 )
 def test_malformed_or_oversized_descriptor_is_rejected(data):
     with pytest.raises(bootstrap.BootstrapError):

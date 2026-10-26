@@ -98,6 +98,14 @@ def draw_pending(layout, context):
                 box.label(text=line, icon="ERROR")
         box.operator("mcad.cancel_history_rebuild", text="Cancel Rebuild", icon="CANCEL")
         return True
+    if details.get("insert_preview"):
+        box.label(text="Insertion preview · " + details["state"], icon="TIME")
+        box.label(text=f"{details['elapsed_seconds']:.1f} s elapsed · accepted Assembly retained")
+        if details["message"]:
+            for message in _panel_wrap(context, details["message"]):
+                box.label(text=message, icon="ERROR")
+        box.operator("mcad.assembly_source_update_cancel", text="Cancel Insertion Preview", icon="CANCEL")
+        return True
     if details.get("source_preview"):
         box.label(text="Source update preview · " + details["state"], icon="TIME")
         box.label(text=f"{details['elapsed_seconds']:.1f} s elapsed · accepted source retained")

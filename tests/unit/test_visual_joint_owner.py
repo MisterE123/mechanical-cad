@@ -111,7 +111,7 @@ def host(monkeypatch):
             "bpy_extras": Host(view3d_utils=Host()),
             "mathutils": Host(Vector=tuple),
             name + ".assembly_display": display,
-            name + ".assembly_source_update_preview": Host(active=lambda: None),
+            name + ".assembly_source_preview_registry": Host(active=lambda: None),
             name + ".workspace": workspace,
         },
     ):
@@ -731,7 +731,7 @@ def test_joint_preview_uses_face_boundaries_not_tessellation_diagonals(host):
 
 
 def test_source_update_owner_excludes_joint_and_motion_before_other_work(host, monkeypatch):
-    source_owner = sys.modules[host.owner.__package__ + ".assembly_source_update_preview"]
+    source_owner = sys.modules[host.owner.__package__ + ".assembly_source_preview_registry"]
     monkeypatch.setattr(source_owner, "active", lambda: object())
     for owner_type in (host.owner.JointViewportSession, host.owner.MotionViewportSession):
         with pytest.raises(host.owner.BridgeError, match="source update preview"):

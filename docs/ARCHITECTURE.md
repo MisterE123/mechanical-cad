@@ -227,6 +227,10 @@ modules have one-way dependencies and keep native CAD imports out of Blender:
 - `operators.py`: explicit authoring/file/navigation commands.
 - `geometry_operations.py`: canonical check/export dialogs and outcome reporting.
 - `sketch_draft.py`: pure transient rectangle state and optimistic edit candidates.
+- `general_sketch_validation.py`: shared pure authoring validation and the single
+  recoverable `DraftError` identity. Command, fillet, and retirement helpers depend
+  on these checks without importing the command reducer back into its dependencies.
+  Existing command-module validation names remain exact compatibility reexports.
 - `general_sketch_commands.py` / `general_sketch_journal.py` /
   `general_sketch_draft.py`: pure stable-ID commands, bounded replayable local
   history, raw input and exact solver/Part acceptance gates.

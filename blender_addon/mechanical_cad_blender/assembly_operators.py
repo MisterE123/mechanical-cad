@@ -156,7 +156,7 @@ class MCAD_OT_assembly_insert(AssemblyEdit, Operator):
     bl_idname = "mcad.assembly_insert"
     bl_label = "Insert Child Instance"
     bl_description = (
-        "Insert a reused or working Part with explicit parent, named frames and one joint"
+        "Preview a reused or working Part with explicit parent, named frames and one joint"
     )
     bl_options = {"REGISTER", "UNDO"}
     use_working_part: BoolProperty(name="Capture working Part", default=False)
@@ -168,6 +168,8 @@ class MCAD_OT_assembly_insert(AssemblyEdit, Operator):
     joint_name: StringProperty(name="Joint name", default="Joint")
     kind: EnumProperty(name="Joint", items=JOINT_KINDS)
     _original_axes = {}
+    _preview_on_confirm = False
+    mate_faces: BoolProperty(name="Mate by planar faces after preview", default=False, options={"SKIP_SAVE"})
     translation_x: StringProperty(default="0")
     use_translation_x_limits: BoolProperty(name="Explicit translation x limits")
     translation_x_lower: StringProperty(default="-90")
@@ -208,10 +210,16 @@ class MCAD_OT_assembly_insert(AssemblyEdit, Operator):
                 if selected in {i["id"] for i in data["instances"]}
                 else data["grounded_instance"]
             )
-        return super().invoke(context, event)
+        self.capture_dialog(context)
+        self._preview_on_confirm = True
+        return context.window_manager.invoke_props_dialog(self, width=520, confirm_text="Preview")
+
+    def cancel(self, context):
+        self._preview_on_confirm = False
 
     def draw(self, context):
         layout = self.layout
+        layout.label(text="Preview first; insertion is saved only by Apply in the viewport.", icon="INFO")
         reason = _draw_capture_reason(layout, context)
         capture = layout.row()
         capture.enabled = not reason or self.use_working_part
@@ -222,6 +230,8 @@ class MCAD_OT_assembly_insert(AssemblyEdit, Operator):
             layout.prop(self, "part_id")
         for key in ("name", "parent", "parent_frame", "child_frame", "joint_name", "kind"):
             layout.prop(self, key)
+        if self.kind == "fixed":
+            layout.prop(self, "mate_faces")
         joint_fields(layout, self, self.kind)
         help_lines(
             layout,
@@ -230,6 +240,16 @@ class MCAD_OT_assembly_insert(AssemblyEdit, Operator):
         )
 
     def execute(self, context):
+        if self._preview_on_confirm:
+            # Only the child modal can register a successful insertion/Undo.
+            self._preview_on_confirm = False
+            try:
+                from .assembly_insert_preview import launch_from_dialog
+
+                launch_from_dialog(self, context)
+            except Exception as exc:
+                self.report({"ERROR"}, str(exc))
+            return {"CANCELLED"}
         try:
             candidate, part_id = assembly(context), self.part_id
             if self.use_working_part:

@@ -43,7 +43,12 @@ def host():
         NAVIGATION_EVENTS={"MIDDLEMOUSE"},
         _screen_xy=lambda o, e: e.point,
     )
+    registry = types.ModuleType("source_preview_registry_test")
+    registry_path = ADDON / "assembly_source_preview_registry.py"
+    exec(compile(registry_path.read_text(), str(registry_path), "exec"), registry.__dict__)
     env = dict(
+        assembly_source_preview_registry=registry,
+        active=registry.active,
         bpy=bpy,
         Operator=object,
         copy=copy,
@@ -104,7 +109,7 @@ def host():
         ui_scale=1,
         message="Preview ready",
     )
-    env["_ACTIVE"] = owner
+    registry._ACTIVE = owner
     bpy.context = context
     return NS(
         env=env,
@@ -124,7 +129,7 @@ def test_cancel_releases_resources_once_and_never_publishes(host):
     o.cancel()
     assert not o.alive and not o.finished and not o.ready()
     assert o.expectation is None and not o.ghost_positions and not o.handlers
-    assert host.env["_ACTIVE"] is None
+    assert host.env["assembly_source_preview_registry"]._ACTIVE is None
     host.pending.cancel.assert_called_once_with(token, "Source update preview cancelled")
     assert host.bpy.types.SpaceView3D.draw_handler_remove.call_count == 2
     host.context.window_manager.event_timer_remove.assert_called_once_with("timer")
@@ -189,6 +194,7 @@ def test_apply_is_detached_exact_and_one_shot(host):
     )
     assert host.state.commit_candidate.call_args.args[1] is not o.candidate
     assert o.finished and not o.alive and o.candidate == before
+    assert host.env["assembly_source_preview_registry"]._ACTIVE is None
 
 
 @pytest.mark.parametrize(
@@ -226,7 +232,7 @@ def test_narrow_panel_keeps_cancel_and_no_apply(host, safe):
 @pytest.mark.parametrize("other", ["source", "joint", "lease"])
 def test_independent_owners_exclude_preview(host, other):
     if other != "source":
-        host.env["_ACTIVE"] = None
+        host.env["assembly_source_preview_registry"]._ACTIVE = None
     if other == "joint":
         host.viewport.active.return_value = object()
     if other == "lease":
@@ -355,3 +361,37 @@ def test_preview_result_error_cannot_become_apply_authority(host):
     assert o.error == "exact result rejected" and not o.ready()
     assert not o.apply(host.context)
     host.state.commit_candidate.assert_not_called()
+
+
+def test_start_error_clears_shared_owner_before_propagating(host):
+    registry = host.env["assembly_source_preview_registry"]
+    registry._ACTIVE = None
+    host.owner.prepare_pending = Mock(side_effect=ValueError("prepare failed"))
+    with pytest.raises(ValueError, match="prepare failed"):
+        host.owner.start(host.context)
+    assert registry._ACTIVE is None and registry.active() is None
+    assert not host.owner.alive
+    host.state.commit_candidate.assert_not_called()
+
+
+@pytest.mark.parametrize("reason", ["Opening a file", "History changed", "Add-on disabled"])
+def test_lifecycle_cancel_uses_and_clears_shared_registry(host, reason):
+    registry = host.env["assembly_source_preview_registry"]
+    assert host.env["active"] is registry.active
+    assert registry.active() is host.owner
+    assert host.env["cancel_active"](reason)
+    assert registry._ACTIVE is None and registry.active() is None
+    assert not host.env["cancel_active"](reason)
+    host.state.commit_candidate.assert_not_called()
+
+
+def test_registration_lifecycle_routes_source_preview_cleanup():
+    tree = ast.parse((ADDON / "registration.py").read_text())
+    functions = {node.name: node for node in tree.body if isinstance(node, ast.FunctionDef)}
+    for name in ("_before_blend_load", "_before_history_change", "unregister"):
+        assert any(isinstance(node, ast.Call) and isinstance(node.func, ast.Name)
+                   and node.func.id == "_retire_native_jobs"
+                   for node in ast.walk(functions[name]))
+    assert any(isinstance(node, ast.Call)
+               and ast.unparse(node.func) == "assembly_source_update_preview.cancel_active"
+               for node in ast.walk(functions["_retire_native_jobs"]))

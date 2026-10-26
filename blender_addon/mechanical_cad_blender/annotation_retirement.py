@@ -1,6 +1,6 @@
 """Bounded display-only retirement intent; never geometry or solve authority."""
 
-from .general_sketch_commands import _identifier, _keys, _point, _require
+from .general_sketch_validation import _identifier, _keys, _point, _require
 
 
 def validate_retirement(identifier, binding):

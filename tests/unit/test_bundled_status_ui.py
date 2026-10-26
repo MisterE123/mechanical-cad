@@ -1,6 +1,7 @@
 """Actual presentation function bodies with fake layouts, never native work or RNA."""
 
 import ast
+import builtins
 import importlib.util
 import sys
 import textwrap
@@ -8,6 +9,7 @@ import threading
 import types
 from pathlib import Path
 from textwrap import wrap
+from unittest.mock import patch
 
 import pytest
 
@@ -26,6 +28,19 @@ def draw_method(module, cls, namespace):
     tree = ast.parse((ROOT / (module + ".py")).read_bytes())
     owner = next(n for n in tree.body if isinstance(n, ast.ClassDef) and n.name == cls)
     draw = next(n for n in owner.body if isinstance(n, ast.FunctionDef) and n.name == "draw")
+    # Execute the real body with a bounded import port for the independent
+    # recovery-settings renderer. Never import Blender or perform recovery IO.
+    def import_port(name, globals=None, locals=None, fromlist=(), level=0):
+        assert (name, fromlist, level) == ("", ("local_recovery",), 1)
+        return types.SimpleNamespace(
+            local_recovery=types.SimpleNamespace(draw_configuration=lambda *_: None)
+        )
+
+    namespace["__name__"] = "mcad_status_ui_ports." + module
+    namespace["__package__"] = "mcad_status_ui_ports"
+    namespace["__builtins__"] = {
+        **namespace.get("__builtins__", builtins.__dict__), "__import__": import_port
+    }
     exec(compile(ast.Module(body=[draw], type_ignores=[]), str(ROOT / module), "exec"), namespace)
     return namespace["draw"]
 
@@ -126,7 +141,9 @@ def test_normal_or_non_string_status_is_not_cleanup_failure(lease, module, diagn
 
 @pytest.mark.parametrize("module", ["sketch_pending", "assembly_pending"])
 @pytest.mark.parametrize(
-    "diagnostic", ["cleanup uncertain", "secret/path " * 10000, "<script>raw</script>"]
+    "diagnostic",
+    ["cleanup uncertain", "secret/path " * 10000, "<script>raw</script>"],
+    ids=["cleanup-uncertain", "oversized-private-path", "markup"],
 )
 def test_orphaned_diagnostic_is_normalized_and_repeated_draw_is_readonly(lease, module, diagnostic):
     owner, pending, active = adapter(module, lease, diagnostic)
@@ -311,6 +328,7 @@ def test_workspace_history_draws_failure_before_every_empty_early_return(role):
         "assembly_ui": types.SimpleNamespace(
             draw_assembly_history=lambda *args: calls.append("assembly")
         ),
+        "workspace_view": types.SimpleNamespace(draw_focus=lambda *_: None),
         "draw_suspended_draft": lambda *args: calls.append("draft"),
     }
     context = types.SimpleNamespace(
@@ -348,14 +366,18 @@ def test_assembly_pending_display_exposes_restart_and_disables_futile_cancel(lea
 
 
 def test_standalone_help_is_distinct_and_contains_no_setup_instructions():
-    namespace = {}
-    exec(compile((ROOT / "help_topics.py").read_bytes(), "<help-topics>", "exec"), namespace)
-    help_text = " ".join(namespace["HELP_TOPICS"]["setup.bundled"][1])
+    # Help is split into pure sibling modules; use a package rather than execute
+    # its text with no relative-import context. Restore the temporary imports.
+    package = types.ModuleType("mcad_status_help_tests")
+    package.__path__ = [str(ROOT)]
+    with patch.dict(sys.modules, {package.__name__: package}):
+        topics = importlib.import_module(package.__name__ + ".help_topics").HELP_TOPICS
+    help_text = " ".join(topics["setup.bundled"][1])
     assert "automatic offline preparation" in help_text
     assert "no Project Root or Python path is required" in help_text
     assert "restart Blender" in help_text
     assert "set Project Root" not in help_text
-    assert "set Project Root" in " ".join(namespace["HELP_TOPICS"]["setup.backend"][1])
+    assert "set Project Root" in " ".join(topics["setup.backend"][1])
 
 
 @pytest.mark.parametrize(

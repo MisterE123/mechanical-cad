@@ -160,7 +160,7 @@ def _draw_view(owner):
         overlay.draw_ghost(owner.ghost_positions)
 
 
-def _nearest_visible_mesh(view_layer, viewport, depsgraph, origin, direction):
+def _nearest_visible_mesh(view_layer, viewport, depsgraph, origin, direction, *, exclude_objects=()):
     """Pick visible base meshes without losing real foreign surface occlusion.
 
     Scene.ray_cast has no View3D argument and ignores local-view membership.
@@ -189,6 +189,8 @@ def _nearest_visible_mesh(view_layer, viewport, depsgraph, origin, direction):
     nearest, nearest_distance, ambiguous = None, math.inf, False
     nonsurface_types = {"EMPTY", "CAMERA", "LIGHT", "LIGHT_PROBE", "ARMATURE", "LATTICE", "SPEAKER"}
     for obj in objects:
+        if obj in exclude_objects:
+            continue
         if not obj.visible_get(view_layer=view_layer, viewport=viewport):
             continue
         if obj.type in nonsurface_types:
@@ -238,9 +240,9 @@ class JointViewportSession:
     timer_interval = 0.4
 
     def __init__(self, context, joint_id="", *, mate_faces=False):
-        from . import assembly_source_update_preview
+        from . import assembly_source_preview_registry
 
-        if assembly_source_update_preview.active():
+        if assembly_source_preview_registry.active():
             raise BridgeError("Finish or cancel the source update preview first.")
         if active() is not None:
             raise BridgeError("Finish or cancel the open visual joint first.")

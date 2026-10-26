@@ -10,12 +10,23 @@ from __future__ import annotations
 import copy
 import json
 import math
-import re
 from dataclasses import dataclass
 from typing import Literal, TypeAlias
 
+from .general_sketch_validation import _ID as _ID
+from .general_sketch_validation import ARC_JOURNAL_VERSION as ARC_JOURNAL_VERSION
+from .general_sketch_validation import JOURNAL_VERSION as JOURNAL_VERSION
+from .general_sketch_validation import DraftError as DraftError
+from .general_sketch_validation import _coordinate as _coordinate
+from .general_sketch_validation import _identifier as _identifier
+from .general_sketch_validation import _journal_version as _journal_version
+from .general_sketch_validation import _json as _json
+from .general_sketch_validation import _keys as _keys
+from .general_sketch_validation import _normalized_sketch as _normalized_sketch
+from .general_sketch_validation import _point as _point
+from .general_sketch_validation import _require as _require
+from .general_sketch_validation import _validate_sketch as _validate_sketch
 from .rectangle_tool import rectangle_corners, validate_rectangle_record
-from .sketch_bridge import _normalized_sketch
 from .sketch_relations import canonical_refs
 
 MAX_DOCUMENT_BYTES = 2 * 1024 * 1024
@@ -23,10 +34,7 @@ MAX_JOURNAL_ENTRIES = 64
 MAX_JOURNAL_BYTES = 2 * 1024 * 1024
 MAX_ALLOCATED_IDS = 8192
 MAX_RAW_TEXT_BYTES = 64 * 1024
-JOURNAL_VERSION = 2
-ARC_JOURNAL_VERSION = 3
 MAX_COUNTER = 2**53 - 1
-_ID = re.compile(r"^[A-Za-z0-9_][A-Za-z0-9_.-]{0,127}$")
 Scalar: TypeAlias = int | float | str
 RelationKind: TypeAlias = Literal[
     "horizontal",
@@ -49,34 +57,6 @@ RelationKind: TypeAlias = Literal[
 EntityKind: TypeAlias = Literal["point", "line", "circle", "arc", "constraint"]
 _COLLECTION = {"point": "points", "line": "lines", "circle": "circles", "constraint": "constraints"}
 _ARC_COLLECTION = {**_COLLECTION, "arc": "arcs"}
-
-
-class DraftError(ValueError):
-    """A recoverable authoring/validation problem; accepted intent is unchanged."""
-
-
-def _require(condition, message):
-    if not condition:
-        raise DraftError(message)
-
-
-def _json(value):
-    # Streaming encoding bounds expanded shared-container trees before building
-    # one large string. JSON's circular guard and recursion handling stay active.
-    try:
-        encoder = json.JSONEncoder(
-            sort_keys=True, separators=(",", ":"), ensure_ascii=False, allow_nan=False
-        )
-        chunks, size = [], 0
-        for chunk in encoder.iterencode(value):
-            size += len(chunk.encode("utf-8"))
-            _require(size <= 8 * 1024 * 1024, "Expanded draft JSON exceeds its byte limit.")
-            chunks.append(chunk)
-        return "".join(chunks)
-    except (TypeError, ValueError, OverflowError, RecursionError, UnicodeError) as exc:
-        if isinstance(exc, DraftError):
-            raise
-        raise DraftError("Draft data must be bounded finite JSON.") from exc
 
 
 def _duplicate_keys(pairs):
@@ -132,15 +112,6 @@ def parse_json(text, limit):
         raise DraftError("Draft JSON is unreadable; retain its original text.") from exc
 
 
-def _keys(value, expected):
-    _require(type(value) is dict and set(value) == set(expected), "Unsupported draft fields.")
-
-
-def _identifier(value):
-    _require(type(value) is str and _ID.fullmatch(value), "Invalid stable sketch ID.")
-    return value
-
-
 def _integer(value, *, minimum=0):
     _require(
         type(value) is int and minimum <= value <= MAX_COUNTER, "Invalid draft revision/count."
@@ -155,17 +126,6 @@ def _successor(value, label):
     return value + 1
 
 
-def _coordinate(value):
-    _require(type(value) in (int, float) and -1e6 <= value <= 1e6, "Coordinate outside ±1e6 mm.")
-    _require(math.isfinite(value), "Coordinates must be finite.")
-    return value
-
-
-def _point(value):
-    _require(type(value) in (tuple, list) and len(value) == 2, "Expected two XY coordinates.")
-    return [_coordinate(number) for number in value]
-
-
 def _radius(value):
     _coordinate(value)
     _require(value >= 1e-6, "Radius must be between 0.000001 and 1,000,000 mm.")
@@ -178,27 +138,6 @@ def _line_length(value):
         "Line length must be a finite numeric literal from 0.000001 to 1,000,000 mm.",
     )
     return value
-
-
-def _journal_version(value):
-    _require(type(value) is int and value in (2, 3), "Unsupported local journal version.")
-    return value
-
-
-def _validate_sketch(sketch, *, journal_version=JOURNAL_VERSION):
-    _journal_version(journal_version)
-    try:
-        if journal_version == ARC_JOURNAL_VERSION:
-            from .operation_contracts import validate_authoring_sketch
-
-            validate_authoring_sketch(sketch)
-        elif type(sketch) is dict and sketch.get("schema_version") == 3:
-            raise DraftError("Sketch schema 3 requires explicit journal 3 capability.")
-        else:
-            _normalized_sketch(sketch)  # Validate only; never install normalized data.
-    except (ValueError, TypeError, KeyError, OverflowError, UnicodeError, RecursionError) as exc:
-        raise DraftError(f"Invalid sketch intent: {exc}") from exc
-    return sketch
 
 
 def _ids(sketch):

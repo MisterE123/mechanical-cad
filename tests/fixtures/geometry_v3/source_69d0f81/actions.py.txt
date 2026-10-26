@@ -1,0 +1,196 @@
+"""Fresh canonical-document geometry checks and atomic explicit part exports.
+
+No Blender state or prior replay is accepted. A successful check means valid
+single-solid B-rep / closed oriented manifold mesh, not manufacturability or
+mechanical-safety certification. All coordinates and deflections use millimetres.
+"""
+
+from __future__ import annotations
+
+import math
+import os
+import tempfile
+from collections.abc import Callable
+from pathlib import Path
+from typing import Any, Protocol
+
+from .engine import Kernel, regenerate, validate_result_version
+from .errors import CADException
+from .model import Document
+from .outputs import SolidOutput
+
+GEOMETRY_ACTIONS = frozenset({"check_geometry", "export_step", "export_stl"})
+EXPORT_ACTIONS = frozenset({"export_step", "export_stl"})
+
+
+class GeometryKernel(Kernel, Protocol):
+    """Additional adapter ports used only inside the isolated sidecar process."""
+
+    def manufacturing_check(self, shape: Any, linear_deflection: float = 0.1) -> dict: ...
+    def export_step(self, shape: Any, path: str | Path) -> None: ...
+    def export_stl(self, shape: Any, path: str | Path, linear_deflection: float = 0.1) -> dict: ...
+
+
+def _destination(value: str | Path | None) -> Path:
+    if not isinstance(value, (str, Path)) or not str(value).strip() or "\0" in str(value):
+        raise CADException("invalid_destination", "Choose an explicit local export file path.")
+    path = Path(value)
+    if path.name in {"", ".", ".."}:
+        raise CADException("invalid_destination", "Choose an export file, not a directory.")
+    return path
+
+
+def _atomic_export(destination: Path, write: Callable[[Path], Any]) -> tuple[Any, int]:
+    """Only replace the destination after a complete, flushed writer result.
+
+    Temp files live beside the destination so os.replace stays on one filesystem.
+    The caller's directory must already exist. A successful replace is atomic,
+    but this is not a multi-process lock or a power-loss durability guarantee.
+    """
+    descriptor, temporary_name = tempfile.mkstemp(
+        prefix=f".{destination.name}.", suffix=".tmp", dir=destination.parent
+    )
+    temporary = Path(temporary_name)
+    try:
+        os.close(descriptor)  # Native writers open their own handle (also works on Windows).
+        metadata = write(temporary)
+        with temporary.open("rb") as stream:
+            size = os.fstat(stream.fileno()).st_size
+            if size == 0:
+                raise CADException("empty_export", "The kernel did not write an export file.")
+            os.fsync(stream.fileno())
+        os.replace(temporary, destination)
+        return metadata, size
+    finally:
+        try:
+            temporary.unlink()
+        except FileNotFoundError:
+            pass
+
+
+def run_geometry_action(
+    document: Document,
+    action: str,
+    *,
+    destination: str | Path | None = None,
+    linear_deflection: float = 0.1,
+    kernel: GeometryKernel | None = None,
+    result_version: int = 1,
+) -> dict:
+    """Freshly regenerate, validate the active solid, then check or export it.
+
+    Returns JSON-compatible {ok, result, action, geometry_check, export, error}.
+    result is the full fresh replay even if an active-solid/check/write gate fails;
+    it is None when input validation prevented replay. Failed/blocked features
+    remain available to UI diagnostics. Any failed branch prevents all exports.
+
+    The destination is supplied separately from the canonical document and is
+    required only for explicit export actions. The caller owns user authorization
+    and overwrite confirmation. This helper performs no shell or network action.
+    All three actions run the same conservative B-rep and mesh check; STL adds
+    the kernel's checks of the actual encoded float32 triangles and precision.
+    """
+    response = {
+        "ok": False,
+        "result": None,
+        "action": action if isinstance(action, str) else None,
+        "geometry_check": None,
+        "export": None,
+        "error": None,
+    }
+    phase = "request"
+    try:
+        if not isinstance(action, str) or action not in GEOMETRY_ACTIONS:
+            raise CADException("invalid_action", "Unsupported geometry action.")
+        path = _destination(destination) if action in EXPORT_ACTIONS else None
+        if action == "check_geometry" and destination is not None:
+            raise CADException("invalid_request", "Geometry checks cannot have a destination.")
+        if not isinstance(document, Document):
+            raise CADException("invalid_document", "Expected a canonical Document snapshot.")
+        validate_result_version(document, result_version)
+        if result_version == 2:
+            response["result_version"] = 2
+        phase = "replay"
+        if kernel is None:
+            from .kernel_ocp import OCPKernel
+
+            kernel = OCPKernel()
+        replay = regenerate(
+            document, kernel, linear_deflection=linear_deflection, result_version=result_version
+        )
+        response["result"] = replay.result
+        if not replay.ok:
+            raise CADException(
+                "regeneration_failed",
+                "The current document failed regeneration. See feature diagnostics; nothing was exported.",
+            )
+        if document.active_feature is None or document.active_feature not in replay.outputs:
+            raise CADException(
+                "missing_active_feature", "Choose an active solid before checking or exporting."
+            )
+        if not isinstance(replay.outputs[document.active_feature], SolidOutput):
+            raise CADException(
+                "not_a_solid", "Geometry checks and export require an active solid feature."
+            )
+        active = next(
+            item for item in replay.result["features"] if item["id"] == document.active_feature
+        )
+        stats = active["stats"]
+        if not stats:
+            raise CADException(
+                "not_a_solid", "Geometry checks and export require an active solid feature."
+            )
+        if stats.get("solids") != 1:
+            raise CADException(
+                "unsupported_solid_count", "This version requires exactly one solid."
+            )
+        if (
+            stats.get("valid") is not True
+            or not math.isfinite(stats["volume"])
+            or stats["volume"] <= 0
+        ):
+            raise CADException(
+                "invalid_solid", "The active solid must be valid with positive volume."
+            )
+        shape = replay.shapes[document.active_feature]
+        phase = "geometry_check"
+        checks = kernel.manufacturing_check(shape, linear_deflection=linear_deflection)
+        response["geometry_check"] = checks
+        if action in EXPORT_ACTIONS:
+            phase = "export"
+            if action == "export_step":
+                _, size = _atomic_export(path, lambda target: kernel.export_step(shape, target))
+                file_format = "STEP"
+            else:
+                encoded_checks, size = _atomic_export(
+                    path,
+                    lambda target: kernel.export_stl(
+                        shape, target, linear_deflection=linear_deflection
+                    ),
+                )
+                response["geometry_check"] = encoded_checks
+                file_format = "STL"
+            response["export"] = {
+                "format": file_format,
+                "destination": str(path),
+                "bytes": size,
+                "units": "mm",
+                "document_hash": replay.result["document_hash"],
+                "active_feature": document.active_feature,
+                "linear_deflection_mm": linear_deflection,
+                "atomic_replace": True,
+            }
+        response["ok"] = True
+    except CADException as exc:
+        response["error"] = exc.to_dict()
+    except OSError as exc:
+        response["error"] = {
+            "code": "export_io_error" if phase == "export" else "io_error",
+            "message": str(exc),
+        }
+    except Exception as exc:
+        response["error"] = {
+            "code": f"{phase}_failed",
+            "message": f"{type(exc).__name__}: {exc}",
+        }
+    return response

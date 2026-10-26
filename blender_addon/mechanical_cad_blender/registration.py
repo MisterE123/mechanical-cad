@@ -12,6 +12,7 @@ from bpy.app.handlers import persistent
 from bpy.props import PointerProperty
 
 from . import (
+    assembly_insert_preview,
     assembly_job_ui,
     assembly_joint_viewport,
     assembly_operators,
@@ -241,6 +242,7 @@ CLASSES = (
     *assembly_operators.CLASSES,
     *assembly_joint_viewport.CLASSES,
     *assembly_source_update_preview.CLASSES,
+    *assembly_insert_preview.CLASSES,
     *assembly_job_ui.CLASSES,
     *assembly_verification_ui.CLASSES,
     *assembly_ui.CLASSES,
@@ -325,6 +327,10 @@ def _retire_native_jobs(reason, retire_owner):
     # Retire the RNA-bearing input/publication capability before either adapter
     # waits, and before native load/history/disable can free its original data.
     # Even an unexpected owner failure cannot skip owned-process cancellation.
+    try:
+        assembly_insert_preview.cancel_handoff()
+    except Exception as exc:
+        print("Mechanical CAD insertion handoff cleanup:", str(exc))
     try:
         assembly_source_update_preview.cancel_active(reason)
     except Exception as exc:

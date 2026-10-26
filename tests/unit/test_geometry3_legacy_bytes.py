@@ -11,7 +11,7 @@ import json
 from pathlib import Path
 
 import pytest
-from test_arc_profile_native_end_cap import geometry_revision_originals
+from historical_geometry_source import historical_geometry_source
 
 from mechanical_cad.part_snapshot import input_fingerprint
 
@@ -92,11 +92,45 @@ def _function_bytes(raw, name):
 @pytest.mark.parametrize("name", ("_destination", "_atomic_export"))
 def test_legacy_destination_and_atomic_writer_function_bytes_stay_exact(name):
     relative = "src/mechanical_cad/actions.py"
-    _, originals = geometry_revision_originals(ROOT)
-    original = _function_bytes(originals[relative], name)
+    original = _function_bytes(historical_geometry_source("actions"), name)
     current = _function_bytes((ROOT / relative).read_bytes(), name)
-    assert current == original
+    assert_export_equivalence(original, current, name)
     assert hashlib.sha256(original).hexdigest() == manifest()["helper_sha256"][name]
+
+
+def reviewed_export_bytes(original, name):
+    """Only the e9f04b7 Windows fsync correction may differ from old bytes."""
+    if name != "_atomic_export":
+        return original
+    before = b'        with temporary.open("rb") as stream:\n'
+    after = (
+        b"        # Windows _commit (os.fsync) requires a writable descriptor. The file\n"
+        b"        # is our own completed temporary, not the user's existing destination.\n"
+        b'        with temporary.open("r+b") as stream:\n'
+    )
+    assert original.count(before) == 1
+    return original.replace(before, after)
+
+
+def assert_export_equivalence(original, current, name):
+    assert current == reviewed_export_bytes(original, name)
+
+
+@pytest.mark.parametrize("change", ("unrelated", "readonly", "duplicate"))
+def test_export_equivalence_does_not_waive_other_mutations(change):
+    original = _function_bytes(historical_geometry_source("actions"), "_atomic_export")
+    reviewed = reviewed_export_bytes(original, "_atomic_export")
+    if change == "unrelated":
+        mutated = reviewed + b"# unrelated change\n"
+    elif change == "readonly":
+        mutated = reviewed.replace(b'open("r+b")', b'open("rb")')
+    else:
+        with pytest.raises(AssertionError):
+            reviewed_export_bytes(original + b'        with temporary.open("rb") as stream:\n',
+                                  "_atomic_export")
+        return
+    with pytest.raises(AssertionError):
+        assert_export_equivalence(original, mutated, "_atomic_export")
 
 
 def test_corpus_is_only_fresh_baseline_capture_not_lost_070_reconstruction():

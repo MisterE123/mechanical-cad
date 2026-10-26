@@ -366,6 +366,10 @@ def test_runtime_build_attempt_keeps_truthful_solve_facts_without_seed_authority
     )
 
 
+def unexpected_recovery_discard(*_args, **_kwargs):
+    raise AssertionError("Evidence-owner tests must not discard recovery storage")
+
+
 @pytest.fixture
 def session_module(monkeypatch):
     """Import the real owner with inert Blender integration ports, no bpy import."""
@@ -377,6 +381,9 @@ def session_module(monkeypatch):
         },
         "document_state": {"_REPLAY_RUNNING": False},
         "part_publication": {},
+        # Recovery storage is outside these evidence-owner tests. Fail loudly
+        # if a tested path unexpectedly tries to mutate a recovery checkpoint.
+        "staged_edit_store": {"discard": unexpected_recovery_discard},
         "sketch_view_presentation": {},
         "workspace": {},
         "common": {"_state": lambda context: context.scene.mechanical_cad},

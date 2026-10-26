@@ -560,6 +560,10 @@ def test_arc_dimension_targets_real_arc_radius_and_annotation_center(host, monke
     assert host.checks == checks_before  # Placement opens typing before a guarded native trial.
     revision = host.owner.commands.revision
     host.owner.cancel_dimension()
+    # Placing a dimension clears selection; select the same arc again before
+    # relocating its existing annotation, as the viewport interaction requires.
+    assert not host.owner.draft.selection
+    host.owner.draft.select((("arc", arc["id"]),))
     host.viewport._dimension(host.owner, host.context, event)
     assert host.owner.commands.revision == revision
     assert len(host.owner.commands.sketch["constraints"]) == 1

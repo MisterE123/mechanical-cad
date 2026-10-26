@@ -11,6 +11,8 @@ import copy
 import re
 from dataclasses import dataclass
 
+from .general_authoring_anchors import _anchor_payload as _anchor_payload
+from .general_authoring_anchors import _validate_anchor as _validate_anchor
 from .general_sketch_commands import (
     PointRef,
     PointSeed,
@@ -279,25 +281,6 @@ class _Bindings:
         return BindingStatus("annotation", identifier, state)
 
 
-def _anchor_payload(anchor):
-    if type(anchor) is PointRef:
-        return {"kind": "existing", "point_id": _identifier(anchor.id)}
-    _require(type(anchor) is PointSeed, "Choose an explicit point ID or new XY coordinate.")
-    return {"kind": "new", "position": _point((anchor.u, anchor.v))}
-
-
-def _validate_anchor(anchor, bindings):
-    _require(type(anchor) is dict, "Invalid proposal anchor.")
-    if anchor.get("kind") == "existing":
-        _keys(anchor, {"kind", "point_id"})
-        bindings.require_identity("point", anchor["point_id"])
-    else:
-        _keys(anchor, {"kind", "position"})
-        _require(anchor["kind"] == "new", "Unsupported proposal anchor kind.")
-        _require(type(anchor["position"]) is list, "Expected stored XY coordinates.")
-        _point(anchor["position"])
-
-
 def _proposal_status(proposal, bindings):
     if proposal is None:
         return None
@@ -398,11 +381,11 @@ def _validate_ui(ui, bindings, *, expected_ui_version=UI_VERSION):
         if proposal["kind"] != "arc":
             _validate_anchor(proposal["anchor"], bindings)
     if "pending_length" in ui:
-        from .pending_line_length import validate_pending
+        from .pending_line_length_intent import validate_pending
 
         validate_pending(ui["pending_length"], proposal, bindings)
     if "pending_diameter" in ui:
-        from .pending_circle_diameter import validate_pending
+        from .pending_circle_diameter_intent import validate_pending
         _require(ui["tool"] == "Circle", "Pending diameter requires the Circle tool.")
         validate_pending(ui["pending_diameter"], proposal, bindings)
     _require(not ("pending_length" in ui and "pending_diameter" in ui), "Only one driving field can be pending.")
@@ -827,13 +810,13 @@ class GeneralSketchAuthoringState:
         return self._update(proposal=None, pending_length=None, pending_diameter=None)
 
     def begin_pending_length(self, endpoint, points, *, axis=None, raw_text=""):
-        from .pending_line_length import begin_intent
+        from .pending_line_length_intent import begin_intent
 
         intent = begin_intent(self, endpoint, points, axis=axis, raw_text=raw_text)
         return self._update(pending_length=intent)
 
     def update_pending_length(self, raw_text):
-        from .pending_line_length import validate_raw
+        from .pending_line_length_intent import validate_raw
 
         intent = self.pending_length
         _require(intent is not None, "No pending Line length.")
@@ -851,11 +834,11 @@ class GeneralSketchAuthoringState:
         return self._update(pending_length=None)
 
     def begin_pending_diameter(self, points, *, raw_text=""):
-        from .pending_circle_diameter import begin_intent
+        from .pending_circle_diameter_intent import begin_intent
         return self._update(pending_diameter=begin_intent(self, points, raw_text=raw_text))
 
     def update_pending_diameter(self, raw_text):
-        from .pending_line_length import validate_raw
+        from .pending_line_length_intent import validate_raw
         intent = self.pending_diameter
         _require(intent is not None, "No pending Circle diameter.")
         validate_raw(raw_text)

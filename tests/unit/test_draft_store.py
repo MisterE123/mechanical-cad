@@ -4,17 +4,22 @@ import copy
 import importlib.util
 import json
 import sys
+import types
 from dataclasses import asdict
 from pathlib import Path
 
 import pytest
 
 ROOT = Path(__file__).resolve().parents[2]
+PACKAGE = "mcad_pure_draft_store_tests"
+package = types.ModuleType(PACKAGE)
+package.__path__ = [str(ROOT / "blender_addon/mechanical_cad_blender")]
+sys.modules[PACKAGE] = package
 
 
 def module(name):
     spec = importlib.util.spec_from_file_location(
-        "mcad_pure_" + name, ROOT / "blender_addon/mechanical_cad_blender" / (name + ".py")
+        PACKAGE + "." + name, ROOT / "blender_addon/mechanical_cad_blender" / (name + ".py")
     )
     result = importlib.util.module_from_spec(spec)
     sys.modules[spec.name] = result

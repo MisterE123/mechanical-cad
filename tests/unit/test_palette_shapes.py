@@ -168,6 +168,23 @@ def test_replacing_payload_and_editing_its_manifest_hash_cannot_repin(isolated_a
         TRIANGLE * 193,
         SQUARE * 145,
     ],
+    ids=[
+        "empty",
+        "truncated-byte",
+        "truncated-point",
+        "trailing-zeroes",
+        "trailing-triangle",
+        "over-byte-budget",
+        "bytearray",
+        "list",
+        "two-points",
+        "collinear",
+        "wrong-winding",
+        "duplicate-endpoint",
+        "too-many-points",
+        "triangle-count-budget",
+        "square-count-budget",
+    ],
 )
 def test_adversarial_decoder_framing_geometry_and_budgets(data):
     with pytest.raises(ValueError):

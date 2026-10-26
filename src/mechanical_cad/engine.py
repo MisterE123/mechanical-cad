@@ -301,12 +301,13 @@ def regenerate(
         validate_replay_v3(document, result_version)
     else:
         validate_result_version(document, result_version)
+    # Canonical identity/budget rejection must precede even optional kernel access.
+    document_hash = document.content_hash
     # Optional adapter policy: native-free/fake kernels need no new method.
     # Legacy result-v1 retains its historical snapshot-only Cut tool walls.
     topology_policy = getattr(kernel, "set_topology_result_version", None)
     if topology_policy is not None:
         topology_policy(result_version)
-    document_hash = document.content_hash
     if (
         isinstance(linear_deflection, bool)
         or not isinstance(linear_deflection, (int, float))

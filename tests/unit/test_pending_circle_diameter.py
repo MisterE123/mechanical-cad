@@ -180,7 +180,11 @@ def test_legacy_circle_stays_radius_only_and_without_extension():
     assert s.dumps(s.restore(saved, BASE)) == saved
 
 
-@pytest.mark.parametrize("raw", [None, True, 7, "\ud800", "😃" * (c.MAX_RAW_TEXT_BYTES // 4 + 1)])
+@pytest.mark.parametrize(
+    "raw",
+    [None, True, 7, "\ud800", "😃" * (c.MAX_RAW_TEXT_BYTES // 4 + 1)],
+    ids=["none", "boolean", "integer", "invalid-surrogate", "utf8-over-byte-budget"],
+)
 def test_invalid_raw_updates_are_atomic(raw):
     original = state()
     before = s.dumps(original)

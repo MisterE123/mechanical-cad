@@ -517,7 +517,7 @@ def draw_assembly_history(layout, context):
     current = state(context)
     layout.label(text="Assembly", icon="OUTLINER_COLLECTION")
     if assembly_source_update_preview.active(context):
-        layout.operator("mcad.assembly_source_update_cancel", text="Cancel Source Update Preview", icon="CANCEL")
+        layout.operator("mcad.assembly_source_update_cancel", text=assembly_source_update_preview.active(context).cancel_label, icon="CANCEL")
         layout = layout.column()
         layout.enabled = False
     if assembly_joint_viewport.active(context):
@@ -611,7 +611,7 @@ def draw_assembly_history(layout, context):
 
 def draw_assembly_menu(layout, context):
     if assembly_source_update_preview.active(context):
-        layout.operator("mcad.assembly_source_update_cancel", text="Cancel Source Update Preview", icon="CANCEL")
+        layout.operator("mcad.assembly_source_update_cancel", text=assembly_source_update_preview.active(context).cancel_label, icon="CANCEL")
         return
     if assembly_joint_viewport.active(context):
         layout.operator(

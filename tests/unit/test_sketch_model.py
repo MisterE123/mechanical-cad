@@ -185,7 +185,13 @@ def test_long_number_token_rejected_before_large_integer_parse():
     assert error.value.code == "resource_limit"
 
 
-@pytest.mark.parametrize("text", [" " * (MAX_SKETCH_BYTES + 1), "é" * (MAX_SKETCH_BYTES // 2 + 1)])
+@pytest.mark.parametrize(
+    "text",
+    [" " * (MAX_SKETCH_BYTES + 1), "é" * (MAX_SKETCH_BYTES // 2 + 1)],
+    # Pytest exports node IDs via PYTEST_CURRENT_TEST. Keep oversized payloads
+    # out of that environment variable, whose size is bounded on Windows.
+    ids=["ascii-over-byte-budget", "utf8-over-byte-budget"],
+)
 def test_utf8_byte_budget_is_enforced_before_parse(text):
     with pytest.raises(SketchError) as error:
         Sketch.from_json(text)
