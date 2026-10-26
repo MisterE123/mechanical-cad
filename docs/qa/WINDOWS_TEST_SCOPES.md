@@ -60,3 +60,19 @@ not establish Windows row-presentation/freshness qualification. Windows bundled
 public selection, manual rejection, admission, transport and runtime-cache suites
 remain separate active counterparts; their API leaves/receipts are synthetic
 where documented, not evidence of a launched native backend.
+
+## Cleanup/quarantine release blocker
+
+The cleanup suite's default fixture is now an opaque lifecycle identity for the
+tests that already substitute a non-CAD job port. A safety test proves that this
+identity cannot enter real guarded transport or evidence acceptance.
+
+Threaded worker and exact-class admission-order cases request `worker_harness`.
+It captures the real Linux manual profile on Linux and the real public bundled
+profile on the actual Windows host, copying inert fixture data into the exact
+module-local record classes. It never changes the host platform or relaxes type
+checks. The existing worker exchanges are fault-injected; native process/API
+leaves are forbidden, and a retained attempt counter prevents an expected worker
+exception from hiding an accidental native call. This is lifecycle/record
+coverage, not native backend or Blender qualification. No module-wide skip was
+introduced.

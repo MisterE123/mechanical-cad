@@ -9,6 +9,7 @@ import time
 import types
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import contextmanager, nullcontext
+from dataclasses import asdict
 from pathlib import Path
 
 import pytest
@@ -30,10 +31,23 @@ def function(path, name, namespace):
 
 @pytest.fixture
 def harness(monkeypatch):
+    # Opaque lifecycle identity, never a launch record or CAD authority.
+    yield from _harness(monkeypatch, worker_selection=False)
+
+
+@pytest.fixture
+def worker_harness(monkeypatch):
+    # Real captured record for the real threaded GuardedJob/SidecarJob cases.
+    # The exchange is fault-injected by those tests; no child process may start.
+    yield from _harness(monkeypatch, worker_selection=True)
+
+
+def _harness(monkeypatch, *, worker_selection):
     name = "mcad_cleanup_quarantine_" + str(next(_NAMES))
     package = types.ModuleType(name)
     package.__path__ = [str(ADDON)]
     monkeypatch.setitem(sys.modules, name, package)
+
     # Cleanup owns no Blender interaction or new admission. These explicit ports
     # let the real Assembly cleanup code load without importing the host UI.
     def forbidden_admission(*args, **kwargs):
@@ -41,7 +55,10 @@ def harness(monkeypatch):
 
     for leaf, methods in (
         ("sketch_session", ("interaction_revision",)),
-        ("staged_edit_store", ("interaction_revision", "require_no_live_edit", "require_no_resume")),
+        (
+            "staged_edit_store",
+            ("interaction_revision", "require_no_live_edit", "require_no_resume"),
+        ),
         ("workspace", ("get_role",)),
     ):
         module = types.ModuleType(name + "." + leaf)
@@ -52,9 +69,56 @@ def harness(monkeypatch):
     guarded = importlib.import_module(name + ".guarded_transport")
     managed = importlib.import_module(name + ".sidecar_job")
     contracts = importlib.import_module(name + ".backend_contracts")
-    selection = importlib.import_module(name + ".backend_selection").BackendSelection.capture(
-        str(ROOT), sys.executable, generation=0, lifetime_id="quarantine-test", environment={}
-    )
+    selection = object()
+    native_attempts = []
+    if worker_selection:
+        selection_api = importlib.import_module(name + ".backend_selection")
+        if sys.platform == "linux":
+            selection = selection_api.BackendSelection.capture(
+                str(ROOT),
+                sys.executable,
+                generation=0,
+                lifetime_id="quarantine-test",
+                environment={},
+            )
+        elif sys.platform == "win32":
+            from test_windows_runtime import Fixture
+
+            # Copy inert data into this namespace's exact immutable record types.
+            # Public capture checks the actual Windows host, without OS spoofing.
+            data = Fixture()
+            manifests = importlib.import_module(name + ".runtime_bundle_manifest")
+            windows_cache = importlib.import_module(name + ".windows_cache")
+            launch = importlib.import_module(name + ".runtime_bundle_launch")
+            policy = launch.capture_bundled_policy(
+                manifests.BundleDescriptor(**asdict(data.descriptor)),
+                package_root=data.package,
+                cache_root=data.cache,
+                release_data=data.release,
+                constants=dict(data.constants),
+                windows_cache=windows_cache.WindowsCacheLocation(**asdict(data.location)),
+            )
+            selection = selection_api.BackendSelection.capture_bundled(
+                policy, 60.0, generation=0, lifetime_id="quarantine-test"
+            )
+        else:
+            pytest.skip("no qualified native host selection profile")
+
+        def no_process(*args, **kwargs):
+            native_attempts.append("unexpected native process/API leaf")
+            pytest.fail("worker fault-injection fixture attempted native process work")
+
+        # Rebind module-local leaves only; do not modify global subprocess/OS state.
+        monkeypatch.setattr(
+            managed,
+            "subprocess",
+            types.SimpleNamespace(
+                Popen=no_process, TimeoutExpired=managed.subprocess.TimeoutExpired
+            ),
+        )
+        windows = importlib.import_module(name + ".windows_runtime")
+        monkeypatch.setattr(windows, "WindowsRuntimeAPI", no_process)
+        monkeypatch.setattr(windows, "Win32API", no_process)
     yield types.SimpleNamespace(
         name=name,
         lease=lease,
@@ -63,6 +127,8 @@ def harness(monkeypatch):
         contracts=contracts,
         selection=selection,
     )
+    # An expected BaseException/uncertainty path must not hide a forbidden call.
+    assert native_attempts == []
     # Quarantine has no reset API. Each test's isolated module lifetime ends here;
     # the pure test ports own no actual process, OS lock, or descriptor resources.
     for key in list(sys.modules):
@@ -75,6 +141,16 @@ def request(h, action="canonical_snapshot"):
     if action.startswith("export_"):
         ordinary.update(result_version=2, destination="/unused/never-written.step")
     return h.contracts.prepare_request(ordinary)
+
+
+def test_opaque_lifecycle_identity_cannot_enter_real_transport_or_evidence(harness):
+    h = harness
+    assert type(h.selection) is object
+    prepared = request(h)
+    with pytest.raises(h.managed.bridge.BridgeError, match="prepared request and selection"):
+        h.managed.SidecarJob.from_selection(prepared, h.selection)
+    with pytest.raises(h.contracts.BackendContractError, match="captured backend selection"):
+        h.guarded.accept_response(prepared, {}, h.selection, owner_token=object())
 
 
 def run(h, action="canonical_snapshot", current=None):
@@ -313,8 +389,10 @@ def test_injected_token_mismatch_retains_original_owner_and_leaves_successor_unc
     assert not lease.quarantine(original, owner)  # Idempotent; no cleanup retry.
 
 
-def test_real_worker_stop_event_wakes_uncertainty_without_cleanup_success(harness, monkeypatch):
-    h = harness
+def test_real_worker_stop_event_wakes_uncertainty_without_cleanup_success(
+    worker_harness, monkeypatch
+):
+    h = worker_harness
     resources = object()
     calls = []
 
@@ -512,9 +590,9 @@ def test_live_canonical_capture_scope_wraps_only_existing_transport_and_releases
 
 
 def test_dormant_service_rejects_bundled_before_validation_or_job_construction(
-    harness, monkeypatch
+    worker_harness, monkeypatch
 ):
-    h = harness
+    h = worker_harness
     service = importlib.import_module(h.name + ".service_v3")
     selected = h.selection
     # Exact-class injected setup field suffices to test admission order; no real
@@ -586,9 +664,9 @@ def test_uncertainty_through_live_assembly_scope_preserves_original_job(harness,
 @pytest.mark.parametrize("failure", [SystemExit, KeyboardInterrupt])
 @pytest.mark.parametrize("action", ["canonical_snapshot", "export_step"])
 def test_unexpected_baseexception_wakes_sync_retains_owner_and_blocks_successor(
-    harness, monkeypatch, failure, action
+    worker_harness, monkeypatch, failure, action
 ):
-    h = harness
+    h = worker_harness
     original_resources = object()
     calls = []
 
@@ -625,9 +703,9 @@ def test_unexpected_baseexception_wakes_sync_retains_owner_and_blocks_successor(
 @pytest.mark.parametrize("failure", [SystemExit, KeyboardInterrupt])
 @pytest.mark.parametrize("kind", ["sketch", "assembly"])
 def test_unexpected_baseexception_updates_async_status_after_prior_cancel(
-    harness, monkeypatch, failure, kind
+    worker_harness, monkeypatch, failure, kind
 ):
-    h = harness
+    h = worker_harness
     token = h.lease.try_acquire()
     resources = object()
     entered, proceed = threading.Event(), threading.Event()
