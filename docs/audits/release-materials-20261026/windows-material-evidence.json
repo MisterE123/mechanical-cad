@@ -1,0 +1,660 @@
+{
+  "acquisition_lock": "release_inputs/windows-x64/acquisition-lock.json",
+  "acquisition_lock_sha256": "25bc39a8a1dfd190122344a17f2f3f017707367bc77271f5771318c13038587a",
+  "boundary": "Named-member inspection and exact byte hashes are not component license review, PE dependency closure, native qualification, or redistribution approval. CPython SPDX is package-level, has no file list, and NOASSERTION entries; candidates such as Tcl/Tk/Tix need actual shipped-scope mapping. Filenames do not determine OCP DLL versions. Windows generated OCP source archive hash remains unknown; Linux generated bindings are not a substitute.",
+  "cp312_source_candidates": [
+    {
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "ab8d1b0cc087c20d4c32c0e4fcf7d0c733a95da12cedc6d63b3f0a9af07427e2"
+        }
+      ],
+      "name": "bzip2",
+      "scope": "DECLARED_SBOM_CANDIDATE_APPLICABILITY_NOT_ADJUDICATED",
+      "url": "https://github.com/python/cpython-source-deps/archive/refs/tags/bzip2-1.0.8.tar.gz",
+      "version": "1.0.8"
+    },
+    {
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "4acbed6dd1c744b0376e3b1cf57ce906f9dc9e95e68824584c8099a63025a3c3"
+        }
+      ],
+      "name": "CPython",
+      "scope": "DECLARED_SBOM_CANDIDATE_APPLICABILITY_NOT_ADJUDICATED",
+      "url": "https://www.python.org/ftp/python/3.12.10/python-3.12.10-embed-amd64.zip",
+      "version": "3.12.10"
+    },
+    {
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "17aa6cfc5c4c219c09287abfc10bc13f0c06f30bb654b28bfe6f567ca646eb79"
+        }
+      ],
+      "name": "expat",
+      "scope": "DECLARED_SBOM_CANDIDATE_APPLICABILITY_NOT_ADJUDICATED",
+      "url": "https://github.com/libexpat/libexpat/releases/download/R_2_6_3/expat-2.6.3.tar.gz",
+      "version": "2.6.3"
+    },
+    {
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "e31e4ca10da91c585793c0eaf1b98aee3cb43e3a58d3d8d478593e5a6bd82927"
+        }
+      ],
+      "name": "hacl-star",
+      "scope": "DECLARED_SBOM_CANDIDATE_APPLICABILITY_NOT_ADJUDICATED",
+      "url": "https://github.com/hacl-star/hacl-star/archive/bb3d0dc8d9d15a5cd51094d5b69e70aa09005ff0.zip",
+      "version": "bb3d0dc8d9d15a5cd51094d5b69e70aa09005ff0"
+    },
+    {
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "53626fddce753c454a3fea581cbbc7fe9bbcf0bc70416d48fdbbf5d87ef6c72e"
+        }
+      ],
+      "name": "libb2",
+      "scope": "DECLARED_SBOM_CANDIDATE_APPLICABILITY_NOT_ADJUDICATED",
+      "url": "https://github.com/BLAKE2/libb2/releases/download/v0.98.1/libb2-0.98.1.tar.gz",
+      "version": "0.98.1"
+    },
+    {
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "9d802681adfea27d84cae0487a785fb9caa925bdad44c401b364c59ab2b8edda"
+        }
+      ],
+      "name": "libffi",
+      "scope": "DECLARED_SBOM_CANDIDATE_APPLICABILITY_NOT_ADJUDICATED",
+      "url": "https://github.com/python/cpython-source-deps/archive/refs/tags/libffi-3.4.4.tar.gz",
+      "version": "3.4.4"
+    },
+    {
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "c76f268f5054024e962f2515a0e522baf85313064f6740d80375afc850787a38"
+        }
+      ],
+      "name": "macholib",
+      "scope": "DECLARED_SBOM_CANDIDATE_APPLICABILITY_NOT_ADJUDICATED",
+      "url": "https://files.pythonhosted.org/packages/ec/57/f0a712efc3ed982cf4038a3cee172057303b9be914c32c93b2fbec27f785/macholib-1.0.tar.gz",
+      "version": "1.0"
+    },
+    {
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "9f9cd4c041f99b5c49ffb7b59d9f12d95b683d88585608aa56a6307667b2b21f"
+        }
+      ],
+      "name": "mpdecimal",
+      "scope": "DECLARED_SBOM_CANDIDATE_APPLICABILITY_NOT_ADJUDICATED",
+      "url": "https://www.bytereef.org/software/mpdecimal/releases/mpdecimal-2.5.1.tar.gz",
+      "version": "2.5.1"
+    },
+    {
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "6bb739ecddbd2cfb6d255eb5898437a9b5739277dee931338d3275bac5d96ba2"
+        }
+      ],
+      "name": "openssl",
+      "scope": "DECLARED_SBOM_CANDIDATE_APPLICABILITY_NOT_ADJUDICATED",
+      "url": "https://github.com/python/cpython-source-deps/archive/refs/tags/openssl-3.0.16.tar.gz",
+      "version": "3.0.16"
+    },
+    {
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "e335aeb44fa36cde60ecbb6a9f8be6f5d449d645ce9b0199ee53a7e6728d19d2"
+        }
+      ],
+      "name": "sqlite",
+      "scope": "DECLARED_SBOM_CANDIDATE_APPLICABILITY_NOT_ADJUDICATED",
+      "url": "https://github.com/python/cpython-source-deps/archive/refs/tags/sqlite-3.49.1.0.tar.gz",
+      "version": "3.49.1.0"
+    },
+    {
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "4c23f0dd3efcbe6f3a22c503a68d147617bb30c4f5290f1eb3eaacf0b460440b"
+        }
+      ],
+      "name": "tcl-core",
+      "scope": "DECLARED_SBOM_CANDIDATE_APPLICABILITY_NOT_ADJUDICATED",
+      "url": "https://github.com/python/cpython-source-deps/archive/refs/tags/tcl-core-8.6.15.0.tar.gz",
+      "version": "8.6.15.0"
+    },
+    {
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "f7b21d115867a41ae5fd7c635a4c234d3ca25126c3661eb36028c6e25601f85e"
+        }
+      ],
+      "name": "tix",
+      "scope": "DECLARED_SBOM_CANDIDATE_APPLICABILITY_NOT_ADJUDICATED",
+      "url": "https://github.com/python/cpython-source-deps/archive/refs/tags/tix-8.4.3.6.tar.gz",
+      "version": "8.4.3.6"
+    },
+    {
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "0ae56d39bca92865f338529557a1e56d110594184b6dc5a91339c5675751e264"
+        }
+      ],
+      "name": "tk",
+      "scope": "DECLARED_SBOM_CANDIDATE_APPLICABILITY_NOT_ADJUDICATED",
+      "url": "https://github.com/python/cpython-source-deps/archive/refs/tags/tk-8.6.15.0.tar.gz",
+      "version": "8.6.15.0"
+    },
+    {
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "a15c168e39e87d750c3dc766edc7f19bdda57dacf01e509678467eace91ad282"
+        }
+      ],
+      "name": "xz",
+      "scope": "DECLARED_SBOM_CANDIDATE_APPLICABILITY_NOT_ADJUDICATED",
+      "url": "https://github.com/python/cpython-source-deps/archive/refs/tags/xz-5.2.5.tar.gz",
+      "version": "5.2.5"
+    },
+    {
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "e3f3fb32564952006eb18b091ca8464740e5eca29d328cfb0b2da22768e0b638"
+        }
+      ],
+      "name": "zlib",
+      "scope": "DECLARED_SBOM_CANDIDATE_APPLICABILITY_NOT_ADJUDICATED",
+      "url": "https://github.com/python/cpython-source-deps/archive/refs/tags/zlib-1.3.1.tar.gz",
+      "version": "1.3.1"
+    }
+  ],
+  "runtime_files": 1050,
+  "runtime_inventory_sha256": "b7273d2776622fe5e16070be542bb3bcb07ff003200fb173bbd1b9f10b2dfb10",
+  "source_candidate_evidence_sha256": "efa53ba4f26e8a06410677ec6d010e97133a7a1ab38e0485f6936da2911879fa",
+  "source_candidate_evidence_url": "https://www.python.org/ftp/python/3.12.10/python-3.12.10-embed-amd64.zip.spdx.json",
+  "status": "WINDOWS_COMPONENT_MAPPING_NOT_REVIEWED",
+  "wheels": [
+    {
+      "archive": "cadquery_ocp_novtk-8.0.1.1.0-cp312-cp312-win_amd64.whl",
+      "native_members": [
+        {
+          "identity_status": "NOT_COMPONENT_REVIEWED",
+          "member": "cadquery_ocp_novtk.libs/deflate-6dd36dd208f18c6b44b3a78ae2c9462f.dll",
+          "sha256": "6dd36dd208f18c6b44b3a78ae2c9462f28430e39b7e5bdb00faaec22b495021b",
+          "size": 177664
+        },
+        {
+          "identity_status": "NOT_COMPONENT_REVIEWED",
+          "member": "cadquery_ocp_novtk.libs/FreeImage-eca0c6b310427996d0facb6b3811d370.dll",
+          "sha256": "0ea5052dc40c62a470fabb1c939a60fd145ecb101be05b1b57bb779d40a8c8bd",
+          "size": 1125888
+        },
+        {
+          "identity_status": "NOT_COMPONENT_REVIEWED",
+          "member": "cadquery_ocp_novtk.libs/freetype-ef76e9a69983af15f31b2e530619d486.dll",
+          "sha256": "28ecefbe741065bdf1ad8f6286a97eac2fb714cdd7fc8a43115fad89cfd852e7",
+          "size": 670720
+        },
+        {
+          "identity_status": "NOT_COMPONENT_REVIEWED",
+          "member": "cadquery_ocp_novtk.libs/Iex-138f449be55261c046328ae64c124a9d.dll",
+          "sha256": "d9711485b28161deea602f1e3dc4a9f6adf168ca775885d17c8d513f96062ee0",
+          "size": 292864
+        },
+        {
+          "identity_status": "NOT_COMPONENT_REVIEWED",
+          "member": "cadquery_ocp_novtk.libs/IlmThread-5c7f108988d2554433bb26a9785ab0e5.dll",
+          "sha256": "d3089835d8722de70afe7eb0fa89dd8971640c5ef09f8b3772ed3336949813fe",
+          "size": 45568
+        },
+        {
+          "identity_status": "NOT_COMPONENT_REVIEWED",
+          "member": "cadquery_ocp_novtk.libs/Imath-9b9c82f00ed9c45a0954774404023a2f.dll",
+          "sha256": "95f2029bca88cffef0ee7060a8df65b68cc5487414e371c0b471403066d5565e",
+          "size": 338432
+        },
+        {
+          "identity_status": "NOT_COMPONENT_REVIEWED",
+          "member": "cadquery_ocp_novtk.libs/jpeg8-c8ae4649b8bcf41ec8bfd359bd6239ff.dll",
+          "sha256": "c8ae4649b8bcf41ec8bfd359bd6239ff7622e2041554cee3e99f740698db848f",
+          "size": 694784
+        },
+        {
+          "identity_status": "NOT_COMPONENT_REVIEWED",
+          "member": "cadquery_ocp_novtk.libs/lcms2-d183dc2474a957dbfb455192a64049d6.dll",
+          "sha256": "d183dc2474a957dbfb455192a64049d6b273577539955ddc8f7ab8ed3e138d95",
+          "size": 581632
+        },
+        {
+          "identity_status": "NOT_COMPONENT_REVIEWED",
+          "member": "cadquery_ocp_novtk.libs/Lerc-22a85a36f4a6a0a5b34eede8d466ade1.dll",
+          "sha256": "e282d85b6aee2b772cfe0cb3c3872ecac15367b11b1dca0d140db57eaf1c2363",
+          "size": 548864
+        },
+        {
+          "identity_status": "NOT_COMPONENT_REVIEWED",
+          "member": "cadquery_ocp_novtk.libs/liblzma-8439ed3564a8dbbf6355e29c92e88fdf.dll",
+          "sha256": "8439ed3564a8dbbf6355e29c92e88fdf1f6dee096504149fc051104155c868a9",
+          "size": 188416
+        },
+        {
+          "identity_status": "NOT_COMPONENT_REVIEWED",
+          "member": "cadquery_ocp_novtk.libs/libpng16-0bb95036074bc1e2acf41fe8590e18d3.dll",
+          "sha256": "8c9e2d87978385030f310c48b81f5cd46608172263f570e06c1dca8b44e8b43c",
+          "size": 198656
+        },
+        {
+          "identity_status": "NOT_COMPONENT_REVIEWED",
+          "member": "cadquery_ocp_novtk.libs/libsharpyuv-09e089c9ad5da983f04e98ccc8f41de1.dll",
+          "sha256": "09e089c9ad5da983f04e98ccc8f41de1750b0a351370a4d42b9080c3e68eac50",
+          "size": 25600
+        },
+        {
+          "identity_status": "NOT_COMPONENT_REVIEWED",
+          "member": "cadquery_ocp_novtk.libs/libwebp-d3840055b4660e579d94d60722c712b7.dll",
+          "sha256": "c8e3097cc849cc7f65139c309c783986c274fcce6b390f9ec7d00e0a3dadaf06",
+          "size": 382976
+        },
+        {
+          "identity_status": "NOT_COMPONENT_REVIEWED",
+          "member": "cadquery_ocp_novtk.libs/libwebpmux-e5dee9448ea8f8f080bb950f4004014d.dll",
+          "sha256": "a3900210c40c3b3fc486639e5cf001ccac0dceb678e2b81fae788786329362fd",
+          "size": 43008
+        },
+        {
+          "identity_status": "NOT_COMPONENT_REVIEWED",
+          "member": "cadquery_ocp_novtk.libs/msvcp140-7c26614e1d733892c2deac7e245ce115.dll",
+          "sha256": "7c26614e1d733892c2deac7e245ce115504b1d80592dd0a01b08e3e5a55f89ca",
+          "size": 643512
+        },
+        {
+          "identity_status": "NOT_COMPONENT_REVIEWED",
+          "member": "cadquery_ocp_novtk.libs/OpenEXR-210cc62a9c46faa0d7e864fbe1130f16.dll",
+          "sha256": "4aea0227514342e458427522cc713e48d34d0bcb725648f5cb2ba4ff03c901e2",
+          "size": 851968
+        },
+        {
+          "identity_status": "NOT_COMPONENT_REVIEWED",
+          "member": "cadquery_ocp_novtk.libs/OpenEXRCore-68c33f2c309d9810ec2942109eb9ec80.dll",
+          "sha256": "bf919ffc688d5bcb164b1d5e1eea3d209c4a47364ff2ecbab89584843f8ed43b",
+          "size": 314368
+        },
+        {
+          "identity_status": "NOT_COMPONENT_REVIEWED",
+          "member": "cadquery_ocp_novtk.libs/openjp2-5d11a0abfa2b679c22f0d91df66bd2ab.dll",
+          "sha256": "5d11a0abfa2b679c22f0d91df66bd2abc83acb6988b050ad9e75ea0b0025e2b0",
+          "size": 360448
+        },
+        {
+          "identity_status": "NOT_COMPONENT_REVIEWED",
+          "member": "cadquery_ocp_novtk.libs/openjph-77a805c39a4057939dfa655d77639be9.dll",
+          "sha256": "77a805c39a4057939dfa655d77639be9a30465373b9ada4e70d56e98eb95eebf",
+          "size": 356352
+        },
+        {
+          "identity_status": "NOT_COMPONENT_REVIEWED",
+          "member": "cadquery_ocp_novtk.libs/raw-4406ceb5271df80f8a6e4fdd4a48cf2c.dll",
+          "sha256": "e4d912b91ac899c37f4c77faa2c61f31a7667dd0ca55f5bc62dd2bf7bd4b6884",
+          "size": 1171968
+        },
+        {
+          "identity_status": "NOT_COMPONENT_REVIEWED",
+          "member": "cadquery_ocp_novtk.libs/tiff-c9f1d4bd42b46208492c347254c25d5c.dll",
+          "sha256": "4094a90c2752b0ed41435a866aa0216d22bc4110bf9087659a4367b7b7d6eae5",
+          "size": 504320
+        },
+        {
+          "identity_status": "NOT_COMPONENT_REVIEWED",
+          "member": "cadquery_ocp_novtk.libs/TKBin-53c7d0d9c5dc9ffe626fa308e1100b1c.dll",
+          "sha256": "df617225366c330d716a53d2beee164f0003e1f59cad88b927b2f0d9f95ea24c",
+          "size": 109056
+        },
+        {
+          "identity_status": "NOT_COMPONENT_REVIEWED",
+          "member": "cadquery_ocp_novtk.libs/TKBinL-18c2df1091ce11e597f8a7caf24413f4.dll",
+          "sha256": "328541752b487379a61acedd1447347c33dbd8ffcd5c804117bd6ba5d281af96",
+          "size": 261632
+        },
+        {
+          "identity_status": "NOT_COMPONENT_REVIEWED",
+          "member": "cadquery_ocp_novtk.libs/TKBinTObj-52de2193a338469bcd9795775f4b411f.dll",
+          "sha256": "af7555e12632ccd23a6c6592a079c67a33ffdf4db75d2297f5b2fff2c6de31f5",
+          "size": 54784
+        },
+        {
+          "identity_status": "NOT_COMPONENT_REVIEWED",
+          "member": "cadquery_ocp_novtk.libs/TKBinXCAF-56db709b38bcb40a94ceafd206a2302e.dll",
+          "sha256": "598f181eeca342f86487c3e60ac71801374f96822b640f08d46492e2c3dd360d",
+          "size": 112640
+        },
+        {
+          "identity_status": "NOT_COMPONENT_REVIEWED",
+          "member": "cadquery_ocp_novtk.libs/TKBO-aadb9b5aa0f476b7ba64f490558b9e9d.dll",
+          "sha256": "a08f9c89869869d7c81ce9e69693b352392be0ee3442d97cd05b35f4823e4cdb",
+          "size": 2095616
+        },
+        {
+          "identity_status": "NOT_COMPONENT_REVIEWED",
+          "member": "cadquery_ocp_novtk.libs/TKBool-d752512ca3d2ef46a2a61ac4fd77d49d.dll",
+          "sha256": "c8b738ad5ad36a536aa30da457aa3c7b299093d20b7e382adc9c6e5658c86d81",
+          "size": 3725824
+        },
+        {
+          "identity_status": "NOT_COMPONENT_REVIEWED",
+          "member": "cadquery_ocp_novtk.libs/TKBRep-b8a6c8636a17e7c54e46e34d57b89de4.dll",
+          "sha256": "6353eb894224ab2b4f4b11f636d41e51f740207577b9b316cf0e1ef3defc1327",
+          "size": 2174976
+        },
+        {
+          "identity_status": "NOT_COMPONENT_REVIEWED",
+          "member": "cadquery_ocp_novtk.libs/TKCAF-3cde3007b1fff537c51a692f344945c5.dll",
+          "sha256": "99d84eeed4fb5c5fece5a57f21c4a90c20e8a804dbcdababb3d25ee1f18b0aa9",
+          "size": 517120
+        },
+        {
+          "identity_status": "NOT_COMPONENT_REVIEWED",
+          "member": "cadquery_ocp_novtk.libs/TKCDF-43d2f9d293c6dd2b04b56eaf5b0cd642.dll",
+          "sha256": "be9af0afa87db076c10344c493f7af7dcaa9dca6446fa34d2f1727adcb381447",
+          "size": 276992
+        },
+        {
+          "identity_status": "NOT_COMPONENT_REVIEWED",
+          "member": "cadquery_ocp_novtk.libs/TKDE-5c1a1022ca594cce4c01d5160e745587.dll",
+          "sha256": "7c0da07bf4012f3db4bbbff3e0d4627430fdbce81a766a8d9d37fc66bfeead56",
+          "size": 172032
+        },
+        {
+          "identity_status": "NOT_COMPONENT_REVIEWED",
+          "member": "cadquery_ocp_novtk.libs/TKDEGLTF-355378017c7e50dd5e59709feb6d810e.dll",
+          "sha256": "91119c4c3e064b58ad5f36c3e6c7e13c42b796d9badda6f250de2d069c76fb4f",
+          "size": 504832
+        },
+        {
+          "identity_status": "NOT_COMPONENT_REVIEWED",
+          "member": "cadquery_ocp_novtk.libs/TKDEIGES-0fde462304985a6072057ad399ca2859.dll",
+          "sha256": "eb5fbdbf9567f21c3b54b69eb41d1b7b8c2c8796ade9a0eb52a91a4f8bc3eb3e",
+          "size": 3216384
+        },
+        {
+          "identity_status": "NOT_COMPONENT_REVIEWED",
+          "member": "cadquery_ocp_novtk.libs/TKDESTEP-b5fca3d5036d97c312095eee357ca840.dll",
+          "sha256": "911675c419548b6f6377299b42997db9933a5a2bb22a7619b128f3ed8c0b9dde",
+          "size": 5787136
+        },
+        {
+          "identity_status": "NOT_COMPONENT_REVIEWED",
+          "member": "cadquery_ocp_novtk.libs/TKDESTL-861b3f30020f308bf0f5165301446a4e.dll",
+          "sha256": "b1d25de83ea6ff1d63d9639550f953c187aa9c7017427d4bfe6dffaa6677c0e2",
+          "size": 131072
+        },
+        {
+          "identity_status": "NOT_COMPONENT_REVIEWED",
+          "member": "cadquery_ocp_novtk.libs/TKDEVRML-8de042b81d80f6641d5652e384713b7f.dll",
+          "sha256": "da94535b92b11345b4e8f44084103a87621f28ef350e9403f8ac024ed0e9c995",
+          "size": 521728
+        },
+        {
+          "identity_status": "NOT_COMPONENT_REVIEWED",
+          "member": "cadquery_ocp_novtk.libs/TKernel-4441eb3ced8f02d5dc5ded0fdef250c6.dll",
+          "sha256": "c409a6e6b9afa2a815ac4858fea4abc68ad64ac7a813e03b154bbe9b31d7cbf1",
+          "size": 1703424
+        },
+        {
+          "identity_status": "NOT_COMPONENT_REVIEWED",
+          "member": "cadquery_ocp_novtk.libs/TKExpress-5a7261e1b448ee6571fc47c5e5725dcd.dll",
+          "sha256": "47c10ed5c857a65a6b53411e3cc300e6555bbf87a5ccb94a95db88b799816ec0",
+          "size": 324096
+        },
+        {
+          "identity_status": "NOT_COMPONENT_REVIEWED",
+          "member": "cadquery_ocp_novtk.libs/TKFeat-80bb0372df2683eecc939bcce1802700.dll",
+          "sha256": "0452e20893e7431f4d9df8b7695fb513a41318c3b7bf9f800f1200eb0cabef0d",
+          "size": 1020928
+        },
+        {
+          "identity_status": "NOT_COMPONENT_REVIEWED",
+          "member": "cadquery_ocp_novtk.libs/TKFillet-11425bd1c4653c716f2cd988967f6233.dll",
+          "sha256": "3c7608aa9ded5cbf1f819ee2890e5907737bbe8d22f2816a055b252ef7051d2a",
+          "size": 2333184
+        },
+        {
+          "identity_status": "NOT_COMPONENT_REVIEWED",
+          "member": "cadquery_ocp_novtk.libs/TKG2d-d0a28b0cdf5cca8ed2949b53d8e5d8f8.dll",
+          "sha256": "ff9d40a14d5265ad4d3a3a8f6383574f236dc10eed6f2f9a61c038e77a26a254",
+          "size": 436736
+        },
+        {
+          "identity_status": "NOT_COMPONENT_REVIEWED",
+          "member": "cadquery_ocp_novtk.libs/TKG3d-416e941a5fc40a0d18e99c531a6c0218.dll",
+          "sha256": "e399a97dbd65a3d9d21bd110389f3fb543876a98c8a4b69d74c5f8adaea7953c",
+          "size": 1347584
+        },
+        {
+          "identity_status": "NOT_COMPONENT_REVIEWED",
+          "member": "cadquery_ocp_novtk.libs/TKGeomAlgo-24486a38ab6f34f881d4e8300e9019e7.dll",
+          "sha256": "48326643f05d79452a692506efa30a244e8b8d62fe088042eb3791b0fc615cda",
+          "size": 4498944
+        },
+        {
+          "identity_status": "NOT_COMPONENT_REVIEWED",
+          "member": "cadquery_ocp_novtk.libs/TKGeomBase-1856c797f3289163541b89115ec81835.dll",
+          "sha256": "12390b12309674a3b6be16e812c414136d483a50d2f5e8ab77cd333924e6da23",
+          "size": 4388864
+        },
+        {
+          "identity_status": "NOT_COMPONENT_REVIEWED",
+          "member": "cadquery_ocp_novtk.libs/TKHLR-d5d4aecf413570480c81f9ad78c1886d.dll",
+          "sha256": "767e37ebde3b4573c7e5e1753d1a6755d7ef354cbc566b485cdc42dc87c3ba36",
+          "size": 1020928
+        },
+        {
+          "identity_status": "NOT_COMPONENT_REVIEWED",
+          "member": "cadquery_ocp_novtk.libs/TKLCAF-2fd60034432289c8462875e022e93ab0.dll",
+          "sha256": "df43fe73f357498e29c81ddf979366522e22f4d7923b87874ccf0b5c8edf5313",
+          "size": 698880
+        },
+        {
+          "identity_status": "NOT_COMPONENT_REVIEWED",
+          "member": "cadquery_ocp_novtk.libs/TKMath-8a3f9a82359c32f78f2b7ecb69a12009.dll",
+          "sha256": "0f67a3a71f42d8dab1602569fcd7347594d5a4bfb237c43a646bd807e297f569",
+          "size": 1413120
+        },
+        {
+          "identity_status": "NOT_COMPONENT_REVIEWED",
+          "member": "cadquery_ocp_novtk.libs/TKMesh-e38c062fde3e5c16908af34d857cb31a.dll",
+          "sha256": "b02ad2b3590539c60dd58fbb65f7eb9b25f22717c21f5fa22fa396d880ec76e9",
+          "size": 664064
+        },
+        {
+          "identity_status": "NOT_COMPONENT_REVIEWED",
+          "member": "cadquery_ocp_novtk.libs/TKMeshVS-39ce10b6d9cec44ac83d0273abdf2d3b.dll",
+          "sha256": "b61be71ac21e6b5d1e2968d9d10d106ff7991a42e443f5acf9653973b1989841",
+          "size": 323584
+        },
+        {
+          "identity_status": "NOT_COMPONENT_REVIEWED",
+          "member": "cadquery_ocp_novtk.libs/TKOffset-60894de068dc235a88aa2af8f0b850eb.dll",
+          "sha256": "05a052b13acfb3cce18659cea0df1dc74bca338e9cb45e75847584e76e0822a6",
+          "size": 1790976
+        },
+        {
+          "identity_status": "NOT_COMPONENT_REVIEWED",
+          "member": "cadquery_ocp_novtk.libs/TKOpenGl-f225ada1b1aaef1928e8b7e074c48cc3.dll",
+          "sha256": "25bb0afdd863232ff557dc65d12aabb635d958c6aa8dd18bfc3e6582246d1d44",
+          "size": 1333248
+        },
+        {
+          "identity_status": "NOT_COMPONENT_REVIEWED",
+          "member": "cadquery_ocp_novtk.libs/TKPrim-aae815b4092c7b8375b61cd98e22f9f8.dll",
+          "sha256": "4d2173068b2f010153a64593d6c946772cba4d9841b2f38c3fb270958ed352fb",
+          "size": 320512
+        },
+        {
+          "identity_status": "NOT_COMPONENT_REVIEWED",
+          "member": "cadquery_ocp_novtk.libs/TKRWMesh-3398094ebfeff1cf3afa2d1608d983e1.dll",
+          "sha256": "b7bb0f3ad7d4418f120313e3359d24697a5f331664167b46c8608d45308bbfc9",
+          "size": 163328
+        },
+        {
+          "identity_status": "NOT_COMPONENT_REVIEWED",
+          "member": "cadquery_ocp_novtk.libs/TKService-dff7fb2efc10f78d5dedb6bd6c0c4a88.dll",
+          "sha256": "9222614a9f4b61973a9e8d1ebf2faa5ae28d08f3c9e6f62c42945fc50d85d543",
+          "size": 1020416
+        },
+        {
+          "identity_status": "NOT_COMPONENT_REVIEWED",
+          "member": "cadquery_ocp_novtk.libs/TKShHealing-b439f70ad4f802fc78d445d77c1bdea0.dll",
+          "sha256": "e0a8d92b3d5155000b83fc35b16afe4f03edb38e30f94063df4a91c8033f517e",
+          "size": 2572800
+        },
+        {
+          "identity_status": "NOT_COMPONENT_REVIEWED",
+          "member": "cadquery_ocp_novtk.libs/TKStd-9dc9645c1f31dd74e12e00a85768e04f.dll",
+          "sha256": "3f87dfdfea14847b69a209fb4beccf25fb8c9c4a1bc31bc1ade209465c8800e5",
+          "size": 607744
+        },
+        {
+          "identity_status": "NOT_COMPONENT_REVIEWED",
+          "member": "cadquery_ocp_novtk.libs/TKStdL-9f6b98c2dfd3f95fab1486a93bc43338.dll",
+          "sha256": "9ed2cf6b81761ce4c4aa3423427c0fe1cb31909ebb846196502233b28e449070",
+          "size": 226304
+        },
+        {
+          "identity_status": "NOT_COMPONENT_REVIEWED",
+          "member": "cadquery_ocp_novtk.libs/TKTObj-6159c0ddb026029f3fa624571b2acea1.dll",
+          "sha256": "71c20ae54931d58a91d55d7868c54a399a3a3104b255131b5f0d1afac2ba1948",
+          "size": 210944
+        },
+        {
+          "identity_status": "NOT_COMPONENT_REVIEWED",
+          "member": "cadquery_ocp_novtk.libs/TKTopAlgo-52fac0922b9d7bbdc85f7e5297e453ec.dll",
+          "sha256": "5ec1f71c1c7b02bfb669c9402362fb1342dc29c75eedc4cd13cd871814e3ccce",
+          "size": 2508800
+        },
+        {
+          "identity_status": "NOT_COMPONENT_REVIEWED",
+          "member": "cadquery_ocp_novtk.libs/TKV3d-a5f8bf6d40518ce117631c6104014dbf.dll",
+          "sha256": "205c1b0f0ad8c4626afb3470d4bd6dea0e68f7846e6bd9cf5d6213f07e58002f",
+          "size": 2541056
+        },
+        {
+          "identity_status": "NOT_COMPONENT_REVIEWED",
+          "member": "cadquery_ocp_novtk.libs/TKVCAF-edf2a472f8a8f8234775a665580ab806.dll",
+          "sha256": "72103db55761c6d93c533935e1cdfc6662159bdc61c0d4653ce1700d92ee4208",
+          "size": 205312
+        },
+        {
+          "identity_status": "NOT_COMPONENT_REVIEWED",
+          "member": "cadquery_ocp_novtk.libs/TKXCAF-5ef497f2ebf10c1600e7830136665c78.dll",
+          "sha256": "85a941abff16b3a04d48890182e88dd925dbe2e409654e344de7219efdcded20",
+          "size": 836608
+        },
+        {
+          "identity_status": "NOT_COMPONENT_REVIEWED",
+          "member": "cadquery_ocp_novtk.libs/TKXMesh-ca4f9f515cd3f9d5470183633b6e3c1a.dll",
+          "sha256": "b22480ae14cfd8b776423087e571d61fe8e0dd48eedfa3c03c15d272a81bae05",
+          "size": 16384
+        },
+        {
+          "identity_status": "NOT_COMPONENT_REVIEWED",
+          "member": "cadquery_ocp_novtk.libs/TKXml-80817391172c9337ed980fb7e4a24d54.dll",
+          "sha256": "a1709585b71a0f2363a9ce3fe5bda75427466f387429d3b4a3b6bd7973bfa95c",
+          "size": 169984
+        },
+        {
+          "identity_status": "NOT_COMPONENT_REVIEWED",
+          "member": "cadquery_ocp_novtk.libs/TKXmlL-415bf69865e6679b68e561e51a4f72fc.dll",
+          "sha256": "c36e59ae82d817eab5429436f36cbc765272b5fd3a804ca549f652a23f21cd29",
+          "size": 350208
+        },
+        {
+          "identity_status": "NOT_COMPONENT_REVIEWED",
+          "member": "cadquery_ocp_novtk.libs/TKXmlTObj-a443fa190fc1f36990495e09c10f47cb.dll",
+          "sha256": "329a5bcd896470d20723b9885c6ce31c862f96d8c28049d8f0bad4effdec69f7",
+          "size": 53760
+        },
+        {
+          "identity_status": "NOT_COMPONENT_REVIEWED",
+          "member": "cadquery_ocp_novtk.libs/TKXmlXCAF-d6234e0aafb5cc44b17cef99df690316.dll",
+          "sha256": "9d1391ab573d4c45777e6c58e67d883cbc328facdc37b415d894f19cf02fb3ee",
+          "size": 143360
+        },
+        {
+          "identity_status": "NOT_COMPONENT_REVIEWED",
+          "member": "cadquery_ocp_novtk.libs/TKXSBase-b2e3060facaeef1d07def8c30b72e806.dll",
+          "sha256": "f2c8beb0d88d4535a36b3598c721d1f31908d024dcc3732b65fadb52e891332f",
+          "size": 1742848
+        },
+        {
+          "identity_status": "NOT_COMPONENT_REVIEWED",
+          "member": "cadquery_ocp_novtk.libs/vcomp140-95d4ce4a6802d1e18b5e0e1722cc30ea.dll",
+          "sha256": "95d4ce4a6802d1e18b5e0e1722cc30ea72ca7e033f83828f05c0b7b993fe7cbf",
+          "size": 212920
+        },
+        {
+          "identity_status": "NOT_COMPONENT_REVIEWED",
+          "member": "cadquery_ocp_novtk.libs/zlib-f4f26ea6300c8449daad4650915e01ac.dll",
+          "sha256": "f4f26ea6300c8449daad4650915e01ac80aafc6ca8b73a50be450f1fb66cdd63",
+          "size": 90624
+        },
+        {
+          "identity_status": "NOT_COMPONENT_REVIEWED",
+          "member": "cadquery_ocp_novtk.libs/zstd-fcc1dc71b7df5489e37a78abab9c31d7.dll",
+          "sha256": "fcc1dc71b7df5489e37a78abab9c31d763570d55e93c67f388058c41c0d7b8df",
+          "size": 657408
+        },
+        {
+          "identity_status": "NOT_COMPONENT_REVIEWED",
+          "member": "OCP/OCP.cp312-win_amd64.pyd",
+          "sha256": "34d7ad89345ae1d5409a2ed828ebc065b3abf9f6b26f073df0ba0f1d5959d0f4",
+          "size": 108014080
+        }
+      ],
+      "notice_named_members": [],
+      "sha256": "af3ecbeaf28ee4df17a07c8a3b88e3009bb820c7f4c7d7d1732745d064c96781",
+      "size": 47747323,
+      "url": "https://files.pythonhosted.org/packages/29/ad/ffa8c0f9fc2128d77d24e3afdd778cc699365eed66a895ded249cfdca5ac/cadquery_ocp_novtk-8.0.1.1.0-cp312-cp312-win_amd64.whl"
+    },
+    {
+      "archive": "cadquery_ocp_proxy-8.0.1.1.0-py3-none-any.whl",
+      "native_members": [],
+      "notice_named_members": [],
+      "sha256": "98c71bb60cfb651afe179b134ab88580fd75384fce0cc6d633f727002cd18abd",
+      "size": 3250,
+      "url": "https://files.pythonhosted.org/packages/13/5e/29c3d8c4b290dee82387468a33ac06c663518a167963cdb9ff48e6bbd8f9/cadquery_ocp_proxy-8.0.1.1.0-py3-none-any.whl"
+    },
+    {
+      "archive": "slvs-3.2-cp312-cp312-win_amd64.whl",
+      "native_members": [
+        {
+          "identity_status": "NOT_COMPONENT_REVIEWED",
+          "member": "slvs/solvespace.pyd",
+          "sha256": "86fa3599cf2b5eba37979043bafe6186728cacc78ccc9ac1590c565bcdc8f772",
+          "size": 608256
+        }
+      ],
+      "notice_named_members": [
+        "slvs-3.2.dist-info/licenses/COPYING.txt"
+      ],
+      "sha256": "e97f29eda8d7cf15ee2bc4fbdda47ecbd23a80854965e12e28e9a358bd4f971c",
+      "size": 285842,
+      "url": "https://files.pythonhosted.org/packages/70/d4/74bb1e5a017bdcf98eabb9718d8904a43ccb4a2c7c956682d20a149306c3/slvs-3.2-cp312-cp312-win_amd64.whl"
+    }
+  ]
+}

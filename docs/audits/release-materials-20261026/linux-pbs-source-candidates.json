@@ -1,0 +1,240 @@
+{
+  "actions": [
+    {
+      "issue_id": "pbs-bzip2.source",
+      "remaining": "Archive presence may be closed only after fetch/hash/source inventory and notices review. Original binary correspondence remains separate; zlib candidates require applicability review.",
+      "source_candidates": [
+        {
+          "key": "bzip2",
+          "library_names": [
+            "bz2"
+          ],
+          "license_file": "LICENSE.bzip2.txt",
+          "licenses": [
+            "bzip2-1.0.6"
+          ],
+          "sha256": "ab5a03176ee106d3f0fa90e381da478ddae405918153cca248e682cd0c4a2269",
+          "size": 810029,
+          "upstream_url": "https://sourceware.org/pub/bzip2/bzip2-1.0.8.tar.gz",
+          "url": "https://astral-sh.github.io/mirror/files/bzip2-1.0.8.tar.gz",
+          "version": "1.0.8"
+        }
+      ],
+      "status": "PINNED_DECLARED_SOURCE_AVAILABLE_NOT_YET_MATERIALIZED"
+    },
+    {
+      "issue_id": "pbs-libedit.source",
+      "remaining": "Archive presence may be closed only after fetch/hash/source inventory and notices review. Original binary correspondence remains separate; zlib candidates require applicability review.",
+      "source_candidates": [
+        {
+          "key": "libedit",
+          "library_names": [
+            "edit"
+          ],
+          "license_file": "LICENSE.libedit.txt",
+          "licenses": [
+            "BSD-3-Clause"
+          ],
+          "sha256": "5f0573349d77c4a48967191cdd6634dd7aa5f6398c6a57fe037cc02696d6099f",
+          "size": 538611,
+          "url": "https://thrysoee.dk/editline/libedit-20240808-3.1.tar.gz",
+          "version": "20240808-3.1"
+        }
+      ],
+      "status": "PINNED_DECLARED_SOURCE_AVAILABLE_NOT_YET_MATERIALIZED"
+    },
+    {
+      "issue_id": "pbs-libffi.source",
+      "remaining": "Archive presence may be closed only after fetch/hash/source inventory and notices review. Original binary correspondence remains separate; zlib candidates require applicability review.",
+      "source_candidates": [
+        {
+          "key": "libffi",
+          "library_names": [
+            "ffi"
+          ],
+          "license_file": "LICENSE.libffi.txt",
+          "licenses": [
+            "MIT"
+          ],
+          "sha256": "7da3e2d9a171eb0a038f592ecad3ff2bb2550f3496d87b3b29ad0cf4430c0db4",
+          "size": 1581626,
+          "url": "https://github.com/libffi/libffi/releases/download/v3.8.0/libffi-3.8.0.tar.gz",
+          "version": "3.8.0"
+        }
+      ],
+      "status": "PINNED_DECLARED_SOURCE_AVAILABLE_NOT_YET_MATERIALIZED"
+    },
+    {
+      "issue_id": "pbs-mpdecimal.source",
+      "remaining": "Archive presence may be closed only after fetch/hash/source inventory and notices review. Original binary correspondence remains separate; zlib candidates require applicability review.",
+      "source_candidates": [
+        {
+          "key": "mpdecimal",
+          "library_names": [
+            "mpdec"
+          ],
+          "license_file": "LICENSE.mpdecimal.txt",
+          "licenses": [
+            "BSD-2-Clause"
+          ],
+          "sha256": "942445c3245b22730fd41a67a7c5c231d11cb1b9936b9c0f76334fb7d0b4468c",
+          "size": 315325,
+          "upstream_url": "https://www.bytereef.org/software/mpdecimal/releases/mpdecimal-4.0.0.tar.gz",
+          "url": "https://astral-sh.github.io/mirror/files/mpdecimal-4.0.0.tar.gz",
+          "version": "4.0.0"
+        }
+      ],
+      "status": "PINNED_DECLARED_SOURCE_AVAILABLE_NOT_YET_MATERIALIZED"
+    },
+    {
+      "issue_id": "pbs-ncurses.source",
+      "remaining": "Archive presence may be closed only after fetch/hash/source inventory and notices review. Original binary correspondence remains separate; zlib candidates require applicability review.",
+      "source_candidates": [
+        {
+          "key": "ncurses",
+          "library_names": [
+            "ncurses",
+            "ncursesw",
+            "panel",
+            "panelw"
+          ],
+          "license_file": "LICENSE.ncurses.txt",
+          "licenses": [
+            "X11"
+          ],
+          "sha256": "136d91bc269a9a5785e5f9e980bc76ab57428f604ce3e5a5a90cebc767971cc6",
+          "size": 3688489,
+          "upstream_url": "https://ftp.gnu.org/pub/gnu/ncurses/ncurses-6.5.tar.gz",
+          "url": "https://astral-sh.github.io/mirror/files/ncurses-6.5.tar.gz",
+          "version": "6.5"
+        }
+      ],
+      "status": "PINNED_DECLARED_SOURCE_AVAILABLE_NOT_YET_MATERIALIZED"
+    },
+    {
+      "issue_id": "pbs-openssl-3.5.source",
+      "remaining": "Archive presence may be closed only after fetch/hash/source inventory and notices review. Original binary correspondence remains separate; zlib candidates require applicability review.",
+      "source_candidates": [
+        {
+          "_comment": "Remember to update OPENSSL_VERSION_INFO in pythonbuild/disttests/ whenever upgrading.",
+          "key": "openssl-3.5",
+          "library_names": [
+            "crypto",
+            "ssl"
+          ],
+          "license_file": "LICENSE.openssl-3.txt",
+          "licenses": [
+            "Apache-2.0"
+          ],
+          "sha256": "603f5602e2eef00d77fbd429d34dcd5822bb301757a1bc9cdb24c670f1eb859a",
+          "size": 53279637,
+          "url": "https://github.com/openssl/openssl/releases/download/openssl-3.5.9/openssl-3.5.9.tar.gz",
+          "version": "3.5.9"
+        }
+      ],
+      "status": "PINNED_DECLARED_SOURCE_AVAILABLE_NOT_YET_MATERIALIZED"
+    },
+    {
+      "issue_id": "pbs-sqlite.source",
+      "remaining": "Archive presence may be closed only after fetch/hash/source inventory and notices review. Original binary correspondence remains separate; zlib candidates require applicability review.",
+      "source_candidates": [
+        {
+          "_comment": "Remember to update pythonbuild/disttests/ when version changed.",
+          "actual_version": "3.53.1.0",
+          "key": "sqlite",
+          "library_names": [
+            "sqlite3"
+          ],
+          "license_file": "LICENSE.sqlite.txt",
+          "license_public_domain": true,
+          "licenses": [],
+          "sha256": "83e6b2020a034e9a7ad4a72feea59e1ad52f162e09cbd26735a3ffb98359fc4f",
+          "size": 3275272,
+          "url": "https://www.sqlite.org/2026/sqlite-autoconf-3530100.tar.gz",
+          "version": "3530100"
+        }
+      ],
+      "status": "PINNED_DECLARED_SOURCE_AVAILABLE_NOT_YET_MATERIALIZED"
+    },
+    {
+      "issue_id": "pbs-uuid.source",
+      "remaining": "Archive presence may be closed only after fetch/hash/source inventory and notices review. Original binary correspondence remains separate; zlib candidates require applicability review.",
+      "source_candidates": [
+        {
+          "key": "uuid",
+          "library_names": [
+            "uuid"
+          ],
+          "license_file": "LICENSE.libuuid.txt",
+          "licenses": [
+            "BSD-3-Clause"
+          ],
+          "sha256": "46af3275291091009ad7f1b899de3d0cea0252737550e7919d17237997db5644",
+          "size": 318256,
+          "url": "https://sourceforge.net/projects/libuuid/files/libuuid-1.0.3.tar.gz",
+          "version": "1.0.3"
+        }
+      ],
+      "status": "PINNED_DECLARED_SOURCE_AVAILABLE_NOT_YET_MATERIALIZED"
+    },
+    {
+      "issue_id": "pbs-xz.source",
+      "remaining": "Archive presence may be closed only after fetch/hash/source inventory and notices review. Original binary correspondence remains separate; zlib candidates require applicability review.",
+      "source_candidates": [
+        {
+          "_comment": "IMPORTANT: xz 5.6.0 was released with a backdoor (CVE-2024-3094). This has been resolved. Be cautious before taking any xz upgrades given this past behavior. liblzma is licensed as 0BSD. Other parts of code have different licenses. But we only use liblzma.",
+          "key": "xz",
+          "library_names": [
+            "lzma"
+          ],
+          "license_file": "LICENSE.liblzma.txt",
+          "licenses": [
+            "0BSD"
+          ],
+          "sha256": "0014c7886930454fe8bd4228665b51af55eeae560ea135c9c4cd33f55b2591d9",
+          "size": 2799797,
+          "url": "https://github.com/tukaani-project/xz/releases/download/v5.8.4/xz-5.8.4.tar.gz",
+          "version": "5.8.4"
+        }
+      ],
+      "status": "PINNED_DECLARED_SOURCE_AVAILABLE_NOT_YET_MATERIALIZED"
+    },
+    {
+      "issue_id": "pbs-zlib.source",
+      "remaining": "Archive presence may be closed only after fetch/hash/source inventory and notices review. Original binary correspondence remains separate; zlib candidates require applicability review.",
+      "source_candidates": [
+        {
+          "key": "zlib",
+          "library_names": [
+            "z"
+          ],
+          "license_file": "LICENSE.zlib.txt",
+          "licenses": [
+            "Zlib"
+          ],
+          "sha256": "bb329a0a2cd0274d05519d61c667c062e06990d72e125ee2dfa8de64f0119d16",
+          "size": 1502830,
+          "url": "https://github.com/madler/zlib/releases/download/v1.3.2/zlib-1.3.2.tar.gz",
+          "version": "1.3.2"
+        },
+        {
+          "key": "zlib-ng",
+          "library_names": [
+            "z"
+          ],
+          "license_file": "LICENSE.zlib-ng.txt",
+          "licenses": [
+            "Zlib"
+          ],
+          "sha256": "00bbd88709bc416cb96160ab61d3e1c8f76e106799af7328d0fe434dc7dd5004",
+          "size": 2415819,
+          "url": "https://github.com/python/cpython-source-deps/archive/refs/tags/zlib-ng-2.2.4.tar.gz",
+          "version": "2.2.4"
+        }
+      ],
+      "status": "PINNED_DECLARED_SOURCE_AVAILABLE_NOT_YET_MATERIALIZED"
+    }
+  ],
+  "source_metadata": "https://raw.githubusercontent.com/astral-sh/python-build-standalone/9e40cba825ca0997a01cab9f60a0b15ffb976af2/pythonbuild/downloads.json",
+  "status": "NO_SOURCE_GAP_SILENTLY_CLOSED"
+}

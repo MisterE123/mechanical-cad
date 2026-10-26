@@ -1,0 +1,1810 @@
+{
+  "all_sizes_and_sha256_matched": true,
+  "exact_public_copy_mapping_count": 9,
+  "inventory": [
+    {
+      "mode": 420,
+      "path": "licenses/DISTRIBUTION_NOTICE.md",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "0e8394d0a8b9e2c580db3a7032f11bf85b0a2406c6b91413f53be1cdaf84af69",
+      "size": 8164
+    },
+    {
+      "mode": 420,
+      "path": "licenses/INTEGRATED_MATERIALS.md",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "bb5ba38d6488742072e48f23349b522cbf9bf316056dbbd9db98a3c07cc70a8c",
+      "size": 5345
+    },
+    {
+      "mode": 420,
+      "path": "licenses/LibRaw/AAHD-NOTICE.txt",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "096967033e13b762b813fbd6afeaf57d776cbc9124efd97f243b23a5284ccf68",
+      "size": 477
+    },
+    {
+      "mode": 420,
+      "path": "licenses/LibRaw/Adobe-MIT-distribution-rendering.txt",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "508d1b27fe5e674a74b841295b9261d4cffe7690c74ae85dcca32b5c38b40fab",
+      "size": 2389
+    },
+    {
+      "mode": 420,
+      "path": "licenses/LibRaw/COPYRIGHT.txt",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "c73b7105bf94e2342f2aec0b1bd510026a2068d22fe8c0c128deeb7ce88b0c7f",
+      "size": 1105
+    },
+    {
+      "mode": 420,
+      "path": "licenses/LibRaw/DCB-FBDD-NOTICE.txt",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "fa6cdc223c540d9a059068946fe2ce63201d7d9488f40069991b480d82171d3c",
+      "size": 2007
+    },
+    {
+      "mode": 420,
+      "path": "licenses/LibRaw/DHT-NOTICE.txt",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "1e681e2dd153c49c866a901adc941faf0d4ef08c94e1aa5d2d31fd7b4d82f9b8",
+      "size": 475
+    },
+    {
+      "mode": 420,
+      "path": "licenses/LibRaw/LICENSE.CDDL.txt",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "0e3098d2d54a12434715f6679ea408d57da5e8d613c385c58ecc6fe5d30cc81f",
+      "size": 16906
+    },
+    {
+      "mode": 420,
+      "path": "licenses/LibRaw/LICENSE.LGPL.txt",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "eea173a556abac0370461e57e12aab266894ea6be3874c2be05fd87871f75449",
+      "size": 24389
+    },
+    {
+      "mode": 420,
+      "path": "licenses/LibRaw/LibRaw-dcraw-NOTICE.txt",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "65fc785f58e2a3a978f26976b4819f45116e906352d9abd432ac6ec1c92db60b",
+      "size": 725
+    },
+    {
+      "mode": 420,
+      "path": "licenses/LibRaw/X3F-NOTICE.txt",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "080e136a61e0d5271ee5a2d48a9ebd57189ab7c73a70c26e0b44c430e4ff06db",
+      "size": 1730
+    },
+    {
+      "mode": 420,
+      "path": "licenses/berkeley/INTEGRATED_PATHS.json",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "a99696651d229b156a8f824b70d73a90cf833bbb715d4f044a26600411b6152e",
+      "size": 2621
+    },
+    {
+      "mode": 420,
+      "path": "licenses/berkeley/README.md",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "d683f03a69a80230f40c36f6df02a82fe418e5b893dc4d0943d26684af3c8761",
+      "size": 1207
+    },
+    {
+      "mode": 420,
+      "path": "licenses/berkeley/SOURCE_OBTAINMENT.md",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "dc77fcc11b8594dd8293ef624b71441078df336e6b6473cc3ac0388d8ebda051",
+      "size": 9999
+    },
+    {
+      "mode": 420,
+      "path": "licenses/berkeley/notices/Berkeley-DB-6.0.19-LICENSE.txt",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "b78815181a53241f9347c6b47d1031fd669946f863e1edc807a291354cec024b",
+      "size": 7310
+    },
+    {
+      "mode": 420,
+      "path": "licenses/berkeley/notices/CPython-3.12.15-Doc-license.rst",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "341832873fd316a37927e79385093fbbfd40a467428480835fe435a80cadf4e5",
+      "size": 54130
+    },
+    {
+      "mode": 420,
+      "path": "licenses/berkeley/notices/CPython-3.12.15-LICENSE.txt",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "3b2f81fe21d181c499c59a256c8e1968455d6689d269aa85373bfb6af41da3bf",
+      "size": 13936
+    },
+    {
+      "mode": 420,
+      "path": "licenses/berkeley/notices/CPython-LICENSE.txt",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "86e61415828a8b5b06ec8d024e6f086ce155a8b85fd0c419c0ba4dc004e74fdd",
+      "size": 36164
+    },
+    {
+      "mode": 420,
+      "path": "licenses/berkeley/notices/LICENSE.bdb.txt",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "3bdff06e69991c94664f2ef5c5f8096f60b7dbec071756ea6cc26b445e06ec5b",
+      "size": 7293
+    },
+    {
+      "mode": 420,
+      "path": "licenses/berkeley/notices/PBS-LICENSE.txt",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "1f256ecad192880510e84ad60474eab7589218784b9a50bc7ceee34c2b91f1d5",
+      "size": 16725
+    },
+    {
+      "mode": 420,
+      "path": "licenses/berkeley/sources/cpython-linux312-patch-order.txt",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "541093cdb81a62e6c4058629c42d7caf75feb6e1c4e8b9bfce90bf1cbf613114",
+      "size": 804
+    },
+    {
+      "mode": 420,
+      "path": "licenses/distro-source/LibRaw-Adobe-scope.json",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "42131544066ff3bbfede38032206907b04d21617478ae842fdc796fe64e803a8",
+      "size": 2230
+    },
+    {
+      "mode": 420,
+      "path": "licenses/distro-source/PATCH_ORDER.json",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "9aa1f912cd6932858bbb88899a7156d40814343e13a5e1687da2d4a41d3a7b9a",
+      "size": 46974
+    },
+    {
+      "mode": 420,
+      "path": "licenses/distro-source/RECIPIENT_SOURCE_ACCESS.md",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "172ed947db2df6458b6f271ae05e2c4f17bf169604b859a3c0e442241931e2a3",
+      "size": 9746
+    },
+    {
+      "mode": 420,
+      "path": "licenses/distro-source/SOURCE_CORRESPONDENCE.json",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "1ced18c933b4c02f07345676e8ab31c6e9c563d26326d7c783db01c7911e22db",
+      "size": 1393
+    },
+    {
+      "mode": 420,
+      "path": "licenses/distro-source/gcc-8.5.0-sha512.sum.txt",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "027a1a5f28646050cd05aa1c001242d603352e374ff7b3f0350899a8daca27c1",
+      "size": 596
+    },
+    {
+      "mode": 420,
+      "path": "licenses/expat/Expat-2.9.0-COPYING.txt",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "31b15de82aa19a845156169a17a5488bf597e561b2c318d159ed583139b25e87",
+      "size": 1144
+    },
+    {
+      "mode": 420,
+      "path": "licenses/fmt/fmt-6.2.1-LICENSE.rst",
+      "public_acquisition": {
+        "mode": 420,
+        "operation": "copy_verified_whole_download",
+        "origin_evidence_path": "licenses/ocp/SOURCE_IDENTITIES.json",
+        "origin_evidence_sha256": "0f42b8a8a57d1ceadadedbdc0f228b0247564bef7fd5eab50ec259833d76180c",
+        "sha256": "825c9324e70f8c839c8ba910543dd4a7daee243b86ef960594c11381a19980b8",
+        "size": 1408,
+        "url": "https://raw.githubusercontent.com/fmtlib/fmt/6.2.1/LICENSE.rst"
+      },
+      "sha256": "825c9324e70f8c839c8ba910543dd4a7daee243b86ef960594c11381a19980b8",
+      "size": 1408
+    },
+    {
+      "mode": 420,
+      "path": "licenses/freeimage/ACKNOWLEDGEMENTS.txt",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "3ceb805cd5fc8803f1b8f6a9d00bb4daa56e0293984e7e97adeccf5ff9f872a9",
+      "size": 661
+    },
+    {
+      "mode": 420,
+      "path": "licenses/freeimage/SOURCE_AND_BUILD.md",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "1e46af02dd0f5ded55bfd0125d94fe3e4f7265ea27e0aa0e645913bc47d08201",
+      "size": 5468
+    },
+    {
+      "mode": 420,
+      "path": "licenses/freeimage/build-inputs/FreeImage-3.17.0_CVE-2015-0852.patch",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "fd14c603f8e36b1ee74807bb8fb141751402f0cd70e82a473390bcf5583f017f",
+      "size": 6836
+    },
+    {
+      "mode": 420,
+      "path": "licenses/freeimage/build-inputs/FreeImage-3.17.0_doxygen.patch",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "3bbeee43cddf9e68fd65c31536a9a7ba176e5dd56de65307f15aba30e362e30d",
+      "size": 1719
+    },
+    {
+      "mode": 420,
+      "path": "licenses/freeimage/build-inputs/FreeImage-3.17.0_unbundle.patch",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "c84993573424c6adc5980ef189b96618c722c9b13e3b49b8fcb2920222356659",
+      "size": 22185
+    },
+    {
+      "mode": 420,
+      "path": "licenses/freeimage/build-inputs/FreeImage-CVE-2016-5684.patch",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "8333d336df637ada7f860d06c4167ca95abb7e427fd42db5c9483c6e177ece91",
+      "size": 1200
+    },
+    {
+      "mode": 420,
+      "path": "licenses/freeimage/build-inputs/freeimage.spec",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "82b974c6ac9ed637e8349293bfdc936ad60c680fec1a0cdc09f423118a8ea2cc",
+      "size": 8203
+    },
+    {
+      "mode": 420,
+      "path": "licenses/freeimage/derived-spec/license-fi.txt",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "37f80b2998523e0e780cbab2774e1ee7eb4b7945f1ff232f5ece22ce037b6282",
+      "size": 17436
+    },
+    {
+      "mode": 420,
+      "path": "licenses/freeimage/derived-spec/license-gplv2.txt",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "74359bb57c9f87df8c6f26091050dc7a6405d89705f08a2c347e4498bc198f85",
+      "size": 17752
+    },
+    {
+      "mode": 420,
+      "path": "licenses/freeimage/derived-spec/license-gplv3.txt",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "0f0deb1e4fca2dab6cc342811ee456fe128c75b2da5afaa9ec761cba3824093b",
+      "size": 34655
+    },
+    {
+      "mode": 420,
+      "path": "licenses/freeimage/original/README.linux",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "ceee0928cbae349d2fd0512445477822b96204da66d29e83ef1a261e5c0feded",
+      "size": 2072
+    },
+    {
+      "mode": 420,
+      "path": "licenses/freeimage/original/Source/FreeImage/NNQuantizer.cpp.txt",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "bdeeaa381c17eca692abcea586d86af2aa2053100a296f168c0c9d35ea1ef9b0",
+      "size": 14297
+    },
+    {
+      "mode": 420,
+      "path": "licenses/freeimage/original/Source/FreeImage/PSDParser.cpp.txt",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "f936ddc9337e440be00373a37d22718aaa19bf2978c9ec7a16f4f44a5868e1cb",
+      "size": 30565
+    },
+    {
+      "mode": 420,
+      "path": "licenses/freeimage/original/Source/FreeImage/PSDParser.h.txt",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "4d5db4e77321ea24101b894ac6045da03dce065d8c340022b2929c12ea333989",
+      "size": 8946
+    },
+    {
+      "mode": 420,
+      "path": "licenses/freeimage/original/Source/FreeImage/PluginPICT.cpp.txt",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "f443beb5fd949fc211c122841d610fa77ed26596b1020be811ff877bf07b048e",
+      "size": 39743
+    },
+    {
+      "mode": 420,
+      "path": "licenses/freeimage/original/Source/FreeImage/PluginPSD.cpp.txt",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "69d4559ea2250453ff27282371deed166ee08d5efc697996f72f7697f7781879",
+      "size": 3530
+    },
+    {
+      "mode": 420,
+      "path": "licenses/freeimage/original/license-fi.txt",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "0bb9a3123297c73ae6e19c70459fb0e58f313f67ca63176fd43f8e77668b8243",
+      "size": 17577
+    },
+    {
+      "mode": 420,
+      "path": "licenses/freeimage/original/license-gplv2.txt",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "d51615a1a47f1ddbb027920d60d3fc30a00e1284c795a47857883e641349fadf",
+      "size": 17878
+    },
+    {
+      "mode": 420,
+      "path": "licenses/freeimage/original/license-gplv3.txt",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "084be110e3e8757d8e6945cda1fbc7e5073bbe688dc19b92c0d8440155d8e282",
+      "size": 34801
+    },
+    {
+      "mode": 420,
+      "path": "licenses/libgomp/COPYING.RUNTIME.txt",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "9d6b43ce4d8de0c878bf16b54d8e7a10d9bd42b75178153e3af6a815bdc90f74",
+      "size": 3324
+    },
+    {
+      "mode": 420,
+      "path": "licenses/libgomp/COPYING3.txt",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "8ceb4b9ee5adedde47b31e975c1d90c73ad27b6b165a1dcd80c7c545eb65b903",
+      "size": 35147
+    },
+    {
+      "mode": 420,
+      "path": "licenses/libgomp/libgomp-header-source-notice.txt",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "0fbd6fcdfa137bc1a49721b42d8b2177c618195781bea18f3030c2317ad70414",
+      "size": 37215
+    },
+    {
+      "mode": 420,
+      "path": "licenses/linux-private/private-expat-debian-copyright.txt",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "60919fe1a156395ff14511bb6ff79756c50ade2fff59ac60c9bae1d8a7fe6292",
+      "size": 1756
+    },
+    {
+      "mode": 420,
+      "path": "licenses/linux-private/private-zlib-debian-copyright.txt",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "9e5b96d63773a5d177ba264254390f792be07e41748ebd94730981c6cac31cc6",
+      "size": 2927
+    },
+    {
+      "mode": 420,
+      "path": "licenses/occt/LICENSE_LGPL_21.txt",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "e237fa56668030e928551ddd60f05df5fe957f75eab874bbd017e085ed722e7c",
+      "size": 26434
+    },
+    {
+      "mode": 420,
+      "path": "licenses/occt/MODIFICATIONS.md",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "f2ab662a66ab5c566370604e7fa4be07bf9b168953d1a65cc28b1f95cea4d163",
+      "size": 3240
+    },
+    {
+      "mode": 420,
+      "path": "licenses/occt/OCCT_LGPL_EXCEPTION.txt",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "04580a884ea6cea294402649ff7b5cbb167d47462d1340a4ed33e550db10a81b",
+      "size": 663
+    },
+    {
+      "mode": 420,
+      "path": "licenses/occt/dox/license.md",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "8bd471f4dc05b39ef292ce8817a2adfc7636b7ff268b96446f10d5b0f36813f4",
+      "size": 27976
+    },
+    {
+      "mode": 420,
+      "path": "licenses/occt/switch-vtk-freetype-cmake-order.patch",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "8f5564e9166739201ebc77eae7c5c8a09443624d82ab06ad25968f701ae0d764",
+      "size": 1633
+    },
+    {
+      "mode": 420,
+      "path": "licenses/ocp-dependencies/ACKNOWLEDGEMENTS.txt",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "06446011c14212e5238332da5b804d5c47c498127e29b10fe110c583dd2f7672",
+      "size": 167
+    },
+    {
+      "mode": 420,
+      "path": "licenses/ocp-dependencies/ocp-bzip2-libs/NOTICE.txt",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "c307a103533fb40ba94d821704d2046c2bedffd7baf0848d9e179f1cca24fc25",
+      "size": 2583
+    },
+    {
+      "mode": 420,
+      "path": "licenses/ocp-dependencies/ocp-fontconfig/NOTICE.txt",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "412e98d9149caa38dad2215c117189c4569480589560de18032d9f0222c0c656",
+      "size": 1686
+    },
+    {
+      "mode": 420,
+      "path": "licenses/ocp-dependencies/ocp-freetype/NOTICE.txt",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "4ffcc0b7a224d5c658b348d340f59fa10947c1261167cf28a03067c7b6d602c5",
+      "size": 49411
+    },
+    {
+      "mode": 420,
+      "path": "licenses/ocp-dependencies/ocp-ilmbase/NOTICE.txt",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "4cda33da48df1cfa3ca232bc0b50dae5f93bda08d4f846ac405a34fae7ba6152",
+      "size": 84093
+    },
+    {
+      "mode": 420,
+      "path": "licenses/ocp-dependencies/ocp-jasper-libs/NOTICE.txt",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "348f5d9d652b2c02366bb6516bd04e9c4ff7dfed67148a277a1dc287b4400a63",
+      "size": 3131
+    },
+    {
+      "mode": 420,
+      "path": "licenses/ocp-dependencies/ocp-jxrlib/NOTICE.txt",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "ea94af7a8126958c8873c1f48085a7499cc60bc7666cd01412a4275376b1c27f",
+      "size": 13004
+    },
+    {
+      "mode": 420,
+      "path": "licenses/ocp-dependencies/ocp-lcms2/NOTICE.txt",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "280cc547d8502506dfa30429a2e28ae7bd88f5911ae601d3a0483a0bf8617a19",
+      "size": 1432
+    },
+    {
+      "mode": 420,
+      "path": "licenses/ocp-dependencies/ocp-libjpeg-turbo/NOTICE.txt",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "97efbb3da4e42b145f355787a0a002dddf6c30a50e34c7f85e236d3b26080059",
+      "size": 14179
+    },
+    {
+      "mode": 420,
+      "path": "licenses/ocp-dependencies/ocp-libpng/NOTICE.txt",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "61ee8ec96678ca3caad7d32d6a09725b2f3b7d634817565a02b94c4e3f31b13c",
+      "size": 11832
+    },
+    {
+      "mode": 420,
+      "path": "licenses/ocp-dependencies/ocp-libuuid/NOTICE.txt",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "7cb6cbcb3185a66b652d445de7a3d901e2e5217f8939f561098cf00bf9969c0f",
+      "size": 29106
+    },
+    {
+      "mode": 420,
+      "path": "licenses/ocp-dependencies/ocp-libwebp/NOTICE.txt",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "7c7f22404e6567749eb95a04dbc3c0e51c520c6466553df53dd8b61aa21d7ee8",
+      "size": 3370
+    },
+    {
+      "mode": 420,
+      "path": "licenses/ocp-dependencies/ocp-openexr-libs/NOTICE.txt",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "e388755808197b4fb27a1129c47da39406c7fde0e6445fb3f2f3c8edc1ca9267",
+      "size": 208463
+    },
+    {
+      "mode": 420,
+      "path": "licenses/ocp-dependencies/ocp-openjpeg2/NOTICE.txt",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "d5e423b4d9eea5096f4ee2ab31417f19a9c329bdc198a5d3f2dd587f17373966",
+      "size": 2479
+    },
+    {
+      "mode": 420,
+      "path": "licenses/ocp-dependencies/ocp-tiff/NOTICE.txt",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "a8066195c8b66616a5c8d6d6960cb09d1504b4ad18ee364c10f477dea35cef4e",
+      "size": 29741
+    },
+    {
+      "mode": 420,
+      "path": "licenses/ocp-dependencies/ocp-xz-libs/NOTICE.txt",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "e2806183a35a43cbb47a500e8a96c7001c0a4e0929597bc0762d3ce8991e77e8",
+      "size": 3433
+    },
+    {
+      "mode": 420,
+      "path": "licenses/ocp/BUILD_INPUTS.json",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "964950ec77ccccc60312389736589ac25c7f99c6896d72510183a455805c1040",
+      "size": 6778
+    },
+    {
+      "mode": 420,
+      "path": "licenses/ocp/BUILD_LINUX.md",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "409aea6f167eb59cc8457fa92222b8d98820c5247db7e034e75fef0bf769ae5a",
+      "size": 13060
+    },
+    {
+      "mode": 420,
+      "path": "licenses/ocp/OCP-8.0.1.1-LICENSE.txt",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "a13caea71627202ad33cc4cafafdd18e667e16716488f8d9c568127121fb89fd",
+      "size": 11346
+    },
+    {
+      "mode": 420,
+      "path": "licenses/ocp/SOURCE_IDENTITIES.json",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "0f42b8a8a57d1ceadadedbdc0f228b0247564bef7fd5eab50ec259833d76180c",
+      "size": 2428
+    },
+    {
+      "mode": 420,
+      "path": "licenses/ocp/build-system-LICENSE.txt",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4",
+      "size": 11357
+    },
+    {
+      "mode": 420,
+      "path": "licenses/ocp/build-system-eace4e42-LICENSE.txt",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4",
+      "size": 11357
+    },
+    {
+      "mode": 420,
+      "path": "licenses/project/4d7df8c85202109c6cd4808a4c9d6d28d23ac278/LICENSE",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986",
+      "size": 35149
+    },
+    {
+      "mode": 420,
+      "path": "licenses/project/4d7df8c85202109c6cd4808a4c9d6d28d23ac278/THIRD_PARTY_NOTICES.md",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "2678d5d3c776a1468dd609dc4e753b9c157f36a74c53a40e6b180702952261fa",
+      "size": 6550
+    },
+    {
+      "mode": 420,
+      "path": "licenses/project/7013a025b3526581ef733f9ab03da1d43557d189/LICENSE",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986",
+      "size": 35149
+    },
+    {
+      "mode": 420,
+      "path": "licenses/project/7013a025b3526581ef733f9ab03da1d43557d189/THIRD_PARTY_NOTICES.md",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "2678d5d3c776a1468dd609dc4e753b9c157f36a74c53a40e6b180702952261fa",
+      "size": 6550
+    },
+    {
+      "mode": 420,
+      "path": "licenses/project/84127aa30c1fd67f0fd02f0136114dab916d632c/LICENSE",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986",
+      "size": 35149
+    },
+    {
+      "mode": 420,
+      "path": "licenses/project/84127aa30c1fd67f0fd02f0136114dab916d632c/THIRD_PARTY_NOTICES.md",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "2678d5d3c776a1468dd609dc4e753b9c157f36a74c53a40e6b180702952261fa",
+      "size": 6550
+    },
+    {
+      "mode": 420,
+      "path": "licenses/project/LICENSE",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986",
+      "size": 35149
+    },
+    {
+      "mode": 420,
+      "path": "licenses/project/THIRD_PARTY_NOTICES.md",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "2678d5d3c776a1468dd609dc4e753b9c157f36a74c53a40e6b180702952261fa",
+      "size": 6550
+    },
+    {
+      "mode": 420,
+      "path": "licenses/project/fab775ebd5e5de247a6603c530ac76661a74027b/LICENSE",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986",
+      "size": 35149
+    },
+    {
+      "mode": 420,
+      "path": "licenses/project/fab775ebd5e5de247a6603c530ac76661a74027b/THIRD_PARTY_NOTICES.md",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "2678d5d3c776a1468dd609dc4e753b9c157f36a74c53a40e6b180702952261fa",
+      "size": 6550
+    },
+    {
+      "mode": 420,
+      "path": "licenses/project/fb099b03d1383b14d5ad5e6d6b209a60fe205972/LICENSE",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986",
+      "size": 35149
+    },
+    {
+      "mode": 420,
+      "path": "licenses/project/fb099b03d1383b14d5ad5e6d6b209a60fe205972/THIRD_PARTY_NOTICES.md",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "2678d5d3c776a1468dd609dc4e753b9c157f36a74c53a40e6b180702952261fa",
+      "size": 6550
+    },
+    {
+      "mode": 420,
+      "path": "licenses/project/icons-Apache-2.0.txt",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+      "size": 11358
+    },
+    {
+      "mode": 420,
+      "path": "licenses/project/icons-GPL-3.0-or-later.txt",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986",
+      "size": 35149
+    },
+    {
+      "mode": 420,
+      "path": "licenses/project/icons-NOTICE.txt",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "b1c8186d56129307d47d9c5c3639ece67fc0f82f118990b85d0b53fbf92a1d3f",
+      "size": 1345
+    },
+    {
+      "mode": 420,
+      "path": "licenses/project/palette-shapes-NOTICE.txt",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "46448798a6fb9368591273b32e06141ecfb33988283bc50321249fca04e01dcb",
+      "size": 963
+    },
+    {
+      "mode": 420,
+      "path": "licenses/provenance/CURRENT_FEATURE_BUILD.txt",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "d8cbd12a3525221e6d465246b37e8a277d86dcc0e7f41523b77c7549c9cdbf2c",
+      "size": 560
+    },
+    {
+      "mode": 420,
+      "path": "licenses/provenance/INTEGRATED_MATERIALS_ORIGIN.json",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "cd694e83d177553ce0cded4e24f80ef7c64c818138dd383398382746a202ee2c",
+      "size": 2621
+    },
+    {
+      "mode": 420,
+      "path": "licenses/provenance/current-4d7df8c85202109c6cd4808a4c9d6d28d23ac278-BUILD.txt",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "2be93a707a3f0eab05049a7fd2497cb94dc05c9e23634a7a988fc64df1e61853",
+      "size": 382
+    },
+    {
+      "mode": 420,
+      "path": "licenses/provenance/current-4d7df8c85202109c6cd4808a4c9d6d28d23ac278-source-inventory.json",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "e1626c2a81dd4de3c6fc56fce2c508f9f973a6a6764ac1cb37adc7e8ed9bb27d",
+      "size": 321189
+    },
+    {
+      "mode": 420,
+      "path": "licenses/provenance/current-7013a025b3526581ef733f9ab03da1d43557d189-BUILD.txt",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "c796b46e5181f7c4d57eb690801ee75aa9363ffe6581e762b5d0d1726ab5fac9",
+      "size": 382
+    },
+    {
+      "mode": 420,
+      "path": "licenses/provenance/current-7013a025b3526581ef733f9ab03da1d43557d189-source-inventory.json",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "a3c6fc611770468778754d918b991aed04bdb5a0396f4155886dab8b9366ff83",
+      "size": 321189
+    },
+    {
+      "mode": 420,
+      "path": "licenses/provenance/current-84127aa30c1fd67f0fd02f0136114dab916d632c-BUILD.txt",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "beb5275b6dac7efb9b6252c41c469110c6b70fd4c6bba279798093e48b49338c",
+      "size": 488
+    },
+    {
+      "mode": 420,
+      "path": "licenses/provenance/current-84127aa30c1fd67f0fd02f0136114dab916d632c-runtime-lock.json",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "7cbede5051c768ea6c39c71cc04c9f5af802cba7c833ac7b4af6bf6d1ea21830",
+      "size": 580
+    },
+    {
+      "mode": 420,
+      "path": "licenses/provenance/current-84127aa30c1fd67f0fd02f0136114dab916d632c-source-freeze.json",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "0e24b6e72b4ab4a77c1113e772b5944ae0de698b180956b596619c78c91a1fc4",
+      "size": 406
+    },
+    {
+      "mode": 420,
+      "path": "licenses/provenance/current-84127aa30c1fd67f0fd02f0136114dab916d632c-source-inventory.json",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "73859df9eddfff1f20cf379dd46193f9895df224b5ec245826722a5a03e3d8e2",
+      "size": 248604
+    },
+    {
+      "mode": 420,
+      "path": "licenses/provenance/current-fab775ebd5e5de247a6603c530ac76661a74027b-BUILD.txt",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "69cc654aac810e102beed456185cd3115143a26c2c21b8f4e2bc86bec3b3f5fb",
+      "size": 488
+    },
+    {
+      "mode": 420,
+      "path": "licenses/provenance/current-fab775ebd5e5de247a6603c530ac76661a74027b-runtime-lock.json",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "bc5a72879cbdeabc4470fb5935bff27c72ffb9be76529a637768acacd180d489",
+      "size": 580
+    },
+    {
+      "mode": 420,
+      "path": "licenses/provenance/current-fab775ebd5e5de247a6603c530ac76661a74027b-source-freeze.json",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "f6dc96b680884c08be50739fc0b861aaae54ca54335c9bc1d9810ee455a5e8ed",
+      "size": 406
+    },
+    {
+      "mode": 420,
+      "path": "licenses/provenance/current-fab775ebd5e5de247a6603c530ac76661a74027b-source-inventory.json",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "7d661e0db870356bd0fa83b0d34a458d3dba1d0cf83702e8be1919a65196939f",
+      "size": 302103
+    },
+    {
+      "mode": 420,
+      "path": "licenses/provenance/current-fb099b03d1383b14d5ad5e6d6b209a60fe205972-BUILD.txt",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "d1d060ab73906e1b7b276f38ecdcc899176bf880e747cd649cb6bba7f0ebe70b",
+      "size": 536
+    },
+    {
+      "mode": 420,
+      "path": "licenses/provenance/current-fb099b03d1383b14d5ad5e6d6b209a60fe205972-source-inventory.json",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "6e955db3ad66436d71323e0c3f32468fe080dbdfd555607a57d454de6907d52e",
+      "size": 326391
+    },
+    {
+      "mode": 420,
+      "path": "licenses/provenance/linux-ocp-declared-components.json",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "7b3e3392efe70459c65527c4885f73f4517fb33ede0d2d199874c52458b076e5",
+      "size": 5264
+    },
+    {
+      "mode": 420,
+      "path": "licenses/provenance/linux-private/expat_2.9.0-1~deb13u1.dsc",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "09fe168e2186a2672e077d9fda02287b51fa08f73914fcc425b3307b503df8ff",
+      "size": 2157
+    },
+    {
+      "mode": 420,
+      "path": "licenses/provenance/linux-private/zlib_1.3.dfsg+really1.3.1-1.dsc",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "ede2791e29c1d3b422f9208bdd7edf040c20445ea1e7453a72037576e64fa197",
+      "size": 2637
+    },
+    {
+      "mode": 420,
+      "path": "licenses/provenance/pbs-declared-source-pins.json",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "ba30bc1d9e06002dcacbca9940cae12eb913b0ad2b56efa81e0e554bf2f4f1f6",
+      "size": 9477
+    },
+    {
+      "mode": 420,
+      "path": "licenses/provenance/pbs-linux-PYTHON.json",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "eab4ac657040166405de383cc77b63c08d66e05c91996d6cf4421c0068091549",
+      "size": 121962
+    },
+    {
+      "mode": 420,
+      "path": "licenses/provenance/permissive-binary-notices-20261019.json",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "e816bbd34a1ff03ed81d77f67603ae6e21c8633e50581e4de009173f2066d99b",
+      "size": 230502
+    },
+    {
+      "mode": 420,
+      "path": "licenses/provenance/permissive-extra-notices-20261019.json",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "af7f0c52c1d59121edf8cf746265d7384341ed6544756dab2b0ef68f82792aca",
+      "size": 3434
+    },
+    {
+      "mode": 420,
+      "path": "licenses/provenance/project-source-freeze.json",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "44fe462a40dbaeeabeacc43bb55a088416c6cac281b03d10d657f2bbd689a807",
+      "size": 446
+    },
+    {
+      "mode": 420,
+      "path": "licenses/provenance/project-source-inventory.json",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "b3e1bf78cae6ac4bb3846c4e617b35a8cb3abd10357c4b03d11072a9ba569d55",
+      "size": 243759
+    },
+    {
+      "mode": 420,
+      "path": "licenses/provenance/restored-source-summary.json",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "5a3f7f36c0447280b6d4a2caccfe062d34fee85030de662d9d53a3c348400622",
+      "size": 17982
+    },
+    {
+      "mode": 420,
+      "path": "licenses/provenance/runtime-file-provenance.json",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "3033d7fd01f7ac8e2a7486fdfd9a8a361604cbce1504ce47fb286fda6371764c",
+      "size": 1444098
+    },
+    {
+      "mode": 420,
+      "path": "licenses/provenance/runtime-inventory.json",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "1e881041d4f50c0a5532862952f38e05b071a96624ff5a81c06722960dc7f296",
+      "size": 186397
+    },
+    {
+      "mode": 420,
+      "path": "licenses/provenance/runtime-lock.json",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "dfa3cc9d92e7e1ad9476bdbc5f5e38787fc6e17e4bf1d4bc8548d36f477474f1",
+      "size": 568
+    },
+    {
+      "mode": 420,
+      "path": "licenses/provenance/runtime-static-elf.json",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "fc54024d648c6c05648fbee1cd1ac4dace8f072496d52ec83bb3e388c22b08c7",
+      "size": 67585
+    },
+    {
+      "mode": 420,
+      "path": "licenses/provenance/slvs-PKG-INFO.txt",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "01929ad19a2e1dfa69d450176ac89b316d444a7a9290eb996bbf392b211b66f8",
+      "size": 12455
+    },
+    {
+      "mode": 420,
+      "path": "licenses/provenance/source-analysis-scope-001.json",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "56f6f6de953850b425fba64c5660adbab2b8829bd28b2c6e891073678d95a88e",
+      "size": 1472
+    },
+    {
+      "mode": 420,
+      "path": "licenses/provenance/source-analysis-scope-002.json",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "4ee8c2a2aec63a7ee589d4f8b661838feb0d7c429754ea37e43bcd701ec8a838",
+      "size": 1221
+    },
+    {
+      "mode": 420,
+      "path": "licenses/pybind11/pybind11-2.13.0-LICENSE.txt",
+      "public_acquisition": {
+        "mode": 420,
+        "operation": "copy_verified_whole_download",
+        "origin_evidence_path": "licenses/ocp/SOURCE_IDENTITIES.json",
+        "origin_evidence_sha256": "0f42b8a8a57d1ceadadedbdc0f228b0247564bef7fd5eab50ec259833d76180c",
+        "sha256": "83965b843b98f670d3a85bd041ed4b372c8ec50d7b4a5995a83ac697ba675dcb",
+        "size": 1684,
+        "url": "https://raw.githubusercontent.com/pybind/pybind11/v2.13.6/LICENSE"
+      },
+      "sha256": "83965b843b98f670d3a85bd041ed4b372c8ec50d7b4a5995a83ac697ba675dcb",
+      "size": 1684
+    },
+    {
+      "mode": 420,
+      "path": "licenses/pybind11/pybind11-2.13.6-LICENSE.txt",
+      "public_acquisition": {
+        "mode": 420,
+        "operation": "copy_verified_whole_download",
+        "origin_evidence_path": "licenses/ocp/SOURCE_IDENTITIES.json",
+        "origin_evidence_sha256": "0f42b8a8a57d1ceadadedbdc0f228b0247564bef7fd5eab50ec259833d76180c",
+        "sha256": "83965b843b98f670d3a85bd041ed4b372c8ec50d7b4a5995a83ac697ba675dcb",
+        "size": 1684,
+        "url": "https://raw.githubusercontent.com/pybind/pybind11/v2.13.6/LICENSE"
+      },
+      "sha256": "83965b843b98f670d3a85bd041ed4b372c8ec50d7b4a5995a83ac697ba675dcb",
+      "size": 1684
+    },
+    {
+      "mode": 420,
+      "path": "licenses/python/CPython-LICENSE.txt",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "86e61415828a8b5b06ec8d024e6f086ce155a8b85fd0c419c0ba4dc004e74fdd",
+      "size": 36164
+    },
+    {
+      "mode": 420,
+      "path": "licenses/python/LICENSE.bdb.txt",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "3bdff06e69991c94664f2ef5c5f8096f60b7dbec071756ea6cc26b445e06ec5b",
+      "size": 7293
+    },
+    {
+      "mode": 420,
+      "path": "licenses/python/LICENSE.bzip2.txt",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "1f38bbc7caacafd65169276d759c0d88c991b753b643ce35d0e45ea1971dd441",
+      "size": 1743
+    },
+    {
+      "mode": 420,
+      "path": "licenses/python/LICENSE.expat.txt",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "122f2c27000472a201d337b9b31f7eb2b52d091b02857061a8880371612d9534",
+      "size": 1144
+    },
+    {
+      "mode": 420,
+      "path": "licenses/python/LICENSE.libedit.txt",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "29cea33c32bbc9785142386377915612a2fa786482c46843383384aded2e09b1",
+      "size": 1614
+    },
+    {
+      "mode": 420,
+      "path": "licenses/python/LICENSE.libffi.txt",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "deaf3a42effb551a5b140fa9afefed183a27f1341c6d1bf430d106a5e6931fc0",
+      "size": 1132
+    },
+    {
+      "mode": 420,
+      "path": "licenses/python/LICENSE.liblzma.txt",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "9a4062de0a2c388a98cf35a35d348b62fa97c838a71c3c28ee1a2d7d0a565b02",
+      "size": 660
+    },
+    {
+      "mode": 420,
+      "path": "licenses/python/LICENSE.libuuid.txt",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "122ee1f7e258f2c3c0e538a75c037684f420454bf3850ddc74ce750bbf5fe86b",
+      "size": 1432
+    },
+    {
+      "mode": 420,
+      "path": "licenses/python/LICENSE.mpdecimal.txt",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "669512af7219f58be03a398766d7c9da11a3b3df9d3f05cb74c5ceca25c8da3b",
+      "size": 1284
+    },
+    {
+      "mode": 420,
+      "path": "licenses/python/LICENSE.ncurses.txt",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "87a4c4442337b8968ef956031c406b74f9cb7149b7ba87311bdaba534816201c",
+      "size": 1447
+    },
+    {
+      "mode": 420,
+      "path": "licenses/python/LICENSE.openssl-1.1.txt",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "9c04cce50c4989d5601dd8b07f6ab922c40388b66ac736c9007cb1ed9d9dd560",
+      "size": 6120
+    },
+    {
+      "mode": 420,
+      "path": "licenses/python/LICENSE.openssl-3.txt",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "7d5450cb2d142651b8afa315b5f238efc805dad827d91ba367d8516bc9d49e7a",
+      "size": 10175
+    },
+    {
+      "mode": 420,
+      "path": "licenses/python/LICENSE.sqlite.txt",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "38bef3d28b24f145ea293bd3b6eb4b20396982abc8303128fb493986ea5bc719",
+      "size": 1481
+    },
+    {
+      "mode": 420,
+      "path": "licenses/python/LICENSE.zlib-ng.txt",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "6c9f0d975b41afaa34d22f55bb8986ce69e5cb7ad327cb2b28820cd425edf5ee",
+      "size": 867
+    },
+    {
+      "mode": 420,
+      "path": "licenses/python/LICENSE.zlib.txt",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "818922b2620f12801a12bf78e399644a30990e66824abd8ca8ec24d451d6f92c",
+      "size": 995
+    },
+    {
+      "mode": 420,
+      "path": "licenses/python/PBS-LICENSE.txt",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "1f256ecad192880510e84ad60474eab7589218784b9a50bc7ceee34c2b91f1d5",
+      "size": 16725
+    },
+    {
+      "mode": 420,
+      "path": "licenses/python/runtime-LICENSE.txt",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "3b2f81fe21d181c499c59a256c8e1968455d6689d269aa85373bfb6af41da3bf",
+      "size": 13936
+    },
+    {
+      "mode": 420,
+      "path": "licenses/rapidjson/rapidjson-24b5e7a8-license.txt",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "a140e5d46fe734a1c78f1a3c3ef207871dd75648be71fdda8e309b23ab8b1f32",
+      "size": 5152
+    },
+    {
+      "mode": 420,
+      "path": "licenses/slvs/COPYING.txt",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "ca372a7d92560b1fa9f6d832b440e8bcd62d9adfa8870c98287deab66d98310e",
+      "size": 35148
+    },
+    {
+      "mode": 420,
+      "path": "licenses/slvs/eigen/BFloat16.h.txt",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "1c3faf2e812a463d0be1c7dab3368ede6afe84d34f042c007bc5dad375e96bd9",
+      "size": 26903
+    },
+    {
+      "mode": 420,
+      "path": "licenses/slvs/eigen/COPYING.APACHE",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "03379001a7b12a2ec997a25554247d985270b353c10d5bafee9ac8d6519820b7",
+      "size": 11362
+    },
+    {
+      "mode": 420,
+      "path": "licenses/slvs/eigen/COPYING.BSD",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "51928dce36213c5333ba3172e847d735d4c6e9b7ff2722a326c49067155b82eb",
+      "size": 1517
+    },
+    {
+      "mode": 420,
+      "path": "licenses/slvs/eigen/COPYING.GPL",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "8ceb4b9ee5adedde47b31e975c1d90c73ad27b6b165a1dcd80c7c545eb65b903",
+      "size": 35147
+    },
+    {
+      "mode": 420,
+      "path": "licenses/slvs/eigen/COPYING.LGPL",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "dc626520dcd53a22f727af3ee42c770e56c97a64fe3adb063799d8ab032fe551",
+      "size": 26530
+    },
+    {
+      "mode": 420,
+      "path": "licenses/slvs/eigen/COPYING.MINPACK",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "c87b7f8ee88f6195e91743820c00354833583aef091b72e2d4a49c8e28e798a0",
+      "size": 2193
+    },
+    {
+      "mode": 420,
+      "path": "licenses/slvs/eigen/COPYING.MPL2",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "fab3dd6bdab226f1c08630b1dd917e11fcb4ec5e1e020e2c16f83a0a13863e85",
+      "size": 16726
+    },
+    {
+      "mode": 420,
+      "path": "licenses/slvs/eigen/COPYING.README",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "c83230b770f17ef1386ea1fd3681271dd98aa93646bdbfb5bff3a1b7050fff9d",
+      "size": 779
+    },
+    {
+      "mode": 420,
+      "path": "licenses/slvs/eigen/Eigen_Colamd.h.txt",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "68655daf6bae480b8e9f2c24d3a3b1e624702f15ac1e8c481ee3a9ba260980eb",
+      "size": 61681
+    },
+    {
+      "mode": 420,
+      "path": "licenses/slvs/eigen/GeneralMatrixMatrixTriangular_BLAS.h.txt",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "973de070289ba262340b5d463fd59625f2f125691fa3322e69e28f58da7c2a84",
+      "size": 6936
+    },
+    {
+      "mode": 420,
+      "path": "licenses/slvs/eigen/GeneralMatrixMatrix_BLAS.h.txt",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "79cd720f0506bcadc600ea2de3405a4457536e4a35beb4078161f75f76134f67",
+      "size": 5106
+    },
+    {
+      "mode": 420,
+      "path": "licenses/slvs/eigen/GeneralMatrixVector_BLAS.h.txt",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "999b5819ab540b4f9bba07cb57763cd433c9cbc1fea66e05da12aa41064e7693",
+      "size": 6368
+    },
+    {
+      "mode": 420,
+      "path": "licenses/slvs/eigen/Half.h.txt",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "bcdf4205c17eddcacbc175c1a5d188db2b36c9e5029b3829076d05dfda406f4d",
+      "size": 35534
+    },
+    {
+      "mode": 420,
+      "path": "licenses/slvs/eigen/MKL_support.h.txt",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "487f0c220d40b8418876b5c7d9032d3597374cdff790d4022e8f4eea932cf620",
+      "size": 4268
+    },
+    {
+      "mode": 420,
+      "path": "licenses/slvs/eigen/SelfadjointMatrixMatrix_BLAS.h.txt",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "74ed10cd34a5118d0300b7c91cd08bbfe56ac9659d18a383eb8d2aaf3a070cec",
+      "size": 11570
+    },
+    {
+      "mode": 420,
+      "path": "licenses/slvs/eigen/SelfadjointMatrixVector_BLAS.h.txt",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "10aad74414d67ae92cd458c5267f84c441dd2c3de826cd4f9333aa042cc76b1c",
+      "size": 5209
+    },
+    {
+      "mode": 420,
+      "path": "licenses/slvs/eigen/SparseColEtree.h.txt",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "871be15fce8853900437445ee4913bba0c9c3d6af08e6313f3deb9cb916e9344",
+      "size": 6485
+    },
+    {
+      "mode": 420,
+      "path": "licenses/slvs/eigen/TriangularMatrixMatrix_BLAS.h.txt",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "b09bbec2fc888d442697d26d62571f1a991b4a12f347748930f3592d537c39da",
+      "size": 13867
+    },
+    {
+      "mode": 420,
+      "path": "licenses/slvs/eigen/TriangularMatrixVector_BLAS.h.txt",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "4ac4ff35409d8875e57af5cec80ae7c537b64034e2720d401fbeba4ec7268749",
+      "size": 10571
+    },
+    {
+      "mode": 420,
+      "path": "licenses/slvs/eigen/TriangularSolverMatrix_BLAS.h.txt",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "d9c296e7a71f502a2804bbf8a704b4f5e866b5978d6f941685c3548ba5e6a842",
+      "size": 6707
+    },
+    {
+      "mode": 420,
+      "path": "licenses/slvs/mimalloc-LICENSE.txt",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "82ade5d7d9b029044b5fbbc326207fc47c2d44ee4dd71e8a559c36d728217de9",
+      "size": 1096
+    },
+    {
+      "mode": 420,
+      "path": "licenses/slvs/source-README.md",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "e0b6b74aab35bf002a7c6999513d797c46c74319c710f09a84c1e8c3100119c2",
+      "size": 11747
+    },
+    {
+      "mode": 420,
+      "path": "sources/Python-3.12.15.tar.xz",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "c2c4321961fab0fb999d66e0cecf521c2ab3994c7992873ea99e306c1094fd5a",
+      "size": 20829824
+    },
+    {
+      "mode": 420,
+      "path": "sources/db-6.0.19.tar.gz",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "2917c28f60903908c2ca4587ded1363b812c4e830a5326aaa77c9879d13ae18e",
+      "size": 36541923
+    },
+    {
+      "mode": 420,
+      "path": "sources/freeimage/FreeImage3170.zip",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "fbfc65e39b3d4e2cb108c4ffa8c41fd02c07d4d436c594fff8dab1a6d5297f89",
+      "size": 7020636
+    },
+    {
+      "mode": 420,
+      "path": "sources/linux-distro/LibRaw-0.19.5-6.el8_10-distgit.tar",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "c96b5592390cc74fb9844c75f2ab5d4432c7ec66cce980763d17a84d395c1410",
+      "size": 51200
+    },
+    {
+      "mode": 420,
+      "path": "sources/linux-distro/LibRaw-0.19.5.tar.gz",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "40a262d7cc71702711a0faec106118ee004f86c86cc228281d12d16da03e02f5",
+      "size": 1303806
+    },
+    {
+      "mode": 420,
+      "path": "sources/linux-distro/gcc-8.5.0-29.el8_10.alma.1-distgit.tar",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "7faeea076bd9f6eec12d25e0baa6b85bcd1d35bd118231b7ae3ab5a4ae16f53e",
+      "size": 1259520
+    },
+    {
+      "mode": 420,
+      "path": "sources/linux-distro/gcc-8.5.0.tar.xz",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "d308841a511bb830a6100397b0042db24ce11f642dab6ea6ee44842e5325ed50",
+      "size": 63841008
+    },
+    {
+      "mode": 420,
+      "path": "sources/linux-private/expat_2.9.0-1~deb13u1.debian.tar.xz",
+      "public_acquisition": {
+        "mode": 420,
+        "operation": "copy_verified_whole_download",
+        "origin_evidence_path": "licenses/provenance/restored-source-summary.json",
+        "origin_evidence_sha256": "5a3f7f36c0447280b6d4a2caccfe062d34fee85030de662d9d53a3c348400622",
+        "sha256": "0c1575a3dc3d039f9e6751821efcdfd5246e04c6af4939defa01226d94541fba",
+        "size": 14348,
+        "url": "https://security.debian.org/debian-security/pool/updates/main/e/expat/expat_2.9.0-1~deb13u1.debian.tar.xz"
+      },
+      "sha256": "0c1575a3dc3d039f9e6751821efcdfd5246e04c6af4939defa01226d94541fba",
+      "size": 14348
+    },
+    {
+      "mode": 420,
+      "path": "sources/linux-private/expat_2.9.0.orig.tar.gz",
+      "public_acquisition": {
+        "mode": 420,
+        "operation": "copy_verified_whole_download",
+        "origin_evidence_path": "licenses/provenance/restored-source-summary.json",
+        "origin_evidence_sha256": "5a3f7f36c0447280b6d4a2caccfe062d34fee85030de662d9d53a3c348400622",
+        "sha256": "6e8ce7b52ebbaa423c59becc7cf1e6875c42e49228c062ac8123c10e700cec27",
+        "size": 8488503,
+        "url": "https://security.debian.org/debian-security/pool/updates/main/e/expat/expat_2.9.0.orig.tar.gz"
+      },
+      "sha256": "6e8ce7b52ebbaa423c59becc7cf1e6875c42e49228c062ac8123c10e700cec27",
+      "size": 8488503
+    },
+    {
+      "mode": 420,
+      "path": "sources/linux-private/zlib_1.3.dfsg+really1.3.1-1.debian.tar.xz",
+      "public_acquisition": {
+        "mode": 420,
+        "operation": "copy_verified_whole_download",
+        "origin_evidence_path": "licenses/provenance/restored-source-summary.json",
+        "origin_evidence_sha256": "5a3f7f36c0447280b6d4a2caccfe062d34fee85030de662d9d53a3c348400622",
+        "sha256": "9ed525955ce9fb0c1b39be8ff98f73450dbfc6305a9a27e6149c8972d38a0a9e",
+        "size": 16576,
+        "url": "https://deb.debian.org/debian/pool/main/z/zlib/zlib_1.3.dfsg+really1.3.1-1.debian.tar.xz"
+      },
+      "sha256": "9ed525955ce9fb0c1b39be8ff98f73450dbfc6305a9a27e6149c8972d38a0a9e",
+      "size": 16576
+    },
+    {
+      "mode": 420,
+      "path": "sources/linux-private/zlib_1.3.dfsg+really1.3.1.orig.tar.gz",
+      "public_acquisition": {
+        "mode": 420,
+        "operation": "copy_verified_whole_download",
+        "origin_evidence_path": "licenses/provenance/restored-source-summary.json",
+        "origin_evidence_sha256": "5a3f7f36c0447280b6d4a2caccfe062d34fee85030de662d9d53a3c348400622",
+        "sha256": "60dd315c07f616887caa029408308a018ace66e3d142726a97db164b3b8f69fb",
+        "size": 1325737,
+        "url": "https://deb.debian.org/debian/pool/main/z/zlib/zlib_1.3.dfsg+really1.3.1.orig.tar.gz"
+      },
+      "sha256": "60dd315c07f616887caa029408308a018ace66e3d142726a97db164b3b8f69fb",
+      "size": 1325737
+    },
+    {
+      "mode": 420,
+      "path": "sources/occt/OCCT-b8f597c677811d1f9f4d8a97f5ae2825c0353a42.tar.gz",
+      "public_acquisition": {
+        "mode": 420,
+        "operation": "copy_verified_whole_download",
+        "origin_evidence_path": "licenses/provenance/restored-source-summary.json",
+        "origin_evidence_sha256": "5a3f7f36c0447280b6d4a2caccfe062d34fee85030de662d9d53a3c348400622",
+        "sha256": "dba62b81078dd43cec23feba89432be301582341001edad1b93342ad8bda35ea",
+        "size": 45131814,
+        "url": "https://codeload.github.com/Open-Cascade-SAS/OCCT/tar.gz/b8f597c677811d1f9f4d8a97f5ae2825c0353a42"
+      },
+      "sha256": "dba62b81078dd43cec23feba89432be301582341001edad1b93342ad8bda35ea",
+      "size": 45131814
+    },
+    {
+      "mode": 420,
+      "path": "sources/ocp/OCP_src_stubs_Linux-8.0.1.1.zip",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "bbab4dc85fdba87ac8f024e13a3e9dba0e268f4b204c9c60c53edf2522ced46e",
+      "size": 5975016
+    },
+    {
+      "mode": 420,
+      "path": "sources/ocp/ocp-build-system-eace4e42cfa2c162ac39bc36864534fe5f5787a6.tar.gz",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "b6757cee2698380d4b16cc50f296d2ae3264b464685e7d3a984c382e5a02a9f4",
+      "size": 1406122
+    },
+    {
+      "mode": 420,
+      "path": "sources/project/mechanical-cad-4d7df8c85202109c6cd4808a4c9d6d28d23ac278.zip",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "c439271f1820d1ad3c2902cef1959c3ffc44bedb2a889100151e556eec0fdf25",
+      "size": 5592949
+    },
+    {
+      "mode": 420,
+      "path": "sources/project/mechanical-cad-5b272e6cf19dadf25df2972377de46af80944256.zip",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "d4565430873e4b3e88908c6435d059d24651173fbcd5bd068031e164b974038f",
+      "size": 4276886
+    },
+    {
+      "mode": 420,
+      "path": "sources/project/mechanical-cad-7013a025b3526581ef733f9ab03da1d43557d189.zip",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "72258aabaaf946aaa64fad5a147c135e371a243076549ab1506de0b2d887403f",
+      "size": 5592950
+    },
+    {
+      "mode": 420,
+      "path": "sources/project/mechanical-cad-84127aa30c1fd67f0fd02f0136114dab916d632c.zip",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "9fc0ddd120b199bff7a28f39e0c5fec1c108648a48dd4a2f0f999e9549681c1f",
+      "size": 4404286
+    },
+    {
+      "mode": 420,
+      "path": "sources/project/mechanical-cad-fab775ebd5e5de247a6603c530ac76661a74027b.zip",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "16b82a4bf5d9e043249418aecc2201bc81f964717be442c1e6eb5bab38206d49",
+      "size": 5271099
+    },
+    {
+      "mode": 420,
+      "path": "sources/project/mechanical-cad-fb099b03d1383b14d5ad5e6d6b209a60fe205972.zip",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "d0e4e0bf012cdf63d149280bbc02dc15c007e7f61e480bf501c6050a4883158d",
+      "size": 5681678
+    },
+    {
+      "mode": 420,
+      "path": "sources/python-build-standalone-9e40cba825ca0997a01cab9f60a0b15ffb976af2.tar.gz",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "e748761a4826f861864c8316b2ae59f1d4a641cbe15b0582a40d36595eff6547",
+      "size": 465734
+    },
+    {
+      "mode": 420,
+      "path": "sources/rapidjson/rapidjson-24b5e7a8-headers.tar.gz",
+      "public_acquisition": {
+        "status": "NO_COMPLETE_PUBLIC_RECIPE_CAPTURED_IN_THIS_MANIFEST"
+      },
+      "sha256": "15c861f29ec52527e290f6dc8e9cd9613cf0d608fa7f5ec7675374a15c5664fc",
+      "size": 141092
+    },
+    {
+      "mode": 420,
+      "path": "sources/slvs/slvs-3.2.tar.gz",
+      "public_acquisition": {
+        "mode": 420,
+        "operation": "copy_verified_whole_download",
+        "origin_evidence_path": "licenses/provenance/restored-source-summary.json",
+        "origin_evidence_sha256": "5a3f7f36c0447280b6d4a2caccfe062d34fee85030de662d9d53a3c348400622",
+        "sha256": "cf7c00fb17a2d100df7cfa80db5e04c7ec16e6093b3d9a74402f001043550a9b",
+        "size": 7204982,
+        "url": "https://files.pythonhosted.org/packages/3c/90/794947dfc55aa0310dbddf0ff7e304774f46ca29f202086006a4e5dcc563/slvs-3.2.tar.gz"
+      },
+      "sha256": "cf7c00fb17a2d100df7cfa80db5e04c7ec16e6093b3d9a74402f001043550a9b",
+      "size": 7204982
+    }
+  ],
+  "recipe_boundary": "Mappings are data only: download to fresh staging, verify exact size/hash before copy, preserve destination mode; no archive extraction, commands, install hooks or transformations are authorized by this manifest. Expected digests identify retained bytes, not fresh upstream availability/signatures. Unmapped entries are not all missing public origins; complete recipes were not transcribed/verified here. Normalized distro/header archives must not be treated as upstream-download hashes.",
+  "status": "HISTORICAL_CORPUS_NOT_CURRENT_RELEASE_INPUT",
+  "verification_date": "2026-10-26",
+  "verified_files": 194
+}
