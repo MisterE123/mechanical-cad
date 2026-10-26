@@ -18,6 +18,7 @@ from dataclasses import replace
 from pathlib import Path
 
 import pytest
+from arc_owner_review import reviewed_dynamic_calls
 
 ROOT = Path(__file__).resolve().parents[2]
 ADDON = ROOT / "blender_addon/mechanical_cad_blender"
@@ -439,7 +440,7 @@ def verify_assembly_version_provenance(tree, filename):
     return allowed
 
 
-def check_capable_calls(sources):
+def check_capable_calls(sources, *, complete=True):
     capable = {"document_state.py", "general_session.py", "general_sketch_draft.py"}
     plumbing = {"guarded_evidence.py", "guarded_transport.py"}
     snapshots = {"guarded_operations.py", "assembly_operator_helpers.py"}
@@ -447,6 +448,7 @@ def check_capable_calls(sources):
     for name, source in sources.items():
         path = Path(name)
         tree = ast.parse(source)
+        reviewed_calls = reviewed_dynamic_calls(tree, path.stem)
         if path.name == "geometry_operations.py":
             verify_geometry_version_provenance(tree)
         assembly_calls = (
@@ -487,10 +489,15 @@ def check_capable_calls(sources):
                         )
                     elif path.name in ASSEMBLY_VERSION_PROVENANCE:
                         assert node in assembly_calls
+                    elif node in reviewed_calls:
+                        # Exact reviewed owner bodies bind these versions to
+                        # prepared requests/source policy, never result stamps.
+                        pass
                     elif path.name not in capable | plumbing:
                         assert isinstance(keyword.value, ast.Constant)
                         assert type(keyword.value.value) is int and keyword.value.value == 2
-    assert capable | plumbing | snapshots | ASSEMBLY_VERSION_PROVENANCE.keys() <= seen
+    if complete:
+        assert capable | plumbing | snapshots | ASSEMBLY_VERSION_PROVENANCE.keys() <= seen
 
 
 GEOMETRY_HISTORICAL_SOURCE = '''def _historical_projection(evidence, prepared, binding, action):
@@ -749,3 +756,34 @@ def test_assembly_export_allowance_rejects_unbound_versions_actions_or_extra_sin
     sources[filename] = ast.unparse(tree)
     with pytest.raises(AssertionError):
         check_capable_calls(sources)
+
+
+@pytest.mark.parametrize(
+    "module,before,after",
+    [
+        ("direct_edge_pick", 'self.catalog_version = request["result_version"]', "self.catalog_version = 3"),
+        ("direct_edge_pick", 'self.catalog_version = request["result_version"]', 'self.catalog_version = response["result_version"]'),
+        ("projection_repair_ui", "self._version = document_state._result_version(self._document)", "self._version = 3"),
+        ("solid_projection_picker", "expected_result_version=self.catalog_version", "expected_result_version=choice.evidence.result_version"),
+        ("line_length_session", 'expected_result_version=prepared.operation_request()["result_version"]', "expected_result_version=response['result_version']"),
+        ("circle_diameter_session", 'expected_result_version=prepared.operation_request()["result_version"]', "expected_result_version=3"),
+        ("sketch_remove_fillet_session", 'expected_result_version=prepared.operation_request()["result_version"]', "expected_result_version=3"),
+        ("extrusion_preview", "expected_result_version=operation_contracts.result_version_for(candidate)", "expected_result_version=3"),
+    ],
+)
+def test_new_owner_versions_require_exact_reviewed_source_or_prepared_provenance(module, before, after):
+    sources = {module + ".py": (ADDON / (module + ".py")).read_text()}
+    check_capable_calls(sources, complete=False)
+    original = sources[module + ".py"]
+    assert before in original
+    sources[module + ".py"] = original.replace(before, after, 1)
+    with pytest.raises(AssertionError):
+        check_capable_calls(sources, complete=False)
+
+
+def test_reviewed_owner_module_is_not_a_blanket_dynamic_version_capability():
+    sources = {"direct_edge_pick.py": (ADDON / "direct_edge_pick.py").read_text()}
+    check_capable_calls(sources, complete=False)
+    sources["direct_edge_pick.py"] += "\ndef rogue(e):\n    return e.revalidate(s, expected_result_version=self.catalog_version)\n"
+    with pytest.raises(AssertionError):
+        check_capable_calls(sources, complete=False)

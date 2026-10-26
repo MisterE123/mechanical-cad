@@ -1,7 +1,7 @@
 """Fresh reconstruction contracts; all geometry/solver ports here are synthetic.
 
 These tests establish protocol and atomic-action behavior, never native geometry.
-Gate B admits the unguarded service; both capability markers remain dormant.
+Current typed-graph admission is independent of solved solid readiness.
 """
 
 from __future__ import annotations
@@ -150,7 +150,7 @@ def test_selected_profile_is_never_geometry_output(active, code):
     assert error.value.code == code
 
 
-def test_profile_only_extra_branch_and_extra_consumer_are_rejected():
+def test_profile_only_rejects_but_connected_branches_are_structurally_admitted():
     document = source()
     alternatives = (
         replace(document, features=document.features[:1], active_feature="profile"),
@@ -165,18 +165,18 @@ def test_profile_only_extra_branch_and_extra_consumer_are_rejected():
             + (Feature("pad2", "extrude", "Pad2", {"length": 2}, {"profile": "profile"}),),
         ),
     )
-    for alternative, code in zip(
-        alternatives,
-        ("not_a_solid", "unsupported_profile_graph", "unsupported_profile_graph"),
-        strict=True,
-    ):
-        with pytest.raises(CADException) as error:
-            validate_geometry_v3(alternative, 3)
-        assert error.value.code == code
+    with pytest.raises(CADException) as error:
+        validate_geometry_v3(alternatives[0], 3)
+    assert error.value.code == "not_a_solid"
+    for alternative in alternatives[1:]:
+        before = alternative.to_json()
+        validate_geometry_v3(alternative, 3)
+        assert alternative.to_json() == before
+        # Admission does not generate replay, B-rep or valid solid evidence.
 
 
 @pytest.mark.parametrize("variant", ["empty", "legacy", "two_arcs", "circle", "chord", "alias"])
-def test_exact_arc_radial_form_cannot_be_inferred(variant):
+def test_general_typed_sketch_intent_is_admitted_without_inventing_a_sector(variant):
     sketch = source().features[0].sketch
     if variant in {"empty", "legacy"}:
         sketch = replace(sketch, arcs=(), schema_version=2 if variant == "legacy" else 3)
@@ -192,13 +192,10 @@ def test_exact_arc_radial_form_cannot_be_inferred(variant):
             points=sketch.points + (Point("alias", 5, 0),),
             lines=(replace(sketch.lines[0], end="alias"), sketch.lines[1]),
         )
-    with pytest.raises(CADException) as error:
-        validate_geometry_v3(source(sketch=sketch), 3)
-    assert error.value.code == (
-        "unsupported_geometry_source"
-        if variant in {"empty", "legacy"}
-        else "unsupported_profile_form"
-    )
+    document = source(sketch=sketch)
+    before = document.to_json()
+    validate_geometry_v3(document, 3)
+    assert document.to_json() == before
 
 
 @pytest.mark.parametrize("direction", ["cw", "ccw"])
@@ -224,11 +221,32 @@ def test_radial_orientation_unused_points_and_unconstrained_source_remain_allowe
         Plane(quaternion=(0.5, 0.5, 0.5, 0.5)),
     ],
 )
-def test_frame_requires_exact_values_without_tolerance_or_equivalent_rotation(plane):
+def test_authored_general_frames_are_preserved_without_source_normalization(plane):
     sketch = replace(source().features[0].sketch, plane=plane)
-    with pytest.raises(CADException) as error:
-        validate_geometry_v3(source(sketch=sketch), 3)
-    assert error.value.code == "unsupported_native_frame"
+    document = source(sketch=sketch)
+    before = document.to_json()
+    validate_geometry_v3(document, 3)
+    assert document.to_json() == before
+    assert document.features[0].sketch.plane == plane
+
+
+@pytest.mark.parametrize(
+    "mutation", ["duplicate_feature", "missing_endpoint", "feature_cycle", "unknown_kind"]
+)
+def test_general_geometry_source_still_rejects_invalid_graphs_before_native(mutation):
+    raw = source().to_dict()
+    if mutation == "duplicate_feature":
+        raw["features"].append(copy.deepcopy(raw["features"][0]))
+    elif mutation == "missing_endpoint":
+        raw["features"][0]["sketch"]["arcs"][0]["end"] = "missing"
+    elif mutation == "feature_cycle":
+        raw["features"][1]["inputs"]["profile"] = "pad"
+    else:
+        raw["features"][1]["kind"] = "unknown_solid"
+    before = copy.deepcopy(raw)
+    with pytest.raises(CADException):
+        validate_geometry_v3(Document.from_dict(raw), 3)
+    assert raw == before
 
 
 @pytest.mark.parametrize(

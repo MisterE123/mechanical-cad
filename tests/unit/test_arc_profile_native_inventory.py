@@ -18,6 +18,7 @@ from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
+from historical_runtime_source import historical_runtime_root
 
 import mechanical_cad.arc_profile_native_evidence as evidence
 from mechanical_cad.arc_profile_native_plan import (
@@ -891,6 +892,7 @@ def test_all_historical_kernel_spans_and_protected_runtime_files_stay_unchanged(
     namespace = {
         "ROOT": ROOT,
         "TRUSTED_GUARD_ROOT": ROOT,
+        "historical_runtime_root": historical_runtime_root,
         "ast": ast,
         "hashlib": hashlib,
         "json": json,

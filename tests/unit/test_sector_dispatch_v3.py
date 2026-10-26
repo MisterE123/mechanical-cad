@@ -271,7 +271,7 @@ def test_marker_must_come_from_its_exact_selected_core_file(
         (3, "canonical_snapshot"),
     ],
 )
-def test_marker_imports_are_confined_to_exact_three_supported_actions(version, action, monkeypatch):
+def test_marker_imports_require_typed_supported_requests(version, action, monkeypatch):
     monkeypatch.chdir(ROOT)
     original = bc.importlib.import_module
 
@@ -281,8 +281,12 @@ def test_marker_imports_are_confined_to_exact_three_supported_actions(version, a
 
     monkeypatch.setattr(bc.importlib, "import_module", checked)
     request = {"result_version": version, "action": action}
-    if action == "canonical_snapshot":
-        with pytest.raises(CADException, match="no result-version argument") as exc:
+    if type(version) is not int or action in {"canonical_snapshot", "assembly_replay"}:
+        # Guarded observation now enforces minimum_capabilities: malformed
+        # versions, a version-bearing snapshot, and an untyped Assembly request
+        # reject before any sector owner is observed. Valid Assembly-v3 behavior
+        # has independent full-envelope tests below.
+        with pytest.raises(CADException) as exc:
             bc.observe_backend(request)
         assert exc.value.code == "backend_contract_invalid"
         return

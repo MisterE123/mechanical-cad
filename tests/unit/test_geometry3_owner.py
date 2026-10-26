@@ -742,9 +742,13 @@ def test_prepared_wrong_version_is_rejected_before_transport(host, monkeypatch):
         "near_quaternion",
         "second_arc",
         "circle",
+        "missing_endpoint",
+        "duplicate_arc_id",
+        "unknown_arc_field",
+        "feature_cycle",
     ],
 )
-def test_unsupported_source_rejects_before_lease_or_any_owner_state_change(
+def test_source_admission_reaches_lease_without_confusing_it_with_geometry_readiness(
     host, monkeypatch, action, variant
 ):
     state = host.context.scene.mechanical_cad
@@ -774,10 +778,19 @@ def test_unsupported_source_rejects_before_lease_or_any_owner_state_change(
         )
     elif variant == "second_arc":
         sketch["arcs"].append({**sketch["arcs"][0], "id": "second_arc"})
-    else:
+    elif variant == "circle":
         sketch["circles"].append(
             {"id": "circle", "center": sketch["arcs"][0]["center"], "radius": 5}
         )
+    elif variant == "missing_endpoint":
+        sketch["arcs"][0]["end"] = "missing"
+    elif variant == "duplicate_arc_id":
+        sketch["arcs"].append(copy.deepcopy(sketch["arcs"][0]))
+    elif variant == "unknown_arc_field":
+        sketch["arcs"][0]["future_field"] = True
+    else:
+        assert variant == "feature_cycle"
+        document["features"][1]["inputs"]["profile"] = document["features"][1]["id"]
     state.document_json = json.dumps(document)
     state.status, state.geometry_status = "READY", "PASSED"
     state.geometry_report_json = '{"older_history":true}'
@@ -785,11 +798,37 @@ def test_unsupported_source_rejects_before_lease_or_any_owner_state_change(
     old_part, old_geometry = object(), object()
     host.doc._RUNTIME[key], host.doc._GEOMETRY_RUNTIME[key] = old_part, old_geometry
     before = host.doc._snapshot_fields(state)
-    monkeypatch.setattr(
-        host.lease, "try_acquire", lambda: pytest.fail("unsupported source acquired lease")
-    )
-    with pytest.raises((ValueError, RuntimeError)):
-        run(host, action)
+    invalid = variant in {
+        "profile",
+        "selected_profile",
+        "missing_endpoint",
+        "duplicate_arc_id",
+        "unknown_arc_field",
+        "feature_cycle",
+    }
+    if invalid:
+        monkeypatch.setattr(
+            host.lease, "try_acquire", lambda: pytest.fail("invalid source acquired lease")
+        )
+        with pytest.raises((ValueError, RuntimeError)):
+            run(host, action)
+    else:
+        # f8639a0 admits general source graphs, but only a fresh guarded operation
+        # can establish geometry success. Stop at the exact lease boundary before
+        # any owner/display state is changed; this is not a fake successful replay.
+        class AtLeaseBoundary(RuntimeError):
+            pass
+
+        calls = []
+
+        def reached_lease():
+            calls.append(True)
+            raise AtLeaseBoundary("structural source admitted")
+
+        monkeypatch.setattr(host.lease, "try_acquire", reached_lease)
+        with pytest.raises(AtLeaseBoundary, match="structural source admitted"):
+            run(host, action)
+        assert calls == [True]
     assert host.doc._snapshot_fields(state) == before
     assert host.doc._RUNTIME[key] is old_part and host.doc._GEOMETRY_RUNTIME[key] is old_geometry
     assert not host.jobs and not host.hidden and not host.shown

@@ -184,7 +184,7 @@ def labels(layout):
     return " ".join(value for kind, value in layout.entries if kind == "label")
 
 
-@pytest.mark.parametrize("variant", [{"extruded": False}, {"empty": True}, {"inactive": True}])
+@pytest.mark.parametrize("variant", [{"extruded": False}])
 def test_schema3_action_visibility_uses_whole_candidate_without_side_effects(
     ui, monkeypatch, variant
 ):
@@ -215,6 +215,31 @@ def test_schema3_action_visibility_uses_whole_candidate_without_side_effects(
     assert ui.operators.MCAD_OT_save.poll(ctx)
 
 
+@pytest.mark.parametrize("malformation", ["missing_profile", "unsupported_kind"])
+def test_malformed_arc_graph_still_rejects_actions_and_capture_without_mutation(
+    ui, monkeypatch, malformation
+):
+    document = sector()
+    if malformation == "missing_profile":
+        document["features"][-1]["inputs"]["profile"] = "missing_profile"
+    else:
+        document["features"][-1]["kind"] = "unknown_solid_operation"
+    ctx = context(ui, document)
+    before = copy.deepcopy(vars(ctx.scene.mechanical_cad))
+    monkeypatch.setattr(ui.workspace_ui, "_operator",
+                        lambda *_: pytest.fail("Malformed graph must reject before operator work"))
+    for action in ("CHECK", "EXPORT"):
+        assert ui.workspace_ui.action_reason(ctx, action)
+        assert not ui.workspace_ui.available(ctx, action)
+    assert ui.operators.part_action_reason(ctx, "canonical_snapshot")
+    assert ui.assembly_operators.working_part_capture_reason(ctx)
+    assert not ui.assembly_operators.MCAD_OT_assembly_new.poll(ctx)
+    assert not ui.assembly_operators.MCAD_OT_assembly_update_source.poll(ctx)
+    assert ui.assembly_operators.MCAD_OT_assembly_insert.poll(ctx)
+    assert ui.operators.MCAD_OT_save.poll(ctx)
+    assert vars(ctx.scene.mechanical_cad) == before
+
+
 @pytest.mark.parametrize(
     "kind,cls",
     [
@@ -228,14 +253,15 @@ def test_arc_graph_ui_and_direct_feature_execution_agree_before_append(ui, monke
     ctx = context(ui, sector())
     state = ctx.scene.mechanical_cad
     before = state.document_json
-    assert ui.operators.feature_action_reason(ctx, kind)
+    unsupported = kind == "cut"  # Only one solid: no valid base/tool pair.
+    assert bool(ui.operators.feature_action_reason(ctx, kind)) == unsupported
     operator_class = getattr(ui.operators, cls)
-    assert not operator_class.poll(ctx)
-    monkeypatch.setattr(
-        ui.operators,
-        "_append_feature",
-        lambda *_: pytest.fail("Unsupported graph must reject before append"),
-    )
+    assert operator_class.poll(ctx) != unsupported
+    submitted = []
+    monkeypatch.setattr(ui.operators, "_append_feature",
+                        lambda _ctx, feature: submitted.append(copy.deepcopy(feature)) or True)
+    monkeypatch.setattr(ui.operators, "_commit_candidate",
+                        lambda _ctx, candidate, _path: submitted.append(copy.deepcopy(candidate)) or True)
     operator = operator_class()
     operator.report = lambda *_: None
     for name in ("width", "height", "radius", "length"):
@@ -243,8 +269,20 @@ def test_arc_graph_ui_and_direct_feature_execution_agree_before_append(ui, monke
     operator.x = operator.y = operator.z = 0
     operator.profile = sector()["features"][0]["id"]
     operator.base, operator.tool = "base", "tool"
-    assert operator.execute(ctx) == {"CANCELLED"}
-    assert state.document_json == before and state.last_action_error
+    operator.end_condition = "BLIND"
+    operator.enter_part_after_apply = False
+    operator.properties = types.SimpleNamespace(is_property_set=lambda *_: False)
+    assert operator.execute(ctx) == ({"CANCELLED"} if unsupported else {"FINISHED"})
+    assert state.document_json == before
+    if unsupported:
+        assert not submitted and state.last_action_error
+    else:
+        assert len(submitted) == 1
+        feature = submitted[0]["features"][-1] if kind == "extrude" else submitted[0]
+        assert feature["kind"] == kind
+        if kind == "extrude":
+            assert submitted[0]["features"][:-1] == json.loads(before)["features"]
+            assert feature["inputs"] == {"profile": operator.profile}
 
 
 def test_first_sole_arc_extrusion_and_legacy_feature_controls_remain_available(ui, monkeypatch):
@@ -255,15 +293,21 @@ def test_first_sole_arc_extrusion_and_legacy_feature_controls_remain_available(u
     submitted = []
     monkeypatch.setattr(
         ui.operators,
-        "_append_feature",
-        lambda _ctx, feature: submitted.append(copy.deepcopy(feature)) or True,
+        "_commit_candidate",
+        lambda _ctx, candidate, _path: submitted.append(copy.deepcopy(candidate)) or True,
     )
     op = ui.operators.MCAD_OT_extrude()
     op.profile, op.length = sector(extruded=False)["active_feature"], 10
     op.report = lambda *_: None
+    op.end_condition, op.enter_part_after_apply = "BLIND", False
+    op.properties = types.SimpleNamespace(is_property_set=lambda *_: False)
+    before = ctx.scene.mechanical_cad.document_json
     assert op.execute(ctx) == {"FINISHED"}
-    assert submitted[0]["inputs"] == {"profile": op.profile}
-    assert submitted[0]["params"] == {"length": 10}
+    feature = submitted[0]["features"][-1]
+    assert feature["inputs"] == {"profile": op.profile}
+    assert submitted[0]["parameters"][feature["params"]["length"]] == 10
+    assert submitted[0]["features"][:-1] == json.loads(before)["features"]
+    assert ctx.scene.mechanical_cad.document_json == before
     old = context(ui)
     for kind in ("sketch_rectangle", "sketch_circle", "extrude", "sketch_constrained"):
         assert not ui.operators.feature_action_reason(old, kind)
@@ -273,7 +317,7 @@ def test_first_sole_arc_extrusion_and_legacy_feature_controls_remain_available(u
     assert ui.assembly_operators.MCAD_OT_assembly_update_source.poll(old)
 
 
-@pytest.mark.parametrize("variant", [{"extruded": False}, {"empty": True}])
+@pytest.mark.parametrize("variant", [{"extruded": False}])
 def test_unsupported_capture_rejects_but_existing_definition_insert_does_not_capture(
     ui, monkeypatch, variant
 ):
@@ -475,7 +519,9 @@ def test_status_keeps_trial_solve_readiness_and_native_detail_with_raw_input(ui,
         failed_features=(("profile", "unsupported_arc_interval", "periodic range shifted"),),
     )
     owner = types.SimpleNamespace(
-        draft=types.SimpleNamespace(tool="Arc", proposal=None),
+        draft=types.SimpleNamespace(tool="Arc", proposal=None, pending_length=None,
+                                    pending_diameter=None, retired_annotation_ids=()),
+        current_diagnostics=None,
         selection_mode="geometry",
         pending=None,
         current_solution_response=lambda: None,
@@ -494,32 +540,46 @@ def test_status_keeps_trial_solve_readiness_and_native_detail_with_raw_input(ui,
     layout = Layout()
     ui.workspace_ui._draw_general_status(layout, ctx, owner)
     text = labels(layout)
-    assert "Trial solve: 5 DoF" in text and "Pure profile readiness: Ready" in text
-    assert "Native build failed" in text and "periodic range shifted" in text
+    assert "Build failed" in text and "periodic range shifted" in text
+    assert "Trial solve" not in text and "Closed profile available" not in text
+    assert "Profile: unchecked" in text
+    ctx.scene.mechanical_cad.show_sketch_details = True
+    expanded = Layout()
+    ui.workspace_ui._draw_general_status(expanded, ctx, owner)
+    assert "Trial solve: 5 DoF" in labels(expanded)
+    assert "unsupported_arc_interval" in labels(expanded)
     assert "'  radius + 0  '" in text and "not accepted" in text
     owner.current_build_failure = None
     owner.evidence_response = {"result": {"sketch": {"remaining_dof": 0}}}
     owner.current = True
     layout = Layout()
     ui.workspace_ui._draw_general_status(layout, ctx, owner)
-    assert "DoF unverified" in labels(layout) and "0 DoF" not in labels(layout)
-    assert "Native build: not checked for this draft" in labels(layout)
+    assert "Unverified · Check sketch" in labels(layout) and "Fully defined" not in labels(layout)
+    assert "Downstream build: not_checked" in labels(layout)
     owner.current_solution_response = lambda: {
         "result": {
-            "sketch": {"remaining_dof": 0, "status": "fully_constrained"},
+            "sketch": {"remaining_dof": 0, "status": "okay"},
             "profile_check": {"ready": True},
         }
     }
     owner.current_native_build_status = "succeeded"
     layout = Layout()
     ui.workspace_ui._draw_general_status(layout, ctx, owner)
-    assert "0 DoF" in labels(layout) and "Native build: checked downstream" in labels(layout)
+    assert "Fully defined" in labels(layout) and "Downstream build: succeeded" in labels(layout)
+    assert "Closed profile available" in labels(layout)
+    ctx.scene.mechanical_cad.show_sketch_details = False
+    compact = Layout()
+    ui.workspace_ui._draw_general_status(compact, ctx, owner)
+    assert "Fully defined" in labels(compact) and "Closed profile available" in labels(compact)
+    assert "Downstream build:" not in labels(compact)
+    assert "'  radius + 0  '" in labels(compact) and "not accepted" in labels(compact)
 
 
 def test_palette_new_tools_have_stable_slots_named_routes_and_short_viewport_fallback(
     ui, monkeypatch
 ):
-    base = ("SELECT", "POINTS", "LINE", "CIRCLE", "DIMENSION", "ARC", "REVERSE", "USE_POINT")
+    base = ("SELECT", "POINTS", "LINE", "DRAW_RECTANGLE", "CIRCLE", "DIMENSION",
+            "ARC", "REVERSE", "USE_POINT", "TRIM", "EXTEND", "PROJECT", "USE_SOLID_EDGE")
     assert ui.workspace_ui._GENERAL_PALETTE_TOOLS == base
     reference = None
     for contextual in (
@@ -534,12 +594,12 @@ def test_palette_new_tools_have_stable_slots_named_routes_and_short_viewport_fal
             fixed = {action: positions[action] for action in base + ("FINISH", "CANCEL")}
             assert reference is None or fixed == reference
             reference = fixed
-            assert len(ui.workspace_ui.palette_slots(actions)) == 13
-            assert bounds == (8, 30, 62, 588)
+            assert len(ui.workspace_ui.palette_slots(actions)) == 21
+            assert bounds == (8, 114, 104, 588)
             assert ui.workspace_ui.palette_layout(actions, 709) is not None
             assert ui.workspace_ui.palette_layout(actions, 710) is not None
-            assert ui.workspace_ui.palette_layout(actions, 457) is None
-            assert ui.workspace_ui.palette_layout(actions, 458) is not None
+            assert ui.workspace_ui.palette_layout(actions, 415) is None
+            assert ui.workspace_ui.palette_layout(actions, 416) is not None
     ctx = context(ui)
     owner = types.SimpleNamespace(
         pending=None,
@@ -601,55 +661,48 @@ def test_palette_responsive_thresholds_and_fixed_context_footer_slots(ui, scale)
         ("FIX_HERE", "FIX_ORIGIN"),
         ("REMOVE_RELATION",),
         ("RECOVER_RELATION",),
+        ("HORIZONTAL", "VERTICAL", "FIX_HERE", "FIX_ORIGIN", "REMOVE_RELATION"),
     ):
         for check in ("SKETCH_CHECK", "CANCEL_CHECK"):
             actions = base + contextual + (check, "FINISH", "CANCEL")
-            for height in (458, 600, 640, 706, 709, 710, 720):
-                compact = height < 710
-                width = 112 if compact else 70
-                bounds, positions = module.palette_layout(
-                    actions, height * scale, scale, width * scale
-                )
-                left, bottom, right, top = bounds
-                expected_top = height * scale - 132 * scale
-                assert bounds == (
-                    8 * scale,
-                    expected_top - (306 if compact else 558) * scale,
-                    (104 if compact else 62) * scale,
-                    expected_top,
-                )
-                expected = {}
-                for index, action in enumerate(module.palette_slots(actions)):
-                    if action is None:
-                        continue
-                    row, column = (
-                        divmod(index + (1 if index >= 11 else 0), 2) if compact else (index, 0)
-                    )
-                    expected[action] = (
-                        (35 + column * 42) * scale if compact else (8 * scale + 62 * scale) / 2,
-                        expected_top - (27 + row * 42) * scale,
-                        0,
-                    )
-                assert positions == expected
-                fixed = {action: positions[action] for action in base + ("FINISH", "CANCEL")}
-                fixed["check"] = positions[check]
-                assert references.setdefault(height, fixed) == fixed
-                assert (
-                    module.palette_layout(actions, height * scale, scale, width * scale - 1) is None
-                )
-                for x, y, _ in positions.values():
-                    assert left <= x - 17 * scale < x + 17 * scale <= right
-                    assert bottom <= y - 17 * scale < y + 17 * scale <= top
-                centers = list(positions.values())
-                for index, (x, y, _) in enumerate(centers):
-                    for other_x, other_y, _ in centers[index + 1 :]:
-                        assert (x - other_x) ** 2 + (y - other_y) ** 2 > (34 * scale) ** 2
-            assert module.palette_layout(actions, 710 * scale - 1, scale, 112 * scale) is not None
-            assert module.palette_layout(actions, 458 * scale - 1, scale, 112 * scale) is None
+            # Independent literal contract: 13 tools, five context cells,
+            # Check and an aligned final Finish/Cancel pair. Native radius17.
+            for columns, rows, minimum_height, width, footer in (
+                (1, 21, 1046, 70, 19), (2, 11, 626, 112, 20),
+                (3, 8, 500, 154, 21), (4, 6, 416, 196, 20),
+            ):
+                for height in (minimum_height, minimum_height + 13):
+                    bounds, positions = module.palette_layout(
+                        actions, height * scale, scale, width * scale)
+                    top = height * scale - 132 * scale
+                    left, bottom, right, _ = bounds
+                    assert bounds == (8 * scale, top - (rows * 42 + 12) * scale,
+                                      (62 + (columns - 1) * 42) * scale, top)
+                    cells = dict(zip(base, range(13), strict=True))
+                    cells.update((action, 13 + index) for index, action in enumerate(contextual))
+                    cells.update({check: 18, "FINISH": footer, "CANCEL": footer + 1})
+                    expected = {action: ((35 + (cell % columns) * 42) * scale,
+                                        top - (27 + (cell // columns) * 42) * scale, 0)
+                                for action, cell in cells.items()}
+                    assert positions == expected
+                    fixed = {action: positions[action] for action in base + ("FINISH", "CANCEL")}
+                    fixed["check"] = positions[check]
+                    assert references.setdefault((columns, height), fixed) == fixed
+                    assert module.palette_layout(actions, height * scale, scale,
+                                                 width * scale - 1) is None
+                    for x, y, _ in positions.values():
+                        assert left <= x - 17 * scale < x + 17 * scale <= right
+                        assert bottom <= y - 17 * scale < y + 17 * scale <= top
+                    centers = list(positions.values())
+                    for index, (x, y, _) in enumerate(centers):
+                        for other_x, other_y, _ in centers[index + 1:]:
+                            assert (x - other_x) ** 2 + (y - other_y) ** 2 > (34 * scale) ** 2
+                assert module.palette_layout(actions, minimum_height * scale - 1,
+                                             scale, width * scale) is None
 
 
 @pytest.mark.parametrize("scale", [1.2, 1.3])
-def test_palette_single_column_retains_original_float_arithmetic(ui, scale):
+def test_palette_single_column_uses_explicit_native_center_at_nonbinary_scales(ui, scale):
     module = ui.workspace_ui
     for actions in (
         ("FINISH", "CANCEL"),
@@ -669,14 +722,14 @@ def test_palette_single_column_retains_original_float_arithmetic(ui, scale):
         + ("HORIZONTAL", "VERTICAL", "CANCEL_CHECK", "FINISH", "CANCEL"),
     ):
         slots = module.palette_slots(actions)
-        for height in (720 * scale, 960 * scale):
-            # Literal pre-change arithmetic, including the midpoint. Algebraic
-            # rewrites can shift a center by one ULP at nonbinary UI scales.
+        for height in (1060 * scale, 1200 * scale):
+            # The center is explicitly 35 logical pixels, not a midpoint
+            # recomputation that can shift by one ULP at nonbinary scales.
             top = height - 132 * scale
             bottom = top - (len(slots) * 42 + 12) * scale
             left, right = 8 * scale, 62 * scale
             positions = {
-                action: ((left + right) / 2, top - (27 + index * 42) * scale, 0)
+                action: (35 * scale, top - (27 + index * 42) * scale, 0)
                 for index, action in enumerate(slots)
                 if action is not None
             }
@@ -726,8 +779,12 @@ def test_palette_draw_passthrough_and_visibility_transitions_share_responsive_bo
     for height, width in (
         (720, 966),
         (706, 966),
-        (458, 112),
-        (457, 112),
+        (626, 112),
+        (625, 112),
+        (500, 154),
+        (499, 154),
+        (416, 196),
+        (415, 196),
         (706, 111),
         (720, 69),
         (706, 966),
@@ -757,10 +814,9 @@ def test_palette_draw_passthrough_and_visibility_transitions_share_responsive_bo
                 assert module.is_palette_event(ctx, event(*positions[action][:2]))
         for x, y in ((left - 1, bottom), (right + 1, top), (left, bottom - 1), (right, top + 1)):
             assert not module.is_palette_event(ctx, event(x, y))
-        if height < 710:
-            # Reserved context and footer spacer remain within visible backing,
-            # but no action owns their native centers.
-            for row, column in ((4, 0), (4, 1), (5, 1)):
+        if height in (706, 720):
+            # Two-column reserved context cells and footer alignment spacer.
+            for row, column in ((6, 1), (7, 0), (7, 1), (8, 0), (8, 1), (9, 1)):
                 empty = ((35 + column * 42) * scale, top - (27 + row * 42) * scale, 0)
                 assert empty not in positions.values()
                 assert module.is_palette_event(ctx, event(*empty[:2]))
@@ -794,9 +850,9 @@ def test_palette_draw_passthrough_and_visibility_transitions_share_responsive_bo
     for action in actions:
         assert not group.buttons[action].hide and not group.buttons[action].hide_select
         assert group.buttons[action].alpha == 1
-    assert group.buttons["CANCEL_CHECK"].matrix_basis.translation == (35 * scale, 337 * scale, 0)
-    assert group.buttons["FINISH"].matrix_basis.translation == (35 * scale, 295 * scale, 0)
-    assert group.buttons["CANCEL"].matrix_basis.translation == (77 * scale, 295 * scale, 0)
+    assert group.buttons["CANCEL_CHECK"].matrix_basis.translation == (35 * scale, 169 * scale, 0)
+    assert group.buttons["FINISH"].matrix_basis.translation == (35 * scale, 127 * scale, 0)
+    assert group.buttons["CANCEL"].matrix_basis.translation == (77 * scale, 127 * scale, 0)
 
 
 def test_general_palette_hidden_fallback_labels_existing_header_menu_only(ui, monkeypatch):
@@ -815,7 +871,7 @@ def test_general_palette_hidden_fallback_labels_existing_header_menu_only(ui, mo
     )
     for height, label in (
         (706, "CAD · Sketch"),
-        (457, "CAD · Sketch · Tools"),
+        (415, "CAD · Sketch · Tools"),
         (720, "CAD · Sketch"),
     ):
         ctx.area.regions[0].height = height
@@ -824,7 +880,8 @@ def test_general_palette_hidden_fallback_labels_existing_header_menu_only(ui, mo
         layout.menu = lambda name, menus=menus, **kwargs: menus.append((name, kwargs["text"]))
         module._draw_header(types.SimpleNamespace(layout=layout), ctx)
         assert menus == [("MCAD_MT_workspace", label)]
-        assert [item.action for kind, item in layout.entries if kind == "operator"] == [
+        assert [item.action for kind, item in layout.entries
+                if kind == "operator" and item.name == "mcad.workspace_action"] == [
             "FINISH",
             "CANCEL",
         ]
@@ -860,7 +917,7 @@ def test_insert_dialog_can_leave_retained_capture_mode_for_existing_v2_definitio
     op.use_working_part = False
     op.layout = Layout()
     op.draw(ctx)
-    assert ("prop", ("use_working_part", not bool(variant))) in op.layout.entries
+    assert ("prop", ("use_working_part", variant != {"extruded": False})) in op.layout.entries
     assert ("prop", ("part_id", True)) in op.layout.entries
 
 
@@ -883,10 +940,11 @@ def test_legacy_probe_id_collisions_keep_valid_feature_actions_available(ui, sty
     assert ctx.scene.mechanical_cad.document_json == before
 
 
+@pytest.mark.parametrize("variant", [{}, {"empty": True}, {"inactive": True}])
 def test_supported_sector_outputs_and_assembly_capture_are_available_without_mutation(
-    ui, monkeypatch
+    ui, monkeypatch, variant
 ):
-    ctx = context(ui, sector())
+    ctx = context(ui, sector(**variant))
     before = copy.deepcopy(vars(ctx.scene.mechanical_cad))
     monkeypatch.setattr(
         ui.workspace_ui, "_operator", lambda *_: types.SimpleNamespace(poll=lambda: True)
@@ -907,7 +965,7 @@ def test_supported_sector_outputs_and_assembly_capture_are_available_without_mut
     assert vars(ctx.scene.mechanical_cad) == before
 
 
-@pytest.mark.parametrize("variant", [{"extruded": False}, {"empty": True}])
+@pytest.mark.parametrize("variant", [{"extruded": False}])
 def test_unsupported_sector_limits_explain_capture_and_geometry_rejections(ui, variant):
     ctx = context(ui, sector(**variant))
     before = copy.deepcopy(vars(ctx.scene.mechanical_cad))
@@ -935,11 +993,22 @@ def draw_history(ui, monkeypatch, report, *, current=True, draft=False, feature=
         }
     )
     result = {
-        "features": [{"id": state.features[0].feature_id, "sketch": report}] if feature else []
+        "features": [{"id": state.features[0].feature_id, "status": "ok", "sketch": report}]
+        if feature else []
     }
-    monkeypatch.setattr(
-        ui.document_state, "current_part_result", lambda _context: result if current else None
-    )
+    # The current history draw captures a detached runtime projection, not the
+    # saved report field nor an unbound current_part_result dictionary.
+    document_json = state.document_json
+    response = {"result": copy.deepcopy(result)}
+    def projection(context, _records, *, with_current_check=False):
+        def matches():
+            return (current and context.scene is ctx.scene
+                    and context.scene.mechanical_cad is state
+                    and state.document_json == document_json and state.status == "READY")
+        if not matches():
+            return None
+        return (None, response, matches) if with_current_check else (None, response)
+    monkeypatch.setattr(ui.document_state, "_runtime_projection", projection)
     monkeypatch.setattr(ui.workspace, "get_role", lambda _context: "SKETCH")
     monkeypatch.setattr(ui.workspace, "has_draft", lambda _context: draft)
     monkeypatch.setattr(ui.workspace, "active_draft", lambda _context: object() if draft else None)
@@ -972,7 +1041,7 @@ def test_exact_redundant_okay_history_uses_ordered_info_candidates_without_mutat
     assert ("Redundant constraints: known_b, known_a", "INFO") in layout.icons
     assert not any("Conflict candidates:" in text for text, _ in layout.icons)
     assert not any(icon == "ERROR" for text, icon in layout.icons if "second" in text)
-    assert str(dof) + " DoF" in labels(layout)
+    assert ("Fully defined" if dof == 0 else str(dof) + " DoF") in labels(layout)
     assert report == before
 
 

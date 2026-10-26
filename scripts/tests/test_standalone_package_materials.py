@@ -38,10 +38,49 @@ PINNED = {
     "scripts/standalone_child_bootstrap.py": "df85aeb34905ca1e18f34610ecbf74b8c00fa26738f520e65f9bc278b058188c",
     "blender_addon/mechanical_cad_blender/runtime_bundle_manifest.py": "8e6f66dbc12ef135795b247dcf244805f188cf0a91ac30ab5b4ccf8435a0f246",
 }
+HISTORICAL = ROOT / "tests/fixtures/standalone/materials_07f2550"
+PLATFORM_CHANGES_SHA256 = "4d666e6cd43252454b0161922e0ad5b2e5020f3563aa63945069c0681103900a"
 
 
 def digest(data):
     return hashlib.sha256(data).hexdigest()
+
+
+def reviewed_materials_sources(manifest_bytes=None, originals=None):
+    """Restore reviewed source bytes as data, never import historical builders."""
+    if manifest_bytes is None:
+        manifest_bytes = (HISTORICAL / "reviewed_platform_changes.json").read_bytes()
+    assert digest(manifest_bytes) == PLATFORM_CHANGES_SHA256
+    manifest = json.loads(manifest_bytes)
+    assert manifest["schema_version"] == 1
+    expected_paths = set(PINNED) - {"blender_addon/mechanical_cad_blender/runtime_bundle_manifest.py"}
+    assert set(manifest["files"]) == expected_paths
+    result = {}
+    for path, record in manifest["files"].items():
+        original = (
+            (HISTORICAL / record["original_file"]).read_bytes()
+            if originals is None else originals[path]
+        )
+        assert digest(original) == PINNED[path]
+        source = original.decode("utf-8")
+        for change in record["changes"]:
+            assert set(change) == {"before", "after"}
+            assert change["before"] and source.count(change["before"]) == 1
+            source = source.replace(change["before"], change["after"], 1)
+        result[path] = source.encode("utf-8")
+    return result
+
+
+def assert_reviewed_materials_source(path, data):
+    if path == "scripts/standalone_child_bootstrap.py":
+        current = f'package.__version__ != "{PROJECT_VERSION}"'.encode()
+        assert data.count(current) == 1
+        data = data.replace(current, b'package.__version__ != "0.6.0"')
+    reviewed = reviewed_materials_sources()
+    if path in reviewed:
+        assert data == reviewed[path]
+    else:
+        assert digest(data) == PINNED[path]
 
 
 def record(path, data, mode=0o644):
@@ -1099,14 +1138,63 @@ def test_actual_inert_materializer_and_reverification_never_visit_materials(
     )
 
 
-def test_legacy_bytes_and_absent_runtime_import_edge_and_default_discovery():
-    for path, expected in PINNED.items():
-        data = (ROOT / path).read_bytes()
-        if path == "scripts/standalone_child_bootstrap.py":
-            current = f'package.__version__ != "{PROJECT_VERSION}"'.encode()
-            assert data.count(current) == 1
-            data = data.replace(current, b'package.__version__ != "0.6.0"')
-        assert digest(data) == expected
+def test_original_materials_sources_and_exact_reviewed_platform_deltas():
+    for path in PINNED:
+        assert_reviewed_materials_source(path, (ROOT / path).read_bytes())
+
+
+@pytest.mark.parametrize("path", [
+    "scripts/package_standalone_extension.py", "scripts/standalone_child_bootstrap.py"
+])
+def test_historical_materials_source_tampering_is_rejected(path):
+    manifest = json.loads((HISTORICAL / "reviewed_platform_changes.json").read_bytes())
+    originals = {
+        key: (HISTORICAL / value["original_file"]).read_bytes()
+        for key, value in manifest["files"].items()
+    }
+    originals[path] += b"\n# unreviewed historical change\n"
+    with pytest.raises(AssertionError):
+        reviewed_materials_sources(originals=originals)
+
+
+def test_reviewed_platform_delta_tampering_is_rejected():
+    data = (HISTORICAL / "reviewed_platform_changes.json").read_bytes()
+    with pytest.raises(AssertionError):
+        reviewed_materials_sources(manifest_bytes=data + b" ")
+
+
+def test_bootstrap_version_normalization_requires_one_exact_current_literal():
+    path = "scripts/standalone_child_bootstrap.py"
+    data = (ROOT / path).read_bytes()
+    current = f'package.__version__ != "{PROJECT_VERSION}"'.encode()
+    assert data.count(current) == 1
+    for changed in (data.replace(current, b'package.__version__ != "9.9.9"'), data + current):
+        with pytest.raises(AssertionError):
+            assert_reviewed_materials_source(path, changed)
+
+
+@pytest.mark.parametrize("path,before,after", [
+    (
+        "scripts/package_standalone_extension.py",
+        b"    os.link(archive_path, destination)",
+        b"    os.replace(archive_path, destination)",
+    ),
+    (
+        "scripts/standalone_child_bootstrap.py",
+        b"            _verify_windows_images(layout)",
+        b"            pass  # unreviewed origin bypass",
+    ),
+])
+def test_current_platform_safety_mutations_cannot_hide_in_reviewed_deltas(path, before, after):
+    current = (ROOT / path).read_bytes()
+    assert current.count(before) == 1
+    with pytest.raises(AssertionError):
+        assert_reviewed_materials_source(path, current.replace(before, after, 1))
+    with pytest.raises(AssertionError):
+        assert_reviewed_materials_source(path, current + b"\n# unrelated current change\n")
+
+
+def test_current_absent_runtime_import_edge_and_default_discovery():
     for directory in ("src", "blender_addon"):
         for path in (ROOT / directory).rglob("*.py"):
             tree = ast.parse(path.read_bytes())

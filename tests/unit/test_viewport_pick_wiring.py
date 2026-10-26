@@ -22,6 +22,34 @@ def test_part_picker_uses_shared_viewport_ray_and_retains_display_binding(name):
     assert not any(
         isinstance(node.func, ast.Attribute) and node.func.attr == "ray_cast" for node in calls
     )
+    # Source-bound visual reselection (33c4ec2) routes all pickers through the
+    # captured owner snapshot, not a fresh global display binding.
     assert any(
-        isinstance(node.func, ast.Name) and node.func.id == "bound_feature" for node in calls
+        isinstance(node.func, ast.Attribute)
+        and node.func.attr == "bound_feature"
+        and ast.unparse(node.func.value) == "self.snapshot"
+        for node in calls
     )
+    if name != "face_pick":
+        assert any(
+            isinstance(node, ast.ClassDef)
+            and any(isinstance(base, ast.Name) and base.id == "FacePicker" for base in node.bases)
+            for node in tree.body
+        )
+    else:
+        snapshot = next(
+            node
+            for node in tree.body
+            if isinstance(node, ast.ClassDef) and node.name == "HoverSnapshot"
+        )
+        binding = next(
+            node
+            for node in snapshot.body
+            if isinstance(node, ast.FunctionDef) and node.name == "bound_feature"
+        )
+        assert any(
+            isinstance(node, ast.Call)
+            and isinstance(node.func, ast.Name)
+            and node.func.id == "bound_feature"
+            for node in ast.walk(binding)
+        )

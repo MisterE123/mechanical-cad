@@ -25,8 +25,10 @@ def call_lines(node, argument):
 
 def history_lines(node):
     return [
-        call.lineno for call in ast.walk(node)
-        if isinstance(call, ast.Call) and isinstance(call.func, ast.Name)
+        call.lineno
+        for call in ast.walk(node)
+        if isinstance(call, ast.Call)
+        and isinstance(call.func, ast.Name)
         and call.func.id == "draw_history"
     ]
 
@@ -51,10 +53,31 @@ def test_standard_sidebar_has_one_primary_edit_above_history_and_parameters():
 def test_workspace_has_one_primary_edit_per_kind_above_history():
     draw = draw_source("workspace_ui.py", "MCAD_PT_workspace_history")
     history = history_lines(draw)
+    tree = ast.parse((ADDON / "workspace_ui.py").read_text())
+    helper = next(
+        node
+        for node in tree.body
+        if isinstance(node, ast.FunctionDef) and node.name == "_draw_selected_history_edit"
+    )
+    launchers = [
+        node.lineno
+        for node in ast.walk(draw)
+        if isinstance(node, ast.Call)
+        and isinstance(node.func, ast.Name)
+        and node.func.id == helper.name
+    ]
+    assert len(launchers) == len(history) == 1
+    assert launchers[0] < history[0]
     for action in ("EDIT_FEATURE", "EDIT", "mcad.activate_feature"):
-        lines = call_lines(draw, action)
-        assert len(lines) == len(history) == 1
-        assert lines[0] < history[0]
+        assert len(call_lines(helper, action)) == 1
+        assert not call_lines(draw, action)
+    # Family dispatch remains exclusive rather than rendering duplicate launchers.
+    dispatch = next(
+        node for node in helper.body if isinstance(node, ast.If) and call_lines(node, "EDIT")
+    )
+    assert call_lines(dispatch.body[0], "EDIT")
+    assert len(dispatch.orelse) == 1 and isinstance(dispatch.orelse[0], ast.If)
+    assert call_lines(dispatch.orelse[0], "EDIT_FEATURE")
 
 
 def test_projection_repair_launcher_precedes_history_in_both_sidebars():

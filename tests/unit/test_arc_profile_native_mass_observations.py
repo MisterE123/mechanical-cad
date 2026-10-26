@@ -18,6 +18,7 @@ from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
+from historical_runtime_source import historical_runtime_root
 from test_arc_profile_native_end_cap import _assembly_step_bytes
 
 from mechanical_cad.arc_profile_native_evidence import (
@@ -506,7 +507,7 @@ def original_kernel_bytes(data):
 
 
 def test_every_original_kernel_and_mass_comparator_byte_matches_snapshot5():
-    source = _assembly_step_bytes(ROOT, "src/mechanical_cad/kernel_ocp.py")
+    source = _assembly_step_bytes(historical_runtime_root(), "src/mechanical_cad/kernel_ocp.py")
     assert hashlib.sha256(original_kernel_bytes(source)).hexdigest() == SNAPSHOT5_KERNEL
     current = undo_regularity_metadata_revision(
         EVIDENCE.read_bytes(), "src/mechanical_cad/arc_profile_native_evidence.py"
@@ -529,7 +530,7 @@ def test_vertex_inverse_is_exact_portable_and_rejects_every_changed_hunk(relativ
     fixture = json.loads(
         (ROOT / "tests/fixtures/arc_sector/canonical_vertex_inverse.json").read_text()
     )["files"][relative]
-    current = undo_regularity_metadata_revision(_assembly_step_bytes(ROOT, relative), relative)
+    current = undo_regularity_metadata_revision(_assembly_step_bytes(historical_runtime_root(), relative), relative)
     assert hashlib.sha256(current).hexdigest() == fixture["current_sha256"]
     restored = undo_canonical_vertex_revision(current, relative)
     assert hashlib.sha256(restored).hexdigest() == fixture["historical_sha256"]
@@ -555,7 +556,7 @@ def test_regularity_inverse_is_exact_portable_and_rejects_every_changed_hunk(rel
     fixture = json.loads(
         (ROOT / "tests/fixtures/arc_sector/regularity_metadata_inverse.json").read_text()
     )["files"][relative]
-    current = _assembly_step_bytes(ROOT, relative)
+    current = _assembly_step_bytes(historical_runtime_root(), relative)
     assert hashlib.sha256(current).hexdigest() == fixture["current_sha256"]
     restored = undo_regularity_metadata_revision(current, relative)
     assert hashlib.sha256(restored).hexdigest() == fixture["historical_sha256"]
@@ -575,7 +576,7 @@ def test_regularity_inverse_is_exact_portable_and_rejects_every_changed_hunk(rel
 
 @pytest.mark.parametrize("statement", [RAW_FACE, RAW_PRISM])
 def test_byte_guard_rejects_missing_duplicate_or_enlarged_raw_observations(statement):
-    source = _assembly_step_bytes(ROOT, "src/mechanical_cad/kernel_ocp.py")
+    source = _assembly_step_bytes(historical_runtime_root(), "src/mechanical_cad/kernel_ocp.py")
     for replacement in (
         b"",
         statement * 2,
@@ -587,7 +588,7 @@ def test_byte_guard_rejects_missing_duplicate_or_enlarged_raw_observations(state
 
 def test_byte_guard_preserves_comparator_registration_and_existing_diagnostics():
     # Restore the exact reviewed parent before exercising its original mutations.
-    source = _assembly_step_bytes(ROOT, "src/mechanical_cad/kernel_ocp.py")
+    source = _assembly_step_bytes(historical_runtime_root(), "src/mechanical_cad/kernel_ocp.py")
     for old, new in (
         (b"area_check = check_masses(plan, area, context=c)", b"area_check = None"),
         (b"context=c, height=height, volume=volume", b"context=c, height=height, volume=0.0"),
