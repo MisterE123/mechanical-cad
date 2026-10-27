@@ -526,7 +526,7 @@ def test_generator_rejects_unqualified_or_destructive_requests(generator_checkou
     elif fault == "existing_evidence":
         evidence.mkdir()
         (evidence / "sentinel.txt").write_text("Preserve old evidence\n")
-        expected = "File exists"
+        expected = existing_evidence_error(evidence)
     result = run_generator(checkout, *arguments, source=source)
     assert result.returncode == 2, result.stderr
     assert expected in result.stderr
@@ -535,6 +535,29 @@ def test_generator_rejects_unqualified_or_destructive_requests(generator_checkou
         assert (evidence / "sentinel.txt").read_text() == "Preserve old evidence\n"
     else:
         assert not evidence.exists()
+
+
+def existing_evidence_error(directory):
+    """Obtain the exact host/path error from the same exclusive mkdir operation."""
+    with pytest.raises(FileExistsError) as error:
+        directory.mkdir(parents=True, exist_ok=False)
+    return str(error.value)
+
+
+def test_existing_evidence_error_is_host_exact_and_preserves_sentinel(tmp_path):
+    directory = tmp_path / "evidence"
+    directory.mkdir()
+    sentinel = directory / "sentinel.txt"
+    original = b"Preserve old evidence\n"
+    sentinel.write_bytes(original)
+    expected = existing_evidence_error(directory)
+    with pytest.raises(FileExistsError) as observed:
+        directory.mkdir(parents=True, exist_ok=False)
+    assert expected == str(observed.value)
+    assert observed.value.filename == str(directory)
+    assert expected != "File exists"  # Full host exception, including its exact target.
+    assert {path.name for path in directory.iterdir()} == {"sentinel.txt"}
+    assert sentinel.read_bytes() == original
 
 
 def test_generator_labels_dirty_source_and_records_changed_tree_digest(generator_checkout):

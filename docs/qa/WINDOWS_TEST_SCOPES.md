@@ -588,3 +588,19 @@ and 40 recovery validators/rejections. Collection retained 38 Linux cases
 (20 manual runtime and 18 recovery) without executing them. Filesystem-link and
 contention/crash subprocess tests were excluded from local execution. These
 results do not qualify native Windows locking or recovery publication.
+
+## Clevis existing-evidence diagnostics
+
+The existing-evidence generator case retains exit 2, exact sentinel bytes and
+no-overwrite assertions. Its expected error is now the full `FileExistsError`
+string obtained from the same exclusive mkdir operation on that exact host/path,
+rather than POSIX-only wording. A pure host-error/sentinel control passed. The
+generator subprocess case was not run locally in this slice.
+
+The disposable generator fixture initializes/commits a fresh Git checkout, then
+runs Python with `-S -B` and `PYTHONPATH`. The generator verifies its imported
+project paths, probes a second child origin, collects Git/source provenance and
+checks canonical bytes before exclusive evidence-directory creation. The retained
+embedded Python `_pth` ignores `PYTHONPATH`; this route needs explicit source
+binding review before local execution. No generator/native evidence is claimed
+from the pure error-message control.
