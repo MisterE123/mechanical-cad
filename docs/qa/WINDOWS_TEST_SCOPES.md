@@ -544,3 +544,21 @@ Before building, only this case's two ZIP publishers receive the reviewed
 shared production publisher and global link functions are unchanged. This is
 inert archive/materializer/owner composition, not atomic/hard-link publication,
 native ACL/retained-handle or backend/Blender qualification.
+
+## Backend runtime manual and bundled currentness
+
+Twenty cases in `test_backend_runtime.py` require Linux manual selection. Only
+those named test functions receive Linux scope; all original bodies, assertions
+and parameter tables are unchanged. Worker-thread ownership and forged-selection
+rejection remain portable and passed on actual Windows.
+
+The existing Windows timeout/lifetime test remains unchanged. Ten additional
+actual-Windows public-profile controls cover timeout/tolerance A-to-B-to-A
+revocation, reentrant recapture ordering, callback-failure revocation, and
+ReferenceError/AttributeError observation loss and restoration for preferences,
+timeout and tolerance. They use real preference lookup, configuration, public
+`capture_bundled`, exact record identity and currentness logic with inert policy
+records. Native cache/preparation/process/DLL calls and the private qualification
+capture are forbidden and counted. They do not use manual admission, host spoofing
+or private capture to claim parity. This is runtime authority coverage, not native
+Windows process/cache or Blender qualification.

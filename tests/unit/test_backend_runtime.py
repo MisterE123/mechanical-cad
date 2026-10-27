@@ -16,6 +16,11 @@ sys.modules[PACKAGE] = package
 runtime = importlib.import_module(PACKAGE + ".backend_runtime")
 
 
+LINUX_MANUAL_PROFILE = pytest.mark.skipif(
+    sys.platform != "linux", reason="Linux manual backend configuration/currentness contract"
+)
+
+
 @pytest.fixture(autouse=True)
 def fresh_lifetime():
     runtime.configure_invalidation(None)
@@ -45,6 +50,7 @@ def prefs(context):
     return context.preferences.addons[PACKAGE].preferences
 
 
+@LINUX_MANUAL_PROFILE
 def test_current_recapture_does_not_revoke_or_change_captured_launch(context):
     notifications = []
     runtime.configure_invalidation(notifications.append)
@@ -55,6 +61,7 @@ def test_current_recapture_does_not_revoke_or_change_captured_launch(context):
     assert runtime.stamp() == (selected.lifetime_id, selected.generation)
 
 
+@LINUX_MANUAL_PROFILE
 def test_supported_preference_aba_revokes_twice_even_without_operation_between(context):
     selected = runtime.capture(context)
     notifications = []
@@ -69,6 +76,7 @@ def test_supported_preference_aba_revokes_twice_even_without_operation_between(c
 
 
 @pytest.mark.parametrize("field,value", [("timeout_seconds", 70), ("linear_deflection", 0.2)])
+@LINUX_MANUAL_PROFILE
 def test_observed_policy_change_revokes_completed_evidence(context, field, value):
     selected = runtime.capture(context)
     setattr(prefs(context), field, value)
@@ -76,6 +84,7 @@ def test_observed_policy_change_revokes_completed_evidence(context, field, value
     assert runtime.capture(context).generation == selected.generation + 1
 
 
+@LINUX_MANUAL_PROFILE
 def test_effective_environment_change_is_observed_without_mutating_selection(context, monkeypatch):
     old_root = prefs(context).project_root
     new_root = Path(old_root) / "different-backend"
@@ -89,6 +98,7 @@ def test_effective_environment_change_is_observed_without_mutating_selection(con
     assert selected.launch_environment() == environment
 
 
+@LINUX_MANUAL_PROFILE
 def test_invalid_configuration_revokes_once_and_does_not_restore_after_fix(context):
     selected = runtime.capture(context)
     previous = prefs(context).project_root
@@ -101,6 +111,7 @@ def test_invalid_configuration_revokes_once_and_does_not_restore_after_fix(conte
     assert not runtime.is_current(selected, context)
 
 
+@LINUX_MANUAL_PROFILE
 def test_callback_sees_revocation_before_failure_and_cannot_roll_it_back(context):
     selected = runtime.capture(context)
     observed = []
@@ -118,6 +129,7 @@ def test_callback_sees_revocation_before_failure_and_cannot_roll_it_back(context
     assert not runtime.is_current(selected, context)
 
 
+@LINUX_MANUAL_PROFILE
 def test_reentrant_callback_recapture_does_not_recursively_revoke(context):
     selected = runtime.capture(context)
     captured = []
@@ -128,6 +140,7 @@ def test_reentrant_callback_recapture_does_not_recursively_revoke(context):
     assert changed.generation == selected.generation + 1
 
 
+@LINUX_MANUAL_PROFILE
 def test_new_epoch_does_not_match_even_when_generation_resets(context):
     selected = runtime.capture(context)
     runtime.new_lifetime()
@@ -159,6 +172,7 @@ def test_duck_typed_selection_cannot_claim_current(context):
     assert not runtime.is_current(forged, context)
 
 
+@LINUX_MANUAL_PROFILE
 def test_missing_preferences_revokes_instead_of_substituting_environment_defaults(context):
     selected = runtime.capture(context)
     unavailable = types.SimpleNamespace()
@@ -172,6 +186,7 @@ def test_missing_preferences_revokes_instead_of_substituting_environment_default
     "field",
     ["preferences", "project_root", "python_executable", "timeout_seconds", "linear_deflection"],
 )
+@LINUX_MANUAL_PROFILE
 def test_unavailable_rna_observation_cannot_revive_old_selection_after_restoration(
     context, field, error_type
 ):

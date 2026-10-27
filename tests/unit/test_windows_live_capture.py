@@ -385,6 +385,138 @@ def test_windows_setup_capture_has_no_manual_cache_or_environment_override(
         runtime._bundle_capture(fixture.package, fixture.cache, fixture.constants)
 
 
+@pytest.fixture
+def actual_windows_runtime(monkeypatch, native_forbidden):
+    assert sys.platform == "win32" and os.name == "nt"
+    assert runtime.BackendSelection is selection.BackendSelection
+    attempts = []
+
+    def private_capture_forbidden(*args, **kwargs):
+        attempts.append("private qualification capture")
+        pytest.fail(attempts[-1])
+
+    monkeypatch.setattr(
+        selection.BackendSelection,
+        "_capture_windows_bundled_transport",
+        classmethod(private_capture_forbidden),
+    )
+    fixture = Fixture()
+    preferences = types.SimpleNamespace(timeout_seconds=180, linear_deflection=0.1)
+    context = types.SimpleNamespace(
+        preferences=types.SimpleNamespace(
+            addons={runtime.__package__: types.SimpleNamespace(preferences=preferences)}
+        )
+    )
+    for name, value in dict(
+        _BUNDLE_REQUIRED=True,
+        _BUNDLE_ENABLED=True,
+        _BUNDLE_POLICY=fixture.policy(),
+        _OBSERVED=None,
+        _GENERATION=0,
+        _LIFETIME="actual-windows-currentness",
+        _INVALIDATE=None,
+    ).items():
+        monkeypatch.setattr(runtime, name, value)
+    yield context, preferences
+    assert attempts == []
+
+
+@pytest.mark.skipif(sys.platform != "win32", reason="Actual Windows bundled public currentness")
+@pytest.mark.parametrize("field,changed", [("timeout_seconds", 179), ("linear_deflection", 0.2)])
+def test_actual_windows_bundled_preference_aba_never_revives_old_selection(
+    actual_windows_runtime, field, changed
+):
+    context, preferences = actual_windows_runtime
+    old = runtime.capture(context)
+    assert type(old) is selection.BackendSelection
+    assert runtime.assert_current(old, context) == old
+    original, notifications = getattr(preferences, field), []
+    runtime.configure_invalidation(notifications.append)
+    setattr(preferences, field, changed)
+    runtime.revoke("A to B")
+    setattr(preferences, field, original)
+    runtime.revoke("B to A")
+    assert runtime.stamp() == (old.lifetime_id, old.generation + 2)
+    with pytest.raises(runtime.bridge.BridgeError, match="stale"):
+        runtime.assert_current(old, context)
+    current = runtime.capture(context)
+    assert current.generation == old.generation + 2
+    assert runtime.is_current(current, context)
+    assert notifications == ["A to B", "B to A"]
+
+
+@pytest.mark.skipif(sys.platform != "win32", reason="Actual Windows bundled public currentness")
+def test_actual_windows_reentrant_callback_observes_new_selection_once(actual_windows_runtime):
+    context, preferences = actual_windows_runtime
+    old = runtime.capture(context)
+    observations = []
+    runtime.configure_invalidation(
+        lambda reason: observations.append((runtime.stamp(), runtime.capture(context)))
+    )
+    preferences.timeout_seconds = 179
+    current = runtime.capture(context)
+    assert observations == [(runtime.stamp(), current)]
+    assert current.generation == old.generation + 1
+    assert runtime.assert_current(current, context) == current
+    assert len(observations) == 1
+    assert not runtime.is_current(old, context)
+
+
+@pytest.mark.skipif(sys.platform != "win32", reason="Actual Windows bundled public currentness")
+def test_actual_windows_callback_failure_cannot_roll_back_revocation(actual_windows_runtime):
+    context, _ = actual_windows_runtime
+    old = runtime.capture(context)
+    observations = []
+
+    def fail(reason):
+        observations.append(runtime.stamp())
+        raise RuntimeError("injected cleanup failure")
+
+    runtime.configure_invalidation(fail)
+    with pytest.raises(RuntimeError, match="cleanup failure"):
+        runtime.revoke()
+    assert observations == [runtime.stamp()]
+    assert runtime.stamp() == (old.lifetime_id, old.generation + 1)
+    runtime.configure_invalidation(None)
+    assert not runtime.is_current(old, context)
+    assert runtime.is_current(runtime.capture(context), context)
+
+
+@pytest.mark.skipif(sys.platform != "win32", reason="Actual Windows bundled public currentness")
+@pytest.mark.parametrize("field", ["preferences", "timeout_seconds", "linear_deflection"])
+@pytest.mark.parametrize("error_type", [ReferenceError, AttributeError])
+def test_actual_windows_preference_observation_loss_cannot_revive_after_restoration(
+    actual_windows_runtime, field, error_type
+):
+    context, preferences = actual_windows_runtime
+    old = runtime.capture(context)
+    addons = context.preferences.addons
+    original = addons[runtime.__package__]
+
+    class Unavailable:
+        def __init__(self, source):
+            self.source = source
+
+        def __getattr__(self, name):
+            if name == field:
+                raise error_type("RNA struct removed")
+            return getattr(self.source, name)
+
+    addons[runtime.__package__] = (
+        Unavailable(original)
+        if field == "preferences"
+        else types.SimpleNamespace(preferences=Unavailable(preferences))
+    )
+    assert not runtime.is_current(old, context)
+    revoked = runtime.stamp()
+    assert revoked == (old.lifetime_id, old.generation + 1)
+    assert not runtime.is_current(old, context) and runtime.stamp() == revoked
+    addons[runtime.__package__] = original
+    assert not runtime.is_current(old, context)
+    assert runtime.is_current(runtime.capture(context), context)
+    assert runtime.stamp() == revoked
+
+
 def test_windows_configuration_currentness_revokes_old_timeout_and_lifetime(
     monkeypatch, native_forbidden
 ):
