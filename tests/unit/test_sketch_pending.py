@@ -8,6 +8,7 @@ import ast
 import copy
 import importlib
 import json
+import os
 import subprocess
 import sys
 import threading
@@ -26,6 +27,10 @@ sys.modules[PACKAGE] = package
 p = importlib.import_module(PACKAGE + ".sketch_pending")
 BridgeError = p.bridge.BridgeError
 contracts = p.sketch_action_bridge.snapshots
+
+LINUX_MANUAL_PROCESS = pytest.mark.skipif(
+    sys.platform != "linux", reason="Linux manual SidecarJob process and worker contract"
+)
 
 
 def request(action="solve_sketch"):
@@ -696,6 +701,7 @@ def wait_until(predicate):
         time.sleep(0.005)
 
 
+@LINUX_MANUAL_PROCESS
 def test_real_sidecar_delivers_validated_solve_only_after_actual_cleanup(
     real_configuration,
     real_resources,
@@ -710,6 +716,7 @@ def test_real_sidecar_delivers_validated_solve_only_after_actual_cleanup(
 
 
 @pytest.mark.parametrize("ready", [False, True])
+@LINUX_MANUAL_PROCESS
 def test_real_sidecar_late_identity_and_sleeping_child_cancel_without_consumption(
     real_configuration,
     real_resources,
@@ -735,12 +742,60 @@ def test_real_sidecar_late_identity_and_sleeping_child_cancel_without_consumptio
     assert not p.execution_lease.is_busy()
 
 
+@LINUX_MANUAL_PROCESS
 def test_real_invalid_configuration_releases_execution_lease(tmp_path):
     with pytest.raises(BridgeError, match="Project Root"):
         p.prepare(
             request(), identity(), project_root=str(tmp_path), python_executable=sys.executable
         )
     assert not p.execution_lease.is_busy() and not p.status()
+
+
+@pytest.mark.skipif(sys.platform != "win32", reason="Actual Windows legacy admission order")
+def test_windows_legacy_admission_releases_lease_before_configuration_or_io(tmp_path, monkeypatch):
+    assert os.name == "nt" and p.sidecar_job.sys is sys and p.sidecar_job.os is os
+    assert p._JOB_FACTORY is p.sidecar_job.SidecarJob
+    assert not p._ACTIVE and not p.status() and not p.execution_lease.is_busy()
+    events, acquired, released = [], [], []
+    acquire, release = p.execution_lease.try_acquire, p.execution_lease.release
+
+    def tracked_acquire():
+        token = acquire()
+        assert token is not None and p.execution_lease.is_busy()
+        acquired.append(token)
+        return token
+
+    def tracked_release(token):
+        assert p.execution_lease.is_busy()
+        result = release(token)
+        released.append(token)
+        return result
+
+    def forbidden(*args, **kwargs):
+        events.append("unexpected configuration, IO or worker")
+        raise AssertionError(events[-1])
+
+    monkeypatch.setattr(p.execution_lease, "try_acquire", tracked_acquire)
+    monkeypatch.setattr(p.execution_lease, "release", tracked_release)
+    monkeypatch.setattr(p.bridge, "resolve_configuration", forbidden)
+    monkeypatch.setattr(p.bridge, "Path", forbidden)
+    monkeypatch.setattr(p.bridge, "subprocess", types.SimpleNamespace(run=forbidden))
+    monkeypatch.setattr(p.sidecar_job, "Path", forbidden)
+    monkeypatch.setattr(p.sidecar_job.SidecarJob, "_initialize", forbidden)
+    monkeypatch.setattr(p.sidecar_job, "subprocess", types.SimpleNamespace(Popen=forbidden))
+    monkeypatch.setattr(p.sidecar_job, "tempfile", types.SimpleNamespace(TemporaryFile=forbidden))
+    monkeypatch.setattr(
+        p.sidecar_job,
+        "threading",
+        types.SimpleNamespace(Thread=forbidden, Lock=forbidden, Event=forbidden),
+    )
+    with pytest.raises(BridgeError, match="Windows backend execution is not yet qualified"):
+        p.prepare(
+            request(), identity(), project_root=str(tmp_path), python_executable=sys.executable
+        )
+    assert len(acquired) == len(released) == 1 and acquired[0] is released[0]
+    assert events == []
+    assert not p._ACTIVE and not p.status() and not p.execution_lease.is_busy()
 
 
 @pytest.mark.parametrize("bad", [None, {"live": object()}, {"v": float("nan")}])
@@ -771,6 +826,7 @@ def test_spontaneous_transport_cancellation_reports_once_without_consumption(job
     assert jobs[0].result_calls == 0 and not p.execution_lease.is_busy()
 
 
+@LINUX_MANUAL_PROCESS
 def test_thread_start_failure_real_transport_is_reaped_before_release(
     monkeypatch,
     real_configuration,
@@ -788,6 +844,7 @@ def test_thread_start_failure_real_transport_is_reaped_before_release(
 
 
 @pytest.mark.parametrize("action", ["solve_sketch", "replay"])
+@LINUX_MANUAL_PROCESS
 def test_real_repository_sidecar_passes_existing_strict_boundary(action, real_resources):
     # Optional native dependency discovery does not import it into this process.
     dependency = "slvs" if action == "solve_sketch" else "OCP"
