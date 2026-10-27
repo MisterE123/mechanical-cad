@@ -220,3 +220,30 @@ embedded runtime's `python312._pth` explicitly includes `Lib/site-packages`, so
 `-S` does not remove those native packages. No numeric tolerance, dependency
 policy, golden/hash value or production behavior was changed to hide these
 remaining observations. They require separate review; this is not a full pass.
+
+The process harness now binds project imports explicitly to its intended
+checkout, independently of `PYTHONPATH`. A test-only source loader compiles the
+captured live bytes rather than accepting an ambient module or cached bytecode;
+origin and SHA-256 checks compare to that checkout's current bytes, not frozen
+hashes for intentionally live files. The pinned historical engine/sidecar/kernel
+remain exact overrides. Their unpinned shared dependencies use the intended
+current tree. A separate per-child proof must verify before the parent accepts
+protocol output. No diagnostic marker is added to protocol stdout. Private
+entry scripts avoid Windows' command-line size limit for historical source.
+
+Controls accept intended source despite an ambient older directory, reject a
+preloaded older package, reject a mismatched module origin even with well-formed
+response JSON, and reject source bytes changed after capture. Each rejection
+has a positive control first. A failed source proof cannot become successful
+merely because final verification or expected-error handling runs afterward.
+
+A read-only related-helper audit found the same environment-only selection in
+integration replay, sidecar-actions, CLI, part-snapshot, versioned-sketch, clevis,
+cut-chain and install-verifier processes, plus core-import children in the arc
+profile suites. Those helpers were not executed or repaired in this slice.
+Earlier Techbox subprocess totals involving those paths do not qualify the
+current source. Parent-process AST checks remain checks of the files they read;
+the geometry-result client child separately supplies an explicit add-on package
+path and is not evidence of this particular core-source-selection defect.
+Source binding also does not make `-S` remove embedded `_pth` package entries;
+the three dependency-unavailability cases remain a separate pending repair.

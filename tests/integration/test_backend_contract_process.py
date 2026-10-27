@@ -7,9 +7,15 @@ import os
 import shutil
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 import pytest
+from process_source_binding import (
+    SourceBindingError,
+    require_source_binding,
+    source_bound_script,
+)
 
 ROOT = Path(__file__).resolve().parents[2]
 BASELINE = "mcad.backend-contract/1"
@@ -115,7 +121,15 @@ def run(request=None, *, raw=None, root=ROOT, no_site=False, script=None, framed
         command.append("-S")
     if framed:
         script = framed_child_script(script)
-    command.extend(["-c", script] if script else ["-m", "mechanical_cad.sidecar"])
+    entry = (
+        script or "import runpy\nrunpy.run_module('mechanical_cad.sidecar', run_name='__main__')\n"
+    )
+    proof = Path(tempfile.mkdtemp(prefix="process-source-")) / "binding.json"
+    child = proof.with_name("entry.py")
+    child.write_bytes(
+        source_bound_script(root, entry, proof, historical_pins=historical_pins()).encode("utf-8")
+    )
+    command.append(str(child))
     env = dict(os.environ, PYTHONPATH=str(root / "src"), PYTHONNOUSERSITE="1")
     env.pop("PYTHONHOME", None)
     result = subprocess.run(
@@ -127,7 +141,95 @@ def run(request=None, *, raw=None, root=ROOT, no_site=False, script=None, framed
         env=env,
         check=False,
     )
+    require_source_binding(result, proof)
     return result, json.loads(result.stdout)
+
+
+def historical_pins():
+    directory, manifest = sector_pre_service_fixtures()
+    pins = {
+        "pre_service_" + name + ".py": {
+            "sha256": entry["sha256"],
+            "module": "mechanical_cad.engine" if name == "engine" else None,
+        }
+        for name, entry in manifest["sources"].items()
+    }
+    kernel = directory / "kernel_ocp-30383a1.py.txt"
+    pins[str(kernel)] = dict(
+        sha256="77f3f3033f95cbe72a97dbdab70769f1f0c3d34604f2d2ac036d6e10f78224ac",
+        module="mechanical_cad.kernel_ocp",
+    )
+    pins["legacy_sidecar.py"] = dict(
+        sha256=hashlib.sha256(legacy_sidecar_source().encode("utf-8")).hexdigest(), module=None
+    )
+    return pins
+
+
+def _binding_control(tmp_path, *, prelude="", entry=None, tamper=False):
+    root, older = tmp_path / "intended", tmp_path / "older"
+    for folder in [root, older]:
+        package = folder / "src/mechanical_cad"
+        package.mkdir(parents=True, exist_ok=True)
+        (package / "__init__.py").write_bytes(b"")
+        (package / "engine.py").write_bytes(b"VALUE = 'intended'\n")
+    (older / "src/mechanical_cad/engine.py").write_bytes(
+        b"raise AssertionError('OLDER_SOURCE_MUST_NOT_EXECUTE')\n"
+    )
+    proof = Path(tempfile.mkdtemp(prefix="proof-", dir=tmp_path)) / "binding.json"
+    body = entry or (
+        "from mechanical_cad.engine import VALUE\n"
+        "import json\nprint(json.dumps({'value': VALUE}, separators=(',', ':')))\n"
+    )
+    program = source_bound_script(root, CHILD_TEXT_FRAMING + body, proof, historical_pins={})
+    if tamper:
+        (root / "src/mechanical_cad/engine.py").write_bytes(b"VALUE = 'changed'\n")
+    child = proof.with_name("entry.py")
+    child.write_bytes((prelude.format(older=str(older / "src")) + program).encode("utf-8"))
+    process = subprocess.run(
+        [sys.executable, "-B", "-S", str(child)],
+        capture_output=True,
+        timeout=30,
+        check=False,
+    )
+    return process, proof
+
+
+def test_child_binding_overrides_ambient_older_source_and_rejects_preload(tmp_path):
+    process, proof = _binding_control(tmp_path)
+    assert require_source_binding(process, proof)["status"] == "verified"
+    assert process.returncode == 0 and process.stdout == b'{"value":"intended"}\n'
+    ambient = "import sys\nsys.path.insert(0, {older!r})\n"
+    process, proof = _binding_control(tmp_path, prelude=ambient)
+    assert require_source_binding(process, proof)["status"] == "verified"
+    assert process.returncode == 0 and process.stdout == b'{"value":"intended"}\n'
+    process, proof = _binding_control(tmp_path, prelude=ambient + "import mechanical_cad\n")
+    with pytest.raises(SourceBindingError, match="preloaded project module"):
+        require_source_binding(process, proof)
+    assert process.returncode != 0 and process.stdout == b""
+
+
+def test_child_binding_rejects_mismatched_module_origin_before_accepting_output(tmp_path):
+    process, proof = _binding_control(tmp_path)
+    assert require_source_binding(process, proof)["status"] == "verified"
+    entry = (
+        "import mechanical_cad.engine as engine\n"
+        "engine.__spec__.origin = 'foreign/engine.py'\n"
+        'print(\'{"value":"untrusted"}\')\n'
+    )
+    process, proof = _binding_control(tmp_path, entry=entry)
+    with pytest.raises(SourceBindingError, match="module origin mismatch"):
+        require_source_binding(process, proof)
+    assert process.stdout == b'{"value":"untrusted"}\n'
+    assert process.returncode != 0
+
+
+def test_child_binding_rejects_live_bytes_changed_after_capture(tmp_path):
+    process, proof = _binding_control(tmp_path)
+    assert require_source_binding(process, proof)["status"] == "verified"
+    process, proof = _binding_control(tmp_path, tamper=True)
+    with pytest.raises(SourceBindingError, match="source bytes mismatch"):
+        require_source_binding(process, proof)
+    assert process.returncode != 0 and process.stdout == b""
 
 
 @pytest.mark.parametrize("port", ["stdout", "fdopen"])
@@ -788,19 +890,29 @@ def test_historical_kernel_loader_is_lazy_and_rechecks_bytes(tmp_path):
     assert result.returncode == 0
     assert result.stdout == (directory / "snapshot_drilled_plate.stdout.txt").read_bytes()
     loader = script.split("engine = types.ModuleType", 1)[0]
+    proof = Path(tempfile.mkdtemp(prefix="process-source-")) / "binding.json"
+    child = proof.with_name("entry.py")
+    child.write_bytes(
+        source_bound_script(
+            ROOT,
+            framed_child_script(loader + "import mechanical_cad.kernel_ocp\n"),
+            proof,
+            historical_pins=historical_pins(),
+        ).encode("utf-8")
+    )
     result = subprocess.run(
         [
             sys.executable,
             "-B",
             "-S",
-            "-c",
-            framed_child_script(loader + "import mechanical_cad.kernel_ocp\n"),
+            str(child),
         ],
         cwd=ROOT,
         env={**os.environ, "PYTHONPATH": str(ROOT / "src"), "PYTHONNOUSERSITE": "1"},
         capture_output=True,
         timeout=30,
     )
+    require_source_binding(result, proof)
     assert result.returncode != 0
     assert b"AssertionError" in result.stderr
     assert b"must never execute" not in result.stderr
