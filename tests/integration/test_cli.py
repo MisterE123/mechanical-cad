@@ -1,11 +1,14 @@
+import io
 import json
 import math
 import os
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 import pytest
+from process_source_binding import require_source_binding, source_bound_script
 
 from mechanical_cad.cli import main
 from mechanical_cad.kernel_ocp import OCPKernel
@@ -91,17 +94,35 @@ def test_cli_current_document_edit_controls_exported_geometry(plate, tmp_path):
 
 def _cli_process(arguments, *, console_entry=False):
     entry = (
-        ["-c", "from mechanical_cad.cli import main; raise SystemExit(main())"]
+        "import sys\nsys.argv[0] = '-c'\n"
+        "from mechanical_cad.cli import main; raise SystemExit(main())\n"
         if console_entry
-        else ["-m", "mechanical_cad.cli"]
+        else "import runpy\nrunpy.run_module('mechanical_cad.cli', run_name='__main__', alter_sys=True)\n"
     )
-    return subprocess.run(
-        [sys.executable, *entry, *arguments],
+    proof = Path(tempfile.mkdtemp(prefix="cli-source-")) / "binding.json"
+    child = proof.with_name("entry.py")
+    child.write_bytes(source_bound_script(ROOT, entry, proof, historical_pins={}).encode("utf-8"))
+    process = subprocess.run(
+        [sys.executable, "-B", str(child), *arguments],
         capture_output=True,
-        text=True,
         timeout=60,
+        cwd=ROOT,
         env=dict(os.environ, PYTHONPATH=str(ROOT / "src")),
     )
+    # Reject wrong-source output before decoding or treating it as CLI evidence.
+    require_source_binding(process, proof)
+    return subprocess.CompletedProcess(
+        process.args,
+        process.returncode,
+        _cli_text(process.stdout),
+        _cli_text(process.stderr),
+    )
+
+
+def _cli_text(raw):
+    # Match text=True's existing universal-newline semantics with the CLI's
+    # explicit UTF-8 encoding, independent of the parent's Windows locale.
+    return io.TextIOWrapper(io.BytesIO(raw), encoding="utf-8", errors="strict").read()
 
 
 @pytest.mark.parametrize("console_entry", [False, True])

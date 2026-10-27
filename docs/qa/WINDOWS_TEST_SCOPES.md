@@ -358,3 +358,36 @@ actual cache preparation/publication, subprocess or Blender proof is claimed.
 
 Earlier unsupported-host spoof tests were replaced by actual-host wrong-profile
 metadata controls. Unsupported-host execution itself was not tested on Techbox.
+
+## CLI subprocess source and text decoding
+
+The CLI subprocess helper now captures raw bytes, requires the existing reviewed
+`process_source_binding` proof, and only then reads each stream with strict UTF-8
+and the existing text-mode universal-newline semantics. The CLI already writes
+its confirmation stream as UTF-8; the old locale-default cp1252 reader corrupted
+Unicode paths on Windows. No production CLI encoding, output bytes, confirmation
+expectation, export implementation or golden fixture changed.
+
+Both console and module entry paths use the same source-binding machinery as
+the backend process harness. Every project import is bound to intended checkout
+bytes; origin/hash or preloaded-project failures reject the process before its
+output is decoded or accepted. Module execution retains `runpy`'s `__main__`
+semantics; console execution retains its `-c` argv identity. Proofs are separate
+files, never protocol output. `-B` prevents child bytecode writes.
+
+The explicit Techbox selection collected and passed 15 cases: all four existing
+`test_cli_export_process_stdout_contains_only_confirmation` STEP/STL and
+console/module cases, plus 11 generated-source controls. Those controls exercise
+an ambient older tree, a preloaded foreign package, wrong module origin, changed
+source bytes, correct UTF-8 versus cp1252 interpretation and strict invalid-UTF-8
+rejection. Each source-fault control first succeeds with clean fixture source.
+The wrong-origin child emits invalid UTF-8 to prove source rejection precedes
+decoding; the valid-source/invalid-UTF-8 control proves decoding remains strict.
+All original CLI test bodies and assertions are preserved exactly.
+
+Earlier ambient CLI subprocess results loaded the retained runtime's older
+source tree despite `PYTHONPATH`; they are not current-source qualification.
+The repaired four-case result binds current working-tree source bytes, with CI
+checkout providing the outer commit identity. Other CLI tests and broader suites
+were not executed in this bounded pass. It establishes neither native Windows
+packaging nor Blender usability; Windows native release remains NOT_READY.
