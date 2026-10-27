@@ -23,6 +23,10 @@ sys.modules[PACKAGE] = package
 validator = importlib.import_module(PACKAGE + ".part_result_bridge")
 bridge = importlib.import_module(PACKAGE + ".bridge")
 
+LINUX_LEGACY_BRIDGE = pytest.mark.skipif(
+    sys.platform != "linux", reason="Linux qualified legacy bridge manual-process contract"
+)
+
 
 def request(name="circle_sketch_part", **changes):
     doc = load_document(ROOT / "examples" / (name + ".mcad.json"))
@@ -101,6 +105,7 @@ def test_blocked_and_failed_typed_results_keep_only_valid_current_outputs():
 
 
 @pytest.mark.parametrize("name", ["circle_sketch_part", "open_line_sketch"])
+@LINUX_LEGACY_BRIDGE
 def test_real_sidecar_client_uses_explicit_new_path(name):
     req = request(name)
     result = bridge.replay(
@@ -110,6 +115,7 @@ def test_real_sidecar_client_uses_explicit_new_path(name):
 
 
 @pytest.mark.parametrize("action", ["check_geometry", "export_step", "export_stl"])
+@LINUX_LEGACY_BRIDGE
 def test_real_geometry_client_preserves_negotiated_output_and_export_metadata(tmp_path, action):
     req = request()
     destination = None if action == "check_geometry" else str(tmp_path / "part.file")
@@ -125,6 +131,7 @@ def test_real_geometry_client_preserves_negotiated_output_and_export_metadata(tm
     assert response["result"]["features"][-1]["output"]["kind"] == "solid"
 
 
+@LINUX_LEGACY_BRIDGE
 def test_real_geometry_client_accepts_explicit_open_not_solid_failure(tmp_path):
     req = request("open_line_sketch")
     path = tmp_path / "keep.step"

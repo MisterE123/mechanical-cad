@@ -29,6 +29,10 @@ diagnostics = importlib.import_module(PACKAGE + ".constraint_diagnostics")
 geometry = importlib.import_module(PACKAGE + ".general_view_geometry")
 pending = importlib.import_module(PACKAGE + ".sketch_pending")
 
+LINUX_MANUAL_PROCESS = pytest.mark.skipif(
+    sys.platform != "linux", reason="Linux manual capture and native guarded subprocess contract"
+)
+
 
 def selection(generation=0):
     return selection_module.BackendSelection.capture(
@@ -105,6 +109,7 @@ def clone(draft):
     return d.GeneralSketchDraft.from_checkpoint_payload(draft.checkpoint_payload())
 
 
+@LINUX_MANUAL_PROCESS
 def test_bound_draft_rejects_matching_legacy_success_without_authored_changes():
     draft, _, _ = circle()
     current, owner = bind(draft)
@@ -126,6 +131,7 @@ def test_bound_draft_rejects_matching_legacy_success_without_authored_changes():
     assert not draft.has_current_solution and checkpoint(draft) == before
 
 
+@LINUX_MANUAL_PROCESS
 def test_same_owner_clone_retains_original_evidence_and_rejects_other_owner():
     draft, _, _ = circle()
     current, owner = bind(draft)
@@ -157,6 +163,7 @@ def test_same_owner_clone_retains_original_evidence_and_rejects_other_owner():
         )
 
 
+@LINUX_MANUAL_PROCESS
 def test_generation_aba_retires_solved_seed_and_preserves_every_authored_byte():
     draft, _, fixed = circle()
     current, owner = bind(draft)
@@ -181,6 +188,7 @@ def test_generation_aba_retires_solved_seed_and_preserves_every_authored_byte():
         )
 
 
+@LINUX_MANUAL_PROCESS
 def test_generation_change_during_acceptance_cannot_retain_current_solution():
     draft, _, _ = circle()
     current, owner = bind(draft)
@@ -196,6 +204,7 @@ def test_generation_change_during_acceptance_cannot_retain_current_solution():
     assert checkpoint(draft) == before
 
 
+@LINUX_MANUAL_PROCESS
 def test_failed_guarded_diagnostics_keep_scalar_snapshot_and_revoke_on_aba():
     draft, _, _ = circle()
     rim = draft.sketch["circles"][0]["id"]
@@ -263,6 +272,7 @@ def test_failed_guarded_diagnostics_keep_scalar_snapshot_and_revoke_on_aba():
     assert not draft.has_current_solution
 
 
+@LINUX_MANUAL_PROCESS
 def test_downstream_trial_mixed_generations_reject_without_changing_raw_input():
     draft, driver, _ = circle(consumed=True)
     current, owner = bind(draft)
@@ -280,6 +290,7 @@ def test_downstream_trial_mixed_generations_reject_without_changing_raw_input():
     assert not draft.has_current_solution and not draft.has_verified_trial
 
 
+@LINUX_MANUAL_PROCESS
 def test_downstream_chain_survives_exact_clone_and_is_revalidated_together():
     draft, driver, _ = circle(consumed=True)
     current, owner = bind(draft)
@@ -310,6 +321,7 @@ def test_downstream_chain_survives_exact_clone_and_is_revalidated_together():
     assert (checkpoint(draft), checkpoint(copy)) == before
 
 
+@LINUX_MANUAL_PROCESS
 def test_snapshot_and_type_changed_authored_numbers_cannot_enter_solved_sink():
     draft, _, _ = circle()
     current, owner = bind(draft)
@@ -334,6 +346,7 @@ def test_snapshot_and_type_changed_authored_numbers_cannot_enter_solved_sink():
         )
 
 
+@LINUX_MANUAL_PROCESS
 def test_guarded_pending_old_cleanup_cannot_consume_or_release_new_lease():
     draft, _, _ = circle()
     current, owner = bind(draft)
