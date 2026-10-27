@@ -247,3 +247,13 @@ the geometry-result client child separately supplies an explicit add-on package
 path and is not evidence of this particular core-source-selection defect.
 Source binding also does not make `-S` remove embedded `_pth` package entries;
 the three dependency-unavailability cases remain a separate pending repair.
+
+The subsequent controlled-unavailability slice keeps the original `-S` flag but
+adds an explicit child-only import policy for exactly `invalid_deflection`
+(OCP), `solver_dependency_absent` (slvs), and `kernel_dependency_absent` (OCP).
+Historical/live children receive the same policy. Already-loaded target roots
+or descendants reject setup; normal and dynamic imports of selected roots and
+descendants raise the top-level `ModuleNotFoundError` envelope. Standard-library
+and current-checkout imports remain available. Native positive cases receive no
+policy. Controls prove these properties without creating a physically different
+runtime, and all three original raw golden/error comparisons pass unchanged.

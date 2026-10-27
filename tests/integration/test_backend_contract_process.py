@@ -115,7 +115,49 @@ def framed_child_script(script=None):
     )
 
 
-def run(request=None, *, raw=None, root=ROOT, no_site=False, script=None, framed=False):
+CONTROLLED_UNAVAILABLE = {
+    "invalid_deflection": ("OCP",),
+    "solver_dependency_absent": ("slvs",),
+    "kernel_dependency_absent": ("OCP",),
+}
+
+
+def controlled_unavailability_script(roots):
+    assert roots and set(roots) <= {"OCP", "slvs"}
+    return f"""
+import builtins, importlib.abc, sys
+_wire_unavailable_roots = {tuple(roots)!r}
+for _wire_name in sys.modules:
+    assert not any(_wire_name == root or _wire_name.startswith(root + '.')
+                   for root in _wire_unavailable_roots), 'preloaded unavailable module: ' + _wire_name
+def _wire_missing(name):
+    for root in _wire_unavailable_roots:
+        if name == root or name.startswith(root + '.'):
+            raise ModuleNotFoundError("No module named '" + root + "'", name=root)
+_wire_original_import = builtins.__import__
+def _wire_import(name, globals=None, locals=None, fromlist=(), level=0):
+    if level == 0:
+        _wire_missing(name)
+    return _wire_original_import(name, globals, locals, fromlist, level)
+class _WireUnavailable(importlib.abc.MetaPathFinder):
+    def find_spec(self, fullname, path=None, target=None):
+        _wire_missing(fullname)
+        return None
+builtins.__import__ = _wire_import
+sys.meta_path.insert(0, _WireUnavailable())
+"""
+
+
+def run(
+    request=None,
+    *,
+    raw=None,
+    root=ROOT,
+    no_site=False,
+    script=None,
+    framed=False,
+    unavailable=(),
+):
     command = [sys.executable, "-B"]
     if no_site:
         command.append("-S")
@@ -124,6 +166,8 @@ def run(request=None, *, raw=None, root=ROOT, no_site=False, script=None, framed
     entry = (
         script or "import runpy\nrunpy.run_module('mechanical_cad.sidecar', run_name='__main__')\n"
     )
+    if unavailable:
+        entry = controlled_unavailability_script(unavailable) + entry
     proof = Path(tempfile.mkdtemp(prefix="process-source-")) / "binding.json"
     child = proof.with_name("entry.py")
     child.write_bytes(
@@ -143,6 +187,60 @@ def run(request=None, *, raw=None, root=ROOT, no_site=False, script=None, framed
     )
     require_source_binding(result, proof)
     return result, json.loads(result.stdout)
+
+
+@pytest.mark.parametrize("name", ["OCP", "slvs"])
+def test_controlled_unavailability_blocks_roots_and_descendants(name):
+    script = f"""
+import importlib, json
+from mechanical_cad.model import Document
+assert Document is not None
+blocked = []
+for candidate in [{name!r}, {name!r} + '.descendant']:
+    try:
+        importlib.import_module(candidate)
+    except ModuleNotFoundError as error:
+        assert error.name == {name!r}
+        blocked.append(candidate)
+    else:
+        raise AssertionError('unavailable import succeeded')
+try:
+    sys.meta_path[0].find_spec({name!r} + '.direct_descendant')
+except ModuleNotFoundError as error:
+    assert error.name == {name!r}
+else:
+    raise AssertionError('descendant finder did not reject')
+print(json.dumps({{'blocked': blocked}}, separators=(',', ':')))
+"""
+    process, value = run(script=script, no_site=True, framed=True, unavailable=(name,))
+    assert process.returncode == 0 and value == {"blocked": [name, name + ".descendant"]}
+    assert process.stderr == b""
+
+
+@pytest.mark.parametrize("name", ["OCP", "OCP.descendant", "slvs", "slvs.descendant"])
+def test_controlled_unavailability_rejects_already_loaded_modules(tmp_path, name):
+    entry = (
+        f"import sys, types\nsys.modules[{name!r}] = types.ModuleType({name!r})\n"
+        + controlled_unavailability_script((name.split(".")[0],))
+        + "print('{\"must_not_run\":true}')\n"
+    )
+    process, proof = _binding_control(tmp_path, entry=entry)
+    assert require_source_binding(process, proof)["status"] == "verified"
+    assert process.returncode != 0 and process.stdout == b""
+    assert b"preloaded unavailable module" in process.stderr
+
+
+def test_positive_native_cases_receive_no_unavailability_policy():
+    _, manifest = sector_pre_service_fixtures()
+    for case in manifest["cases"]:
+        if not case["no_site"]:
+            assert CONTROLLED_UNAVAILABLE.get(case["name"], ()) == ()
+    process, value = run(
+        no_site=True,
+        framed=True,
+        script="import json\nprint(json.dumps({'policy_installed': '_wire_unavailable_roots' in globals()}))\n",
+    )
+    assert process.returncode == 0 and value == {"policy_installed": False}
 
 
 def historical_pins():
@@ -666,12 +764,16 @@ def test_exact_pre_service_request_stdout_exit_and_source_differential(case):
     if not case["no_site"]:
         pytest.importorskip("OCP")
         pytest.importorskip("slvs")
-    current, _ = run(raw=raw.decode("utf-8"), no_site=case["no_site"], framed=True)
+    unavailable = CONTROLLED_UNAVAILABLE.get(case["name"], ())
+    current, _ = run(
+        raw=raw.decode("utf-8"), no_site=case["no_site"], framed=True, unavailable=unavailable
+    )
     original, _ = run(
         raw=raw.decode("utf-8"),
         no_site=case["no_site"],
         script=sector_pre_service_script(directory, manifest),
         framed=True,
+        unavailable=unavailable,
     )
     assert current.returncode == original.returncode == case["returncode"]
     assert original.stdout == expected
