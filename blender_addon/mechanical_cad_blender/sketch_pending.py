@@ -476,7 +476,7 @@ def cancel_all(reason="Sketch work cancelled for lifecycle change.", *, wait_tim
     for pending in jobs:
         if not pending.done:
             try:
-                pending._job.wait(max(0.0, deadline - time.monotonic()))
+                pending._job.wait(min(seconds, max(0.0, deadline - time.monotonic())))
             except Exception as exc:
                 pending._error = "Native process cleanup wait failed: " + _message(exc)
             _finish_retired(pending)

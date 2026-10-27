@@ -391,3 +391,61 @@ The repaired four-case result binds current working-tree source bytes, with CI
 checkout providing the outer commit identity. Other CLI tests and broader suites
 were not executed in this bounded pass. It establishes neither native Windows
 packaging nor Blender usability; Windows native release remains NOT_READY.
+
+## Manual guarded and legacy bridge contracts
+
+Named Linux marks retain nine `test_general_guarded_capabilities.py` cases whose
+manual `BackendSelection.capture` intentionally rejects other hosts before native
+evidence exists. Their original bodies, helpers and assertions are unchanged.
+The Part result module marks only its two real sidecar-client cases, three real
+geometry-client cases and one open-not-solid bridge case. Its 56 validator,
+mutation and isolated-import cases remain active on Windows.
+
+The sketch-pending module marks its six genuine manual sidecar/worker cases and
+the real invalid-configuration case. The latter retains the exact Linux Project
+Root assertion. A separate actual-Windows admission-order counterpart uses the
+real default `SidecarJob` constructor, observes actual lease acquisition/release,
+and forbids configuration, path, temporary-file, process and worker leaves.
+It is an early-rejection control, not a substitute successful Windows sidecar.
+All portable identity, strict response, lease and lifecycle cases remain active.
+
+Collection retained all 22 Linux cases with true Windows skip conditions. The
+explicit Windows execution list contains 55 Part in-process cases, 111 sketch
+cases and seven new deterministic clock cases. Two unchanged portable import-only
+subprocess tests remain active in CI but were excluded from this local execution.
+All 173 selected cases passed, including every setup and teardown; no Linux
+process case executed. This is not a broad module skip or complete suite pass.
+
+The first bounded run's incomplete reporting and blocked pytest housekeeping
+attempts remain recorded separately. The reviewed private runner now disables
+JUnit, cacheprovider and external plugin autoload, clears addopts and preserves
+incrementally flushed phase/failure reports with separate stream capture. It
+omits only the inspected optional pytest current-alias helper, with both paths
+strictly bounded beneath a fresh run-owned basetemp. Application and native guard
+functions are unchanged. Its generated pass/intentional-failure validation and
+the final 173-case execution recorded zero forbidden process/link attempts.
+
+Distinct Windows public-path coverage remains in `test_windows_live_capture.py`
+(bundled policy capture versus closed external capture), `test_windows_transport.py`
+(real transport/owner composition with narrow fake OS leaves) and
+`test_service_v3_lifecycle.py` (public-record rejection by the dormant service).
+Those do not establish native parity with the retained Linux manual-process
+cases. No production admission, class, authority or platform guard changed;
+Windows native packaging and Blender qualification remain NOT_READY.
+
+## Sketch cleanup deadline rounding
+
+At an unchanged large clock value, deadline addition/subtraction can produce a
+remaining wait of `0.02000000001862645` for a `0.02` budget. `cancel_all` now caps
+that wait by the original seconds as well as the existing decreasing shared
+deadline. The original strict `<= 0.02` assertion is unchanged. There is no new
+deadline, retry, tolerance or authority to release an unconfirmed owner.
+
+Seven deterministic regressions replace only the sketch-pending module's time
+reference, leaving shared `time.monotonic` intact. One publicly admitted job
+exercises unchanged large time, elapsed time, expiration, zero timeout and wait
+exceptions. No second job is manufactured around the exclusive lease. Pending
+cleanup and wait exceptions keep the lease held with no response consumed;
+confirmed later cleanup/reap releases it. Eleven focused cancellation/clock/
+Windows-admission cases passed before the 173-case selection ran. This is pure
+adapter and ownership coverage, not native Windows transport qualification.
