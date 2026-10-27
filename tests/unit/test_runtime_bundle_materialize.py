@@ -16,6 +16,7 @@ from dataclasses import replace
 from pathlib import Path
 
 import pytest
+from windows_materializer_fixture import ComposedStorage, short_root
 
 ROOT = Path(__file__).resolve().parents[2]
 PACKAGE = "mcad_runtime_bundle_tests"
@@ -40,10 +41,19 @@ class Pin:
 
 
 class Fixture:
-    def __init__(self, tmp_path, platform="linux-x64"):
+    def __init__(self, tmp_path, platform=None):
+        platform = platform or ("windows-x64" if os.name == "nt" else "linux-x64")
+        if os.name == "nt":
+            tmp_path = short_root(tmp_path)
         self.package, self.cache = tmp_path / "package é", tmp_path / "cache 中文"
         self.package.mkdir()
-        self.cache.mkdir()
+        if os.name == "nt":
+            self.known = tmp_path / "k"
+            self.known.mkdir()
+            self.cache = self.known / "MechanicalCAD" / "r"
+            self.cache.mkdir(parents=True)
+        else:
+            self.cache.mkdir()
         self.platform = platform
         self.bundle_id = m.bundle_identity("a" * 40, "b" * 64, platform)
         python_path = "python/python.exe" if platform == "windows-x64" else "python/bin/python3.12"
@@ -77,6 +87,13 @@ class Fixture:
         self.folder.mkdir(parents=True)
         self.pin = Pin(self.bundle_id)
         self.write()
+        self.storage = None
+        if os.name == "nt" and platform == "windows-x64":
+            c = importlib.import_module(PACKAGE + ".windows_cache")
+            release = m.parse_release_manifest(
+                encode(self.release), expected_platform=platform, limits=LIMITS
+            )
+            self.storage = ComposedStorage(c, self.package, self.known, release)
 
     def write(self, mutate=None, compression=zipfile.ZIP_DEFLATED):
         output = io.BytesIO()
@@ -118,15 +135,41 @@ class Fixture:
     def run(self, **kwargs):
         options = dict(expected_platform=self.platform, limits=LIMITS, pin=self.pin)
         options.update(kwargs)
+        if self.storage is not None:
+            self.storage.release = m.parse_release_manifest(
+                encode(self.release), expected_platform=self.platform, limits=LIMITS
+            )
+            return self.storage.invoke(
+                u.materialize_bundle, release_data=encode(self.release), **options
+            )
         return u.materialize_bundle(self.package, self.cache, encode(self.release), **options)
 
     def recheck(self, **kwargs):
         options = dict(expected_platform=self.platform, limits=LIMITS, pin=self.pin)
         options.update(kwargs)
+        if self.storage is not None:
+            self.storage.release = m.parse_release_manifest(
+                encode(self.release), expected_platform=self.platform, limits=LIMITS
+            )
+            return self.storage.invoke(
+                u.verify_cached_bundle, release_data=encode(self.release), **options
+            )
         return u.verify_cached_bundle(self.package, self.cache, encode(self.release), **options)
 
 
-@pytest.mark.parametrize("platform", ["linux-x64", "windows-x64"])
+@pytest.mark.parametrize(
+    "platform",
+    [
+        pytest.param(
+            "linux-x64",
+            marks=pytest.mark.skipif(
+                os.name == "nt",
+                reason="Linux payload uses POSIX mode/link inventory; Windows payload runs below",
+            ),
+        ),
+        "windows-x64",
+    ],
+)
 def test_complete_offline_materialization_and_shared_recheck(tmp_path, platform):
     f = Fixture(tmp_path, platform)
     before = {p.relative_to(f.package): p.read_bytes() for p in f.package.rglob("*") if p.is_file()}
@@ -160,7 +203,21 @@ def test_cached_tree_is_rehashed_not_marker_trusted_and_never_replaced(tmp_path)
 
 
 @pytest.mark.parametrize(
-    "mutation", ["missing", "extra", "directory", "mode", "symlink", "hardlink", "marker"]
+    "mutation",
+    [
+        "missing",
+        "extra",
+        "directory",
+        pytest.param(
+            "mode",
+            marks=pytest.mark.skipif(
+                os.name == "nt", reason="POSIX mode mutation; Windows ACL negatives are separate"
+            ),
+        ),
+        "symlink",
+        "hardlink",
+        "marker",
+    ],
 )
 def test_exact_final_inventory_rejects_every_unlisted_change(tmp_path, mutation):
     f = Fixture(tmp_path)
@@ -174,6 +231,24 @@ def test_exact_final_inventory_rejects_every_unlisted_change(tmp_path, mutation)
         (f.final / "extra").mkdir()
     elif mutation == "mode":
         target.chmod(0o777)
+    elif os.name == "nt" and mutation in {"symlink", "hardlink"}:
+
+        def configure(owner, api):
+            def changed(info):
+                if info.path == str(target):
+                    return replace(
+                        info,
+                        **(
+                            {"attributes": info.attributes | 0x400}
+                            if mutation == "symlink"
+                            else {"links": 2}
+                        ),
+                    )
+                return info
+
+            api.info_change = changed
+
+        f.storage.configure = configure
     elif mutation == "symlink":
         target.unlink()
         target.symlink_to(f.folder / "bundle-manifest.json")
@@ -248,7 +323,9 @@ def test_cancel_before_start_and_mid_copy_retains_only_owned_stage(tmp_path):
     assert error.value.staging_path is None
 
     def cancelled():
-        return any(p.stat().st_size > 0 for p in f.cache.glob(".stage-*/python/bin/python3.12"))
+        return any(
+            p.stat().st_size > 0 for p in f.cache.glob(".stage-*/" + f.manifest["python_path"])
+        )
 
     with pytest.raises(u.BundleCancelled) as error:
         f.run(cancelled=cancelled)
@@ -305,7 +382,14 @@ def test_payload_path_replacement_after_open_cannot_switch_verified_stream(tmp_p
     try:
         result = f.run()
     except u.BundlePreparationError as error:
-        assert "changed during" in str(error)
+        if os.name == "nt" and isinstance(error.__cause__, PermissionError):
+            # A retained Windows input handle can deny replacement outright.
+            # The original bytes must remain; no switched stream was extracted.
+            assert error.__cause__.winerror in {5, 32}
+            assert (f.folder / "payload.zip").read_bytes() == f.payload
+            assert not f.final.exists()
+        else:
+            assert "changed during" in str(error)
     else:
         assert Path(result.python_path).read_bytes() == b"fake interpreter"
 
@@ -324,7 +408,7 @@ def test_limits_disk_and_pin_fail_without_output(tmp_path, monkeypatch):
     assert not list(f.cache.iterdir())
 
 
-def test_package_cache_overlap_and_symlink_roots_rejected(tmp_path):
+def test_package_cache_overlap_and_symlink_roots_rejected(tmp_path, monkeypatch):
     f = Fixture(tmp_path)
     with pytest.raises(u.BundlePreparationError, match="disjoint"):
         u.materialize_bundle(
@@ -336,7 +420,19 @@ def test_package_cache_overlap_and_symlink_roots_rejected(tmp_path):
             pin=f.pin,
         )
     link = tmp_path / "cache-link"
-    link.symlink_to(f.cache, target_is_directory=True)
+    if os.name == "nt":
+        link.mkdir()
+        assert u._safe_path(link) == link
+        original = Path.lstat
+
+        def reparse(path):
+            if path == link:
+                return types.SimpleNamespace(st_mode=stat.S_IFDIR, st_file_attributes=0x400)
+            return original(path)
+
+        monkeypatch.setattr(Path, "lstat", reparse)
+    else:
+        link.symlink_to(f.cache, target_is_directory=True)
     with pytest.raises(u.BundlePreparationError, match="Symlink"):
         u.materialize_bundle(
             f.package,
@@ -672,12 +768,75 @@ def test_uncertain_input_close_never_retries_reused_descriptor(tmp_path, monkeyp
             original_close(fd)
 
 
+def windows_composed_hook_fixture(tmp_path, monkeypatch):
+    """Observe and fault real owner methods around fake metadata leaves only."""
+    c = importlib.import_module(PACKAGE + ".windows_cache")
+    f = Fixture(tmp_path, "windows-x64")
+    state = types.SimpleNamespace(
+        owner=None,
+        stage=None,
+        events=[],
+        fail_stage=None,
+        fail_entry=None,
+        fail_before=None,
+        fail_after=None,
+        c=c,
+        f=f,
+    )
+
+    def configure(owner, api):
+        state.owner = owner
+
+    f.storage.configure = configure
+
+    def wrap(name, event):
+        original = getattr(c.WindowsCacheOwner, name)
+
+        def observed(actual, *args, **kwargs):
+            if name == "before_stage_rename" and state.fail_before:
+                raise state.fail_before
+            result = original(actual, *args, **kwargs)
+            if actual is not state.owner:
+                return result  # Constructor's pure binding check precedes configure.
+            if name == "create_stage":
+                state.stage = actual.owned_stage_path
+                state.events.append(event)
+                if state.fail_stage:
+                    raise state.fail_stage
+            elif name == "check_private_entry":
+                state.events.append((event, str(args[0]), kwargs["directory"]))
+                if state.fail_entry and state.fail_entry(Path(args[0]), kwargs["directory"]):
+                    raise m.BundleError("injected private-entry rejection")
+            else:
+                state.events.append(event)
+            if name == "after_stage_rename" and state.fail_after:
+                raise state.fail_after
+            return result
+
+        monkeypatch.setattr(c.WindowsCacheOwner, name, observed)
+
+    for method, event in (
+        ("check_installed_paths", "installed"),
+        ("check_manifest_paths", "paths"),
+        ("assert_held", "held"),
+        ("create_stage", "created_stage"),
+        ("check_private_entry", "private"),
+        ("before_stage_rename", "before_rename"),
+        ("after_stage_rename", "after_rename"),
+    ):
+        wrap(method, event)
+    state.run, state.recheck = f.run, f.recheck
+    return state
+
+
 # These inert POSIX fixtures instrument named methods on the concrete owner.
 # Literal DOS strings name ordinary temporary POSIX directories here; they do
 # not model Windows path resolution, DACL inheritance or native sharing/rename.
 # The existing extractor, payload hashes, inventory, marker and rename stay real.
 def windows_hook_fixture(tmp_path, monkeypatch):
     c = importlib.import_module(PACKAGE + ".windows_cache")
+    if os.name == "nt":
+        return windows_composed_hook_fixture(tmp_path, monkeypatch)
     f = Fixture(tmp_path, "windows-x64")
     package_text = r"C:\extension"
     known = r"C:\Users\Alice\AppData\Local"
@@ -992,3 +1151,92 @@ def test_windows_storage_binding_rejects_before_safe_root_io(
             pin=f.pin,
             windows_storage=owner,
         )
+
+
+@pytest.mark.skipif(os.name != "nt", reason="Concrete DOS owner on host Windows paths")
+@pytest.mark.parametrize(
+    "fault", ["links", "reparse", "acl", "rename_identity", "cancel", "cleanup", "native"]
+)
+def test_windows_composed_owner_positive_then_metadata_fault(tmp_path, fault):
+    # A clean complete tree must pass before any negative observation is useful.
+    good = Fixture(tmp_path)
+    descriptor = good.run()
+    good.pin.mode = "shared"
+    assert good.recheck() == descriptor
+    for owner, api in good.storage.attempts:
+        assert owner._state == "closed" and not owner.cleanup_uncertain
+        assert not api.handles and not api.allocations
+        assert all(resource.closed for resource in owner._resources)
+    original_owner = good.storage.attempts[0][0]
+    assert original_owner.owned_stage_path is not None
+    assert not os.path.lexists(original_owner.owned_stage_path)
+
+    f = Fixture(tmp_path)
+    c = f.storage.w
+    cancelled = False
+    f.storage.cancelled = lambda: cancelled
+
+    def configure(owner, api):
+        def info_change(info):
+            if info.path.endswith("\\bootstrap.py"):
+                if fault == "links":
+                    return replace(info, links=2)
+                if fault == "reparse":
+                    return replace(info, attributes=info.attributes | 0x400)
+            if fault == "rename_identity" and info.path == str(f.final):
+                return replace(info, identity=(info.identity[0], info.identity[1] + 1))
+            return info
+
+        def security_change(value):
+            if fault == "acl" and api.security_path.endswith("\\bootstrap.py"):
+                return replace(value, owner=bytes.fromhex("010100000000000100000000"))
+            return value
+
+        def hook(event):
+            nonlocal cancelled
+            if fault == "cancel" and event[0] == "attributes" and "\\.stage-" in event[1]:
+                cancelled = True
+            if fault == "cleanup" and event[0] == "free" and owner.owned_stage_path:
+                raise OSError("injected uncertain metadata cleanup")
+            if fault == "native" and event[0] == "token_open":
+                c._WindowsAPI()
+
+        api.info_change, api.security_change, api.hook = info_change, security_change, hook
+
+    f.storage.configure = configure
+    expected = c.WindowsCacheCancelled if fault == "cancel" else u.BundlePreparationError
+    # Native factory poisoning fails in owner acquisition, before materializer.
+    if fault == "native":
+        expected = c.WindowsCacheError
+    with pytest.raises(expected) as raised:
+        f.run()
+    owner, api = f.storage.attempts[-1]
+    assert len(api.closed) == len(set(api.closed))
+    assert len(api.freed) == len(set(api.freed))
+    if fault == "native":
+        assert isinstance(raised.value.__cause__, AssertionError)
+        assert "must not bind native" in str(raised.value.__cause__)
+        assert owner.owned_stage_path is None
+    else:
+        assert raised.value.staging_path == owner.owned_stage_path
+        assert owner.owned_stage_path is not None
+        assert os.path.lexists(f.final if fault == "rename_identity" else owner.owned_stage_path)
+        if fault != "cancel":
+            assert type(raised.value.__cause__) is c.WindowsCacheError
+            assert (
+                raised.value.__cause__.code
+                == {
+                    "links": "windows_cache_unsupported_location",
+                    "reparse": "windows_cache_unsupported_location",
+                    "acl": "windows_cache_not_private",
+                    "rename_identity": "windows_cache_unsupported_location",
+                    "cleanup": "cleanup_blocked",
+                }[fault]
+            )
+    if fault == "cleanup":
+        assert owner.cleanup_uncertain
+        assert any(resource.attempted and not resource.closed for resource in owner._resources)
+        assert api.allocations  # Uncertain cleanup stays owned; no retry or deletion.
+    else:
+        assert owner._state == "closed"
+        assert not api.handles and not api.allocations

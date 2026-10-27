@@ -371,6 +371,34 @@ def test_runtime_mutation_after_inventory_still_rejected_during_stream_copy(inpu
 
 
 def _materializer_exercise(inputs, tmp_path):
+    import os
+
+    storage_fixture = None
+    if os.name == "nt":
+        spec = importlib.util.spec_from_file_location(
+            "isolated_windows_materializer_fixture",
+            ROOT / "tests/unit/windows_materializer_fixture.py",
+        )
+        storage_fixture = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(storage_fixture)
+        tmp_path = storage_fixture.short_root(tmp_path)
+        # Build a Windows contract on Windows rather than route a Linux payload
+        # through the POSIX nlink fallback. All interpreter bytes remain inert.
+        old = inputs["python_path"]
+        new = "python/python.exe"
+        (inputs["runtime_root"] / old).rename(inputs["runtime_root"] / new)
+        inputs = dict(
+            inputs,
+            platform="windows-x64",
+            python_path=new,
+            runtime_files=[
+                dict(item, path=new) if item["path"] == old else item
+                for item in inputs["runtime_files"]
+            ],
+        )
+        # This isolated test qualifies materialization only. Native hard-link
+        # publication is a separate gate and is unavailable on this host.
+        builder.os.link = storage_fixture.publish_inert_zip
     result = builder.build_contract_extension(**inputs)
     package = tmp_path / "known synthetic package"
     package.mkdir()
@@ -393,16 +421,30 @@ def _materializer_exercise(inputs, tmp_path):
         def assert_held(self):
             pass  # Synthetic contract only, not OS lock qualification.
 
-    cache = tmp_path / "cache"
-    cache.mkdir()
-    descriptor = materializer.materialize_bundle(
-        package,
-        cache,
-        (package / "release_identity.json").read_bytes(),
-        expected_platform="linux-x64",
+    release_data = (package / "release_identity.json").read_bytes()
+    options = dict(
+        release_data=release_data,
+        expected_platform=inputs["platform"],
         limits=builder.CONTRACTS.BundleLimits(),
         pin=FakePin(),
     )
+    if storage_fixture is None:
+        cache = tmp_path / "cache"
+        cache.mkdir()
+        descriptor = materializer.materialize_bundle(package, cache, **options)
+    else:
+        known = tmp_path / "k"
+        known.mkdir()
+        c = importlib.import_module(name + ".windows_cache")
+        manifest = importlib.import_module(name + ".runtime_bundle_manifest")
+        release = manifest.parse_release_manifest(
+            release_data, expected_platform="windows-x64", limits=options["limits"]
+        )
+        storage = storage_fixture.ComposedStorage(c, package, known, release)
+        descriptor = storage.invoke(materializer.materialize_bundle, **options)
+        shared = dict(options, pin=FakePin())
+        shared["pin"].mode = "shared"
+        assert storage.invoke(materializer.verify_cached_bundle, **shared) == descriptor
     assert Path(descriptor.python_path).read_bytes().startswith(b"INERT INTERPRETER")
     assert (Path(descriptor.root) / "src/mechanical_cad/sidecar.py").read_bytes() == (
         inputs["source_root"] / "src/mechanical_cad/sidecar.py"

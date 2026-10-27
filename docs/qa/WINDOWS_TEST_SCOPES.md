@@ -151,5 +151,44 @@ UTF-8. The mutation fixture's source append helper also writes UTF-8 with LF to
 retain the original bytes outside its intentional append. Normalizing away only
 these I/O options leaves the complete audit-module ASTs unchanged: no approved
 hash, allowlist, mutation or assertion is rebased. Cache-owner materialization
-composition and unsupported manual-profile native groups remain outside this
-bounded repair pass.
+composition was addressed in the subsequent bounded pass below. Unsupported
+manual-profile native groups remain deferred.
+
+## Concrete Windows owner and materializer composition
+
+On Windows, `test_runtime_bundle_materialize.py` now composes its namespace's
+exact `WindowsCacheOwner` with short host-absolute package/cache roots on a worker
+thread. `windows_materializer_fixture.py` supplies explicit fake token, ACL,
+volume and handle metadata leaves; real file identity/link observations use the
+inert temporary files. Native API construction and DLL binding are forbidden.
+Production binding, worker affinity, path budgets, ownership, ACL and one-link
+checks remain active. Extraction, hashes, inventory, ready marker, stage rename,
+shared recheck and resource retirement are real unit-test composition.
+
+Each metadata-fault case first completes an independent clean materialization
+and recheck. Faults cover two-link observations, reparse attributes, foreign ACL
+ownership, changed identity after rename, cancellation, uncertain cleanup and
+attempted native binding. Uncertain resources remain recorded without retry or
+deletion. Existing Windows hook tests observe real owner methods on Windows;
+their original POSIX method doubles remain unchanged on Linux. No private-entry
+check is replaced by blanket success in the Windows composition.
+
+The Linux payload/POSIX mode mutation and two existing FIFO tests remain
+platform-scoped. Windows link/reparse negatives use metadata/predicate controls
+without creating filesystem links. Its retained open payload can reject a
+replacement with WinError 5/32; that branch requires unchanged original bytes
+and no published tree. Linux keeps its original replacement assertions.
+
+The two isolated builder/materializer tests build a Windows-target inert payload
+on Windows and use the same concrete-owner composition, including shared
+reverification. Only their ZIP publication leaf is an explicit exclusive-copy
+test double: this does not prove production atomic hard-link publication. The
+native-import deny finder remains active in the separate interpreter.
+
+A broader local builder run invoked existing native link tests and confirmed
+WinError 5 for hard-link publication and WinError 1314 for symlink creation.
+Those actions were not repeated after that run. The remaining builder tests
+requiring those actions are not qualified by the bounded composed run. No
+production guard or publication implementation was changed. These observations
+establish neither native cache ACL/locking behavior nor Windows/Blender release
+qualification; Windows remains NOT_READY.
