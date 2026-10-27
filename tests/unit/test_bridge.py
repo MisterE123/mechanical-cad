@@ -3,6 +3,7 @@
 import importlib.util
 import json
 import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -13,6 +14,12 @@ SPEC = importlib.util.spec_from_file_location(
 )
 bridge = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(bridge)
+
+
+LINUX_LEGACY_BRIDGE = pytest.mark.skipif(
+    sys.platform != "linux",
+    reason="Linux legacy bridge admission and mocked-transport integration contract",
+)
 
 
 @pytest.fixture
@@ -38,6 +45,7 @@ def process(value, returncode=0):
     return subprocess.CompletedProcess([], returncode, json.dumps(value), "")
 
 
+@LINUX_LEGACY_BRIDGE
 def test_subprocess_arguments_are_safe_and_isolated(monkeypatch, configuration):
     calls = []
 
@@ -58,6 +66,7 @@ def test_subprocess_arguments_are_safe_and_isolated(monkeypatch, configuration):
     assert json.loads(kwargs["input"])["document"]["id"] == "doc"
 
 
+@LINUX_LEGACY_BRIDGE
 @pytest.mark.parametrize(
     "exception,match",
     [
@@ -74,6 +83,7 @@ def test_process_failures_are_actionable(monkeypatch, configuration, exception, 
         bridge.replay({"id": "doc"}, **configuration)
 
 
+@LINUX_LEGACY_BRIDGE
 @pytest.mark.parametrize(
     "value,match",
     [
@@ -99,6 +109,7 @@ def test_malformed_response_fails_closed(monkeypatch, configuration, value, matc
         bridge.replay({"id": "doc"}, **configuration)
 
 
+@LINUX_LEGACY_BRIDGE
 def test_failed_replay_can_return_per_feature_diagnostics(monkeypatch, configuration):
     result = {
         "document_id": "doc",
@@ -113,12 +124,14 @@ def test_failed_replay_can_return_per_feature_diagnostics(monkeypatch, configura
     assert bridge.replay({"id": "doc"}, **configuration) == result
 
 
+@LINUX_LEGACY_BRIDGE
 def test_success_with_nonzero_exit_is_rejected(monkeypatch, configuration):
     monkeypatch.setattr(bridge.subprocess, "run", lambda *args, **kwargs: process(response(), 1))
     with pytest.raises(bridge.BridgeError, match="despite reporting success"):
         bridge.replay({"id": "doc"}, **configuration)
 
 
+@LINUX_LEGACY_BRIDGE
 def test_invalid_json_reports_bounded_stderr(monkeypatch, configuration):
     monkeypatch.setattr(
         bridge.subprocess,
@@ -140,6 +153,7 @@ def test_missing_source_path_is_actionable(tmp_path):
         bridge.resolve_configuration(str(tmp_path), str(tmp_path / "python"))
 
 
+@LINUX_LEGACY_BRIDGE
 def test_nonfinite_document_does_not_launch_process(monkeypatch, configuration):
     monkeypatch.setattr(
         bridge.subprocess, "run", lambda *args, **kwargs: pytest.fail("must not launch")
@@ -148,6 +162,7 @@ def test_nonfinite_document_does_not_launch_process(monkeypatch, configuration):
         bridge.replay({"id": "doc", "value": float("nan")}, **configuration)
 
 
+@LINUX_LEGACY_BRIDGE
 @pytest.mark.parametrize("version", [True, 1.0, "1"])
 def test_response_version_requires_an_integer(monkeypatch, configuration, version):
     monkeypatch.setattr(

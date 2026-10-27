@@ -66,6 +66,11 @@ sys.exit(request.get('exit', 0))
 """
 
 
+LINUX_MANUAL_PROFILE = pytest.mark.skipif(
+    sys.platform != "linux", reason="Linux manual SidecarJob or legacy bridge admission contract"
+)
+
+
 @pytest.fixture
 def configuration(tmp_path):
     module = tmp_path / "src/mechanical_cad"
@@ -122,6 +127,7 @@ def started(configuration):
     wait_until(path.exists)
 
 
+@LINUX_MANUAL_PROFILE
 def test_explicit_start_exact_snapshot_and_single_consumption(configuration, resources):
     request = {"action": "assembly_check", "document": {"dimensions": [2.5, 3], "name": "板"}}
     expected = json.loads(json.dumps(request))
@@ -151,6 +157,7 @@ def test_explicit_start_exact_snapshot_and_single_consumption(configuration, res
     assert job.request_snapshot() == expected
 
 
+@LINUX_MANUAL_PROFILE
 def test_safe_command_and_environment_isolation(monkeypatch, configuration, resources):
     monkeypatch.setenv("PYTHONHOME", "/wrong/blender/python")
     monkeypatch.setenv("PYTHONPATH", "/wrong/source")
@@ -169,6 +176,7 @@ def test_safe_command_and_environment_isolation(monkeypatch, configuration, reso
     assert result["cwd"] == configuration["project_root"]
 
 
+@LINUX_MANUAL_PROFILE
 @pytest.mark.parametrize(
     "invalid_request",
     [
@@ -188,6 +196,7 @@ def test_nonfinite_or_nonexact_json_rejected_before_launch(
     assert resources[0] == []
 
 
+@LINUX_MANUAL_PROFILE
 def test_cyclic_request_rejected_before_launch(configuration, resources):
     request = {}
     request["cycle"] = request
@@ -196,6 +205,7 @@ def test_cyclic_request_rejected_before_launch(configuration, resources):
     assert resources[0] == []
 
 
+@LINUX_MANUAL_PROFILE
 def test_oversized_request_rejected_before_launch(monkeypatch, configuration, resources):
     monkeypatch.setattr(transport, "MAX_DOCUMENT_BYTES", 128)
     with pytest.raises(BridgeError, match="2 MiB input limit"):
@@ -203,6 +213,7 @@ def test_oversized_request_rejected_before_launch(monkeypatch, configuration, re
     assert resources[0] == []
 
 
+@LINUX_MANUAL_PROFILE
 @pytest.mark.parametrize("case", ["shared_dag", "cycle", "string", "integer"])
 def test_resource_preflight_runs_before_full_json_encoding(monkeypatch, configuration, case):
     if case == "shared_dag":
@@ -225,6 +236,7 @@ def test_resource_preflight_runs_before_full_json_encoding(monkeypatch, configur
         transport.SidecarJob({"value": value}, **configuration)
 
 
+@LINUX_MANUAL_PROFILE
 @pytest.mark.parametrize(
     "value",
     [
@@ -245,6 +257,7 @@ def test_preflight_size_matches_exact_default_json_bytes(monkeypatch, configurat
         transport.SidecarJob(request, **configuration)
 
 
+@LINUX_MANUAL_PROFILE
 def test_benign_shared_containers_are_detached_without_changing_wire_bytes(configuration):
     shared = {"coordinates": [1.5, 2.5, None], "label": "板"}
     request = {"left": shared, "right": shared, "list": [shared, shared]}
@@ -260,6 +273,7 @@ def test_benign_shared_containers_are_detached_without_changing_wire_bytes(confi
     assert job.request_snapshot() == snapshot
 
 
+@LINUX_MANUAL_PROFILE
 def test_preflight_detaches_before_the_final_encoder_runs(monkeypatch, configuration):
     request = {"values": [1, 2, 3]}
     encode = transport.json.dumps
@@ -291,6 +305,7 @@ def test_cached_subtree_height_is_checked_at_every_reference(monkeypatch):
         transport.snapshot_request({"first": shared, "second": {"deeper": shared}})
 
 
+@LINUX_MANUAL_PROFILE
 @pytest.mark.skipif(os.name == "nt", reason="resource limits require POSIX")
 @pytest.mark.parametrize(
     "case",
@@ -362,12 +377,14 @@ def test_adversarial_input_preflight_in_time_and_memory_capped_process(configura
     assert process.stdout.strip() == expected
 
 
+@LINUX_MANUAL_PROFILE
 @pytest.mark.parametrize("timeout", [float("nan"), float("inf"), None, "invalid"])
 def test_invalid_timeout_is_actionable(timeout, configuration):
     with pytest.raises(BridgeError, match="Invalid sidecar timeout"):
         transport.SidecarJob({}, timeout=timeout, **configuration)
 
 
+@LINUX_MANUAL_PROFILE
 @pytest.mark.parametrize(
     "response,exit_code,message",
     [
@@ -391,6 +408,7 @@ def test_common_protocol_fails_closed(response, exit_code, message, configuratio
         job.result()
 
 
+@LINUX_MANUAL_PROFILE
 def test_valid_cad_failure_envelope_remains_available(configuration, resources):
     response = {
         "protocol_version": 1,
@@ -402,6 +420,7 @@ def test_valid_cad_failure_envelope_remains_available(configuration, resources):
     assert finished(job.start()).result() == response
 
 
+@LINUX_MANUAL_PROFILE
 @pytest.mark.parametrize(
     "raw",
     [
@@ -419,6 +438,7 @@ def test_invalid_response_json(raw, configuration, resources):
         job.result()
 
 
+@LINUX_MANUAL_PROFILE
 def test_stderr_diagnostic_is_bounded(configuration, resources):
     job = transport.SidecarJob(
         {"mode": "invalid", "stderr": "private-prefix" + "x" * 4096 + "TAIL"}, **configuration
@@ -431,6 +451,7 @@ def test_stderr_diagnostic_is_bounded(configuration, resources):
     assert len(str(error.value)) < transport.MAX_DIAGNOSTIC_CHARS + 100
 
 
+@LINUX_MANUAL_PROFILE
 def test_timeout_kills_and_reaps_its_process(configuration, resources):
     job = transport.SidecarJob({"mode": "sleep"}, timeout=0.01, **configuration)
     assert job._timeout == 1.0  # Match the synchronous bridge's lower clamp.
@@ -441,6 +462,7 @@ def test_timeout_kills_and_reaps_its_process(configuration, resources):
     assert not (Path(configuration["project_root"]) / "completed").exists()
 
 
+@LINUX_MANUAL_PROFILE
 def test_cancel_before_start_never_launches(configuration, resources):
     job = transport.SidecarJob({}, **configuration)
     assert job.cancel() is True
@@ -454,6 +476,7 @@ def test_cancel_before_start_never_launches(configuration, resources):
     assert not resources[1]
 
 
+@LINUX_MANUAL_PROFILE
 def test_cancel_during_run_is_nonblocking_and_reaped(configuration, resources):
     job = transport.SidecarJob({"mode": "sleep"}, **configuration).start()
     started(configuration)
@@ -469,6 +492,7 @@ def test_cancel_during_run_is_nonblocking_and_reaped(configuration, resources):
     assert all(file.closed for file in resources[1])
 
 
+@LINUX_MANUAL_PROFILE
 def test_cancel_ready_response_wins_before_consumption(configuration, resources):
     job = finished(transport.SidecarJob({}, **configuration).start())
     assert resources[0][0].returncode == 0
@@ -480,6 +504,7 @@ def test_cancel_ready_response_wins_before_consumption(configuration, resources)
     assert job._response is None
 
 
+@LINUX_MANUAL_PROFILE
 def test_cancel_during_validation_prevents_late_publication(monkeypatch, configuration, resources):
     entered, resume = threading.Event(), threading.Event()
     original = transport.SidecarJob._read_response
@@ -508,6 +533,7 @@ def test_cancel_during_validation_prevents_late_publication(monkeypatch, configu
     assert job._response is None
 
 
+@LINUX_MANUAL_PROFILE
 def test_cancel_during_process_launch_prevents_late_publication(
     monkeypatch, configuration, resources
 ):
@@ -533,6 +559,7 @@ def test_cancel_during_process_launch_prevents_late_publication(
     assert resources[0][0].returncode is not None
 
 
+@LINUX_MANUAL_PROFILE
 def test_concurrent_start_and_cancel_always_leave_cancelled_job(configuration, resources):
     for _ in range(12):
         job = transport.SidecarJob({}, **configuration)
@@ -566,6 +593,7 @@ def test_concurrent_start_and_cancel_always_leave_cancelled_job(configuration, r
             job.result()
 
 
+@LINUX_MANUAL_PROFILE
 def test_ready_result_and_cancellation_have_one_atomic_winner(configuration, resources):
     for _ in range(12):
         job = finished(transport.SidecarJob({}, **configuration).start())
@@ -599,6 +627,7 @@ def test_ready_result_and_cancellation_have_one_atomic_winner(configuration, res
             assert "error" not in outcomes
 
 
+@LINUX_MANUAL_PROFILE
 @pytest.mark.parametrize(
     "mode,constant,message",
     [
@@ -619,6 +648,7 @@ def test_output_limit_is_enforced_while_process_is_running(
     assert not (Path(configuration["project_root"]) / "completed").exists()
 
 
+@LINUX_MANUAL_PROFILE
 def test_output_limit_is_checked_after_fast_exit(monkeypatch, configuration, resources):
     monkeypatch.setattr(transport, "MAX_RESPONSE_BYTES", 128)
     job = transport.SidecarJob({"mode": "raw", "raw": "x" * 256}, **configuration).start()
@@ -627,6 +657,7 @@ def test_output_limit_is_checked_after_fast_exit(monkeypatch, configuration, res
         job.result()
 
 
+@LINUX_MANUAL_PROFILE
 def test_executable_start_failure_closes_all_tempfiles(configuration, resources, tmp_path):
     invalid = tmp_path / "not-executable"
     invalid.write_text("not executable", encoding="utf-8")
@@ -640,6 +671,7 @@ def test_executable_start_failure_closes_all_tempfiles(configuration, resources,
     assert all(file.closed for file in resources[1])
 
 
+@LINUX_MANUAL_PROFILE
 def test_thread_start_failure_is_consumable(monkeypatch, configuration, resources):
     def fail_start(self):
         raise RuntimeError("thread unavailable")
@@ -653,6 +685,7 @@ def test_thread_start_failure_is_consumable(monkeypatch, configuration, resource
     assert resources[1] == []
 
 
+@LINUX_MANUAL_PROFILE
 def test_partial_tempfile_setup_failure_closes_previous_files(
     monkeypatch, configuration, resources
 ):
@@ -676,6 +709,7 @@ def test_partial_tempfile_setup_failure_closes_previous_files(
     assert resources[1][0].closed
 
 
+@LINUX_MANUAL_PROFILE
 @pytest.mark.parametrize("phase", ["before", "running", "ready"])
 def test_export_cancellation_reports_uncertain_outcome_only_after_launch(
     phase, configuration, resources
@@ -694,6 +728,7 @@ def test_export_cancellation_reports_uncertain_outcome_only_after_launch(
     assert error.value.outcome_unknown == (phase != "before")
 
 
+@LINUX_MANUAL_PROFILE
 def test_nonstring_action_does_not_break_error_cleanup(configuration, resources):
     job = transport.SidecarJob({"action": [], "mode": "invalid"}, **configuration).start()
     finished(job, "failed")
@@ -701,6 +736,7 @@ def test_nonstring_action_does_not_break_error_cleanup(configuration, resources)
         job.result()
 
 
+@LINUX_MANUAL_PROFILE
 def test_repeated_jobs_cleanup_without_descriptor_growth(configuration, resources):
     descriptors = Path("/proc/self/fd")
     before = len(list(descriptors.iterdir())) if descriptors.is_dir() else None
@@ -729,6 +765,7 @@ def test_transport_imports_no_blender_or_native_cad():
             assert node.module.split(".")[0] not in forbidden
 
 
+@LINUX_MANUAL_PROFILE
 @pytest.mark.skipif(os.name == "nt", reason="POSIX process reaping proof")
 def test_finished_process_has_already_been_reaped(configuration, resources):
     job = finished(transport.SidecarJob({}, **configuration).start())

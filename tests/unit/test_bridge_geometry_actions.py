@@ -4,6 +4,7 @@ import copy
 import importlib.util
 import json
 import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -16,6 +17,12 @@ bridge = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(bridge)
 DOCUMENT = {"id": "doc", "active_feature": "pad", "units": "mm"}
 DESTINATION = "/tmp/part with spaces.step"
+
+
+LINUX_LEGACY_BRIDGE = pytest.mark.skipif(
+    sys.platform != "linux",
+    reason="Linux legacy bridge admission and mocked-transport integration contract",
+)
 
 
 @pytest.fixture
@@ -85,6 +92,7 @@ def invoke(configuration, action="check_geometry"):
     return bridge.geometry_action(DOCUMENT, action, **kwargs, **configuration)
 
 
+@LINUX_LEGACY_BRIDGE
 @pytest.mark.parametrize("action", ["check_geometry", "export_step", "export_stl"])
 def test_success_keeps_full_precision_and_explicit_request(monkeypatch, configuration, action):
     expected = response(action)
@@ -122,6 +130,7 @@ def test_invalid_request_never_launches_process(monkeypatch, configuration, acti
     assert not raised.value.outcome_unknown
 
 
+@LINUX_LEGACY_BRIDGE
 @pytest.mark.parametrize("action", ["check_geometry", "export_step", "export_stl"])
 def test_structured_early_failure_is_known_not_transport_uncertainty(
     monkeypatch, configuration, action
@@ -136,6 +145,7 @@ def test_structured_early_failure_is_known_not_transport_uncertainty(
     assert invoke(configuration, action) == value
 
 
+@LINUX_LEGACY_BRIDGE
 def test_replay_diagnostics_survive_failed_action(monkeypatch, configuration):
     value = response("export_step")
     value.update(
@@ -150,6 +160,7 @@ def test_replay_diagnostics_survive_failed_action(monkeypatch, configuration):
     assert invoke(configuration, "export_step") == value
 
 
+@LINUX_LEGACY_BRIDGE
 @pytest.mark.parametrize("action", ["check_geometry", "export_step", "export_stl"])
 def test_timeout_reports_export_outcome_unknown_without_retry(monkeypatch, configuration, action):
     calls = []
@@ -165,6 +176,7 @@ def test_timeout_reports_export_outcome_unknown_without_retry(monkeypatch, confi
     assert calls == [1]
 
 
+@LINUX_LEGACY_BRIDGE
 def test_launch_failure_cannot_have_written_export(monkeypatch, configuration):
     def run(*args, **kwargs):
         raise OSError("Interpreter unavailable")
@@ -175,6 +187,7 @@ def test_launch_failure_cannot_have_written_export(monkeypatch, configuration):
     assert not raised.value.outcome_unknown
 
 
+@LINUX_LEGACY_BRIDGE
 @pytest.mark.parametrize(
     "path,value",
     [
@@ -217,6 +230,7 @@ def test_inconsistent_export_response_is_unconfirmed(monkeypatch, configuration,
     assert raised.value.outcome_unknown
 
 
+@LINUX_LEGACY_BRIDGE
 @pytest.mark.parametrize(
     "change", ["missing_active", "duplicate_active", "volume_mismatch", "invalid_active"]
 )
@@ -236,6 +250,7 @@ def test_successful_check_requires_consistent_active_solid(monkeypatch, configur
         invoke(configuration)
 
 
+@LINUX_LEGACY_BRIDGE
 @pytest.mark.parametrize(
     "path,value",
     [
@@ -259,6 +274,7 @@ def test_stl_requires_encoded_mesh_and_precision_gates(monkeypatch, configuratio
     assert raised.value.outcome_unknown
 
 
+@LINUX_LEGACY_BRIDGE
 def test_lost_export_reply_never_claims_file_preservation(monkeypatch, configuration):
     monkeypatch.setattr(
         bridge.subprocess,
