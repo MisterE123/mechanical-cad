@@ -2531,7 +2531,29 @@ def assert_windows_runtime_cache_finite_symbols(root):
                 start = min(
                     [node.lineno] + [item.lineno for item in getattr(node, "decorator_list", [])]
                 )
-                result.append(b"".join(lines[start - 1 : node.end_lineno]))
+                raw = b"".join(lines[start - 1 : node.end_lineno])
+                if (
+                    current
+                    and filename == "windows_runtime.py"
+                    and name == "WindowsOperationOwner.exchange"
+                ):
+                    # Require the reviewed insertion on the live path, then
+                    # compare every remaining byte with the sealed predecessor.
+                    assert isinstance(node, ast.FunctionDef)
+                    reviewed = (
+                        b"            if self.process.error is not None:\n"
+                        b"                raise self.process.error\n"
+                    )
+                    anchor = (
+                        b"            self.process.start()\n"
+                        b"            if self.process.cleanup_started_at is not None:\n"
+                        b"                self.cleanup_checkpoint(self.process.cleanup_started_at)\n"
+                        + reviewed
+                        + b"            self.checkpoint()\n"
+                    )
+                    assert raw.count(reviewed) == raw.count(anchor) == 1
+                    raw = raw.replace(anchor, anchor.replace(reviewed, b""), 1)
+                result.append(raw)
             return result
 
         result = members(ast.parse(data).body)

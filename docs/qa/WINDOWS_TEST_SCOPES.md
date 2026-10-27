@@ -695,3 +695,19 @@ The exact public positive passed under ordinary and CI-shaped task-local C: root
 before correction; the in-memory D: layout reproduced the CI-shaped failure.
 This isolates the cross-drive metadata issue without global settings, drive
 remapping, SystemRoot changes, native process/API execution or path relaxation.
+
+## Exact live admission for the reviewed failed-start check
+
+The finite-symbol boundary requires the reviewed two-line check only in the
+CURRENT `WindowsOperationOwner.exchange`, at the exact start/cleanup-budget/
+success-checkpoint anchor. It requires one insertion, removes only those lines
+for comparison, and compares all remaining method bytes with the sealed original.
+The historical path is unchanged. No whole-method exemption, allowed-symbol set,
+review-manifest digest or historical golden changed.
+
+Nine new positive-before-negative controls reject missing, duplicated, misplaced,
+changed-error, changed-cause and changed-guard insertions, later checkpoint or
+finally-cleanup changes, and an extra call. All 46 explicit source/AST controls
+passed, including the four reported live failures, existing finite-symbol/import
+and alias/dynamic-call mutations, and immutable historical guard/hash controls.
+These tests execute no runtime, process, filesystem link or native API.
