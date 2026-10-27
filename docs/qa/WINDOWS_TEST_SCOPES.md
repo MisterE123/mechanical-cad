@@ -604,3 +604,22 @@ checks canonical bytes before exclusive evidence-directory creation. The retaine
 embedded Python `_pth` ignores `PYTHONPATH`; this route needs explicit source
 binding review before local execution. No generator/native evidence is claimed
 from the pure error-message control.
+
+## Snapshot duplicate-wire security and legacy admission
+
+Only the real-process canonical snapshot case and the two mocked legacy
+duplicate-wire integration cases in `test_part_snapshot_bridge.py` receive Linux
+scope. The duplicate cases are admission/decoder integration contracts, not native
+geometry tests. Original bodies remain unchanged. In-process canonical validators,
+authored-input immutability, checksum and resource mutation controls stay active.
+
+Two new portable controls first parse/validate a clean canonical response, then
+reject duplicate envelope or nested keys through the real
+`bridge.parse_document_json`, preserving the original request. Two actual-Windows
+public-profile controls inject ambiguous RAW response bytes into the existing
+finite process-owner API composition. The real decoder rejects them before result
+or evidence handoff; each original owner closes its resources once, releases its
+pin and lease, and refuses result reuse or job restart without another API event.
+The last duplicate value is otherwise valid, so accepting last-key-wins JSON would
+fail these controls. The documented inventory/launch-input/pin doubles remain;
+this is decoder/owner/receipt composition, not native process or geometry parity.

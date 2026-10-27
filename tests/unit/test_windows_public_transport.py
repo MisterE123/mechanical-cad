@@ -307,3 +307,71 @@ def test_public_protocol_and_receipt_rejection_keeps_owner_cleanup(public, fault
     with pytest.raises(public.transport.GuardedOperationError, match="consumed"):
         job.result(public.selected, owner_token=owner)
     assert public.env.events == before
+
+
+def record_public_jobs(monkeypatch, public):
+    jobs = []
+    original = public.transport.GuardedJob.__init__
+
+    def observe(self, *args, **kwargs):
+        original(self, *args, **kwargs)
+        jobs.append(self)
+
+    monkeypatch.setattr(public.transport.GuardedJob, "__init__", observe)
+    return jobs
+
+
+def assert_failed_public_owner_retired_once(public, job):
+    env, lease = public.env, public.transport.execution_lease
+    assert job.done and job._job._response is None
+    assert env.pin.releases == 1 and not env.pin.held
+    assert env.events.count("create") == env.events.count("rmdir") == 1
+    assert env.events.count("pin_release") == 1
+    assert env.events.index("rmdir") < env.events.index("pin_release")
+    assert set(env.process.acquired) == set(env.process.closed)
+    assert len(env.process.close_calls) == len(set(env.process.close_calls))
+    assert not lease.is_busy() and lease._QUARANTINE is None
+    before = list(env.events)
+    with pytest.raises(public.transport.GuardedOperationError, match="consumed"):
+        job.result(public.selected, owner_token=job._owner_token)
+    with pytest.raises(public.transport.GuardedOperationError, match="once"):
+        job.start(public.selected)
+    assert env.events == before
+
+
+@WINDOWS_PUBLIC
+@pytest.mark.parametrize("duplicate", ["envelope", "nested"])
+def test_public_raw_duplicate_response_rejects_without_evidence_or_retry(
+    public, monkeypatch, duplicate
+):
+    request = prepared()
+    clean = response(request, public.selected)
+    decoded = fixture.jobs.bridge.parse_document_json(clean.decode("utf-8"), require_object=False)
+    positive = public.transport.accept_response(
+        request, decoded, public.selected, owner_token=object()
+    )
+    assert type(positive) is public.transport.GuardedEvidence
+    assert positive.publication.cancel()
+    if duplicate == "envelope":
+        original, replacement = b'"ok":true', b'"ok":false,"ok":true'
+    else:
+        original, replacement = (
+            b'"document_id":"public_snapshot"',
+            b'"document_id":"foreign","document_id":"public_snapshot"',
+        )
+    assert clean.count(original) == 1
+    ambiguous = clean.replace(original, replacement, 1)
+    public.env.process.response = ambiguous  # Raw bytes reach the real decoder.
+    jobs, evidence = record_public_jobs(monkeypatch, public), []
+    with pytest.raises(public.transport.GuardedOperationError, match="invalid JSON"):
+        evidence.append(
+            public.transport.execute(
+                request,
+                public.selected,
+                owner_token=object(),
+                current_selection=lambda: public.selected,
+            )
+        )
+    assert evidence == [] and len(jobs) == 1
+    assert public.env.process.contents["file1"] == ambiguous
+    assert_failed_public_owner_retired_once(public, jobs[0])

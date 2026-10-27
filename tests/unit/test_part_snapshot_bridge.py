@@ -30,6 +30,11 @@ spec.loader.exec_module(snapshot)
 bridge = snapshot.bridge
 
 
+LINUX_LEGACY_PROFILE = pytest.mark.skipif(
+    sys.platform != "linux", reason="Linux legacy real-process or mocked decoder/admission integration"
+)
+
+
 def raw_document():
     return json.loads(
         (ROOT / "examples/regressions/viewport_schema2_capture.mcad.json").read_text()
@@ -89,6 +94,7 @@ def test_capture_uses_existing_transport_and_returns_detached_authoritative_rece
     assert calls[0][0]["document"] is not raw
 
 
+@LINUX_LEGACY_PROFILE
 def test_real_process_capture_with_current_interpreter():
     raw = raw_document()
     receipt = snapshot.canonical_snapshot(
@@ -313,6 +319,7 @@ def test_failure_response_is_actionable_but_cannot_create_receipt():
 
 
 @pytest.mark.parametrize("duplicate", ["envelope", "nested"])
+@LINUX_LEGACY_PROFILE
 def test_duplicate_wire_response_keys_are_rejected_by_existing_transport(monkeypatch, duplicate):
     candidate = request()
     raw = json.dumps(process_request(candidate))
@@ -329,6 +336,30 @@ def test_duplicate_wire_response_keys_are_rejected_by_existing_transport(monkeyp
         snapshot.canonical_snapshot(
             candidate["document"], project_root=str(ROOT), python_executable=sys.executable
         )
+
+
+@pytest.mark.parametrize("duplicate", ["envelope", "nested"])
+def test_duplicate_wire_keys_reject_in_real_parser_after_clean_snapshot_positive(duplicate):
+    candidate = request()
+    before = copy.deepcopy(candidate)
+    clean = json.dumps(process_request(candidate), allow_nan=False)
+    decoded = bridge.parse_document_json(clean, require_object=False)
+    receipt = snapshot.validate_response(candidate, decoded)
+    assert receipt["content_hash"] == Document.from_dict(candidate["document"]).content_hash
+    if duplicate == "envelope":
+        key, original, replacement = "ok", '"ok": true', '"ok": false, "ok": true'
+    else:
+        key, original, replacement = (
+            "schema_version",
+            '"schema_version": 2',
+            '"schema_version": 1, "schema_version": 2',
+        )
+    assert original in clean
+    ambiguous = clean.replace(original, replacement, 1)
+    assert ambiguous != clean
+    with pytest.raises(bridge.BridgeError, match="^Duplicate JSON key: " + key + "$"):
+        bridge.parse_document_json(ambiguous, require_object=False)
+    assert candidate == before
 
 
 def test_bridge_import_never_imports_bpy_or_core_even_without_site_packages(tmp_path):
