@@ -449,3 +449,58 @@ cleanup and wait exceptions keep the lease held with no response consumed;
 confirmed later cleanup/reap releases it. Eleven focused cancellation/clock/
 Windows-admission cases passed before the 173-case selection ran. This is pure
 adapter and ownership coverage, not native Windows transport qualification.
+
+## Legacy transport admission and public Windows composition
+
+Only named tests that enter the manual `SidecarJob` constructor or legacy bridge
+transport have Linux scope. Some mock the process; their Linux scope describes
+the admission/integration contract, not a claim that they run native geometry.
+Every original body, helper, assertion and pre-existing decorator is preserved.
+
+| Original module | Retained Linux cases | Original portable cases active on Windows |
+| --- | ---: | ---: |
+| `test_sidecar_job.py` | 66 | 3 |
+| `test_bridge.py` | 17 | 5 |
+| `test_bridge_geometry_actions.py` | 47 | 9 |
+| `test_bridge_sketch_reports.py` | 31 | 0 |
+
+The Linux count includes eight already-POSIX-only cases and eight generic
+exception cases that could pass at Windows admission without reaching their
+intended assertion boundary. No whole-module skip is used. The legacy v1 geometry
+response path remains a Linux integration contract; bundled guarded operations
+select v2/v3 instead. Existing strict typed Part/geometry validators remain active
+on Windows. A legacy v1 reply is not relabeled as a supported Windows success.
+
+`test_legacy_transport_validation.py` adds 43 portable data-only cases. It reuses
+the original sketch mutation table against the real `_validate_sketch_report`
+helper, with a clean positive before every mutation. The actual bounded request
+snapshot helper retains finite/plain-JSON, exact byte limits, resource rejection
+and detached-copy coverage. These calls never enter or override legacy admission
+and cannot mint process evidence or publication authority.
+
+`test_windows_public_transport.py` uses actual Windows public `capture_bundled`,
+real `SidecarJob.from_selection`, guarded transport, receipt validators and
+publication/lease ownership. Existing finite fake OS APIs drive the real owner
+composition. Short generated paths contain inert files solely so the unchanged
+receipt path resolver can verify identity; no interpreter or CAD library is run.
+The earlier missing synthetic-path failure is retained separately. The private
+qualification constructor, native DLL bindings and native subprocess calls are
+forbidden with counters. Absorbing quarantine uses a fresh instance of the real
+lease module, preserving its original owner without resetting other tests.
+
+Fourteen public-path cases cover exact request bytes/fresh nonce, one-shot result
+and publication, cancellation before launch, ready cancellation, wrong owner,
+stale selection, common envelope/nonce/fingerprint/document rejection, and cleanup
+uncertainty that retains the original lease/pin and suppresses publication/retry.
+Twenty existing Windows owner/stream controls retain limits, original cleanup
+order, ambiguous-close ownership and no-retry assertions.
+
+The first six public composition cases passed before expansion. The final
+explicit selection collected 255 cases, retained all 161 Linux cases without
+executing them, and ran 94 Windows cases: 17 original portable, 43 data-validator,
+14 public composition and 20 existing owner/limit cases. All 94 passed with zero
+forbidden audit attempts and all setup/teardown phases passing. All 74 original
+functions/helpers preserve exact source and AST apart from named Linux marks.
+Production admission, class/authority checks and goldens are unchanged. This is
+neither native Windows process/geometry parity nor packaged Blender qualification;
+Windows native release remains NOT_READY.
