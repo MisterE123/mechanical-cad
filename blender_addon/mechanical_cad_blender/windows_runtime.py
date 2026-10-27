@@ -865,6 +865,8 @@ class WindowsOperationOwner:
             self.process.start()
             if self.process.cleanup_started_at is not None:
                 self.cleanup_checkpoint(self.process.cleanup_started_at)
+            if self.process.error is not None:
+                raise self.process.error
             self.checkpoint()
             while True:
                 self.checkpoint()

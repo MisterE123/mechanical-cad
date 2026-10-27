@@ -375,3 +375,153 @@ def test_public_raw_duplicate_response_rejects_without_evidence_or_retry(
     assert evidence == [] and len(jobs) == 1
     assert public.env.process.contents["file1"] == ambiguous
     assert_failed_public_owner_retired_once(public, jobs[0])
+
+
+@WINDOWS_PUBLIC
+@pytest.mark.parametrize("fault", ["start_error", "timeout"])
+def test_public_start_or_timeout_failure_releases_only_confirmed_original_owner(
+    public, monkeypatch, fault
+):
+    env, request = public.env, prepared()
+    env.process.response = response(request, public.selected)
+    started = env.clock.now
+    cause = fixture.w.ProcessError("injected", operation="create")
+    if fault == "start_error":
+
+        def fail_create(event):
+            if event == "create":
+                raise cause
+
+        env.process.hook = fail_create
+        expected = (
+            "Bundled backend verification or communication failed. "
+            "Check the installed extension and its private runtime."
+        )
+    else:
+        env.process.complete_on_resume = False
+        advanced = []
+
+        def late_wait_once(event):
+            if event == "wait" and not advanced:
+                advanced.append(True)
+                env.clock.now += 11
+
+        env.process.hook = late_wait_once
+        expected = (
+            "CAD operation timed out; the sidecar was stopped. Reduce model "
+            "complexity or increase the timeout in preferences."
+        )
+    jobs, evidence = record_public_jobs(monkeypatch, public), []
+    with pytest.raises(public.transport.GuardedOperationError) as error:
+        evidence.append(
+            public.transport.execute(
+                request,
+                public.selected,
+                owner_token=object(),
+                current_selection=lambda: public.selected,
+            )
+        )
+    assert str(error.value) == expected
+    assert evidence == [] and len(jobs) == 1
+    original = jobs[0]._job._bundle_owner
+    assert original.deadline == started + public.selected.timeout
+    assert original.failure_code == ("injected" if fault == "start_error" else "timeout")
+    if fault == "start_error":
+        assert original.process.error is cause and type(cause) is fixture.w.ProcessError
+        assert not original.process.resumed
+    else:
+        assert original.process.resumed and "kill_job" in env.events
+        assert "read_file1" not in env.events
+    assert original.process._closed and original.cleanup_complete and not original.cleanup_uncertain
+    assert_failed_public_owner_retired_once(public, jobs[0])
+
+
+@WINDOWS_PUBLIC
+@pytest.mark.parametrize("fault", ["ambiguous_close", "expired_cleanup"])
+def test_public_failed_start_cleanup_uncertainty_precedes_original_error(
+    public, monkeypatch, fault
+):
+    env = public.env
+    cause = fixture.w.ProcessError("injected", operation="create")
+
+    def fail_create_or_expire_cleanup(event):
+        if event == "create":
+            raise cause
+        if event == "close_file1" and fault == "expired_cleanup":
+            env.clock.now += 6
+
+    env.process.hook = fail_create_or_expire_cleanup
+    if fault == "ambiguous_close":
+        env.process.fault = "close_file1"
+    jobs, evidence = record_public_jobs(monkeypatch, public), []
+    with pytest.raises(public.transport.GuardedOperationError, match="restart Blender"):
+        evidence.append(
+            public.transport.execute(
+                prepared(),
+                public.selected,
+                owner_token=object(),
+                current_selection=lambda: public.selected,
+            )
+        )
+    assert evidence == [] and len(jobs) == 1
+    job, lease = jobs[0], public.transport.execution_lease
+    original = job._job._bundle_owner
+    assert original.process.error is cause and type(cause) is fixture.w.ProcessError
+    assert original.cleanup_uncertain and not original.cleanup_complete
+    assert not original.process._closed and not job.done and job._job._response is None
+    assert original.failure_code == (
+        "injected" if fault == "ambiguous_close" else "response_failed"
+    )
+    assert env.pin.held and env.pin.releases == 0
+    token, retained = lease._QUARANTINE
+    assert retained is job and lease.is_busy() and lease.try_acquire() is None
+    assert not lease.release(token)
+    assert env.runtime.closed == [] and "rmdir" not in env.events
+    assert env.events.count("create") == env.events.count("close_file1") == 1
+    assert len(env.process.close_calls) == len(set(env.process.close_calls))
+    before = list(env.events)
+    with pytest.raises(public.transport.GuardedOperationError, match="restart Blender"):
+        public.transport.execute(
+            prepared(),
+            public.selected,
+            owner_token=object(),
+            current_selection=lambda: public.selected,
+        )
+    assert not job.cancel() and env.events == before
+
+
+@WINDOWS_PUBLIC
+@pytest.mark.parametrize("fault", ["lost_pin", "late_deadline"])
+def test_public_successful_start_late_pin_or_deadline_rejects_before_output(
+    public, monkeypatch, fault
+):
+    env, request = public.env, prepared()
+    env.process.response = response(request, public.selected)
+    changed = []
+
+    def change_after_successful_start(event):
+        if event == "wait" and not changed:
+            changed.append(True)
+            if fault == "lost_pin":
+                env.pin.held = False
+            else:
+                env.clock.now += 11
+
+    env.process.hook = change_after_successful_start
+    jobs, evidence = record_public_jobs(monkeypatch, public), []
+    with pytest.raises(public.transport.GuardedOperationError):
+        evidence.append(
+            public.transport.execute(
+                request,
+                public.selected,
+                owner_token=object(),
+                current_selection=lambda: public.selected,
+            )
+        )
+    assert evidence == [] and len(jobs) == 1 and changed == [True]
+    original = jobs[0]._job._bundle_owner
+    assert original.process.resumed and env.events.index("resume") < env.events.index("wait")
+    assert original.failure_code == ("response_failed" if fault == "lost_pin" else "timeout")
+    assert "read_file1" not in env.events and "read_file2" not in env.events
+    assert original.cleanup_complete and not original.cleanup_uncertain
+    assert_failed_public_owner_retired_once(public, jobs[0])

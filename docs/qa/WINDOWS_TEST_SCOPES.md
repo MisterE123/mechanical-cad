@@ -646,3 +646,22 @@ on Windows. The final bounded Windows selection passed 63 data/public-compositio
 cases with zero forbidden operations; collection retained the 14 Linux cases and
 three deferred cases without execution. This is not native Windows parity or a
 claim that all 17 original integration cases were executed or passed locally.
+
+## Failed-start error ordering
+
+A failed Windows process start may complete original-owner cleanup and release
+its pin before returning. `WindowsOperationOwner.exchange` now raises the retained
+process error immediately after its existing cleanup-budget check, before the
+normal success checkpoint. This preserves the original error code instead of
+classifying the later retired-pin check as a response failure. `finally` cleanup,
+expired/uncertain cleanup precedence and every success/polling pin/deadline check
+remain unchanged. The original cause was retained on the process owner even
+before this change; no successful result or unsafe cleanup was observed.
+
+Seven explicitly selected actual-Windows composition cases passed: clean public
+success; failed create with exact original error identity/code and one pin
+release; timeout; ambiguous failed-start closure and expired cleanup retaining
+original pin/lease/quarantine; successful start followed by pin loss or a late
+deadline rejecting before either output read. Fake API leaves, inventory/input
+and pin seams remain explicitly documented. No native Windows execution is
+implied.
