@@ -1244,6 +1244,114 @@ def test_actual_inert_materializer_and_reverification_never_visit_materials(
     )
 
 
+@pytest.mark.skipif(sys.platform != "win32", reason="Actual Windows owner composition")
+def test_windows_inert_materializer_and_reverification_never_visit_materials(
+    inputs, tmp_path, monkeypatch
+):
+    helper_spec = importlib.util.spec_from_file_location(
+        "materials_windows_fixture", ROOT / "tests/unit/windows_materializer_fixture.py"
+    )
+    helper = importlib.util.module_from_spec(helper_spec)
+    helper_spec.loader.exec_module(helper)
+    root = helper.short_root(tmp_path)
+    old_python, new_python = inputs["python_path"], "python/python.exe"
+    (inputs["runtime_root"] / old_python).rename(inputs["runtime_root"] / new_python)
+    inputs.update(platform="windows-x64", python_path=new_python, destination=root / "extended.zip")
+    for item in inputs["runtime_files"]:
+        if item["path"] == old_python:
+            item["path"] = new_python
+    value = map_value(inputs)
+    for binding in value["runtime_bindings"]:
+        if binding["path"] == old_python:
+            binding["path"] = new_python
+    pins(inputs, value)
+
+    # Explicit inert exclusive-copy double, scoped to this test's two publishers.
+    # This does not qualify hard-link/atomic publication or run an executable.
+    original_link, publications, forbidden_calls = os.link, [], []
+
+    def publish(source, destination):
+        source, destination = Path(source), Path(destination)
+        assert source.is_relative_to(root) and destination.is_relative_to(root)
+        assert source.suffix == destination.suffix == ".zip"
+        publications.append((source, destination))
+        helper.publish_inert_zip(source, destination)
+
+    def forbidden(*args, **kwargs):
+        forbidden_calls.append((args, kwargs))
+        raise AssertionError("No native execution or material extraction in inert composition")
+
+    monkeypatch.setattr(b, "os", types.SimpleNamespace(**(vars(os) | {"link": publish})))
+    monkeypatch.setattr(w, "os", types.SimpleNamespace(**(vars(os) | {"link": publish})))
+    monkeypatch.setattr(subprocess, "Popen", forbidden)
+    monkeypatch.setattr(zipfile.ZipFile, "extract", forbidden)
+    monkeypatch.setattr(zipfile.ZipFile, "extractall", forbidden)
+    result = build(inputs)
+    assert len(publications) == 2 and os.link is original_link
+    package_root, known = root / "p", root / "k"
+    package_root.mkdir()
+    known.mkdir()
+    with zipfile.ZipFile(inputs["destination"]) as archive:
+        for info in archive.infolist():
+            path = package_root / info.filename
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_bytes(archive.read(info))
+    package_name = "materials_windows_inert_runtime_tests"
+    package = types.ModuleType(package_name)
+    package.__path__ = [str(ROOT / "blender_addon/mechanical_cad_blender")]
+    monkeypatch.setitem(sys.modules, package_name, package)
+    materialize = importlib.import_module(package_name + ".runtime_bundle_materialize")
+    manifest = importlib.import_module(package_name + ".runtime_bundle_manifest")
+    cache = importlib.import_module(package_name + ".windows_cache")
+    assert materialize.WindowsCacheOwner is cache.WindowsCacheOwner
+    limits = manifest.BundleLimits(reserve_free_bytes=0)
+    release_data = (package_root / "release_identity.json").read_bytes()
+    release = manifest.parse_release_manifest(
+        release_data, expected_platform="windows-x64", limits=limits
+    )
+    assert release.bundle_id == result["bundle_id"]
+    storage = helper.ComposedStorage(cache, package_root, known, release)
+    visits, original_open = [], materialize._open_regular
+
+    @contextmanager
+    def observed(path):
+        visits.append(Path(path))
+        assert not {"sources", "licenses"}.intersection(Path(path).parts)
+        with original_open(path) as stream:
+            yield stream
+
+    monkeypatch.setattr(materialize, "_open_regular", observed)
+    pin = types.SimpleNamespace(
+        bundle_id=release.bundle_id, mode="exclusive", assert_held=lambda: None
+    )
+    options = dict(
+        release_data=release_data, expected_platform="windows-x64", limits=limits, pin=pin
+    )
+    descriptor = storage.invoke(materialize.materialize_bundle, **options)
+    pin.mode = "shared"
+    assert storage.invoke(materialize.verify_cached_bundle, **options) == descriptor
+    cached = files(Path(descriptor.root))
+    payload = json.loads((package_root / release.manifest_path).read_bytes())
+    assert payload["platform"] == "windows-x64" and payload["python_path"] == new_python
+    expected = {item["path"]: item for item in payload["files"]}
+    assert set(cached) == set(expected) | {materialize._READY}
+    for path, item in expected.items():
+        assert len(cached[path]) == item["size"] and digest(cached[path]) == item["sha256"]
+    assert not any(path.startswith(("sources/", "licenses/")) for path in cached)
+    assert not {"PACKAGED_MATERIALS.json", "MATERIALS.md"}.intersection(cached)
+    assert visits and not (tmp_path / "EXECUTED").exists() and not (root / "EXECUTED").exists()
+    assert len(storage.attempts) == 2
+    for owner, api in storage.attempts:
+        assert type(owner) is cache.WindowsCacheOwner and api.w is cache
+        assert owner._state == "closed" and not owner.cleanup_uncertain
+        assert not api.handles and not api.allocations
+        assert all(resource.closed for resource in owner._resources)
+        assert len(api.closed) == len(set(api.closed)) and len(api.freed) == len(set(api.freed))
+    stage = storage.attempts[0][0].owned_stage_path
+    assert stage is not None and not os.path.lexists(stage)
+    assert not forbidden_calls and os.link is original_link
+
+
 def test_original_materials_sources_and_exact_reviewed_platform_deltas():
     for path in PINNED:
         assert_reviewed_materials_source(path, (ROOT / path).read_bytes())

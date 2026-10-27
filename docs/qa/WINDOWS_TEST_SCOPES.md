@@ -514,3 +514,18 @@ module-local opening boundary; no nonregular filesystem object is created. Each
 first verifies real regular-file stream/copy/hash success, then proves rejection
 before stream wrapping, copy, base build or publication. A rejected opened file
 is closed once. Global OS functions and production validation remain unchanged.
+
+The original inert-materializer case retains its real Linux publication path and
+body under explicit Linux scope. A separate actual-Windows case retargets the
+interpreter, runtime inventory and materials-map pins together. It uses the
+caller's exact imported manifest/cache classes, `ComposedStorage` and its fake
+`FileMetadataAPI` observations around real `WindowsCacheOwner` checks. Real
+`materialize_bundle` and `verify_cached_bundle` inventory, staging, rename and
+recheck execute, with exact cached membership/size/hash, no materials visits or
+execution sentinel, and closed owner/handle/allocation assertions.
+
+Before building, only this case's two ZIP publishers receive the reviewed
+`publish_inert_zip` exclusive-copy double through module-local OS facades. The
+shared production publisher and global link functions are unchanged. This is
+inert archive/materializer/owner composition, not atomic/hard-link publication,
+native ACL/retained-handle or backend/Blender qualification.
