@@ -335,9 +335,26 @@ and timeout/lifetime counterparts also run with tripwires and assert real host
 module identity rather than substituting Windows platform values on Windows.
 This is lifecycle-port coverage, not native cache, publication or Blender proof.
 
-The separately inspected automatic preparation-transfer counterpart still needs
-its original private-entry success stub for the pin directory/lock. Replacing
-that stub with a tripwire stopped before any OS action and exposed the fixture
-gap. Its original test remains unchanged and is excluded from this bounded
-execution claim; a concrete owner/API fixture needs separate review. No new
-private-entry success shortcut or production guard change was introduced.
+The earlier tripwire exposed missing pin-directory/lock proof in the automatic
+preparation-transfer fixture. Its reviewed follow-on now constructs the real
+exact-class `WindowsCacheOwner` with a finite in-memory metadata API at `api=`.
+The API returns the importing module's concrete info, security, ACE and volume
+records. Actual acquire, retained identity/ACL checks, private-entry one-link
+checks, worker affinity and close execute; none is replaced by a success stub.
+Only query, pin and materializer remain named lifecycle ports. The fake pin port
+creates records in memory, never files or native handles. Its release requires
+the real owner to be closed with all resources retired first.
+
+Each bad pin ACL, directory reparse, two-link file, retained-identity change and
+uncertain owner-close control first completes a clean preparation. Metadata
+failures prevent materialization and successful descriptor/recipe transfer;
+their pin can release only after clean owner closure. Uncertain owner cleanup
+quarantines the original owner and pin, exposes no recipe, and never releases
+the pin or retries an uncertain handle. Clean-error recipe metadata alone is
+not authority: descriptor consumption must succeed before any transfer.
+The original transfer/cleanup expectations remain asserted. Thirty-seven
+explicit cases passed, including 31 existing owner controls. No native DLL/API,
+actual cache preparation/publication, subprocess or Blender proof is claimed.
+
+Earlier unsupported-host spoof tests were replaced by actual-host wrong-profile
+metadata controls. Unsupported-host execution itself was not tested on Techbox.
