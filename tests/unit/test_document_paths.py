@@ -19,7 +19,7 @@ def test_compound_suffix_is_idempotent(suffix, ending):
     value = SimpleNamespace(filepath="/tmp/my.part" + ending, filename_ext=suffix)
     module.normalized_export_check(value, None)
     accepted = value.filepath
-    assert accepted.lower() == "/tmp/my.part" + suffix
+    assert accepted.lower() == str(Path("/tmp/my.part" + suffix))
     for _ in range(5):
         assert not module.normalized_export_check(value, None)
         assert value.filepath == accepted

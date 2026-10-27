@@ -86,7 +86,7 @@ def test_explicit_dispatch_and_clone_retain_capability_without_saved_authority(p
 
 def test_dispatch_preserves_every_frozen_legacy_envelope_and_base_byte():
     frozen = json.loads(
-        (ROOT / "tests/fixtures/arc_authoring/legacy_codec_ce5b50b.json").read_text()
+        (ROOT / "tests/fixtures/arc_authoring/legacy_codec_ce5b50b.json").read_text(encoding="utf-8")
     )
     assert len(frozen["cases"]) == 39
     for name, case in frozen["cases"].items():

@@ -307,3 +307,14 @@ forbidden, alongside the capture fixture's native process/API traps. This uses
 regular inert fixture files and real public capture, not a native backend or
 Blender process. Production class, authority and bundled rejection guards are
 unchanged; native Windows release qualification remains NOT_READY.
+
+The bounded pure path/encoding pass keeps current-host UI paths separate from
+historical wire spelling. Document suffix and expanded recovery-folder fixtures
+expect the host's `Path` rendering. The four sealed geometry export observations
+use `PurePosixPath` only for their historical POSIX destination expectation;
+stored request/response bytes, fingerprints and SHA-256 checks are unchanged.
+No export runs in these tests. Frozen arc-envelope JSON and the assembly action
+AST helper read UTF-8 explicitly. The stale-action label matches its original
+UTF-8 source; no caption, checksum, privacy rule or production code changed.
+Only the 17 named pure cases were executed; CLI export, subprocess/native tests,
+Blender and broad modules/suites remain outside this pass.

@@ -77,7 +77,8 @@ def test_expanded_details_keep_complete_retention_coverage_and_folder():
     text = ' '.join(row['text'] for kind, row in layout.rows if kind == 'label')
     for detail in ('Two generations', '32 scopes, 128 MiB', '2 seconds', 'disk stalls',
                    'Assembly, unapplied repair', 'conflict copies', 'No automatic eviction',
-                   'network, Git or export', 'session, Scene and document', '/private/recovery-v1'):
+                   'network, Git or export', 'session, Scene and document',
+                   str(Path('/private/recovery-v1'))):
         assert detail in text
 
 

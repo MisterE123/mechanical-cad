@@ -71,7 +71,7 @@ def controls(
     presets=(),
 ):
     source = ADDON / "assembly_ui.py"
-    tree = ast.parse(source.read_text())
+    tree = ast.parse(source.read_text(encoding="utf-8"))
     nodes = [
         n for n in tree.body if isinstance(n, ast.FunctionDef) and n.name == "_primary_actions"
     ]

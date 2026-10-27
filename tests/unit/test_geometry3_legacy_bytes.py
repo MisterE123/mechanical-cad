@@ -8,7 +8,7 @@ No missing historical run is recreated or claimed by this corpus.
 import ast
 import hashlib
 import json
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 import pytest
 from historical_geometry_source import historical_geometry_source
@@ -73,7 +73,7 @@ def test_real_legacy_raw_request_and_stdout_are_exact(case, version, action):
         assert response["export"] is None and "destination" not in request
     else:
         assert "/./" in request["destination"] and " " in request["destination"]
-        assert response["export"]["destination"] == str(Path(request["destination"]))
+        assert response["export"]["destination"] == str(PurePosixPath(request["destination"]))
         assert response["export"]["atomic_replace"] is True
         assert response["export"]["bytes"] == row["export_file"]["bytes"]
 
