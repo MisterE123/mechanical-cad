@@ -481,7 +481,12 @@ and cannot mint process evidence or publication authority.
 `test_windows_public_transport.py` uses actual Windows public `capture_bundled`,
 real `SidecarJob.from_selection`, guarded transport, receipt validators and
 publication/lease ownership. Existing finite fake OS APIs drive the real owner
-composition. Short generated paths contain inert files solely so the unchanged
+composition. The reused `test_windows_runtime.install` fixture also substitutes
+`_verify_cached_tree`, `_read_launch_inputs` and `pins.acquire_bundle_pin`
+(with its explicit `Pin` lifecycle double). These named seams do not perform real
+filesystem inventory verification or native pin acquisition. This proves
+transport/owner/receipt composition, not an OS-leaves-only integration.
+Short generated paths contain inert files solely so the unchanged
 receipt path resolver can verify identity; no interpreter or CAD library is run.
 The earlier missing synthetic-path failure is retained separately. The private
 qualification constructor, native DLL bindings and native subprocess calls are
@@ -504,6 +509,16 @@ functions/helpers preserve exact source and AST apart from named Linux marks.
 Production admission, class/authority checks and goldens are unchanged. This is
 neither native Windows process/geometry parity nor packaged Blender qualification;
 Windows native release remains NOT_READY.
+
+Five additional portable controls execute only the current constructor's pure
+snapshot/encoding statements, extracted in order from its source. They do not
+invoke or bypass constructor platform admission. Four resource cases prove the
+final encoder runs on a clean positive and is never reached for cyclic, expanded
+DAG, oversized-string or oversized-integer input. The final-encoder mutation case
+proves caller mutation cannot alter detached wire bytes and that the now-invalid
+caller is rejected before a second encoding. A local globals/JSON facade keeps
+shared JSON/reporting untouched. Original Linux constructor controls remain
+unchanged; this is data-preflight ordering evidence, not Windows native parity.
 
 ## Standalone material opening metadata
 

@@ -1,6 +1,8 @@
 """Actual Windows public capture with real owners and finite fake OS APIs.
 
 These are composition controls, not native Windows process or geometry proof.
+The reused runtime fixture also doubles _verify_cached_tree, _read_launch_inputs
+and pin acquisition/lifetime; it does not verify a real filesystem inventory.
 """
 
 import ctypes
