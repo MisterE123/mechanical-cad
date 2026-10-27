@@ -2,6 +2,8 @@
 
 import ctypes
 import importlib
+import os
+import sys
 import types
 
 import pytest
@@ -10,6 +12,32 @@ from test_windows_runtime import PACKAGE, Fixture, cache, m, selection
 hostmod = importlib.import_module(PACKAGE + ".windows_package_host")
 prepare = importlib.import_module(PACKAGE + ".runtime_bundle_prepare")
 runtime = importlib.import_module(PACKAGE + ".backend_runtime")
+windows = importlib.import_module(PACKAGE + ".windows_runtime")
+jobs = importlib.import_module(PACKAGE + ".sidecar_job")
+
+
+@pytest.fixture
+def native_forbidden(monkeypatch):
+    attempts = []
+
+    def forbidden(*args, **kwargs):
+        attempts.append("native/cache preparation")
+        pytest.fail("Synthetic live-capture test entered native/cache preparation")
+
+    for owner, name in (
+        (cache, "_WindowsAPI"),
+        (cache.WindowsCacheOwner, "check_private_entry"),
+        (prepare, "query_windows_automatic_cache_location"),
+        (prepare, "materialize_bundle"),
+        (prepare, "acquire_bundle_pin"),
+        (windows, "WindowsRuntimeAPI"),
+        (windows, "Win32API"),
+        (jobs.subprocess, "Popen"),
+    ):
+        monkeypatch.setattr(owner, name, forbidden)
+    monkeypatch.setattr(ctypes, "WinDLL", forbidden, raising=False)
+    yield
+    assert attempts == []
 
 
 class HostFixture:
@@ -207,6 +235,10 @@ def test_automatic_preparation_transfers_recipe_only_after_cache_and_pin_retirem
 
 
 def windows_host(monkeypatch):
+    if sys.platform == "win32":
+        assert os.name == "nt"
+        assert selection.sys is sys and runtime.sys is sys and selection.os is os
+        return
     monkeypatch.setattr(selection, "sys", types.SimpleNamespace(platform="win32"))
     monkeypatch.setattr(selection, "os", types.SimpleNamespace(name="nt"))
     monkeypatch.setattr(runtime, "sys", types.SimpleNamespace(platform="win32"))
@@ -227,7 +259,9 @@ def test_public_bundled_capture_is_exact_windows_policy_but_external_remains_clo
         selection.BackendSelection.capture_bundled(policy, 180, generation=0, lifetime_id="test")
 
 
-def test_windows_setup_capture_has_no_manual_cache_or_environment_override(monkeypatch):
+def test_windows_setup_capture_has_no_manual_cache_or_environment_override(
+    monkeypatch, native_forbidden
+):
     windows_host(monkeypatch)
     fixture = Fixture()
     captured = runtime._bundle_capture(fixture.package, None, fixture.constants)
@@ -237,7 +271,9 @@ def test_windows_setup_capture_has_no_manual_cache_or_environment_override(monke
         runtime._bundle_capture(fixture.package, fixture.cache, fixture.constants)
 
 
-def test_windows_configuration_currentness_revokes_old_timeout_and_lifetime(monkeypatch):
+def test_windows_configuration_currentness_revokes_old_timeout_and_lifetime(
+    monkeypatch, native_forbidden
+):
     windows_host(monkeypatch)
     fixture = Fixture()
     preferences = types.SimpleNamespace(timeout_seconds=180, linear_deflection=0.1)

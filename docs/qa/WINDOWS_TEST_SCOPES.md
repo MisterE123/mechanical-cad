@@ -318,3 +318,26 @@ AST helper read UTF-8 explicitly. The stale-action label matches its original
 UTF-8 source; no caption, checksum, privacy rule or production code changed.
 Only the 17 named pure cases were executed; CLI export, subprocess/native tests,
 Blender and broad modules/suites remain outside this pass.
+
+The bundled-runtime lifecycle fixture uses actual-host metadata and short
+host-absolute Windows package paths. Windows requests retain `cache_root=None`
+and use only the named fake `for_bundled_windows` job port, which captures and
+returns a detached concrete `WindowsCacheLocation`. Real runtime begin/poll,
+host/profile admission, callback revocation, cleanup gating and policy transfer
+remain active. Linux retains its original package/cache values and generic job
+port. Replacement setup changes the Windows package, not an unsupported manual
+cache override. Wrong-profile metadata is rejected on the actual host without
+spoofing it. Detached-literal checks mutate to the other host's profile.
+
+Native API/DLL binding, subprocess launch and real preparation/pin/materializer
+leaves are forbidden with retained attempt counters. The Windows setup-capture
+and timeout/lifetime counterparts also run with tripwires and assert real host
+module identity rather than substituting Windows platform values on Windows.
+This is lifecycle-port coverage, not native cache, publication or Blender proof.
+
+The separately inspected automatic preparation-transfer counterpart still needs
+its original private-entry success stub for the pin directory/lock. Replacing
+that stub with a tripwire stopped before any OS action and exposed the fixture
+gap. Its original test remains unchanged and is excluded from this bounded
+execution claim; a concrete owner/API fixture needs separate review. No new
+private-entry success shortcut or production guard change was introduced.

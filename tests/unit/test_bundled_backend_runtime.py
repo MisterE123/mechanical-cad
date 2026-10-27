@@ -4,6 +4,7 @@ import importlib
 import sys
 import threading
 import types
+from dataclasses import replace
 from pathlib import Path
 
 import pytest
@@ -13,6 +14,11 @@ PACKAGE = "mcad_bundled_runtime_tests"
 package = sys.modules.setdefault(PACKAGE, types.ModuleType(PACKAGE))
 package.__path__ = [str(ROOT / "blender_addon/mechanical_cad_blender")]
 r = importlib.import_module(PACKAGE + ".backend_runtime")
+cache = importlib.import_module(PACKAGE + ".windows_cache")
+prepare = importlib.import_module(PACKAGE + ".runtime_bundle_prepare")
+windows = importlib.import_module(PACKAGE + ".windows_runtime")
+jobs = importlib.import_module(PACKAGE + ".sidecar_job")
+SETUP_PATHS = None
 
 
 class Job:
@@ -22,7 +28,21 @@ class Job:
         self.args, self.kwargs = args, kwargs
         self.state, self.starts, self.consumes = "created", 0, 0
         self.descriptor = object()
+        self._windows_location = None
         self.instances.append(self)
+
+    @classmethod
+    def for_bundled_windows(cls, package_root, release_data, *, limits):
+        assert sys.platform == "win32"
+        job = cls(package_root, None, release_data, expected_platform="windows-x64", limits=limits)
+        job._windows_location = replace(SETUP_PATHS.location)
+        return job
+
+    @property
+    def windows_cache_location(self):
+        if not self.done or self._windows_location is None:
+            return None
+        return replace(self._windows_location)
 
     def start(self):
         self.starts += 1
@@ -50,7 +70,43 @@ class Job:
 
 
 @pytest.fixture(autouse=True)
-def isolated(monkeypatch):
+def isolated(monkeypatch, tmp_path_factory):
+    attempts = []
+
+    def forbidden(*args, **kwargs):
+        attempts.append("native/preparation leaf")
+        pytest.fail("Pure lifecycle fixture entered native/preparation work")
+
+    for owner, name in (
+        (prepare.BundlePreparationJob, "start"),
+        (prepare, "query_windows_automatic_cache_location"),
+        (prepare, "materialize_bundle"),
+        (prepare, "acquire_bundle_pin"),
+        (cache, "_WindowsAPI"),
+        (windows, "WindowsRuntimeAPI"),
+        (windows, "Win32API"),
+        (jobs.subprocess, "Popen"),
+    ):
+        monkeypatch.setattr(owner, name, forbidden)
+    monkeypatch.setattr(cache.ctypes, "WinDLL", forbidden, raising=False)
+    if sys.platform == "win32":
+        root = tmp_path_factory.mktemp("br")
+        known = root / "Local"
+        location = cache.WindowsCacheLocation(str(known), str(known / "MechanicalCAD" / "r"))
+        paths = types.SimpleNamespace(
+            package=str(root / "Installed"),
+            cache=None,
+            replacement=str(root / "Replacement"),
+            location=location,
+        )
+    else:
+        paths = types.SimpleNamespace(
+            package="/installed/package",
+            cache="/private/cache",
+            replacement="/private/replacement",
+            location=None,
+        )
+    monkeypatch.setattr(sys.modules[__name__], "SETUP_PATHS", paths)
     for name, value in {
         "_BUNDLE_REQUIRED": False,
         "_BUNDLE_ENABLED": False,
@@ -68,17 +124,22 @@ def isolated(monkeypatch):
     monkeypatch.setattr(r, "BundlePreparationJob", Job)
     monkeypatch.setattr(r, "capture_bundled_policy", lambda descriptor, **kw: (descriptor, kw))
     r.new_lifetime()
+    yield
+    assert attempts == []
 
 
 def constants():
     result = dict.fromkeys(r.LAUNCH_CONSTANT_FIELDS, "bounded")
-    result.update(PLATFORM="linux-x64", RELEASE_IDENTITY_BYTES=b"release")
+    result.update(
+        PLATFORM="windows-x64" if sys.platform == "win32" else "linux-x64",
+        RELEASE_IDENTITY_BYTES=b"release",
+    )
     return result
 
 
 def begin(**overrides):
     args = dict(
-        package_root="/installed/package", cache_root="/private/cache", constants=constants()
+        package_root=SETUP_PATHS.package, cache_root=SETUP_PATHS.cache, constants=constants()
     )
     args.update(overrides)
     return r.begin_bundled_setup(**args)
@@ -105,6 +166,12 @@ def test_prepare_transfer_is_once_only_and_never_current_before_cleanup():
     assert not r.poll_bundled_setup()
     assert r.bundle_status() == ("ready", "Bundled backend ready.")
     assert r._BUNDLE_POLICY[0] is job.descriptor
+    if sys.platform == "win32":
+        binding = r._BUNDLE_POLICY[1]
+        assert type(binding["windows_cache"]) is cache.WindowsCacheLocation
+        assert binding["windows_cache"] == SETUP_PATHS.location
+        assert binding["windows_cache"] is not SETUP_PATHS.location
+        assert binding["cache_root"] == SETUP_PATHS.location.cache_root
     assert r.stamp()[1] == before[1] + 2
     assert not r.poll_bundled_setup() and job.consumes == 1
     assert r._BUNDLE_JOB is None
@@ -126,12 +193,13 @@ def test_disable_reenable_waits_for_original_cleanup_before_replacement():
     r.stop_bundled_setup()
     assert r._BUNDLE_JOB is original and original.state == "cancelling"
     assert not r.poll_bundled_setup()
-    assert begin(cache_root="/private/replacement")
+    request = {"package_root" if sys.platform == "win32" else "cache_root": SETUP_PATHS.replacement}
+    assert begin(**request)
     assert r._BUNDLE_JOB is original and len(Job.instances) == 1
     original.state = "cancelled"
     assert r.poll_bundled_setup()
     replacement = Job.instances[1]
-    assert replacement.args[1] == "/private/replacement"
+    assert replacement.args[0 if sys.platform == "win32" else 1] == SETUP_PATHS.replacement
     assert replacement is r._BUNDLE_JOB and original.consumes == 1
     assert r._BUNDLE_POLICY is None
     replacement.state = "ready"
@@ -192,10 +260,15 @@ def test_bad_metadata_rejects_before_any_preparation_worker():
     assert not Job.instances
 
 
-@pytest.mark.parametrize("platform", ["win32", "darwin"])
-def test_unqualified_host_has_no_worker_or_fallback(monkeypatch, platform):
-    monkeypatch.setattr(r.sys, "platform", platform)
-    assert not begin()
+@pytest.mark.parametrize("profile", ["other-supported-host", "unqualified"])
+def test_wrong_host_profile_has_no_worker_or_fallback(profile):
+    data = constants()
+    data["PLATFORM"] = (
+        ("linux-x64" if sys.platform == "win32" else "windows-x64")
+        if profile == "other-supported-host"
+        else "darwin-x64"
+    )
+    assert not begin(constants=data)
     assert "not qualified" in r.bundle_status()[1]
     assert not Job.instances and r._BUNDLE_POLICY is None
 
@@ -204,12 +277,14 @@ def test_captured_generated_literals_are_detached():
     data = constants()
     begin(constants=data)
     data["RELEASE_IDENTITY_BYTES"] = b"changed"
-    data["PLATFORM"] = "windows-x64"
+    data["PLATFORM"] = "linux-x64" if sys.platform == "win32" else "windows-x64"
     owner = Job.instances[0]
     owner.state = "ready"
     assert not r.poll_bundled_setup()
     kw = r._BUNDLE_POLICY[1]
-    assert kw["release_data"] == b"release" and kw["constants"]["PLATFORM"] == "linux-x64"
+    assert (
+        kw["release_data"] == b"release" and kw["constants"]["PLATFORM"] == constants()["PLATFORM"]
+    )
 
 
 def test_policy_validation_failure_cannot_publish_or_restart(monkeypatch):
