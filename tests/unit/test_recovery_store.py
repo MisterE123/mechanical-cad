@@ -22,6 +22,11 @@ SCOPE = "a" * 32
 CREATED = "2026-10-25T00:00:00+00:00"
 
 
+LINUX_RECOVERY_WRITER = pytest.mark.skipif(
+    sys.platform != "linux", reason="Linux POSIX recovery writer/lock contract"
+)
+
+
 def encoded(sequence=1, scope=SCOPE, document=BASE, draft=""):
     return r.encode(scope, sequence, document, draft, CREATED)
 
@@ -112,6 +117,7 @@ def test_listing_is_read_only_and_missing_root(tmp_path):
     assert not root.exists()
 
 
+@LINUX_RECOVERY_WRITER
 def test_two_generations_monotonic_and_exact_bytes(tmp_path):
     store = r.Store(tmp_path)
     for sequence in (1, 3, 7):
@@ -132,6 +138,7 @@ def test_two_generations_monotonic_and_exact_bytes(tmp_path):
         assert all(path.stat().st_mode & 0o777 == 0o600 for path in tmp_path.iterdir())
 
 
+@LINUX_RECOVERY_WRITER
 def test_corruption_visible_and_never_overwritten(tmp_path):
     store = r.Store(tmp_path)
     store.write(encoded())
@@ -179,6 +186,7 @@ def test_root_and_ancestor_symlink_refused(tmp_path):
     assert list(real.iterdir()) == []
 
 
+@LINUX_RECOVERY_WRITER
 def test_path_traversal_and_nonregular_entries(tmp_path):
     store = r.Store(tmp_path)
     for scope, slot in (("../x", 0), (SCOPE, "../x"), (SCOPE, True), (SCOPE, 2)):
@@ -191,6 +199,7 @@ def test_path_traversal_and_nonregular_entries(tmp_path):
 
 
 @pytest.mark.parametrize("failure", ["replace", "fsync"])
+@LINUX_RECOVERY_WRITER
 def test_disk_failure_preserves_both_generations(tmp_path, monkeypatch, failure):
     store = r.Store(tmp_path)
     store.write(encoded(1))
@@ -206,6 +215,7 @@ def test_disk_failure_preserves_both_generations(tmp_path, monkeypatch, failure)
     assert disk_bytes(tmp_path) == before
 
 
+@LINUX_RECOVERY_WRITER
 def test_quota_counts_unknown_and_temp_without_eviction(tmp_path, monkeypatch):
     store = r.Store(tmp_path)
     store.write(encoded())
@@ -223,6 +233,7 @@ def test_quota_counts_unknown_and_temp_without_eviction(tmp_path, monkeypatch):
     assert (tmp_path / ".abandoned.tmp").read_bytes() == b"keep too"
 
 
+@LINUX_RECOVERY_WRITER
 def test_scope_quota_no_eviction(tmp_path, monkeypatch):
     store = r.Store(tmp_path)
     store.write(encoded())
@@ -249,6 +260,7 @@ def test_metadata_is_checksummed():
             r.decode(json.dumps(data).encode())
 
 
+@LINUX_RECOVERY_WRITER
 def test_temp_collision_never_removes_unknown_file(tmp_path, monkeypatch):
     collision = uuid.UUID("b" * 32)
     path = tmp_path / f".{SCOPE}.{collision.hex}.tmp"
@@ -259,6 +271,7 @@ def test_temp_collision_never_removes_unknown_file(tmp_path, monkeypatch):
     assert path.read_bytes() == b"unrelated original"
 
 
+@LINUX_RECOVERY_WRITER
 def test_independent_scopes_retain_their_generations(tmp_path):
     store = r.Store(tmp_path)
     other = "b" * 32
@@ -292,6 +305,7 @@ def test_embedded_schema3_sector_uses_existing_dispatch():
     assert r.decode(encoded(document=document)).document_json == document
 
 
+@LINUX_RECOVERY_WRITER
 def test_entry_display_name_is_not_a_path(tmp_path):
     document = BASE.replace("Part", "../presentation only")
     store = r.Store(tmp_path)
@@ -318,6 +332,7 @@ def test_graph_structure_rejected(variant):
         encoded(document=json.dumps(document))
 
 
+@LINUX_RECOVERY_WRITER
 def test_abandoned_generated_temp_reserves_scope_without_deletion(tmp_path, monkeypatch):
     other = "b" * 32
     path = tmp_path / f".{other}.{'c' * 32}.tmp"
@@ -382,6 +397,7 @@ print("WRITTEN", flush=True)
 
 
 @pytest.mark.parametrize("kind", ["symlink", "nonempty", "directory", "hardlink"])
+@LINUX_RECOVERY_WRITER
 def test_invalid_lock_entry_never_modified(tmp_path, kind):
     root = tmp_path / "store"
     root.mkdir()
@@ -408,13 +424,63 @@ def test_invalid_lock_entry_never_modified(tmp_path, kind):
 def test_unsupported_platform_write_fails_before_filesystem_changes(tmp_path, monkeypatch):
     root = tmp_path / "not-created"
     store = r.Store(root)
-    monkeypatch.setattr(r.os, "O_NOFOLLOW", None)
+    monkeypatch.setattr(r, "os", types.SimpleNamespace(**(vars(os) | {"O_NOFOLLOW": None})))
     # Model a platform with no no-follow support without changing global os.name,
     # which would alter pathlib's own platform dispatch in the test harness.
     monkeypatch.delattr(r.os, "O_NOFOLLOW")
     with pytest.raises(r.RecoveryError, match="platform is not supported"):
         store.write(encoded())
     assert not root.exists()
+
+
+def test_read_path_and_nonregular_inventory_rejection_remain_portable(tmp_path):
+    store = r.Store(tmp_path)
+    for scope, slot in (("../x", 0), (SCOPE, "../x"), (SCOPE, True), (SCOPE, 2)):
+        with pytest.raises(r.RecoveryError):
+            store.read(scope, slot)
+    assert store.entries() == ()
+    (tmp_path / "unknown-directory").mkdir()
+    with pytest.raises(r.RecoveryError, match="non-private regular"):
+        store.entries()
+    assert {path.name for path in tmp_path.iterdir()} == {"unknown-directory"}
+
+
+@pytest.mark.skipif(sys.platform != "win32", reason="Actual Windows recovery-write rejection")
+@pytest.mark.parametrize("existing", [False, True])
+def test_actual_windows_write_rejects_before_decode_filesystem_or_lock(
+    tmp_path, monkeypatch, existing
+):
+    assert os.name == "nt" and r.os is os
+    root = tmp_path / "store"
+    if existing:
+        root.mkdir()
+        (root / "unrelated").write_bytes(b"preserve exact bytes")
+    store, data, attempts = r.Store(root), encoded(), []
+    before = disk_bytes(root) if existing else None
+
+    def forbidden(*args, **kwargs):
+        attempts.append("decode/filesystem/lock")
+        pytest.fail("Windows recovery write reached " + attempts[-1])
+
+    facade = types.SimpleNamespace(
+        **(
+            vars(os)
+            | {
+                name: forbidden
+                for name in ("open", "fdopen", "mkdir", "replace", "fsync", "unlink")
+            }
+        )
+    )
+    monkeypatch.setattr(r, "os", facade)
+    monkeypatch.setattr(r, "decode", forbidden)
+    monkeypatch.setattr(r.Store, "_check_root", forbidden)
+    monkeypatch.setattr(r.Store, "_writer_lock", forbidden)
+    with pytest.raises(r.RecoveryError, match="POSIX filesystem lock.*platform is not supported"):
+        store.write(data)
+    assert attempts == []
+    assert (disk_bytes(root) if existing else None) == before
+    assert root.exists() is existing
+    assert not (root / ".writer.lock").exists()
 
 
 @pytest.mark.skipif(os.name != "posix", reason="Linux/POSIX crash-release qualification")

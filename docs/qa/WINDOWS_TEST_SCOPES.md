@@ -562,3 +562,29 @@ records. Native cache/preparation/process/DLL calls and the private qualificatio
 capture are forbidden and counted. They do not use manual admission, host spoofing
 or private capture to claim parity. This is runtime authority coverage, not native
 Windows process/cache or Blender qualification.
+
+## Recovery persistence host contract
+
+`Store.write` supports the POSIX lock path and intentionally rejects actual
+Windows before decoding or filesystem access. Eleven named writer/lock test
+functions now have explicit Linux scope, retaining 15 cases; the three existing
+POSIX ownership/contention/crash cases remain collected. Every original real
+write/lock/crash body and assertion is unchanged. Some negative lock/temp cases
+previously passed at Windows platform admission without exercising their intended
+POSIX failure boundary; they are no longer counted as Windows lock coverage.
+
+Envelope, checksum, bounds, document and graph validators, read-only listing and
+filename checks remain portable. A separate portable control preserves the mixed
+path test's traversal/slot and nonregular inventory obligations without writing.
+The existing missing-no-follow test now uses a module-local OS facade, since
+Windows does not expose `O_NOFOLLOW`; the real global OS module stays unchanged.
+Two actual-Windows controls retain the host guard and prove rejection before
+decode, root inspection, filesystem or lock leaves, with a missing root and an
+existing sentinel. No writer lock or work file appears and sentinel bytes remain
+exact. Windows recovery writes remain unsupported.
+
+The explicit bounded selection passed 53 Windows cases: 13 runtime/currentness
+and 40 recovery validators/rejections. Collection retained 38 Linux cases
+(20 manual runtime and 18 recovery) without executing them. Filesystem-link and
+contention/crash subprocess tests were excluded from local execution. These
+results do not qualify native Windows locking or recovery publication.
