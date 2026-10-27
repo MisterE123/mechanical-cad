@@ -246,7 +246,7 @@ current source. Parent-process AST checks remain checks of the files they read;
 the geometry-result client child separately supplies an explicit add-on package
 path and is not evidence of this particular core-source-selection defect.
 Source binding also does not make `-S` remove embedded `_pth` package entries;
-the three dependency-unavailability cases remain a separate pending repair.
+the three dependency-unavailability cases are handled in the separate slice below.
 
 The subsequent controlled-unavailability slice keeps the original `-S` flag but
 adds an explicit child-only import policy for exactly `invalid_deflection`
@@ -257,3 +257,31 @@ descendants raise the top-level `ModuleNotFoundError` envelope. Standard-library
 and current-checkout imports remain available. Native positive cases receive no
 policy. Controls prove these properties without creating a physically different
 runtime, and all three original raw golden/error comparisons pass unchanged.
+
+Only six demonstrated platform-sensitive native cases use a Linux-specific
+sealed-output baseline: the three `primitive_cut_result_*` cases,
+`replay_circle_sketch_part`, `replay_parameter_chain`, and
+`independent_failure_graph`. Their original exact golden assertions remain in
+`test_linux_native_pre_service_golden`. Windows executes these same requests in
+`test_windows_native_pre_service_full_raw_differential`: source proofs must pass
+first, return codes remain exact, and full current stdout must equal the
+pre-existing reviewed transformation of the full captured historical stdout.
+There is no tolerance, mesh sorting, extra transformation or Windows golden.
+
+All 50 sealed request/golden integrity cases execute on every host. The other
+44 behavioral comparisons retain exact golden equality on Windows as well as
+Linux, including controlled unavailability and portable/non-native cases. The
+entire mixed suite is not scoped to Linux. Separate positive-before-negative
+controls for each of the six native cases reject unreviewed vertex changes,
+triangle-index changes, feature identity changes, errors and JSON key order.
+Neither a Windows differential pass nor Linux golden equality proves native
+Windows packaging, retained-handle/ACL behavior or Blender usability. Earlier
+ambient subprocess evidence is not retroactively qualified by source binding.
+
+The final explicit Techbox Python 3.12.10 selection collected 166 cases and
+finished 160 passed / 6 skipped. The skips are exactly the six Linux native
+golden cases; all 50 integrity cases, 44 remaining exact-golden comparisons,
+six Windows full-byte native differentials, and the source/visibility/framing
+and mutation controls executed. This is a bounded current-source process-harness
+result. The Linux baseline was not executed on Techbox, no wider Windows suite
+pass is claimed, and Windows standalone/native Blender release remains NOT_READY.

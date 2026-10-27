@@ -741,18 +741,31 @@ def sector_pre_service_script(directory, manifest):
     )
 
 
-@pytest.mark.parametrize(
-    "case",
-    [
+PLATFORM_NATIVE_CASES = frozenset(
+    {
+        "primitive_cut_result_None",
+        "primitive_cut_result_1",
+        "primitive_cut_result_2",
+        "replay_circle_sketch_part",
+        "replay_parameter_chain",
+        "independent_failure_graph",
+    }
+)
+
+
+def _pre_service_cases(*, native=None, mark_native=True):
+    return [
         pytest.param(
             case,
             id=case["name"],
-            marks=() if case["no_site"] else (pytest.mark.kernel,),
+            marks=() if case["no_site"] or not mark_native else (pytest.mark.kernel,),
         )
         for case in sector_pre_service_fixtures()[1]["cases"]
-    ],
-)
-def test_exact_pre_service_request_stdout_exit_and_source_differential(case):
+        if native is None or (case["name"] in PLATFORM_NATIVE_CASES) == native
+    ]
+
+
+def _pre_service_documents(case):
     directory, manifest = sector_pre_service_fixtures()
     stored = (directory / (case["name"] + ".request.txt")).read_bytes()
     assert hashlib.sha256(stored).hexdigest() == case["stored_request_sha256"]
@@ -761,6 +774,11 @@ def test_exact_pre_service_request_stdout_exit_and_source_differential(case):
     assert hashlib.sha256(raw).hexdigest() == case["request_sha256"]
     expected = (directory / (case["name"] + ".stdout.txt")).read_bytes()
     assert hashlib.sha256(expected).hexdigest() == case["stdout_sha256"]
+    return directory, manifest, raw, expected
+
+
+def _pre_service_process_pair(case):
+    directory, manifest, raw, expected = _pre_service_documents(case)
     if not case["no_site"]:
         pytest.importorskip("OCP")
         pytest.importorskip("slvs")
@@ -775,9 +793,69 @@ def test_exact_pre_service_request_stdout_exit_and_source_differential(case):
         framed=True,
         unavailable=unavailable,
     )
+    return current, original, expected
+
+
+def _assert_exact_pre_service_golden(case):
+    current, original, expected = _pre_service_process_pair(case)
     assert current.returncode == original.returncode == case["returncode"]
     assert original.stdout == expected
     assert_reviewed_pre_service_stdout(case["name"], expected, current.stdout)
+
+
+@pytest.mark.parametrize("case", _pre_service_cases(mark_native=False))
+def test_pre_service_fixture_identity_is_exact_on_every_host(case):
+    _pre_service_documents(case)
+
+
+@pytest.mark.parametrize("case", _pre_service_cases(native=False))
+def test_exact_pre_service_request_stdout_exit_and_source_differential(case):
+    _assert_exact_pre_service_golden(case)
+
+
+@pytest.mark.skipif(
+    sys.platform != "linux", reason="Six platform-sensitive Linux-sealed native goldens"
+)
+@pytest.mark.parametrize("case", _pre_service_cases(native=True))
+def test_linux_native_pre_service_golden(case):
+    _assert_exact_pre_service_golden(case)
+
+
+@pytest.mark.skipif(
+    sys.platform != "win32", reason="Full Windows historical/live native differential"
+)
+@pytest.mark.parametrize("case", _pre_service_cases(native=True))
+def test_windows_native_pre_service_full_raw_differential(case):
+    current, original, _ = _pre_service_process_pair(case)
+    assert current.returncode == original.returncode == case["returncode"]
+    assert_reviewed_pre_service_stdout(case["name"], original.stdout, current.stdout)
+
+
+@pytest.mark.parametrize("name", sorted(PLATFORM_NATIVE_CASES))
+@pytest.mark.parametrize("mutation", ["vertex", "triangle", "nonnumeric", "error", "key_order"])
+def test_full_native_differential_rejects_unreviewed_changes(name, mutation):
+    _, manifest = sector_pre_service_fixtures()
+    case = next(case for case in manifest["cases"] if case["name"] == name)
+    _, _, _, original = _pre_service_documents(case)
+    current = reviewed_pre_service_stdout(name, original)
+    assert_reviewed_pre_service_stdout(name, original, current)
+    value = json.loads(current)
+    feature = next(feature for feature in value["result"]["features"] if feature.get("mesh"))
+    if mutation == "vertex":
+        feature["mesh"]["vertices"][0][0] += 0.125
+    elif mutation == "triangle":
+        triangle = feature["mesh"]["triangles"][0]
+        triangle[0] = (triangle[0] + 1) % len(feature["mesh"]["vertices"])
+    elif mutation == "nonnumeric":
+        feature["id"] += "-unreviewed"
+    elif mutation == "error":
+        value["error"] = {"code": "unreviewed", "message": "unexpected failure"}
+    else:
+        value = dict(reversed(list(value.items())))
+    changed = json.dumps(value, separators=(",", ":")).encode("utf-8") + b"\n"
+    assert changed != current
+    with pytest.raises(AssertionError):
+        assert_reviewed_pre_service_stdout(name, original, changed)
 
 
 def reviewed_pre_service_stdout(name, expected):
