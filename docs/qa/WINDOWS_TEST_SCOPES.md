@@ -285,3 +285,25 @@ six Windows full-byte native differentials, and the source/visibility/framing
 and mutation controls executed. This is a bounded current-source process-harness
 result. The Linux baseline was not executed on Techbox, no wider Windows suite
 pass is claimed, and Windows standalone/native Blender release remains NOT_READY.
+
+## Dormant-service owner rejection
+
+All 36 cases in `tests/integration/test_service_v3_owner_rejection.py` require
+the shared `real_cases` fixture's Linux/manual capture and native sidecar packet
+production. The module now states that Linux-only scope with an explicit
+platform mark; its 25 functions/fixtures, including all 15 original test bodies
+and their assertions/decorators, are preserved exactly. Collection retains all
+36 nodes. Windows does not execute their fixtures or substitute bundled/fake
+records for those process packets. No Linux process execution is claimed here.
+
+Windows executes the portable dormant-service rejection counterparts in
+`tests/unit/test_service_v3_lifecycle.py`: five foreign-record cases, three
+actual public Windows capture/policy/descriptor rejection cases and one new
+subclass control. The existing cases did not distinguish an exact-class guard
+from `isinstance`; the new control first observes the real public selection's
+intentional dormant rejection, then requires its otherwise identical subclass
+to reject sooner at the exact-class gate. Model/currentness/job leaves remain
+forbidden, alongside the capture fixture's native process/API traps. This uses
+regular inert fixture files and real public capture, not a native backend or
+Blender process. Production class, authority and bundled rejection guards are
+unchanged; native Windows release qualification remains NOT_READY.

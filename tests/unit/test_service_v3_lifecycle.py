@@ -8,7 +8,7 @@ profiles here; Windows tests prove rejection with a real public capture.
 import importlib
 import sys
 import types
-from dataclasses import dataclass
+from dataclasses import dataclass, fields
 from pathlib import Path
 
 import pytest
@@ -75,3 +75,32 @@ def test_windows_public_profile_cannot_enter_dormant_service(
     expected = "dormant" if kind == "selection" else "captured backend selection"
     with pytest.raises(service.bridge.BridgeError, match=expected):
         service.DataOnlyJob({}, candidates[kind], current_selection=forbidden)
+
+
+@pytest.mark.skipif(sys.platform != "win32", reason="actual public Windows host capture")
+def test_windows_public_record_subclass_rejects_at_exact_class_gate(captured_backend, monkeypatch):
+    selected = captured_backend(selections, generation=0, lifetime_id="windows-exact-class-gate")
+    assert type(selected) is selections.BackendSelection
+    assert selected.bundled_policy is not None
+
+    class ForeignSelection(selections.BackendSelection):
+        pass
+
+    foreign = ForeignSelection(
+        **{field.name: getattr(selected, field.name) for field in fields(selected)}
+    )
+    assert isinstance(foreign, selections.BackendSelection)
+    assert type(foreign) is not selections.BackendSelection
+
+    def forbidden(*args, **kwargs):
+        pytest.fail("Rejected public record reached a later admission leaf")
+
+    monkeypatch.setattr(service.result_v3, "validate_request", forbidden)
+    monkeypatch.setattr(service.SidecarJob, "from_selection", forbidden)
+    monkeypatch.setattr(ForeignSelection, "assert_current", forbidden)
+    # The exact supported public record reaches the intentional dormant gate.
+    with pytest.raises(service.bridge.BridgeError, match="dormant"):
+        service.DataOnlyJob({}, selected, current_selection=forbidden)
+    # A subclass must fail sooner, even though it carries the same valid policy.
+    with pytest.raises(service.bridge.BridgeError, match="captured backend selection"):
+        service.DataOnlyJob({}, foreign, current_selection=forbidden)

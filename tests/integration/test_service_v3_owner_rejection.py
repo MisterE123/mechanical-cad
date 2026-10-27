@@ -3,6 +3,9 @@
 The session fixture performs serialized native sidecar work. Owner methods run
 against small native-free host ports; these tests make no Blender GUI claim.
 No result is downgraded for acceptance and no production module is modified.
+These are Linux/manual-backend process cases. The dormant service rejects
+bundled profiles; portable and Windows public-profile admission controls live in
+tests/unit/test_service_v3_lifecycle.py.
 """
 
 from __future__ import annotations
@@ -28,7 +31,12 @@ from service_v3_owner_fakes import (
     load_owners,
 )
 
-pytestmark = pytest.mark.kernel
+pytestmark = [
+    pytest.mark.kernel,
+    pytest.mark.skipif(
+        sys.platform != "linux", reason="Linux manual-backend native owner-rejection packets"
+    ),
+]
 
 
 def sector_document():
