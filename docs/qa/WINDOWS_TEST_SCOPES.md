@@ -504,3 +504,13 @@ functions/helpers preserve exact source and AST apart from named Linux marks.
 Production admission, class/authority checks and goldens are unchanged. This is
 neither native Windows process/geometry parity nor packaged Blender qualification;
 Windows native release remains NOT_READY.
+
+## Standalone material opening metadata
+
+Only the original physical FIFO mutation and FIFO-before-open swap cases have
+explicit Linux scope. Their bodies and assertions remain unchanged. Six portable
+controls supply FIFO/socket/directory lstat or fstat metadata at the builder
+module-local opening boundary; no nonregular filesystem object is created. Each
+first verifies real regular-file stream/copy/hash success, then proves rejection
+before stream wrapping, copy, base build or publication. A rejected opened file
+is closed once. Global OS functions and production validation remain unchanged.

@@ -33,6 +33,9 @@ sys.modules[SPEC.name] = w
 SPEC.loader.exec_module(w)
 b = w.BUILDER
 LIMITS = w.MaterialsLimits(chunk_bytes=17, reserve_free_bytes=0)
+LINUX_POSIX_MATERIAL = pytest.mark.skipif(
+    sys.platform != "linux", reason="Real Linux FIFO or native-link publication contract"
+)
 PINNED = {
     "scripts/package_standalone_extension.py": "1fd634b545480816a277b0707f27488e3253b8aae1a47090fe99c806b1d92750",
     "scripts/standalone_child_bootstrap.py": "df85aeb34905ca1e18f34610ecbf74b8c00fa26738f520e65f9bc278b058188c",
@@ -610,7 +613,11 @@ def test_addon_cannot_claim_reserved_namespaces(inputs, name):
 
 
 @pytest.mark.parametrize(
-    "change", ["missing", "extra", "short", "grown", "same_size_hash", "symlink", "fifo"]
+    "change",
+    [
+        "missing", "extra", "short", "grown", "same_size_hash", "symlink",
+        pytest.param("fifo", marks=LINUX_POSIX_MATERIAL),
+    ],
 )
 def test_material_tree_mutations_rejected(inputs, tmp_path, change):
     path = inputs["materials_root"] / "licenses/NOTICE.txt"
@@ -652,6 +659,7 @@ def test_reparse_material_root_rejected(inputs, monkeypatch):
         build(inputs)
 
 
+@LINUX_POSIX_MATERIAL
 def test_regular_to_fifo_swap_before_open_is_rejected_without_blocking(inputs, monkeypatch):
     original = b.os.open
     target = inputs["materials_root"] / "licenses/NOTICE.txt"
@@ -665,6 +673,103 @@ def test_regular_to_fifo_swap_before_open_is_rejected_without_blocking(inputs, m
     monkeypatch.setattr(b.os, "open", swap)
     with pytest.raises(w.BuildError, match="regular"):
         build(inputs)
+
+
+@pytest.mark.parametrize("where", ["lstat", "fstat"])
+@pytest.mark.parametrize(
+    "mode",
+    [stat.S_IFIFO, stat.S_IFSOCK, stat.S_IFDIR],
+    ids=["fifo-metadata", "socket", "directory"],
+)
+def test_nonregular_open_metadata_rejects_before_stream_copy_or_publication(
+    inputs, monkeypatch, where, mode
+):
+    item = w.C.validate_file_inventory(inputs["materials_files"], limits=LIMITS)[0]
+    target = inputs["materials_root"] / item.path
+    original_bytes = target.read_bytes()
+    original_path, original_copy = b._path, b._copy_checked
+    original_os = os
+    original_functions = os.open, os.fstat, os.fdopen, os.close, os.link
+    observation = {"negative": False}
+    events, live = [], set()
+
+    def forbidden(*args, **kwargs):
+        events.append("forbidden copy/build/publication")
+        raise AssertionError(events[-1])
+
+    class ObservedPath:
+        def __fspath__(self):
+            return str(target)
+
+        def lstat(self):
+            info = target.lstat()
+            return types.SimpleNamespace(
+                st_mode=mode if observation["negative"] and where == "lstat" else info.st_mode,
+                st_file_attributes=getattr(info, "st_file_attributes", 0),
+            )
+
+    def checked_path(path):
+        actual = original_path(path)
+        return ObservedPath() if actual == target else actual
+
+    def opened(path, flags, *args, **kwargs):
+        fd = original_os.open(path, flags, *args, **kwargs)
+        live.add(fd)
+        events.append("negative open" if observation["negative"] else "positive open")
+        return fd
+
+    def fstat(fd):
+        if observation["negative"] and where == "fstat" and fd in live:
+            return types.SimpleNamespace(st_mode=mode)
+        return original_os.fstat(fd)
+
+    def stream(fd, *args, **kwargs):
+        if observation["negative"]:
+            return forbidden()
+        events.append("positive stream")
+        return original_os.fdopen(fd, *args, **kwargs)
+
+    def closed(fd):
+        assert fd in live
+        live.remove(fd)
+        events.append("negative close" if observation["negative"] else "positive close")
+        return original_os.close(fd)
+
+    def copied(*args, **kwargs):
+        if observation["negative"]:
+            return forbidden()
+        events.append("positive copy")
+        return original_copy(*args, **kwargs)
+
+    facade = types.SimpleNamespace(
+        **(
+            vars(os)
+            | {
+                "open": opened,
+                "fstat": fstat,
+                "fdopen": stream,
+                "close": closed,
+                "link": forbidden,
+            }
+        )
+    )
+    monkeypatch.setattr(b, "os", facade)
+    monkeypatch.setattr(w, "os", types.SimpleNamespace(**(vars(os) | {"link": forbidden})))
+    monkeypatch.setattr(b, "_path", checked_path)
+    monkeypatch.setattr(b, "_copy_checked", copied)
+    w._verify_file(target, item, LIMITS)
+    assert events == ["positive open", "positive stream", "positive copy", "positive close"]
+    assert not live
+    observation["negative"] = True
+    monkeypatch.setattr(b, "build_contract_extension", forbidden)
+    monkeypatch.setattr(w, "_append", forbidden)
+    monkeypatch.setattr(w, "_write_receipt", forbidden)
+    with pytest.raises(w.BuildError, match="regular"):
+        build(inputs)
+    assert events[4:] == ([] if where == "lstat" else ["negative open", "negative close"])
+    assert not live and not inputs["destination"].exists()
+    assert target.read_bytes() == original_bytes
+    assert (os.open, os.fstat, os.fdopen, os.close, os.link) == original_functions
 
 
 @pytest.mark.parametrize("change", ["material", "extra", "source", "runtime"])
@@ -1084,6 +1189,7 @@ def test_no_material_execution_native_imports_network_or_processes(inputs, tmp_p
     assert not (tmp_path / "EXECUTED").exists()
 
 
+@LINUX_POSIX_MATERIAL
 def test_actual_inert_materializer_and_reverification_never_visit_materials(
     inputs, tmp_path, monkeypatch
 ):
