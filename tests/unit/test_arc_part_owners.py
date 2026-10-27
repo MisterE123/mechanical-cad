@@ -89,8 +89,8 @@ def synthetic_evidence(owners, prepared, response, selected, owner):
             solver_origin=str(Path(selected.core_origin) / "sketch_solver.py"),
             python_executable=selected.python_executable,
             python_executable_target=selected.python_executable_target,
-            python_prefix="/synthetic/prefix",
-            python_base_prefix="/synthetic/base",
+            python_prefix=str(Path(selected.project_root) / "synthetic-prefix"),
+            python_base_prefix=str(Path(selected.project_root) / "synthetic-base"),
             python_version=[3, 12, 14],
         ),
     )
@@ -174,6 +174,12 @@ def publish(owner, label="radius_edit_5_0_replay", **variant):
     intent, evidence = prepare(owner, label, **variant)
     assert intent.publish(owner.context, evidence)
     return evidence
+
+
+@pytest.mark.parametrize("field", ["python_prefix", "python_base_prefix"])
+def test_synthetic_receipt_diagnostics_have_explicit_host_absolute_paths(owner, field):
+    _, evidence = prepare(owner)
+    assert Path(evidence.receipt_snapshot()["backend"][field]).is_absolute()
 
 
 @pytest.mark.parametrize("variant", [{}, {"profile": True}, {"selected_profile": True}])

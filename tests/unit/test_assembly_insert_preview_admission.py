@@ -31,7 +31,7 @@ def insertion(adapter):  # noqa: F811
     path = ROOT / "blender_addon/mechanical_cad_blender/assembly_pending.py"
     node = next(
         n
-        for n in ast.parse(path.read_text()).body
+        for n in ast.parse(path.read_text(encoding="utf-8")).body
         if isinstance(n, ast.FunctionDef) and n.name == "prepare_insert_preview"
     )
     node.body = [n for n in node.body if not isinstance(n, (ast.Import, ast.ImportFrom))]

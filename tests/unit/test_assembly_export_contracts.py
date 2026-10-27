@@ -7,6 +7,7 @@ synthetic and do not qualify native STEP geometry or installed-package behavior.
 
 import copy
 import importlib
+import tempfile
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -27,6 +28,7 @@ export_bridge = importlib.import_module(bridge.__package__ + ".assembly_export_b
 operations = importlib.import_module(bridge.__package__ + ".operation_contracts")
 contracts = importlib.import_module(bridge.__package__ + ".backend_contracts")
 transport = importlib.import_module(bridge.__package__ + ".guarded_transport")
+DEFAULT_EXPORT_PATH = str(Path(tempfile.gettempdir()) / "requested assembly.step")
 
 
 class Kernel(LegacyKernel, PairKernel):
@@ -56,7 +58,7 @@ def _packet_factory(monkeypatch, version):
     ]
     raw["active_verification_preset"] = "current"
 
-    def make(*, state="passed", path="/tmp/requested assembly.step"):
+    def make(*, state="passed", path=DEFAULT_EXPORT_PATH):
         candidate = copy.deepcopy(raw)
         active_kernel = kernel
         if state == "unconfigured":
@@ -127,7 +129,7 @@ def _packet_factory(monkeypatch, version):
     return make
 
 
-def pair(monkeypatch, *, version=2, state="passed", path="/tmp/requested assembly.step"):
+def pair(monkeypatch, *, version=2, state="passed", path=DEFAULT_EXPORT_PATH):
     """Reusable strict synthetic request/response for pure owner contract tests."""
     return _packet_factory(monkeypatch, version)(state=state, path=path)
 
@@ -227,9 +229,10 @@ def test_export_path_must_be_an_explicit_absolute_string(packet, path):
 
 
 def test_path_text_is_never_resolved_expanded_or_changed(packet):
-    request, response = packet(path="/tmp/export/../exact name.STEP")
+    raw_path = str(Path(DEFAULT_EXPORT_PATH).parent / "export" / ".." / "exact name.STEP")
+    request, response = packet(path=raw_path)
     assert export_bridge.validate_response(request, response)["export"]["path"] == request["path"]
-    response["export"]["path"] = "/tmp/exact name.STEP"
+    response["export"]["path"] = str(Path(DEFAULT_EXPORT_PATH).with_name("exact name.STEP"))
     with pytest.raises(bridge.bridge.BridgeError, match="destination changed"):
         export_bridge.validate_response(request, response)
 
@@ -262,7 +265,7 @@ def test_outer_reply_is_exact_and_request_bound(packet, key, value):
     [
         ("format", "STL"),
         ("units", "m"),
-        ("path", "/tmp/substituted.step"),
+        ("path", str(Path(DEFAULT_EXPORT_PATH).with_name("substituted.step"))),
         ("path", True),
         ("atomic_write", 1),
         ("atomic_write", False),

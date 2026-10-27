@@ -45,7 +45,7 @@ def insertion(source_host, inputs, monkeypatch):  # noqa: F811
     # injected native-free ports and all handoff/ownership assertions below.
     for name in ("assembly_insert_preview_session.py", "assembly_insert_preview.py"):
         path = ADDON / name
-        tree = ast.parse(path.read_text())
+        tree = ast.parse(path.read_text(encoding="utf-8"))
         tree.body = [n for n in tree.body if not isinstance(n, (ast.Import, ast.ImportFrom))]
         exec(compile(tree, str(path), "exec"), env)
     draft = build(inputs)
@@ -280,7 +280,7 @@ def test_handoff_rejects_different_editor_before_start(insertion, changed):
 @pytest.fixture
 def outer(insertion):
     h = insertion
-    tree = ast.parse((ADDON / "assembly_operators.py").read_text())
+    tree = ast.parse((ADDON / "assembly_operators.py").read_text(encoding="utf-8"))
     cls = next(
         n for n in tree.body if isinstance(n, ast.ClassDef) and n.name == "MCAD_OT_assembly_insert"
     )

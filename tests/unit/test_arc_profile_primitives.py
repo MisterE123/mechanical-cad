@@ -618,7 +618,7 @@ def test_original_arc_policy_bytes_unchanged_and_no_runtime_importers():
     for source_dir in (ROOT / "src", ROOT / "blender_addon"):
         for source in source_dir.rglob("*.py"):
             permitted = allowed.get(source, set())
-            source_tree = ast.parse(source.read_text())
+            source_tree = ast.parse(source.read_text(encoding="utf-8"))
             dynamic_functions = {"__import__"}
             dynamic_modules = {"importlib", "builtins"}
             for node in ast.walk(source_tree):

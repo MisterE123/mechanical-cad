@@ -639,7 +639,7 @@ print('ARC_MEMBERSHIP_NATIVE_FREE_OK')
 
 def test_no_production_consumer_or_duplicate_arithmetic_implementation():
     path = ROOT / "src/mechanical_cad/arc_profile_primitives.py"
-    tree = ast.parse(path.read_text())
+    tree = ast.parse(path.read_text(encoding="utf-8"))
     imports = [node for node in ast.walk(tree) if isinstance(node, (ast.Import, ast.ImportFrom))]
     assert {node.module for node in imports if isinstance(node, ast.ImportFrom)} == {
         "__future__",
@@ -713,7 +713,7 @@ def test_no_production_consumer_or_duplicate_arithmetic_implementation():
     for source_dir in (ROOT / "src", ROOT / "blender_addon"):
         for source in source_dir.rglob("*.py"):
             permitted = allowed.get(source, set())
-            source_tree = ast.parse(source.read_text())
+            source_tree = ast.parse(source.read_text(encoding="utf-8"))
             dynamic_functions = {"__import__"}
             dynamic_modules = {"importlib", "builtins"}
             for node in ast.walk(source_tree):

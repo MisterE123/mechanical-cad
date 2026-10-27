@@ -19,7 +19,7 @@ def owner(*, editing=True, pending=True, native=False):
 
 
 def viewport_function(name, value=None):
-    tree = ast.parse((ROOT / "general_viewport.py").read_text())
+    tree = ast.parse((ROOT / "general_viewport.py").read_text(encoding="utf-8"))
     if name == "description":
         cls = next(n for n in tree.body if isinstance(n, ast.ClassDef) and n.name == "MCAD_OT_general_tool")
         node = next(n for n in cls.body if isinstance(n, ast.FunctionDef) and n.name == name)

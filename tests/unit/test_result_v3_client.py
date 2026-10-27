@@ -574,11 +574,11 @@ def test_frozen_shared_policy_pins_and_canonical_function_parity():
 )
 def test_original_legacy_canonical_bytes_unchanged(name, digest):
     captured = ROOT / "tests/fixtures/result_v3/legacy_30383a1"
-    original_request = json.loads((captured / f"snapshot_{name}.request.txt").read_text())
-    original_result = json.loads((captured / f"snapshot_{name}.stdout.txt").read_text())["result"]
+    original_request = json.loads((captured / f"snapshot_{name}.request.txt").read_text(encoding="utf-8"))
+    original_result = json.loads((captured / f"snapshot_{name}.stdout.txt").read_text(encoding="utf-8"))["result"]
     expected = original_result["canonical_json"].encode("utf-8")
     assert hashlib.sha256(expected).hexdigest() == original_result["content_hash"] == digest
-    document = json.loads((ROOT / "examples" / (name + ".mcad.json")).read_text())
+    document = json.loads((ROOT / "examples" / (name + ".mcad.json")).read_text(encoding="utf-8"))
     assert document == original_request["document"]
     for module in (snapshots, legacy):
         assert (
@@ -732,7 +732,7 @@ def test_client_ast_dependency_graph_is_acyclic_and_no_core_imports():
         if name in dependencies:
             return
         dependencies[name] = set()
-        tree = ast.parse((ADDON / (name + ".py")).read_text())
+        tree = ast.parse((ADDON / (name + ".py")).read_text(encoding="utf-8"))
         for node in ast.walk(tree):
             if isinstance(node, ast.ImportFrom):
                 assert not (node.module or "").startswith("mechanical_cad")

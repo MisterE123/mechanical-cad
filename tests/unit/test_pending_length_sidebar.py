@@ -24,7 +24,7 @@ class Layout:
 
 
 def load_draw():
-    tree = ast.parse((ROOT / "workspace_ui.py").read_text())
+    tree = ast.parse((ROOT / "workspace_ui.py").read_text(encoding="utf-8"))
     names = {"_draw_pending_length_status", "_draw_pending_diameter_status", "_draw_general_status"}
     nodes = [n for n in tree.body if isinstance(n, ast.FunctionDef) and n.name in names]
     environment = {
@@ -106,7 +106,7 @@ def test_ordinary_proposal_and_relations_are_unchanged():
     ("Reopen", "captured direction"),
 ])
 def test_specific_tooltips_explain_cancel_scope(tool, phrase):
-    tree = ast.parse((ROOT / "general_viewport.py").read_text())
+    tree = ast.parse((ROOT / "general_viewport.py").read_text(encoding="utf-8"))
     cls = next(n for n in tree.body if isinstance(n, ast.ClassDef) and n.name == "MCAD_OT_general_tool")
     method = next(n for n in cls.body if isinstance(n, ast.FunctionDef) and n.name == "description")
     method.decorator_list = []
@@ -117,7 +117,7 @@ def test_specific_tooltips_explain_cancel_scope(tool, phrase):
 
 @pytest.mark.parametrize("editing", [True, False])
 def test_viewport_hint_matches_active_or_suspended_field(editing):
-    tree = ast.parse((ROOT / "general_viewport.py").read_text())
+    tree = ast.parse((ROOT / "general_viewport.py").read_text(encoding="utf-8"))
     method = next(n for n in tree.body if isinstance(n, ast.FunctionDef) and n.name == "_line_hint")
     environment = {}
     exec(compile(ast.Module(body=[method], type_ignores=[]), "hint", "exec"), environment)

@@ -49,7 +49,7 @@ def mate_owner(insertion, monkeypatch):  # noqa: F811
 
     monkeypatch.setattr(base, "_show_response", show)
     path = ADDON / "assembly_insert_mate_preview.py"
-    tree = ast.parse(path.read_text())
+    tree = ast.parse(path.read_text(encoding="utf-8"))
     tree.body = [n for n in tree.body if not isinstance(n, (ast.Import, ast.ImportFrom))]
     exec(compile(tree, str(path), "exec"), env)
     owner = env["InsertMateSession"](h.context, h.draft)

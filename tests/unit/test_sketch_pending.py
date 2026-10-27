@@ -641,7 +641,7 @@ assert callable(module.prepare) and module.status() == []
 """
     process = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True)
     assert process.returncode == 0, process.stderr
-    tree = ast.parse((ADDON / "sketch_pending.py").read_text())
+    tree = ast.parse((ADDON / "sketch_pending.py").read_text(encoding="utf-8"))
     attributes = {node.attr for node in ast.walk(tree) if isinstance(node, ast.Attribute)}
     assert not attributes & {"timers", "handlers", "bpy", "RNA"}
 

@@ -2,11 +2,23 @@
 import copy
 
 import pytest
-from test_backend_contract_client import client, operation, receipt_response, selection
+import test_backend_contract_client as client_fixtures
+from test_backend_contract_client import client, operation, receipt_response
+
+
+@pytest.fixture
+def selection(monkeypatch, captured_backend):
+    """Bind the consumer and imported receipt producer to the same exact record."""
+    selected = captured_backend(client_fixtures.selection_module, generation=1, lifetime_id="lifetime")
+    def capture():
+        return selected
+
+    monkeypatch.setattr(client_fixtures, "selection", capture)
+    return capture
 
 
 @pytest.mark.parametrize("rejected", [False, True])
-def test_combined_matches_standalone_apis(rejected):
+def test_combined_matches_standalone_apis(rejected, selection):
     guarded = client.prepare_request(operation()).guarded_request()
     response = receipt_response(guarded, rejected=rejected)
     response["extra"] = {"preserved": []}
@@ -18,7 +30,7 @@ def test_combined_matches_standalone_apis(rejected):
     assert projected == client.project_response(response)
 
 
-def test_shared_input_dag_does_not_alias_receipt_projection_or_input():
+def test_shared_input_dag_does_not_alias_receipt_projection_or_input(selection):
     guarded = client.prepare_request(operation()).guarded_request()
     response = receipt_response(guarded)
     version = response["backend_receipt"]["backend"]["python_version"]
@@ -33,7 +45,7 @@ def test_shared_input_dag_does_not_alias_receipt_projection_or_input():
     assert projected["result"]["aliased"] == [3, 99, 14]
 
 
-def test_dispatched_combined_walks_full_response_once(monkeypatch):
+def test_dispatched_combined_walks_full_response_once(monkeypatch, selection):
     guarded = client.prepare_request(operation()).guarded_request()
     response = receipt_response(guarded)
     calls = []
@@ -47,7 +59,7 @@ def test_dispatched_combined_walks_full_response_once(monkeypatch):
 
 
 @pytest.mark.parametrize("damage", ["cycle", "non_json", "depth", "bytes", "receipt_bytes"])
-def test_combined_retains_original_resource_checks(monkeypatch, damage):
+def test_combined_retains_original_resource_checks(monkeypatch, damage, selection):
     guarded = client.prepare_request(operation()).guarded_request()
     response = receipt_response(guarded)
     if damage == "cycle":
@@ -67,7 +79,7 @@ def test_combined_retains_original_resource_checks(monkeypatch, damage):
         client.validate_receipt_and_project(guarded, response, selection())
 
 
-def test_response_mutation_cannot_change_detached_projection():
+def test_response_mutation_cannot_change_detached_projection(selection):
     guarded = client.prepare_request(operation()).guarded_request()
     response = receipt_response(guarded)
     response["extra"] = [1]

@@ -268,7 +268,7 @@ def check_authority_sources(sources, *, complete=True):
 
 
 def test_every_authority_sink_and_alias_has_explicit_reviewed_version_and_action():
-    check_authority_sources({path.name: path.read_text() for path in ADDON.glob("*.py")})
+    check_authority_sources({path.name: path.read_text(encoding="utf-8") for path in ADDON.glob("*.py")})
 
 
 def test_assembly_version_selection_uses_exact_source_policy_not_received_stamp():
@@ -286,7 +286,7 @@ def test_assembly_version_selection_uses_exact_source_policy_not_received_stamp(
         ),
     }
     for (module, name), expression in expected.items():
-        tree = ast.parse((ADDON / (module + ".py")).read_text())
+        tree = ast.parse((ADDON / (module + ".py")).read_text(encoding="utf-8"))
         function = next(n for n in tree.body if isinstance(n, ast.FunctionDef) and n.name == name)
         assignments = [
             node
@@ -347,7 +347,7 @@ def test_untraced_general_read_helper_references_reject(source):
 def test_all_general_read_wrappers_supply_independent_prepared_request():
     actual = []
     for path in sorted(ADDON.glob("*.py")):
-        tree = ast.parse(path.read_text())
+        tree = ast.parse(path.read_text(encoding="utf-8"))
         reject_untraced_read_wrapper(tree)
         parents = {
             id(child): parent for parent in ast.walk(tree) for child in ast.iter_child_nodes(parent)
@@ -481,7 +481,7 @@ def factory_inventory(raw, module):
 def test_runtime_cannot_import_test_ports_or_data_only_jobs_or_add_evidence_factories():
     factory_imports = []
     for path in sorted(ADDON.glob("*.py")):
-        factory_imports.extend(factory_inventory(path.read_text(), path.stem))
+        factory_imports.extend(factory_inventory(path.read_text(encoding="utf-8"), path.stem))
     assert factory_imports == [("guarded_transport", "accept_response", None)]
 
 
@@ -530,7 +530,7 @@ def test_export_authority_uses_source_policy_and_preserves_display_action_trio()
         ("assembly_validation_common", "ACTIONS"),
         ("operation_contracts", "_ASSEMBLY_ACTIONS"),
     ):
-        tree = ast.parse((ADDON / (module + ".py")).read_text())
+        tree = ast.parse((ADDON / (module + ".py")).read_text(encoding="utf-8"))
         value = next(
             node.value
             for node in tree.body
@@ -543,7 +543,7 @@ def test_export_authority_uses_source_policy_and_preserves_display_action_trio()
             ast.unparse(value)
             == "frozenset({'assembly_replay', 'assembly_check', 'assembly_sample'})"
         )
-    tree = ast.parse((ADDON / "assembly_export_bridge.py").read_text())
+    tree = ast.parse((ADDON / "assembly_export_bridge.py").read_text(encoding="utf-8"))
     source_policy = next(
         node
         for node in tree.body
@@ -571,7 +571,7 @@ return selected
     assert ast.dump(
         ast.Module(body=source_policy.body[1:], type_ignores=[]), include_attributes=False
     ) == ast.dump(expected_policy, include_attributes=False)
-    tree = ast.parse((ADDON / "assembly_export_owner.py").read_text())
+    tree = ast.parse((ADDON / "assembly_export_owner.py").read_text(encoding="utf-8"))
     action = [
         node.value
         for node in tree.body
@@ -625,7 +625,7 @@ return selected
 def test_reviewed_choice_and_new_owner_bodies_cannot_hide_authority_mutations(module, before, after):
     # Positive local admission prevents a partial-inventory mismatch from making
     # a mutation test pass vacuously; the full live inventory is checked above.
-    sources = {module + ".py": (ADDON / (module + ".py")).read_text()}
+    sources = {module + ".py": (ADDON / (module + ".py")).read_text(encoding="utf-8")}
     check_authority_sources(sources, complete=False)
     original = sources[module + ".py"]
     assert before in original
@@ -644,7 +644,7 @@ def test_reviewed_choice_and_new_owner_bodies_cannot_hide_authority_mutations(mo
     ],
 )
 def test_choice_exception_never_admits_extra_direct_alias_or_dynamic_authority(extra):
-    sources = {"solid_projection_picker.py": (ADDON / "solid_projection_picker.py").read_text()}
+    sources = {"solid_projection_picker.py": (ADDON / "solid_projection_picker.py").read_text(encoding="utf-8")}
     check_authority_sources(sources, complete=False)
     sources["solid_projection_picker.py"] += "\n" + extra
     with pytest.raises(AssertionError):
@@ -676,7 +676,7 @@ def test_method_seals_are_portable_without_ignoring_real_type_parameters():
     ],
 )
 def test_choice_constructor_rejects_plain_and_dotted_import_shadows(statement):
-    source = (ADDON / "solid_projection_picker.py").read_text()
+    source = (ADDON / "solid_projection_picker.py").read_text(encoding="utf-8")
     check_authority_sources({"solid_projection_picker.py": source}, complete=False)
     with pytest.raises(AssertionError, match="constructor shadowed by import"):
         check_authority_sources(
@@ -685,7 +685,7 @@ def test_choice_constructor_rejects_plain_and_dotted_import_shadows(statement):
 
 
 def test_choice_import_rule_uses_actual_python_bound_name_not_dotted_suffix():
-    source = (ADDON / "solid_projection_picker.py").read_text()
+    source = (ADDON / "solid_projection_picker.py").read_text(encoding="utf-8")
     # This spelling binds unrelated_package, not the EdgeChoice suffix. No code
     # executes; the scanner must distinguish binding from a textual name match.
     check_authority_sources(
@@ -704,7 +704,7 @@ def test_choice_import_rule_uses_actual_python_bound_name_not_dotted_suffix():
     ],
 )
 def test_choice_constructor_rejects_exception_and_pattern_capture_binders(statement):
-    source = (ADDON / "solid_projection_picker.py").read_text()
+    source = (ADDON / "solid_projection_picker.py").read_text(encoding="utf-8")
     check_authority_sources({"solid_projection_picker.py": source}, complete=False)
     with pytest.raises(AssertionError, match="constructor shadowed by string binder"):
         check_authority_sources(
@@ -716,7 +716,7 @@ def test_choice_constructor_rejects_exception_and_pattern_capture_binders(statem
 def test_choice_constructor_rejects_class_type_parameter_binders_on_supported_ast_schemas(kind):
     from arc_owner_review import definitions
 
-    tree = ast.parse((ADDON / "solid_projection_picker.py").read_text())
+    tree = ast.parse((ADDON / "solid_projection_picker.py").read_text(encoding="utf-8"))
     verify_reviewed_methods(tree, "solid_projection_picker")
     owner = definitions(tree)["SolidProjectionPicker"]
     # Represent the exact name-bearing 3.12+ AST shape also on 3.11, where this
@@ -729,7 +729,7 @@ def test_choice_constructor_rejects_class_type_parameter_binders_on_supported_as
 
 
 def test_unrelated_pattern_capture_does_not_shadow_the_reviewed_constructor():
-    source = (ADDON / "solid_projection_picker.py").read_text()
+    source = (ADDON / "solid_projection_picker.py").read_text(encoding="utf-8")
     check_authority_sources(
         {"solid_projection_picker.py": source + "\nmatch value:\n    case harmless:\n        pass\n"},
         complete=False,
@@ -737,7 +737,7 @@ def test_unrelated_pattern_capture_does_not_shadow_the_reviewed_constructor():
 
 
 def test_wildcard_import_cannot_claim_an_unrelated_constructor_binding():
-    source = (ADDON / "solid_projection_picker.py").read_text()
+    source = (ADDON / "solid_projection_picker.py").read_text(encoding="utf-8")
     check_authority_sources({"solid_projection_picker.py": source}, complete=False)
     with pytest.raises(AssertionError, match="wildcard import cannot prove"):
         check_authority_sources(

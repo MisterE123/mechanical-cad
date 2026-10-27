@@ -24,7 +24,7 @@ overlay = importlib.import_module(PACKAGE + ".assembly_joint_overlay")
 
 @pytest.fixture
 def host():
-    tree = ast.parse(SOURCE.read_text())
+    tree = ast.parse(SOURCE.read_text(encoding="utf-8"))
     tree.body = [node for node in tree.body if not isinstance(node, (ast.Import, ast.ImportFrom))]
     bpy = NS(
         types=NS(SpaceView3D=NS(draw_handler_remove=Mock())),
@@ -45,7 +45,7 @@ def host():
     )
     registry = types.ModuleType("source_preview_registry_test")
     registry_path = ADDON / "assembly_source_preview_registry.py"
-    exec(compile(registry_path.read_text(), str(registry_path), "exec"), registry.__dict__)
+    exec(compile(registry_path.read_text(encoding="utf-8"), str(registry_path), "exec"), registry.__dict__)
     env = dict(
         assembly_source_preview_registry=registry,
         active=registry.active,
@@ -265,7 +265,7 @@ def test_stale_modal_cancels_without_poll_or_apply(host):
 
 
 def test_draw_is_cached_and_has_no_model_or_mesh_traversal():
-    tree = ast.parse(SOURCE.read_text())
+    tree = ast.parse(SOURCE.read_text(encoding="utf-8"))
     functions = [
         n
         for n in ast.walk(tree)
@@ -295,7 +295,7 @@ def test_draw_is_cached_and_has_no_model_or_mesh_traversal():
 
 
 def test_interactive_update_routes_explicitly_to_preview_not_commit():
-    tree = ast.parse((ADDON / "assembly_operators.py").read_text())
+    tree = ast.parse((ADDON / "assembly_operators.py").read_text(encoding="utf-8"))
     cls = next(
         n
         for n in tree.body
@@ -311,7 +311,7 @@ def test_interactive_update_routes_explicitly_to_preview_not_commit():
 @pytest.mark.parametrize("child_result", [{"RUNNING_MODAL"}, {"CANCELLED"}])
 def test_launcher_never_finishes_or_registers_repeat_execute(child_result):
     source = ADDON / "assembly_operators.py"
-    cls = next(n for n in ast.parse(source.read_text()).body
+    cls = next(n for n in ast.parse(source.read_text(encoding="utf-8")).body
                if isinstance(n, ast.ClassDef) and n.name == "MCAD_OT_assembly_update_source")
     invoke = next(n for n in cls.body if isinstance(n, ast.FunctionDef) and n.name == "invoke")
     launch = Mock(return_value=child_result)
@@ -386,7 +386,7 @@ def test_lifecycle_cancel_uses_and_clears_shared_registry(host, reason):
 
 
 def test_registration_lifecycle_routes_source_preview_cleanup():
-    tree = ast.parse((ADDON / "registration.py").read_text())
+    tree = ast.parse((ADDON / "registration.py").read_text(encoding="utf-8"))
     functions = {node.name: node for node in tree.body if isinstance(node, ast.FunctionDef)}
     for name in ("_before_blend_load", "_before_history_change", "unregister"):
         assert any(isinstance(node, ast.Call) and isinstance(node.func, ast.Name)

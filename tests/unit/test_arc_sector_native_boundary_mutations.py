@@ -244,8 +244,8 @@ def guarded_root(tmp_path):
 def _write_import(root, path, source):
     target = root / path
     target.parent.mkdir(parents=True, exist_ok=True)
-    existing = target.read_text() if target.exists() else ""
-    target.write_text(existing + source)
+    existing = target.read_text(encoding="utf-8") if target.exists() else ""
+    target.write_text(existing + source, encoding="utf-8", newline="\n")
 
 
 @pytest.mark.parametrize("guard", GUARDS)
@@ -387,7 +387,7 @@ def test_package_wildcard_is_not_an_exact_reviewed_edge(guarded_root, guard, sty
 
 def test_historical_fixture_is_exact_and_has_explicit_provenance():
     assert hashlib.sha256(BASELINE).hexdigest() == FIXTURE_SHA256
-    provenance = json.loads(FIXTURE.with_name("kernel_ocp-a05626e.provenance.json").read_text())
+    provenance = json.loads(FIXTURE.with_name("kernel_ocp-a05626e.provenance.json").read_text(encoding="utf-8"))
     assert provenance["baseline_commit"] == "a05626ef841478bbdaabe5ac3c58e7795a6be375"
     assert provenance["source_path"] == "src/mechanical_cad/kernel_ocp.py"
     assert provenance["fixture"] == FIXTURE.name
@@ -838,7 +838,7 @@ def test_authoring_inverse_and_added_footprint_never_bypass_runtime_guard(
 def test_historical_primitive_fixture_is_exact_and_has_explicit_provenance():
     assert hashlib.sha256(PRIMITIVE_BASELINE).hexdigest() == PRIMITIVE_SHA256
     provenance = json.loads(
-        PRIMITIVE_FIXTURE.with_name("arc_profile_primitives-a05626e.provenance.json").read_text()
+        PRIMITIVE_FIXTURE.with_name("arc_profile_primitives-a05626e.provenance.json").read_text(encoding="utf-8")
     )
     assert provenance["baseline_commit"] == "a05626ef841478bbdaabe5ac3c58e7795a6be375"
     assert provenance["source_path"] == "src/mechanical_cad/arc_profile_primitives.py"

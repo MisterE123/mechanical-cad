@@ -133,3 +133,23 @@ Pytest resolves dependencies of an imported fixture in the importing test's
 fixture namespace, so the compact-status and saved-sketch-extrusion consumers
 must be able to find it too. Registration is opt-in; it does not introduce an
 automatic fixture, change capture behavior, or add native work during collection.
+
+Assembly STEP packet defaults use the actual host's temporary directory. Explicit
+invalid/relative path arguments still pass unchanged to production validation;
+the foreign-receipt destination remains a different valid host-absolute path.
+The literal `..` destination comparison still proves that path text is neither
+resolved nor silently rewritten. Part-owner diagnostic prefixes likewise derive
+from the captured root, with an independent host-absolute assertion that catches
+single-leading-slash fixtures even on older Windows Python versions.
+
+Combined receipt projection tests explicitly bind both their selected record and
+the imported receipt producer to the captured fixture. Importing a helper alias
+does not inherit the defining module's automatic fixture setup.
+
+Additional owner, profile, insertion and pending-sidebar AST audit readers use
+UTF-8. The mutation fixture's source append helper also writes UTF-8 with LF to
+retain the original bytes outside its intentional append. Normalizing away only
+these I/O options leaves the complete audit-module ASTs unchanged: no approved
+hash, allowlist, mutation or assertion is rebased. Cache-owner materialization
+composition and unsupported manual-profile native groups remain outside this
+bounded repair pass.
