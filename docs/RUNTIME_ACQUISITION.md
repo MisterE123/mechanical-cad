@@ -4,6 +4,15 @@ This adapter realizes **runtime bytes only**, not a qualified installer, complet
 
 Ubuntu 24.04 is the intended Linux qualification host. Bundled Expat requires GLIBC 2.36; the OCP manylinux tag alone does not establish Ubuntu 22.04 support.
 
+Acquisition requires a Linux/POSIX **builder host** for either target lock. The
+release pipeline acquires and builds both `linux-x64` and `windows-x64` target
+archives on Ubuntu; a Windows target does not imply Windows builder support.
+Other hosts still parse and validate the lock first, then reject before resolving
+the work root, creating directories, touching a cache or downloading anything.
+Archive parsing and metadata/hash checks remain portable data-only operations.
+Exact POSIX output-mode verification is unchanged. Native Windows qualification
+of the resulting candidate is a separate later step on a Windows runner.
+
 ## Trusted input and invocation
 
 The reviewed, source-controlled lock is the input authority. The adapter accepts structurally valid Linux or Windows x64 target locks, not only the current six-archive Linux lock. Do not supply an unreviewed replacement lock and treat its internally consistent hashes as independent authentication. Confirm the lock's identity against the intended source commit or another separately reviewed manifest.

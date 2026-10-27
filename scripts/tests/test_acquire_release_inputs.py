@@ -1,6 +1,8 @@
 import importlib.util
 import io
 import json
+import os
+import sys
 import tarfile
 import zipfile
 from pathlib import Path
@@ -11,6 +13,11 @@ P = Path(__file__).parents[1] / "acquire_release_inputs.py"
 spec = importlib.util.spec_from_file_location("acquire_release_inputs", P)
 a = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(a)
+
+LINUX_BUILDER = pytest.mark.skipif(
+    not (sys.platform == "linux" and os.name == "posix"),
+    reason="Linux builder-host acquisition and POSIX filesystem contract",
+)
 
 
 @pytest.mark.parametrize(
@@ -181,6 +188,7 @@ def make_lock(artifact, row):
     }
 
 
+@LINUX_BUILDER
 def test_offline_acquisition_and_no_clobber(tmp_path, monkeypatch):
     path, artifact, row = fixture(tmp_path)
     lock = tmp_path / "lock.json"
@@ -197,6 +205,7 @@ def test_offline_acquisition_and_no_clobber(tmp_path, monkeypatch):
 
 
 @pytest.mark.parametrize("platform", ["linux-x64", "windows-x64"])
+@LINUX_BUILDER
 def test_receipt_reports_target_not_host_without_execution(tmp_path, monkeypatch, platform):
     path, artifact, row = fixture(tmp_path)
     data = make_lock(artifact, row)
@@ -213,6 +222,36 @@ def test_receipt_reports_target_not_host_without_execution(tmp_path, monkeypatch
         if platform == "linux-x64"
         else "WINDOWS_COMPONENT_MAPPING_NOT_REVIEWED"
     )
+
+
+@pytest.mark.skipif(sys.platform != "win32", reason="Actual Windows unsupported builder admission")
+@pytest.mark.parametrize("platform", ["linux-x64", "windows-x64"])
+def test_windows_builder_rejects_valid_targets_before_work_cache_or_download(
+    tmp_path, monkeypatch, platform
+):
+    assert os.name == "nt" and a.sys is sys and a.os is os
+    _path, artifact, row = fixture(tmp_path)
+    value = make_lock(artifact, row)
+    value["platform"] = platform
+    assert len(a.validate_lock(value)) == 1
+    lock = tmp_path / "lock.json"
+    original = a.canonical(value)
+    lock.write_bytes(original)
+    work, cache = tmp_path / "work", tmp_path / "untouched-cache"
+    attempts = []
+
+    def forbidden(*args, **kwargs):
+        attempts.append("work/cache/download/inspection")
+        raise AssertionError(attempts[-1])
+
+    for name in ("Path", "download", "inspect_archive", "verify_tree"):
+        monkeypatch.setattr(a, name, forbidden)
+    with pytest.raises(a.AcquisitionError, match="Linux builder host"):
+        a.acquire(lock, work, download_cache=cache)
+    assert attempts == [] and lock.read_bytes() == original
+    assert not work.exists() and not cache.exists()
+    assert not (work / "acquisition-receipt.json").exists()
+    assert not (work / "runtime-inventory.json").exists()
 
 
 @pytest.mark.parametrize(
@@ -297,6 +336,7 @@ def test_parent_link_rejected(tmp_path):
         a.inspect_archive(path, artifact, [row])
 
 
+@LINUX_BUILDER
 def test_wrong_output_modes_and_extra_file(tmp_path):
     root = tmp_path / "root"
     root.mkdir()
@@ -338,6 +378,7 @@ def test_inert_case_aliases_are_explicit_and_unmapped(tmp_path):
         a.validate_lock(make_lock(artifact, row))
 
 
+@LINUX_BUILDER
 def test_reused_cache_is_rehashed(tmp_path):
     path, artifact, row = fixture(tmp_path)
     lock = tmp_path / "lock.json"
@@ -349,6 +390,7 @@ def test_reused_cache_is_rehashed(tmp_path):
     assert not (tmp_path / "new/runtime/runtime/a").exists()
 
 
+@LINUX_BUILDER
 def test_work_parent_symlink_no_write(tmp_path):
     _path, artifact, row = fixture(tmp_path)
     lock = tmp_path / "lock.json"
@@ -362,6 +404,7 @@ def test_work_parent_symlink_no_write(tmp_path):
     assert not (target / "new").exists()
 
 
+@LINUX_BUILDER
 def test_lock_mutation_cannot_emit_misbound_receipt(tmp_path, monkeypatch):
     path, artifact, row = fixture(tmp_path)
     lock = tmp_path / "lock.json"
@@ -381,6 +424,7 @@ def test_lock_mutation_cannot_emit_misbound_receipt(tmp_path, monkeypatch):
     assert (work / "runtime/runtime/a").read_bytes() == b"hello"
 
 
+@LINUX_BUILDER
 def test_receipt_binds_exact_original_lock_bytes(tmp_path, monkeypatch):
     path, artifact, row = fixture(tmp_path)
     lock = tmp_path / "lock.json"

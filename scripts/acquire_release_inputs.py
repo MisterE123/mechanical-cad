@@ -9,6 +9,7 @@ import json
 import os
 import re
 import stat
+import sys
 import tarfile
 import urllib.parse
 import urllib.request
@@ -416,6 +417,10 @@ def acquire(lock_path, work_root, download_cache=None):
     lock_digest = sha(lock_bytes)
     lock = parse_json(lock_bytes)
     inventory = validate_lock(lock)  # Before any output mutation or network.
+    require(
+        sys.platform == "linux" and os.name == "posix",
+        "Runtime acquisition requires a Linux builder host.",
+    )
     work = Path(work_root).absolute()
     require(not work.exists() and not work.is_symlink(), "work root already exists")
     require(
