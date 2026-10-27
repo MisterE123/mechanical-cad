@@ -636,10 +636,11 @@ The finite 17-case review map is:
 | sketch_dof_cycles: `test_real_blender_bridge_replay_retains_failure_in_both_negotiated_versions` | 2 | Linux legacy bridge replay |
 | part_snapshot_bridge: `test_real_process_capture_with_current_interpreter` | 1 | Linux legacy real-process snapshot |
 | part_snapshot_bridge: `test_duplicate_wire_response_keys_are_rejected_by_existing_transport` | 2 | Linux mocked legacy decoder/admission; portable and Windows raw-byte controls added |
-| assembly_bridge: `test_assembly_process_errors_use_safe_shared_transport` | 2 | Unchanged; new public start-error diagnostic needs review |
+| assembly_bridge: `test_assembly_process_errors_use_safe_shared_transport` | 2 | Linux mocked legacy timeout/start admission; public Windows owner counterparts passed |
 | clevis_example: `test_generator_rejects_unqualified_or_destructive_requests[existing_evidence]` | 1 | Exact host expectation corrected; local subprocess execution deferred |
 
-Only the six named functions totaling 14 cases receive Linux scope in this slice.
+The original scope slice covered six named functions totaling 14 cases; the
+reviewed start-ordering follow-up adds the two mocked assembly cases, for 16.
 Their exact bodies/assertions and original parameter/decorator tables are retained.
 Other native in-process result validators and portable controls remain eligible
 on Windows. The final bounded Windows selection passed 63 data/public-composition
@@ -664,4 +665,12 @@ release; timeout; ambiguous failed-start closure and expired cleanup retaining
 original pin/lease/quarantine; successful start followed by pin loss or a late
 deadline rejecting before either output read. Fake API leaves, inventory/input
 and pin seams remain explicitly documented. No native Windows execution is
-implied.
+implied. The original two mocked assembly timeout/start cases now have Linux
+legacy-admission scope with exact bodies/assertions preserved.
+
+The complete reviewed map remains collected: 16 original Linux cases and the
+deferred clevis generator case, plus the seven safe controls (24 nodes). Linux
+bodies and the generator did not execute locally. The original failed-start
+assertion trace, exact reproducer and complete event log remain private; no
+caught inner transport traceback was serialized, so source-correlated transitions
+are distinguished from observed final state.

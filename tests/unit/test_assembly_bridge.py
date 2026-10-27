@@ -29,6 +29,10 @@ bridge = importlib.util.module_from_spec(spec)
 sys.modules[spec.name] = bridge
 spec.loader.exec_module(bridge)
 
+LINUX_LEGACY_TRANSPORT = pytest.mark.skipif(
+    sys.platform != "linux", reason="Linux mocked legacy timeout/start transport admission contract"
+)
+
 MESH = {
     "vertices": [[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]],
     "triangles": [[0, 2, 1], [0, 1, 3], [0, 3, 2], [1, 2, 3]],
@@ -418,6 +422,7 @@ def test_validated_snapshot_detects_later_mutation(make):
         (OSError("cannot execute"), "Could not start"),
     ],
 )
+@LINUX_LEGACY_TRANSPORT
 def test_assembly_process_errors_use_safe_shared_transport(
     make, monkeypatch, tmp_path, exception, message
 ):
