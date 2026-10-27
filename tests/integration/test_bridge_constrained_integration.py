@@ -17,9 +17,15 @@ bridge = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(bridge)
 
 
+LINUX_LEGACY_PROFILE = pytest.mark.skipif(
+    sys.platform != "linux", reason="Linux legacy sidecar/native diagnostics contract"
+)
+
+
 @pytest.mark.parametrize(
     "variant", ["canonical", "omitted_null_defaults", "redundant", "conflicting", "bad_expression"]
 )
+@LINUX_LEGACY_PROFILE
 def test_real_sidecar_sketch_diagnostics_cross_strict_display_boundary(variant):
     source = json.loads((ROOT / "examples/constrained_plate.mcad.json").read_text())
     constraints = source["features"][0]["sketch"]["constraints"]

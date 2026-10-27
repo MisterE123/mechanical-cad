@@ -23,6 +23,11 @@ ROOT = Path(__file__).resolve().parents[2]
 pytestmark = pytest.mark.kernel
 
 
+LINUX_LEGACY_PROFILE = pytest.mark.skipif(
+    sys.platform != "linux", reason="Linux manual/native addon roundtrip contract"
+)
+
+
 def legacy_assembly():
     return AssemblyDocument.from_json(
         (ROOT / "examples/reused_blocks.mcad-assembly.json").read_text()
@@ -253,6 +258,7 @@ def test_invalid_wire_version_is_bound_without_native_work(version, monkeypatch)
 
 
 @pytest.mark.parametrize("action", ["assembly_replay", "assembly_check", "assembly_sample"])
+@LINUX_LEGACY_PROFILE
 def test_new_native_response_roundtrips_through_addon_client(action):
     candidate = assembly(independent_open=True)
     script = f"""

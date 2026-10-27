@@ -43,6 +43,11 @@ bridge = importlib.import_module(PACKAGE + ".bridge")
 CODE = "solver_dof_indeterminate"
 
 
+LINUX_LEGACY_PROFILE = pytest.mark.skipif(
+    sys.platform != "linux", reason="Linux legacy bridge replay contract"
+)
+
+
 def cycle_document(*, sketch_version=2):
     points = (Point("a", 0, 0), Point("b", 2, 1), Point("c", 4, 0))
     pairs = (("a", "b"), ("b", "c"), ("c", "a"))
@@ -262,6 +267,7 @@ def test_actual_sidecar_error_crosses_strict_bridge_without_source_or_export_mut
 
 
 @pytest.mark.parametrize("version", [1, 2])
+@LINUX_LEGACY_PROFILE
 def test_real_blender_bridge_replay_retains_failure_in_both_negotiated_versions(version):
     source = cycle_document(sketch_version=version)
     before = source.to_json()

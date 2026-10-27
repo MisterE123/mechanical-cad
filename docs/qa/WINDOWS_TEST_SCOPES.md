@@ -623,3 +623,26 @@ pin and lease, and refuses result reuse or job restart without another API event
 The last duplicate value is otherwise valid, so accepting last-key-wins JSON would
 fail these controls. The documented inventory/launch-input/pin doubles remain;
 this is decoder/owner/receipt composition, not native process or geometry parity.
+
+## Remaining legacy integration map
+
+The finite 17-case review map is:
+
+| Existing test function | Cases | Scoped disposition |
+| --- | ---: | --- |
+| assembly_result_v2: `test_new_native_response_roundtrips_through_addon_client` | 3 | Linux manual/native addon roundtrip |
+| bridge_constrained_integration: `test_real_sidecar_sketch_diagnostics_cross_strict_display_boundary` | 5 | Linux legacy sidecar/native diagnostics |
+| edge_catalog: `test_real_guarded_sidecar_transport` | 1 | Linux manual guarded transport |
+| sketch_dof_cycles: `test_real_blender_bridge_replay_retains_failure_in_both_negotiated_versions` | 2 | Linux legacy bridge replay |
+| part_snapshot_bridge: `test_real_process_capture_with_current_interpreter` | 1 | Linux legacy real-process snapshot |
+| part_snapshot_bridge: `test_duplicate_wire_response_keys_are_rejected_by_existing_transport` | 2 | Linux mocked legacy decoder/admission; portable and Windows raw-byte controls added |
+| assembly_bridge: `test_assembly_process_errors_use_safe_shared_transport` | 2 | Unchanged; new public start-error diagnostic needs review |
+| clevis_example: `test_generator_rejects_unqualified_or_destructive_requests[existing_evidence]` | 1 | Exact host expectation corrected; local subprocess execution deferred |
+
+Only the six named functions totaling 14 cases receive Linux scope in this slice.
+Their exact bodies/assertions and original parameter/decorator tables are retained.
+Other native in-process result validators and portable controls remain eligible
+on Windows. The final bounded Windows selection passed 63 data/public-composition
+cases with zero forbidden operations; collection retained the 14 Linux cases and
+three deferred cases without execution. This is not native Windows parity or a
+claim that all 17 original integration cases were executed or passed locally.

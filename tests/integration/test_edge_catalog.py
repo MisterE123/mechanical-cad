@@ -14,6 +14,10 @@ from mechanical_cad.kernel_ocp import OCPKernel
 from mechanical_cad.model import Document, Feature
 from mechanical_cad.sidecar import process_request
 
+LINUX_LEGACY_PROFILE = pytest.mark.skipif(
+    sys.platform != "linux", reason="Linux manual guarded sidecar contract"
+)
+
 
 @pytest.fixture
 def addon():
@@ -127,6 +131,7 @@ def test_segment_projection_is_display_only(addon):
     assert distance == 2 and fraction == 0.5
 
 
+@LINUX_LEGACY_PROFILE
 def test_real_guarded_sidecar_transport(addon):
     root = Path(__file__).resolve().parents[2]
     selection = addon("backend_selection").BackendSelection.capture(
