@@ -192,3 +192,31 @@ requiring those actions are not qualified by the bounded composed run. No
 production guard or publication implementation was changed. These observations
 establish neither native cache ACL/locking behavior nor Windows/Blender release
 qualification; Windows remains NOT_READY.
+
+## Historical/live differential child framing
+
+The 50 pre-service differential cases and lazy historical-kernel loader run
+unmodified historical/live source under explicit test-child UTF-8/LF text
+framing. Both sidecars create a UTF-8 response writer with `os.fdopen`; their
+default Windows newline translation otherwise adds CR before the sealed LF.
+The opt-in child harness sets its text streams to UTF-8/LF and supplies LF only
+when that UTF-8 writer leaves newline unspecified. Other process tests retain
+their ordinary harness behavior, and production code is unchanged.
+
+Captured stdout/stderr remain raw bytes. Separate child controls exercise both
+stdout and the duplicated-descriptor writer under an ASCII ambient encoding,
+then prove that explicit binary CRLF/invalid stderr bytes and explicitly chosen
+text CRLF remain unchanged. Request/example readers specify UTF-8 and have
+independent non-ASCII part/assembly controls. Sealed source, hashes, golden
+stdout, raw-byte comparisons and existing mutation assertions are unchanged.
+These are differential framing tests, not native bundled runtime qualification.
+
+The bounded Techbox Python 3.12.10 run collected 70 explicit safe cases and
+finished 61 passed / 9 failed. All six framing/Unicode controls, the lazy-loader
+test and 13 mutation/hash controls passed; 41 of the 50 differential cases passed.
+Six historical native outputs still differ from the sealed golden bytes after
+LF framing. Three dependency-absence cases also fail locally: the retained
+embedded runtime's `python312._pth` explicitly includes `Lib/site-packages`, so
+`-S` does not remove those native packages. No numeric tolerance, dependency
+policy, golden/hash value or production behavior was changed to hide these
+remaining observations. They require separate review; this is not a full pass.

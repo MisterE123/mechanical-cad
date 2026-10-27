@@ -41,7 +41,7 @@ def legacy_sidecar_source():
 
 
 def document(name="drilled_plate"):
-    return json.loads((ROOT / f"examples/{name}.mcad.json").read_text())
+    return json.loads((ROOT / f"examples/{name}.mcad.json").read_text(encoding="utf-8"))
 
 
 def operation(action="canonical_snapshot", destination=None):
@@ -55,7 +55,9 @@ def operation(action="canonical_snapshot", destination=None):
         request.update(
             kind="assembly",
             assembly_protocol_version=1,
-            assembly=json.loads((ROOT / "examples/reused_blocks.mcad-assembly.json").read_text()),
+            assembly=json.loads(
+                (ROOT / "examples/reused_blocks.mcad-assembly.json").read_text(encoding="utf-8")
+            ),
             coordinates={"slide_a": 100, "slide_b": 200},
             requirements=[],
         )
@@ -84,16 +86,41 @@ def digest(request):
     ).hexdigest()
 
 
-def run(request=None, *, raw=None, root=ROOT, no_site=False, script=None):
+CHILD_TEXT_FRAMING = r"""
+import os, sys
+for _wire_stream in (sys.stdin, sys.stdout, sys.stderr):
+    _wire_stream.reconfigure(encoding="utf-8", errors="strict", newline="\n")
+_wire_original_fdopen = os.fdopen
+def _wire_fdopen(fd, mode="r", *args, **kwargs):
+    # Both unchanged sidecars create this UTF-8 response stream from dup(1).
+    # Configure the child's text writer, never normalize captured output bytes.
+    if mode == "w" and kwargs.get("encoding") == "utf-8" and "newline" not in kwargs:
+        kwargs["newline"] = "\n"
+    return _wire_original_fdopen(fd, mode, *args, **kwargs)
+os.fdopen = _wire_fdopen
+"""
+
+
+def framed_child_script(script=None):
+    return CHILD_TEXT_FRAMING + (
+        script
+        if script is not None
+        else "import runpy\nrunpy.run_module('mechanical_cad.sidecar', run_name='__main__')\n"
+    )
+
+
+def run(request=None, *, raw=None, root=ROOT, no_site=False, script=None, framed=False):
     command = [sys.executable, "-B"]
     if no_site:
         command.append("-S")
+    if framed:
+        script = framed_child_script(script)
     command.extend(["-c", script] if script else ["-m", "mechanical_cad.sidecar"])
     env = dict(os.environ, PYTHONPATH=str(root / "src"), PYTHONNOUSERSITE="1")
     env.pop("PYTHONHOME", None)
     result = subprocess.run(
         command,
-        input=json.dumps(request).encode() if raw is None else raw.encode(),
+        input=json.dumps(request).encode("utf-8") if raw is None else raw.encode("utf-8"),
         capture_output=True,
         timeout=60,
         cwd=root,
@@ -101,6 +128,61 @@ def run(request=None, *, raw=None, root=ROOT, no_site=False, script=None):
         check=False,
     )
     return result, json.loads(result.stdout)
+
+
+@pytest.mark.parametrize("port", ["stdout", "fdopen"])
+def test_child_text_framing_is_utf8_lf(monkeypatch, port):
+    monkeypatch.setenv("PYTHONIOENCODING", "ascii:strict")
+    text = "\u03bb\u4e2d\U0001f527"
+    script = f"""
+import json, os, sys
+request = json.loads(sys.stdin.read())
+output = sys.stdout if {port!r} == 'stdout' else os.fdopen(os.dup(1), 'w', encoding='utf-8')
+output.write(json.dumps(request, ensure_ascii=False, separators=(',', ':')) + '\\n')
+output.flush()
+sys.stderr.write(request['value'] + '\\n')
+"""
+    result, response = run(
+        raw=json.dumps({"value": text}, ensure_ascii=False),
+        no_site=True,
+        script=script,
+        framed=True,
+    )
+    assert result.returncode == 0
+    assert response == {"value": text}
+    assert result.stdout == ('{"value":"' + text + '"}\n').encode("utf-8")
+    assert result.stderr == (text + "\n").encode("utf-8")
+
+
+@pytest.mark.parametrize("port", ["binary", "explicit_text_newline"])
+def test_child_framing_preserves_explicit_output_bytes(port):
+    script = f"""
+import os, sys
+if {port!r} == 'binary':
+    sys.stdout.buffer.write(b'{{"value":1}}\\r\\n')
+else:
+    output = os.fdopen(os.dup(1), 'w', encoding='utf-8', newline='\\r\\n')
+    output.write('{{"value":1}}\\n')
+    output.flush()
+sys.stderr.buffer.write(b'\\xff\\r\\n')
+"""
+    result, response = run(no_site=True, script=script, framed=True)
+    assert result.returncode == 0 and response == {"value": 1}
+    assert result.stdout == b'{"value":1}\r\n'
+    assert result.stderr == b"\xff\r\n"
+
+
+@pytest.mark.parametrize("kind", ["part", "assembly"])
+def test_request_documents_are_read_as_utf8(tmp_path, monkeypatch, kind):
+    monkeypatch.setattr(sys.modules[__name__], "ROOT", tmp_path)
+    examples = tmp_path / "examples"
+    examples.mkdir()
+    value = {"label": "\u03bb\u4e2d\U0001f527"}
+    raw = json.dumps(value, ensure_ascii=False).encode("utf-8")
+    (examples / "drilled_plate.mcad.json").write_bytes(raw)
+    (examples / "reused_blocks.mcad-assembly.json").write_bytes(raw)
+    request = operation("canonical_snapshot" if kind == "part" else "assembly_replay")
+    assert request["document" if kind == "part" else "assembly"] == value
 
 
 SNAPSHOT_GUARD = """
@@ -482,11 +564,12 @@ def test_exact_pre_service_request_stdout_exit_and_source_differential(case):
     if not case["no_site"]:
         pytest.importorskip("OCP")
         pytest.importorskip("slvs")
-    current, _ = run(raw=raw.decode("utf-8"), no_site=case["no_site"])
+    current, _ = run(raw=raw.decode("utf-8"), no_site=case["no_site"], framed=True)
     original, _ = run(
         raw=raw.decode("utf-8"),
         no_site=case["no_site"],
         script=sector_pre_service_script(directory, manifest),
+        framed=True,
     )
     assert current.returncode == original.returncode == case["returncode"]
     assert original.stdout == expected
@@ -700,13 +783,19 @@ def test_historical_kernel_loader_is_lazy_and_rechecks_bytes(tmp_path):
     # Tamper after parent validation: a snapshot must not import the kernel,
     # whereas a child attempting that import must reject the changed bytes.
     (tmp_path / kernel).write_bytes(b"raise RuntimeError('must never execute')\n")
-    raw = (directory / "snapshot_drilled_plate.request.txt").read_text()
-    result, _ = run(raw=raw, no_site=True, script=script)
+    raw = (directory / "snapshot_drilled_plate.request.txt").read_text(encoding="utf-8")
+    result, _ = run(raw=raw, no_site=True, script=script, framed=True)
     assert result.returncode == 0
     assert result.stdout == (directory / "snapshot_drilled_plate.stdout.txt").read_bytes()
     loader = script.split("engine = types.ModuleType", 1)[0]
     result = subprocess.run(
-        [sys.executable, "-B", "-S", "-c", loader + "import mechanical_cad.kernel_ocp\n"],
+        [
+            sys.executable,
+            "-B",
+            "-S",
+            "-c",
+            framed_child_script(loader + "import mechanical_cad.kernel_ocp\n"),
+        ],
         cwd=ROOT,
         env={**os.environ, "PYTHONPATH": str(ROOT / "src"), "PYTHONNOUSERSITE": "1"},
         capture_output=True,
