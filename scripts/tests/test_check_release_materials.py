@@ -73,9 +73,30 @@ def review_for(value, digest):
     }
 
 
+def write_project_source(path, source_root, source_manifest):
+    with zipfile.ZipFile(path, "w") as archive:
+        for item in source_manifest:
+            data = (source_root / item["path"]).read_bytes()
+            assert len(data) == item["size"] and g.A.digest(data) == item["sha256"]
+            info = zipfile.ZipInfo(item["path"])
+            info.create_system = 3
+            info.external_attr = (stat.S_IFREG | item["mode"]) << 16
+            archive.writestr(info, data)
+
+
 @pytest.fixture
-def prepared(tmp_path):
+def prepared(tmp_path, monkeypatch):
+    manifests = []
+    export = f.adapter.export_source
+
+    def capture_manifest(*args, **kwargs):
+        result = export(*args, **kwargs)
+        manifests.append(copy.deepcopy(result))
+        return result
+
+    monkeypatch.setattr(f.adapter, "export_source", capture_manifest)
     original = f.prepared.__wrapped__(tmp_path)
+    assert len(manifests) == 1
     data = (original.inputs_root / "metadata/materials-map.json").read_bytes()
     value = json.loads(data)
     material_root = original.inputs_root / "materials"
@@ -86,13 +107,11 @@ def prepared(tmp_path):
     source_files = json.loads(
         (original.inputs_root / "metadata/materials-inventory.json").read_bytes()
     )
-    with zipfile.ZipFile(material_root / "sources/project.zip", "w") as archive:
-        for path in sorted((tmp_path / "source-export").rglob("*")):
-            if path.is_file():
-                info = zipfile.ZipInfo(path.relative_to(tmp_path / "source-export").as_posix())
-                info.create_system = 3
-                info.external_attr = (stat.S_IFREG | stat.S_IMODE(path.stat().st_mode)) << 16
-                archive.writestr(info, path.read_bytes())
+    exported = tmp_path / "source-export"
+    assert {p.relative_to(exported).as_posix() for p in exported.rglob("*") if p.is_file()} == {
+        item["path"] for item in manifests[0]
+    }
+    write_project_source(material_root / "sources/project.zip", exported, manifests[0])
     source_files = [item for item in source_files if item["path"] != old_path]
     archive_bytes = (material_root / "sources/project.zip").read_bytes()
     source_files.append(
@@ -408,6 +427,33 @@ def test_project_source_verifies_utf8_and_executable_modes(tmp_path, method):
             info.compress_type = method
             archive.writestr(info, data)
     assert g.verify_project_source(path, expected) == g.A.digest(path.read_bytes())
+
+
+@pytest.mark.parametrize(
+    "mode,wrong", [(0o644, 0o755), (0o755, 0o644)], ids=["regular", "executable"]
+)
+def test_fixture_source_modes_follow_manifest_and_reject_mismatched_metadata(tmp_path, mode, wrong):
+    source = tmp_path / "source"
+    source.mkdir()
+    data = b"unchanged source bytes\n"
+    (source / "file.py").write_bytes(data)
+    expected = [{"path": "file.py", "mode": mode, "size": len(data), "sha256": g.A.digest(data)}]
+    path = tmp_path / "project.zip"
+    write_project_source(path, source, expected)
+    with zipfile.ZipFile(path) as archive:
+        (info,) = archive.infolist()
+        assert info.filename == "file.py" and info.create_system == 3
+        assert info.external_attr >> 16 == stat.S_IFREG | mode
+        assert archive.read(info) == data
+    assert g.verify_project_source(path, expected) == g.A.digest(path.read_bytes())
+
+    # Only the ZIP permission bits change; exact source/hash/member checks stay.
+    info.external_attr = (stat.S_IFREG | wrong) << 16
+    with zipfile.ZipFile(path, "w") as archive:
+        archive.writestr(info, data)
+    with pytest.raises(g.ReviewError, match="member metadata mismatch"):
+        g.verify_project_source(path, expected)
+    assert (source / "file.py").read_bytes() == data
 
 
 @pytest.mark.parametrize("where", ["prefix", "suffix", "gap", "local_extra", "local_name"])
