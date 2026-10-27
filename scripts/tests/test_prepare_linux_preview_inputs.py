@@ -4,6 +4,7 @@ from __future__ import annotations
 import importlib.util
 import io
 import json
+import shutil
 import stat
 import struct
 import subprocess
@@ -62,7 +63,35 @@ def record(name, data, mode=0o644):
 
 
 @pytest.fixture
-def prepared(tmp_path, monkeypatch):
+def disk_capacity(tmp_path, monkeypatch):
+    """Observe synthetic capacity only in this preparer's tiny fixture tree.
+
+    Keep production reserve/allocation checks and real file operations intact.
+    Rebinding the private imported module's shutil name does NOT monkeypatch
+    shared stdlib functions or affect other validators, pytest or subprocesses.
+    This is not the actual disk observation used for real-seed preparation.
+    """
+    real_disk_usage = shutil.disk_usage
+    capacity = SimpleNamespace(free=p.RESERVE + 1024**3, available=None, observations=[])
+
+    def observe(path):
+        path = Path(path)
+        assert path == tmp_path or tmp_path in path.parents
+        free = capacity.free if capacity.available is None else capacity.available(path)
+        capacity.observations.append((path, free))
+        return SimpleNamespace(free=free)
+
+    monkeypatch.setattr(p, "shutil", SimpleNamespace(
+        disk_usage=observe, copyfileobj=shutil.copyfileobj))
+    assert shutil.disk_usage is real_disk_usage
+    assert p.shutil is not shutil
+    assert p.RESERVE == 5 * 1024**3
+    yield capacity
+    assert shutil.disk_usage is real_disk_usage
+
+
+@pytest.fixture
+def prepared(tmp_path, monkeypatch, disk_capacity):
     if sys.platform != "linux":
         pytest.skip("Linux-only preparation fixture; portable parser tests remain active")
     original = f.inputs.__wrapped__(tmp_path)
@@ -125,7 +154,7 @@ def prepared(tmp_path, monkeypatch):
                            material_bytes=material_bytes, seed_bytes=seed.read_bytes())
 
 
-def test_refresh_preserves_exact_history_and_cannot_create_approval(prepared):
+def test_refresh_preserves_exact_history_and_cannot_create_approval(prepared, disk_capacity):
     # Neither the source working copy nor opaque seed source is executed/exported.
     (prepared.source_repo / "new.txt").write_bytes(b"dirty working file")
     result = p.prepare(prepared)
@@ -165,10 +194,17 @@ def test_refresh_preserves_exact_history_and_cannot_create_approval(prepared):
         assert set(archive.namelist()) == set(p.IMPLEMENTATION_FILES)
         assert archive.read("scripts/prepare_linux_preview_inputs.py") == (ROOT / "scripts/prepare_linux_preview_inputs.py").read_bytes()
     assert json.loads((prepared.output / "preparation-receipt.json").read_bytes()) == result
+    # The complete positive path still consults capacity initially and before
+    # bounded source/material/runtime/receipt allocations; reserve is not stubbed.
+    observed = [path for path, _ in disk_capacity.observations]
+    assert len(observed) > 20
+    assert observed[0] == prepared.output.parent
+    for directory in (prepared.output, inputs / "runtime", inputs / "metadata"):
+        assert directory in observed
 
 
 @pytest.mark.parametrize("change", ["seed_size", "seed_digest", "source", "same_source", "version",
-                                   "output_exists", "origin", "pin", "disk", "symlink", "older_source"])
+                                   "output_exists", "origin", "pin", "symlink", "older_source"])
 def test_refusal_before_output(prepared, monkeypatch, change):
     if change == "seed_size":
         prepared.seed.write_bytes(prepared.seed_bytes + b"x")
@@ -189,8 +225,6 @@ def test_refusal_before_output(prepared, monkeypatch, change):
         git(prepared.source_repo, "remote", "set-url", "origin", "https://example.invalid/repo")
     elif change == "pin":
         monkeypatch.setitem(p.PIN, "acquisition", "0" * 64)
-    elif change == "disk":
-        monkeypatch.setattr(p.shutil, "disk_usage", lambda path: SimpleNamespace(free=p.RESERVE))
     elif change == "symlink":
         link = prepared.seed.with_name("linked.zip")
         link.symlink_to(prepared.seed)
@@ -198,6 +232,42 @@ def test_refusal_before_output(prepared, monkeypatch, change):
     with pytest.raises((ValueError, subprocess.CalledProcessError)):
         p.prepare(prepared)
     assert not prepared.output.exists() or (prepared.output / "keep").read_bytes() == b"untouched"
+
+
+@pytest.mark.parametrize("headroom", [-1, 32 * 1024**2], ids=["below_floor", "unfunded_allocation"])
+def test_preparation_capacity_refusal_precedes_output(prepared, disk_capacity, headroom):
+    # Even being above the floor cannot fund the initial remaining-allocation
+    # budget: fixed metadata overhead alone is 32 MiB, before source/runtime.
+    disk_capacity.free = p.RESERVE + headroom
+    with pytest.raises(p.RefreshError, match="5 GiB free-disk reserve required"):
+        p.prepare(prepared)
+    assert disk_capacity.observations == [(prepared.output.parent, disk_capacity.free)]
+    assert not prepared.output.exists()
+    assert prepared.seed.read_bytes() == prepared.seed_bytes
+
+
+@LINUX_ONLY
+def test_reserve_includes_rounded_remaining_allocation(tmp_path, disk_capacity):
+    needed = 4097
+    allocation = p.allocation_bytes(tmp_path, needed)
+    assert allocation >= needed
+    disk_capacity.free = p.RESERVE + allocation
+    p.reserve_space(tmp_path, needed)  # Exact sufficient boundary is accepted.
+    disk_capacity.free -= 1
+    with pytest.raises(p.RefreshError, match="5 GiB free-disk reserve required"):
+        p.reserve_space(tmp_path, needed)
+    assert len(disk_capacity.observations) == 2
+    assert list(tmp_path.iterdir()) == []
+
+
+@LINUX_ONLY
+def test_write_rejects_unfunded_allocation_before_open(tmp_path, disk_capacity):
+    data = b"tiny fixture"
+    disk_capacity.free = p.RESERVE + p.allocation_bytes(tmp_path, len(data) + 4096) - 1
+    with pytest.raises(p.RefreshError, match="5 GiB free-disk reserve required"):
+        p.write_new(tmp_path / "must-not-exist", data)
+    assert disk_capacity.observations == [(tmp_path, disk_capacity.free)]
+    assert list(tmp_path.iterdir()) == []
 
 
 def test_no_clobber_after_success(prepared):
@@ -358,7 +428,7 @@ def test_export_preserves_git_executable_mode_not_dirty_working_mode(prepared):
 
 
 @LINUX_ONLY
-def test_implementation_commit_requires_exact_modes(tmp_path, monkeypatch):
+def test_implementation_commit_requires_exact_modes(tmp_path, monkeypatch, disk_capacity):
     repository = tmp_path / "implementation"
     repository.mkdir()
     for name in p.IMPLEMENTATION_FILES:
@@ -378,18 +448,21 @@ def test_implementation_commit_requires_exact_modes(tmp_path, monkeypatch):
     assert p.implementation_snapshot(second)[3] is None
 
 
-def test_insufficient_space_does_not_create_failure_marker_or_mask_error(prepared, monkeypatch):
-    def disk_usage(path):
-        free = p.RESERVE - 1 if prepared.output.exists() else p.RESERVE + 1024**3
-        return SimpleNamespace(free=free)
-    monkeypatch.setattr(p.shutil, "disk_usage", disk_usage)
+def test_insufficient_space_does_not_create_failure_marker_or_mask_error(prepared, disk_capacity):
+    disk_capacity.available = lambda path: (
+        p.RESERVE - 1 if prepared.output.exists() else p.RESERVE + 1024**3)
     with pytest.raises(p.RefreshError, match="5 GiB"):
         p.prepare(prepared)
+    assert disk_capacity.observations[0][1] > p.RESERVE
+    assert all(free < p.RESERVE for _, free in disk_capacity.observations[1:])
+    assert len(disk_capacity.observations) >= 3  # Admission, directory, diagnostic.
+    assert list(prepared.output.iterdir()) == []  # No unsafe write after exhaustion.
     assert not (prepared.output / "preparation-receipt.json").exists()
     assert not (prepared.output / "PREPARATION_FAILED.json").exists()
 
 
-def test_failure_marker_cannot_mask_original_error_at_reserve_boundary(prepared, monkeypatch):
+def test_failure_marker_cannot_mask_original_error_at_reserve_boundary(prepared, monkeypatch,
+                                                                     disk_capacity):
     failed = False
 
     def broken_export(*args):
@@ -398,8 +471,7 @@ def test_failure_marker_cannot_mask_original_error_at_reserve_boundary(prepared,
         raise p.RefreshError("original export failure")
 
     monkeypatch.setattr(p.A, "export_source", broken_export)
-    monkeypatch.setattr(p.shutil, "disk_usage", lambda path: SimpleNamespace(
-        free=p.RESERVE + (4096 if failed else 1024**3)))
+    disk_capacity.available = lambda path: p.RESERVE + (4096 if failed else 1024**3)
     with pytest.raises(p.RefreshError, match="original export failure"):
         p.prepare(prepared)
     assert not (prepared.output / "PREPARATION_FAILED.json").exists()
