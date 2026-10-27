@@ -674,3 +674,24 @@ bodies and the generator did not execute locally. The original failed-start
 assertion trace, exact reproducer and complete event log remain private; no
 caught inner transport traceback was serialized, so source-correlated transitions
 are distinguished from observed final state.
+
+## Cross-drive synthetic metadata
+
+GitHub's Windows regression temp root is on D:, while the fixture's system
+directory is `C:\Windows`. `RuntimeAPI.info` previously computed `ntpath.relpath`
+against the runtime root even for directory anchors, so the system-directory
+observation raised across drives before process creation. It was a fixture
+content lookup failure, not a production path rejection or native launch failure.
+
+The fake API now returns empty content bytes for directory metadata and performs
+the unchanged runtime-content lookup only for files. All metadata identities,
+flags, hooks and errors remain active; no ValueError is caught. Pure C:/D: layouts
+exercise real public selection, SidecarJob and owner composition without creating
+paths on either synthetic layout. Cross-drive positives and two-link/reparse/
+unrelated-error negatives pass; an unexpected cross-drive file still raises.
+The existing public success and original one-link/size controls also pass.
+
+The exact public positive passed under ordinary and CI-shaped task-local C: roots
+before correction; the in-memory D: layout reproduced the CI-shaped failure.
+This isolates the cross-drive metadata issue without global settings, drive
+remapping, SystemRoot changes, native process/API execution or path relaxation.

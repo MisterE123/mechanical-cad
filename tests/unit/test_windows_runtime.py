@@ -223,7 +223,7 @@ class RuntimeAPI:
         path, directory = self.handles[handle]
         path = self.final_path(path)
         identity = self.identities.setdefault(path, (1, 0, len(self.identities) + 1))
-        raw = self.fixture.contents.get(
+        raw = b"" if directory else self.fixture.contents.get(
             ntpath.relpath(path, self.fixture.root).replace("\\", "/"), b""
         )
         return self.info_change(
